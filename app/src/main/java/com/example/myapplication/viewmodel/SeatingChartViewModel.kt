@@ -12,14 +12,16 @@ import androidx.lifecycle.switchMap // Added for switchMap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp // For .dp extension
+import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem // Our new UI model
 
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.Student
 // StudentDetailsForDisplay is still needed for the source LiveData from repository
-import com.example.myapplication.data.StudentDetailsForDisplay 
+import com.example.myapplication.data.StudentDetailsForDisplay
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
@@ -46,18 +48,22 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // Changed to LiveData<List<StudentUiItem>>
     val studentsForDisplay: LiveData<List<StudentUiItem>>
+    val furnitureForDisplay: LiveData<List<FurnitureUiItem>>
+
 
     // LiveData for the preference of recent incidents limit
     val recentIncidentsLimit: LiveData<Int> = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.asLiveData()
 
     init {
-        val studentDao = AppDatabase.getDatabase(application).studentDao()
-        val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
-        val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
-        studentRepository = StudentRepository(studentDao, behaviorEventDao, homeworkLogDao)
+        val db = AppDatabase.getDatabase(application)
+        val studentDao = db.studentDao()
+        val behaviorEventDao = db.behaviorEventDao()
+        val homeworkLogDao = db.homeworkLogDao()
+        val furnitureDao = db.furnitureDao()
+        studentRepository = StudentRepository(studentDao, behaviorEventDao, homeworkLogDao, furnitureDao)
 
         // The MediatorLiveData will now produce List<StudentUiItem>
-        val mediator = MediatorLiveData<List<StudentUiItem>>()
+        val studentMediator = MediatorLiveData<List<StudentUiItem>>()
 
         val defaultWidthLD = appPreferencesRepository.defaultStudentBoxWidthFlow.asLiveData()
         val defaultHeightLD = appPreferencesRepository.defaultStudentBoxHeightFlow.asLiveData()
@@ -68,7 +74,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
         val sourceStudentsDetailsLd = studentRepository.studentsForDisplay // This is LiveData<List<StudentDetailsForDisplay>>
 
-        val updateMediator = { ->
+        val updateStudentMediator = { ->
             val studentsFromRepo = sourceStudentsDetailsLd.value
             val currentDefaultWidth = defaultWidthLD.value ?: DEFAULT_STUDENT_BOX_WIDTH_DP
             val currentDefaultHeight = defaultHeightLD.value ?: DEFAULT_STUDENT_BOX_HEIGHT_DP
@@ -93,6 +99,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
                     StudentUiItem(
                         id = studentDbDetails.id,
+                        stringId = studentDbDetails.stringId,
                         fullName = "${studentDbDetails.firstName} ${studentDbDetails.lastName}",
                         initials = studentDbDetails.getEffectiveInitials(),
                         xPosition = studentDbDetails.xPosition,
@@ -106,21 +113,65 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                         recentBehaviorDescription = studentDbDetails.recentBehaviorDescription
                     )
                 }
-                mediator.postValue(studentUiItemList)
+                studentMediator.postValue(studentUiItemList)
             } else {
-                 mediator.postValue(emptyList())
+                 studentMediator.postValue(emptyList())
             }
         }
 
-        mediator.addSource(sourceStudentsDetailsLd) { updateMediator() }
-        mediator.addSource(defaultWidthLD) { updateMediator() }
-        mediator.addSource(defaultHeightLD) { updateMediator() }
-        mediator.addSource(defaultBgColorLD) { updateMediator() }
-        mediator.addSource(defaultOutlineColorLD) { updateMediator() }
-        mediator.addSource(defaultTextColorLD) { updateMediator() }
-        mediator.addSource(defaultOutlineThicknessLD) { updateMediator() } // Add as source
+        studentMediator.addSource(sourceStudentsDetailsLd) { updateStudentMediator() }
+        studentMediator.addSource(defaultWidthLD) { updateStudentMediator() }
+        studentMediator.addSource(defaultHeightLD) { updateStudentMediator() }
+        studentMediator.addSource(defaultBgColorLD) { updateStudentMediator() }
+        studentMediator.addSource(defaultOutlineColorLD) { updateStudentMediator() }
+        studentMediator.addSource(defaultTextColorLD) { updateStudentMediator() }
+        studentMediator.addSource(defaultOutlineThicknessLD) { updateStudentMediator() } // Add as source
 
-        studentsForDisplay = mediator
+        studentsForDisplay = studentMediator
+
+        // Mediator for Furniture
+        val furnitureMediator = MediatorLiveData<List<FurnitureUiItem>>()
+        val sourceFurnitureLd = studentRepository.allFurniture.asLiveData()
+
+        val updateFurnitureMediator = {
+            val furnitureFromRepo = sourceFurnitureLd.value
+            val currentDefaultOutlineColorHex = defaultOutlineColorLD.value ?: DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
+            val currentDefaultTextColorHex = defaultTextColorLD.value ?: DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
+            val currentDefaultOutlineThickness = defaultOutlineThicknessLD.value ?: DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
+
+            val defaultOutlineComposeColor = safeParseColor(currentDefaultOutlineColorHex, Color.Black)
+            val defaultTextComposeColor = safeParseColor(currentDefaultTextColorHex, Color.Black)
+
+            if (furnitureFromRepo != null) {
+                val furnitureUiItemList = furnitureFromRepo.map { furnitureDb ->
+                    FurnitureUiItem(
+                        id = furnitureDb.id,
+                        stringId = furnitureDb.stringId,
+                        name = furnitureDb.name,
+                        type = furnitureDb.type,
+                        xPosition = furnitureDb.xPosition,
+                        yPosition = furnitureDb.yPosition,
+                        displayWidth = furnitureDb.width.dp,
+                        displayHeight = furnitureDb.height.dp,
+                        displayBackgroundColor = safeParseColor(furnitureDb.fillColor, Color.LightGray),
+                        displayOutlineColor = safeParseColor(furnitureDb.outlineColor, defaultOutlineComposeColor),
+                        displayTextColor = defaultTextComposeColor, // Furniture text color can be a separate preference later
+                        displayOutlineThickness = currentDefaultOutlineThickness.dp
+                    )
+                }
+                furnitureMediator.postValue(furnitureUiItemList)
+            } else {
+                furnitureMediator.postValue(emptyList())
+            }
+        }
+
+        furnitureMediator.addSource(sourceFurnitureLd) { updateFurnitureMediator() }
+        // We can add preferences for furniture defaults as sources later if needed
+        furnitureMediator.addSource(defaultOutlineColorLD) { updateFurnitureMediator() }
+        furnitureMediator.addSource(defaultTextColorLD) { updateFurnitureMediator() }
+        furnitureMediator.addSource(defaultOutlineThicknessLD) { updateFurnitureMediator() }
+
+        furnitureForDisplay = furnitureMediator
     }
 
     fun getAllStudentsForExport(): List<Student>? {
@@ -165,6 +216,32 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     // Suspend function to get a student by ID for editing purposes
     suspend fun getStudentForEditing(studentId: Int): Student? {
         return studentRepository.getStudentByIdNonLiveData(studentId)
+    }
+
+    suspend fun getFurnitureById(id: Int): Furniture? {
+        return studentRepository.getFurnitureById(id)
+    }
+
+    // Furniture ViewModel methods
+    fun addFurniture(furniture: Furniture) = viewModelScope.launch {
+        studentRepository.insertFurniture(furniture)
+    }
+
+    fun updateFurniture(furniture: Furniture) = viewModelScope.launch {
+        studentRepository.updateFurniture(furniture)
+    }
+
+    fun deleteFurnitureById(id: Int) = viewModelScope.launch {
+        studentRepository.deleteFurnitureById(id)
+    }
+
+    fun updateFurniturePosition(id: Int, newX: Float, newY: Float) = viewModelScope.launch {
+        val furniture = studentRepository.getFurnitureById(id)
+        furniture?.let {
+            it.xPosition = newX
+            it.yPosition = newY
+            studentRepository.updateFurniture(it)
+        }
     }
 
     fun addBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch {

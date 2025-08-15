@@ -32,16 +32,20 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType // Added for keyboard options
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
+import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem // Import the new UI model
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.utils.ExcelImportUtil // Corrected import path
@@ -143,13 +147,21 @@ fun SeatingChartScreen(
     onNavigateToSettings: () -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
+    val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var selectedStudentUiItemForBehavior by remember { mutableStateOf<StudentUiItem?>(null) }
     var showAddEditStudentDialog by remember { mutableStateOf(false) }
-    var editingStudent by remember { mutableStateOf<Student?>(null) } 
+    var editingStudent by remember { mutableStateOf<Student?>(null) }
+    var showAddEditFurnitureDialog by remember { mutableStateOf(false) }
+    var editingFurniture by remember { mutableStateOf<Furniture?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showThemeMenu by remember { mutableStateOf(false) }
+
+    // State for zoom and pan
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offsetX by remember { mutableFloatStateOf(0f) }
+    var offsetY by remember { mutableFloatStateOf(0f) }
     val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState()
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState()
 
@@ -194,11 +206,24 @@ fun SeatingChartScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = {
-                editingStudent = null 
-                showAddEditStudentDialog = true
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = "Add Student")
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FloatingActionButton(
+                    onClick = {
+                        editingStudent = null
+                        showAddEditStudentDialog = true
+                    }
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = "Add Student")
+                }
+                FloatingActionButton(
+                    onClick = {
+                        editingFurniture = null
+                        showAddEditFurnitureDialog = true
+                    }
+                ) {
+                    // You might want a different icon for furniture
+                    Icon(Icons.Filled.Add, contentDescription = "Add Furniture")
+                }
             }
         }
     ) { paddingValues ->
@@ -206,23 +231,56 @@ fun SeatingChartScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
-        ) {
-            students.forEach { studentItem -> 
-                StudentDraggableIcon(
-                    studentUiItem = studentItem, 
-                    viewModel = seatingChartViewModel,
-                    showBehavior = showRecentBehavior, 
-                    onClick = {
-                        selectedStudentUiItemForBehavior = studentItem 
-                        showBehaviorDialog = true
-                    },
-                    onLongClick = {
-                        coroutineScope.launch {
-                            editingStudent = seatingChartViewModel.getStudentForEditing(studentItem.id)
-                            showAddEditStudentDialog = true
-                        }
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, pan, zoom, _ ->
+                        scale = (scale * zoom).coerceIn(0.5f, 3f) // Clamp scale
+                        offsetX += pan.x
+                        offsetY += pan.y
                     }
-                )
+                }
+        ) {
+            Box(
+                modifier = Modifier
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offsetX,
+                        translationY = offsetY
+                    )
+            ) {
+                students.forEach { studentItem ->
+                    StudentDraggableIcon(
+                        studentUiItem = studentItem,
+                        viewModel = seatingChartViewModel,
+                        showBehavior = showRecentBehavior,
+                        scale = scale, // Pass scale to the draggable icon
+                        onClick = {
+                            selectedStudentUiItemForBehavior = studentItem
+                            showBehaviorDialog = true
+                        },
+                        onLongClick = {
+                            coroutineScope.launch {
+                                editingStudent =
+                                    seatingChartViewModel.getStudentForEditing(studentItem.id)
+                                showAddEditStudentDialog = true
+                            }
+                        }
+                    )
+                }
+                furniture.forEach { furnitureItem ->
+                    FurnitureDraggableIcon(
+                        furnitureUiItem = furnitureItem,
+                        viewModel = seatingChartViewModel,
+                        scale = scale,
+                        onLongClick = {
+                            // Handle long click for furniture, e.g., open edit dialog
+                            coroutineScope.launch {
+                                editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                                showAddEditFurnitureDialog = true
+                            }
+                        }
+                    )
+                }
             }
         }
 
@@ -248,11 +306,22 @@ fun SeatingChartScreen(
 
         if (showAddEditStudentDialog) {
             AddEditStudentDialog(
-                studentToEdit = editingStudent, 
+                studentToEdit = editingStudent,
                 viewModel = seatingChartViewModel,
-                onDismiss = { 
+                onDismiss = {
                     showAddEditStudentDialog = false
-                    editingStudent = null 
+                    editingStudent = null
+                }
+            )
+        }
+
+        if (showAddEditFurnitureDialog) {
+            AddEditFurnitureDialog(
+                furnitureToEdit = editingFurniture,
+                viewModel = seatingChartViewModel,
+                onDismiss = {
+                    showAddEditFurnitureDialog = false
+                    editingFurniture = null
                 }
             )
         }
@@ -261,10 +330,66 @@ fun SeatingChartScreen(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+fun FurnitureDraggableIcon(
+    furnitureUiItem: FurnitureUiItem,
+    viewModel: SeatingChartViewModel,
+    scale: Float,
+    onLongClick: () -> Unit
+) {
+    var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
+    var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
+
+    LaunchedEffect(furnitureUiItem.xPosition, furnitureUiItem.yPosition) {
+        offsetX = furnitureUiItem.xPosition
+        offsetY = furnitureUiItem.yPosition
+    }
+
+    Card(
+        modifier = Modifier
+            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+            .pointerInput(furnitureUiItem.id) {
+                detectDragGestures(
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        offsetX += dragAmount.x / scale
+                        offsetY += dragAmount.y / scale
+                    },
+                    onDragEnd = {
+                        viewModel.updateFurniturePosition(furnitureUiItem.id, offsetX, offsetY)
+                    }
+                )
+            }
+            .combinedClickable(
+                onClick = { /* Furniture might not have a default click action */ },
+                onLongClick = onLongClick
+            )
+            .width(furnitureUiItem.displayWidth)
+            .height(furnitureUiItem.displayHeight)
+            .border(BorderStroke(furnitureUiItem.displayOutlineThickness, furnitureUiItem.displayOutlineColor)),
+        colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Less elevation than students
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.fillMaxSize().padding(4.dp)
+        ) {
+            Text(
+                text = furnitureUiItem.name,
+                color = furnitureUiItem.displayTextColor,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 fun StudentDraggableIcon(
-    studentUiItem: StudentUiItem, 
+    studentUiItem: StudentUiItem,
     viewModel: SeatingChartViewModel,
     showBehavior: Boolean,
+    scale: Float,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -283,8 +408,9 @@ fun StudentDraggableIcon(
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        offsetX += dragAmount.x
-                        offsetY += dragAmount.y
+                        // Adjust drag amount by the current scale to move in "world" space
+                        offsetX += dragAmount.x / scale
+                        offsetY += dragAmount.y / scale
                     },
                     onDragEnd = {
                         viewModel.updateStudentPosition(studentUiItem.id, offsetX, offsetY)
@@ -394,8 +520,111 @@ fun BehaviorDialog(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun AddEditFurnitureDialog(
+    furnitureToEdit: Furniture?,
+    viewModel: SeatingChartViewModel,
+    onDismiss: () -> Unit
+) {
+    var name by remember(furnitureToEdit?.id) { mutableStateOf(furnitureToEdit?.name ?: "") }
+    var type by remember(furnitureToEdit?.id) { mutableStateOf(furnitureToEdit?.type ?: "Desk") }
+    var width by remember(furnitureToEdit?.id) { mutableStateOf(furnitureToEdit?.width?.toString() ?: "100") }
+    var height by remember(furnitureToEdit?.id) { mutableStateOf(furnitureToEdit?.height?.toString() ?: "60") }
+    val context = LocalContext.current
+    val isEditMode = furnitureToEdit != null
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(if (isEditMode) "Edit Furniture" else "Add Furniture") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    isError = name.isBlank()
+                )
+                OutlinedTextField(
+                    value = type,
+                    onValueChange = { type = it },
+                    label = { Text("Type (e.g., Desk, Bookshelf)") }
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = width,
+                        onValueChange = { width = it },
+                        label = { Text("Width (dp)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = height,
+                        onValueChange = { height = it },
+                        label = { Text("Height (dp)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val widthInt = width.toIntOrNull()
+                    val heightInt = height.toIntOrNull()
+                    if (name.isBlank() || widthInt == null || heightInt == null) {
+                        Toast.makeText(context, "Please fill all fields correctly.", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val furniture = Furniture(
+                        id = furnitureToEdit?.id ?: 0,
+                        name = name,
+                        type = type.ifBlank { "Furniture" },
+                        width = widthInt,
+                        height = heightInt,
+                        xPosition = furnitureToEdit?.xPosition ?: 50f,
+                        yPosition = furnitureToEdit?.yPosition ?: 50f
+                    )
+                    if (isEditMode) {
+                        viewModel.updateFurniture(furniture)
+                    } else {
+                        viewModel.addFurniture(furniture)
+                    }
+                    onDismiss()
+                }
+            ) {
+                Text(if (isEditMode) "Save" else "Add")
+            }
+        },
+        dismissButton = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (isEditMode) {
+                    Button(
+                        onClick = {
+                            furnitureToEdit?.let { viewModel.deleteFurnitureById(it.id) }
+                            onDismiss()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete Furniture")
+                    }
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Button(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun AddEditStudentDialog(
-    studentToEdit: Student? = null, 
+    studentToEdit: Student? = null,
     viewModel: SeatingChartViewModel,
     onDismiss: () -> Unit
 ) {

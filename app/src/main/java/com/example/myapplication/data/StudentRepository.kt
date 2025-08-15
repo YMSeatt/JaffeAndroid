@@ -7,11 +7,13 @@ import kotlinx.coroutines.withContext
 class StudentRepository(
     private val studentDao: StudentDao,
     private val behaviorEventDao: BehaviorEventDao,
-    private val homeworkLogDao: HomeworkLogDao // Added HomeworkLogDao
+    private val homeworkLogDao: HomeworkLogDao, // Added HomeworkLogDao
+    private val furnitureDao: FurnitureDao
 ) {
 
     val studentsForDisplay: LiveData<List<StudentDetailsForDisplay>> = studentDao.getStudentsForDisplay()
     val allStudents: LiveData<List<Student>> = studentDao.getAllStudents() // Added for export
+    val allFurniture: Flow<List<Furniture>> = furnitureDao.getAllFurniture()
 
     // Method to get a student by ID, non-LiveData for suspend contexts
     suspend fun getStudentByIdNonLiveData(studentId: Int): Student? {
@@ -47,6 +49,31 @@ class StudentRepository(
     suspend fun insertBehaviorEvent(event: BehaviorEvent) {
         withContext(Dispatchers.IO) {
             behaviorEventDao.insertBehaviorEvent(event)
+        }
+    }
+
+    // Furniture methods
+    suspend fun insertFurniture(furniture: Furniture) {
+        withContext(Dispatchers.IO) {
+            furnitureDao.insert(furniture)
+        }
+    }
+
+    suspend fun updateFurniture(furniture: Furniture) {
+        withContext(Dispatchers.IO) {
+            furnitureDao.update(furniture)
+        }
+    }
+
+    suspend fun deleteFurnitureById(id: Int) {
+        withContext(Dispatchers.IO) {
+            furnitureDao.deleteById(id)
+        }
+    }
+
+    suspend fun getFurnitureById(id: Int): Furniture? {
+        return withContext(Dispatchers.IO) {
+            furnitureDao.getFurnitureById(id)
         }
     }
 
