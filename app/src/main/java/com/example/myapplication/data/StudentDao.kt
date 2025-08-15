@@ -40,6 +40,6 @@ interface StudentDao {
     """)
     fun getStudentsForDisplay(): LiveData<List<StudentDetailsForDisplay>>
 
-    @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>
+    @Query("SELECT * FROM students WHERE groupId = :groupId ORDER BY lastName ASC")
+    fun getStudentsByGroupId(groupId: Int): LiveData<List<Student>>
 }

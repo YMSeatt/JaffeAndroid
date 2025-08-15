@@ -6,7 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(
-    tableName = "homework_logs",
+    tableName = "quiz_logs",
     foreignKeys = [
         ForeignKey(
             entity = Student::class,
@@ -17,14 +17,13 @@ import androidx.room.PrimaryKey
     ],
     indices = [Index(value = ["studentId"])]
 )
-data class HomeworkLog(
+data class QuizLog(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val studentId: Int,
-    val homeworkName: String,
+    val quizName: String,
     val timestamp: Long,
-    val status: String? = null, // For simple logging, e.g. "Done", "Not Done"
-    val marksData: String? = null, // For detailed logging, stored as JSON
-    val numItems: Int? = null, // For detailed logging
+    val marksData: String?, // Stored as JSON: e.g., {"mark_correct": 8, "mark_incorrect": 2}
+    val numQuestions: Int,
     val comment: String?
 )

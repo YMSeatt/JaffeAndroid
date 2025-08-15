@@ -1,9 +1,22 @@
 package com.example.myapplication.data
 
 import androidx.room.Entity
+import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "students")
+@Entity(
+    tableName = "students",
+    foreignKeys = [
+        ForeignKey(
+            entity = StudentGroup::class,
+            parentColumns = ["id"],
+            childColumns = ["groupId"],
+            onDelete = ForeignKey.SET_NULL // If a group is deleted, set student's groupId to null
+        )
+    ],
+    indices = [Index(value = ["groupId"])]
+)
 data class Student(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
@@ -12,7 +25,7 @@ data class Student(
     val lastName: String,
     var nickname: String? = null,
     var gender: String = "Boy",
-    var groupId: String? = null,
+    var groupId: Int? = null,
     var initials: String? = null, // Customizable, can be null
     var xPosition: Float = 0f,
     var yPosition: Float = 0f,
