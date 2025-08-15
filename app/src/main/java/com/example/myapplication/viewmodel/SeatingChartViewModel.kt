@@ -22,6 +22,7 @@ import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.Student
 // StudentDetailsForDisplay is still needed for the source LiveData from repository
 import com.example.myapplication.data.StudentDetailsForDisplay
+import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
@@ -30,6 +31,10 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_H
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP // New import
+import com.example.myapplication.preferences.QuizMarkTypeSetting
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 // Helper function to safely parse color strings
@@ -53,6 +58,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // LiveData for the preference of recent incidents limit
     val recentIncidentsLimit: LiveData<Int> = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.asLiveData()
+    val quizMarkTypes: StateFlow<List<QuizMarkTypeSetting>>
 
     init {
         val db = AppDatabase.getDatabase(application)
@@ -60,7 +66,25 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         val behaviorEventDao = db.behaviorEventDao()
         val homeworkLogDao = db.homeworkLogDao()
         val furnitureDao = db.furnitureDao()
-        studentRepository = StudentRepository(studentDao, behaviorEventDao, homeworkLogDao, furnitureDao)
+        val quizLogDao = db.quizLogDao()
+        val studentGroupDao = db.studentGroupDao()
+        val layoutTemplateDao = db.layoutTemplateDao()
+        val conditionalFormattingRuleDao = db.conditionalFormattingRuleDao()
+        studentRepository = StudentRepository(
+            studentDao,
+            behaviorEventDao,
+            homeworkLogDao,
+            furnitureDao,
+            quizLogDao,
+            studentGroupDao,
+            layoutTemplateDao,
+            conditionalFormattingRuleDao
+        )
+        quizMarkTypes = appPreferencesRepository.quizMarkTypesListFlow.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            emptyList()
+        )
 
         // The MediatorLiveData will now produce List<StudentUiItem>
         val studentMediator = MediatorLiveData<List<StudentUiItem>>()
@@ -277,5 +301,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>> {
         return studentRepository.getRecentHomeworkLogsForStudent(studentId, limit)
+    }
+
+    fun insertQuizLog(log: QuizLog) = viewModelScope.launch {
+        studentRepository.insertQuizLog(log)
     }
 }

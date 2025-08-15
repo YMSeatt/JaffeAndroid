@@ -45,6 +45,8 @@ import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
+import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem // Import the new UI model
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -154,6 +156,9 @@ fun SeatingChartScreen(
     var editingStudent by remember { mutableStateOf<Student?>(null) }
     var showAddEditFurnitureDialog by remember { mutableStateOf(false) }
     var editingFurniture by remember { mutableStateOf<Furniture?>(null) }
+    var showLogQuizScoreDialog by remember { mutableStateOf(false) }
+    var showAdvancedHomeworkLogDialog by remember { mutableStateOf(false) }
+    var selectedStudentForDialogs by remember { mutableStateOf<StudentUiItem?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     var showThemeMenu by remember { mutableStateOf(false) }
@@ -259,11 +264,25 @@ fun SeatingChartScreen(
                             showBehaviorDialog = true
                         },
                         onLongClick = {
+                            selectedStudentForDialogs = studentItem
+                        },
+                        onEditClick = {
                             coroutineScope.launch {
-                                editingStudent =
-                                    seatingChartViewModel.getStudentForEditing(studentItem.id)
+                                editingStudent = seatingChartViewModel.getStudentForEditing(studentItem.id)
                                 showAddEditStudentDialog = true
                             }
+                        },
+                        onLogBehaviorClick = {
+                            selectedStudentUiItemForBehavior = studentItem
+                            showBehaviorDialog = true
+                        },
+                        onLogQuizScoreClick = {
+                            selectedStudentForDialogs = studentItem
+                            showLogQuizScoreDialog = true
+                        },
+                        onLogHomeworkClick = {
+                            selectedStudentForDialogs = studentItem
+                            showAdvancedHomeworkLogDialog = true
                         }
                     )
                 }
@@ -311,6 +330,36 @@ fun SeatingChartScreen(
                 onDismiss = {
                     showAddEditStudentDialog = false
                     editingStudent = null
+                }
+            )
+        }
+
+        if (showAdvancedHomeworkLogDialog && selectedStudentForDialogs != null) {
+            val nameParts = selectedStudentForDialogs!!.fullName.split(" ", limit = 2)
+            val firstName = nameParts.getOrElse(0) { "" }
+            val lastName = nameParts.getOrElse(1) { "" }
+            val student = Student(id = selectedStudentForDialogs!!.id, firstName = firstName, lastName = lastName)
+            AdvancedHomeworkLogDialog(
+                student = student,
+                viewModel = seatingChartViewModel,
+                onDismiss = {
+                    showAdvancedHomeworkLogDialog = false
+                    selectedStudentForDialogs = null
+                }
+            )
+        }
+
+        if (showLogQuizScoreDialog && selectedStudentForDialogs != null) {
+            val nameParts = selectedStudentForDialogs!!.fullName.split(" ", limit = 2)
+            val firstName = nameParts.getOrElse(0) { "" }
+            val lastName = nameParts.getOrElse(1) { "" }
+            val student = Student(id = selectedStudentForDialogs!!.id, firstName = firstName, lastName = lastName)
+            LogQuizScoreDialog(
+                student = student,
+                viewModel = seatingChartViewModel,
+                onDismiss = {
+                    showLogQuizScoreDialog = false
+                    selectedStudentForDialogs = null
                 }
             )
         }
@@ -391,63 +440,95 @@ fun StudentDraggableIcon(
     showBehavior: Boolean,
     scale: Float,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    onEditClick: () -> Unit,
+    onLogBehaviorClick: () -> Unit,
+    onLogQuizScoreClick: () -> Unit,
+    onLogHomeworkClick: () -> Unit
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
+    var showContextMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
         offsetY = studentUiItem.yPosition.toFloat()
     }
 
-    Card(
+    Box(
         modifier = Modifier
             .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-            .pointerInput(studentUiItem.id) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        // Adjust drag amount by the current scale to move in "world" space
-                        offsetX += dragAmount.x / scale
-                        offsetY += dragAmount.y / scale
-                    },
-                    onDragEnd = {
-                        viewModel.updateStudentPosition(studentUiItem.id, offsetX, offsetY)
-                    }
-                )
-            }
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
-            .width(studentUiItem.displayWidth) 
-            .height(studentUiItem.displayHeight) 
-            .border(BorderStroke(studentUiItem.displayOutlineThickness, studentUiItem.displayOutlineColor)), 
-        colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor), 
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().padding(8.dp)
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = studentUiItem.initials, 
-                    color = studentUiItem.displayTextColor 
+        Card(
+            modifier = Modifier
+                .pointerInput(studentUiItem.id) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            // Adjust drag amount by the current scale to move in "world" space
+                            offsetX += dragAmount.x / scale
+                            offsetY += dragAmount.y / scale
+                        },
+                        onDragEnd = {
+                            viewModel.updateStudentPosition(studentUiItem.id, offsetX, offsetY)
+                        }
+                    )
+                }
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = { showContextMenu = true }
                 )
-                if (showBehavior) {
-                    studentUiItem.recentBehaviorDescription?.let {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            color = studentUiItem.displayTextColor 
-                        )
+                .width(studentUiItem.displayWidth)
+                .height(studentUiItem.displayHeight)
+                .border(BorderStroke(studentUiItem.displayOutlineThickness, studentUiItem.displayOutlineColor)),
+            colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = studentUiItem.initials,
+                        color = studentUiItem.displayTextColor
+                    )
+                    if (showBehavior) {
+                        studentUiItem.recentBehaviorDescription?.let {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2,
+                                color = studentUiItem.displayTextColor
+                            )
+                        }
                     }
                 }
             }
+        }
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false }
+        ) {
+            DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
+                onEditClick()
+                showContextMenu = false
+            })
+            DropdownMenuItem(text = { Text("Log Behavior") }, onClick = {
+                onLogBehaviorClick()
+                showContextMenu = false
+            })
+            DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = {
+                onLogQuizScoreClick()
+                showContextMenu = false
+            })
+            DropdownMenuItem(text = { Text("Log Homework") }, onClick = {
+                onLogHomeworkClick()
+                showContextMenu = false
+            })
         }
     }
 }
