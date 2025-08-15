@@ -20,10 +20,14 @@ fun AdvancedHomeworkLogDialog(
 ) {
     var homeworkName by remember { mutableStateOf("") }
     var numItems by remember { mutableStateOf("") }
-    var marks by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
     val coroutineScope = rememberCoroutineScope()
     val isFormValid = homeworkName.isNotBlank()
+
+    // Detailed marks state
+    val markTypes = listOf("Complete", "Incomplete", "Not Done", "Effort Score (1-5)")
+    val markCounts = remember { mutableStateMapOf<String, String>() }
+
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -45,14 +49,27 @@ fun AdvancedHomeworkLogDialog(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Marks Details:", style = MaterialTheme.typography.titleMedium)
+                markTypes.forEach { markType ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(markType)
+                        OutlinedTextField(
+                            value = markCounts[markType] ?: "",
+                            onValueChange = { markCounts[markType] = it },
+                            modifier = Modifier.width(100.dp),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = marks,
-                    onValueChange = { marks = it },
-                    label = { Text("Marks (e.g. 8/10 or A+)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = comment,
                     onValueChange = { comment = it },
@@ -64,11 +81,12 @@ fun AdvancedHomeworkLogDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    val marksDataMap = markCounts.mapValues { it.value.toIntOrNull() ?: 0 }
                     val log = HomeworkLog(
                         studentId = student.id,
                         homeworkName = homeworkName,
                         timestamp = System.currentTimeMillis(),
-                        marksData = marks,
+                        marksData = kotlinx.serialization.json.Json.encodeToString(marksDataMap),
                         numItems = numItems.toIntOrNull(),
                         comment = comment,
                         status = "Completed"
