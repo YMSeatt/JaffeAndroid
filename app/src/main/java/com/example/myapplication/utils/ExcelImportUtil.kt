@@ -8,11 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
-import org.apache.poi.ss.usermodel.Row // Added for export
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook // Added for export (.xlsx)
-import java.io.InputStream
-import java.io.OutputStream // Added for export
 
 object ExcelImportUtil {
 
@@ -72,7 +69,7 @@ object ExcelImportUtil {
                         continue
                     }
 
-                    val student = Student(firstName = firstName, lastName = lastName, xPosition = 0.0, yPosition = 0.0) // x/yPosition are Double
+                    val student = Student(firstName = firstName, lastName = lastName, xPosition = 0.0F, yPosition = 0.0F) // x/yPosition are Double
                     studentRepository.insertStudent(student)
                     importedStudentCount++
                 }
@@ -119,8 +116,8 @@ object ExcelImportUtil {
                 dataRow.createCell(1).setCellValue(student.firstName)
                 dataRow.createCell(2).setCellValue(student.lastName)
                 dataRow.createCell(3).setCellValue(student.initials ?: "")
-                dataRow.createCell(4).setCellValue(student.xPosition ?: 0.0) 
-                dataRow.createCell(5).setCellValue(student.yPosition ?: 0.0) 
+                dataRow.createCell(4).setCellValue(student.xPosition.toDouble())
+                dataRow.createCell(5).setCellValue(student.yPosition.toDouble())
                 student.customWidth?.let { dataRow.createCell(6).setCellValue(it.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
                 student.customHeight?.let { dataRow.createCell(7).setCellValue(it.toDouble()) } ?: dataRow.createCell(7).setCellValue("")
                 dataRow.createCell(8).setCellValue(student.customBackgroundColor ?: "")

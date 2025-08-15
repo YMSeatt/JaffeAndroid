@@ -150,8 +150,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     fun updateStudentPosition(studentId: Int, newX: Float, newY: Float) = viewModelScope.launch {
         val student = studentRepository.getStudentByIdNonLiveData(studentId)
         student?.let {
-            it.xPosition = newX.toDouble() // Ensure type consistency for xPosition
-            it.yPosition = newY.toDouble() // Ensure type consistency for yPosition
+            it.xPosition = newX.toFloat() // Ensure type consistency for xPosition
+            it.yPosition = newY.toFloat() // Ensure type consistency for yPosition
             // Ensure initials are preserved or regenerated if necessary during an update
             if (it.initials.isNullOrBlank()) {
                  it.initials = it.getGeneratedInitials()

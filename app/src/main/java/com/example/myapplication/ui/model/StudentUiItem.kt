@@ -1,4 +1,4 @@
-'''package com.example.myapplication.ui.model
+package com.example.myapplication.ui.model
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -17,4 +17,3 @@ data class StudentUiItem(
     val displayOutlineThickness: Dp, // Assuming this is needed, similar to StudentDetailsForDisplay
     val recentBehaviorDescription: String?
 )
-'''

@@ -11,6 +11,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP // Added import
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -157,6 +158,16 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateDefaultStudentBoxTextColor(colorHex: String) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultStudentBoxTextColor(colorHex)
+        }
+    }
+
+    // New StateFlow for default student box outline thickness
+    val defaultStudentBoxOutlineThickness: StateFlow<Int> = preferencesRepository.defaultStudentBoxOutlineThicknessFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP)
+
+    fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateDefaultStudentBoxOutlineThickness(thickness)
         }
     }
 }
