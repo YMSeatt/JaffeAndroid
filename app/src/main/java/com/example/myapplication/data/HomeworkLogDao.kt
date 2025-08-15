@@ -15,15 +15,15 @@ interface HomeworkLogDao {
     @Update
     suspend fun updateHomeworkLog(homeworkLog: HomeworkLog)
 
-    @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC")
-    fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>>
+    @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY timestamp DESC")
+    fun getHomeworkLogsForStudent(studentId: Int): LiveData<List<HomeworkLog>>
 
-    @Query("SELECT * FROM homework_logs ORDER BY loggedAt DESC")
+    @Query("SELECT * FROM homework_logs ORDER BY timestamp DESC")
     fun getAllHomeworkLogs(): LiveData<List<HomeworkLog>>
 
     @Query("DELETE FROM homework_logs WHERE id = :logId")
-    suspend fun deleteHomeworkLog(logId: Long)
+    suspend fun deleteHomeworkLog(logId: Int)
 
-    @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
-    fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>>
+    @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
+    fun getRecentHomeworkLogsForStudent(studentId: Int, limit: Int): LiveData<List<HomeworkLog>>
 }

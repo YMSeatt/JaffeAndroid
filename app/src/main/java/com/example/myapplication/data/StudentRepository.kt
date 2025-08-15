@@ -7,25 +7,23 @@ import kotlinx.coroutines.withContext
 class StudentRepository(
     private val studentDao: StudentDao,
     private val behaviorEventDao: BehaviorEventDao,
-    private val homeworkLogDao: HomeworkLogDao, // Added HomeworkLogDao
-    private val furnitureDao: FurnitureDao
+    private val homeworkLogDao: HomeworkLogDao,
+    private val furnitureDao: FurnitureDao,
+    private val quizLogDao: QuizLogDao,
+    private val studentGroupDao: StudentGroupDao,
+    private val layoutTemplateDao: LayoutTemplateDao,
+    private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao
 ) {
 
     val studentsForDisplay: LiveData<List<StudentDetailsForDisplay>> = studentDao.getStudentsForDisplay()
-    val allStudents: LiveData<List<Student>> = studentDao.getAllStudents() // Added for export
-    val allFurniture: Flow<List<Furniture>> = furnitureDao.getAllFurniture()
+    val allStudents: LiveData<List<Student>> = studentDao.getAllStudents()
+    val allFurniture: LiveData<List<Furniture>> = furnitureDao.getAllFurniture()
 
-    // Method to get a student by ID, non-LiveData for suspend contexts
+    // Student methods
     suspend fun getStudentByIdNonLiveData(studentId: Int): Student? {
         return withContext(Dispatchers.IO) {
             studentDao.getStudentByIdNonLiveData(studentId)
         }
-    }
-
-    fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>> = behaviorEventDao.getAllBehaviorEvents()
-
-    fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>> {
-        return studentDao.getRecentBehaviorEventsForStudent(studentId, limit)
     }
 
     suspend fun insertStudent(student: Student) {
@@ -44,6 +42,17 @@ class StudentRepository(
         withContext(Dispatchers.IO) {
             studentDao.deleteStudent(student)
         }
+    }
+
+    fun getStudentsByGroupId(groupId: Int): LiveData<List<Student>> {
+        return studentDao.getStudentsByGroupId(groupId)
+    }
+
+    // BehaviorEvent methods
+    fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>> = behaviorEventDao.getAllBehaviorEvents()
+
+    fun getRecentBehaviorEventsForStudent(studentId: Int, limit: Int): LiveData<List<BehaviorEvent>> {
+        return behaviorEventDao.getRecentBehaviorEventsForStudent(studentId, limit)
     }
 
     suspend fun insertBehaviorEvent(event: BehaviorEvent) {
@@ -84,7 +93,7 @@ class StudentRepository(
         }
     }
 
-    fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>> {
+    fun getHomeworkLogsForStudent(studentId: Int): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getHomeworkLogsForStudent(studentId)
     }
 
@@ -92,13 +101,81 @@ class StudentRepository(
         return homeworkLogDao.getAllHomeworkLogs()
     }
 
-    suspend fun deleteHomeworkLog(logId: Long) {
+    suspend fun deleteHomeworkLog(logId: Int) {
         withContext(Dispatchers.IO) {
             homeworkLogDao.deleteHomeworkLog(logId)
         }
     }
 
-    fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>> {
+    fun getRecentHomeworkLogsForStudent(studentId: Int, limit: Int): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getRecentHomeworkLogsForStudent(studentId, limit)
+    }
+
+    // QuizLog methods
+    suspend fun insertQuizLog(quizLog: QuizLog) {
+        withContext(Dispatchers.IO) {
+            quizLogDao.insert(quizLog)
+        }
+    }
+
+    fun getQuizLogsForStudent(studentId: Int): LiveData<List<QuizLog>> {
+        return quizLogDao.getQuizLogsForStudent(studentId)
+    }
+
+    // StudentGroup methods
+    val allGroups: LiveData<List<StudentGroup>> = studentGroupDao.getAllGroups()
+
+    suspend fun insertGroup(group: StudentGroup) {
+        withContext(Dispatchers.IO) {
+            studentGroupDao.insert(group)
+        }
+    }
+
+    suspend fun updateGroup(group: StudentGroup) {
+        withContext(Dispatchers.IO) {
+            studentGroupDao.update(group)
+        }
+    }
+
+    suspend fun deleteGroup(group: StudentGroup) {
+        withContext(Dispatchers.IO) {
+            studentGroupDao.delete(group)
+        }
+    }
+
+    // LayoutTemplate methods
+    val allLayoutTemplates: LiveData<List<LayoutTemplate>> = layoutTemplateDao.getAllTemplates()
+
+    suspend fun insertLayoutTemplate(template: LayoutTemplate) {
+        withContext(Dispatchers.IO) {
+            layoutTemplateDao.insert(template)
+        }
+    }
+
+    suspend fun deleteLayoutTemplate(template: LayoutTemplate) {
+        withContext(Dispatchers.IO) {
+            layoutTemplateDao.delete(template)
+        }
+    }
+
+    // ConditionalFormattingRule methods
+    val allRules: LiveData<List<ConditionalFormattingRule>> = conditionalFormattingRuleDao.getAllRules()
+
+    suspend fun insertRule(rule: ConditionalFormattingRule) {
+        withContext(Dispatchers.IO) {
+            conditionalFormattingRuleDao.insert(rule)
+        }
+    }
+
+    suspend fun updateRule(rule: ConditionalFormattingRule) {
+        withContext(Dispatchers.IO) {
+            conditionalFormattingRuleDao.update(rule)
+        }
+    }
+
+    suspend fun deleteRule(rule: ConditionalFormattingRule) {
+        withContext(Dispatchers.IO) {
+            conditionalFormattingRuleDao.delete(rule)
+        }
     }
 }
