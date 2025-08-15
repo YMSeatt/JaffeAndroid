@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20" // Changed to direct plugin ID and version
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.20"
     id("kotlin-kapt")
 }
 
@@ -39,6 +39,9 @@ android {
     buildFeatures {
         compose = true
     }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.1" // Align with Compose BOM
+    }
 }
 
 dependencies {
@@ -51,7 +54,17 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    implementation("androidx.compose.runtime:runtime-livedata") // Changed this line
+    implementation("androidx.compose.runtime:runtime-livedata")
+
+    // Material Icons Extended for Undo/Redo
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // Navigation Compose
+    implementation("androidx.navigation:navigation-compose:2.8.0-beta02") // Using beta version for newer features
+
+    // Lifecycle ViewModel Compose
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")

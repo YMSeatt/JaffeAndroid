@@ -1,8 +1,11 @@
 package com.example.myapplication.viewmodel
 
 import android.app.Application
+import android.content.Intent
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.preferences.QuizMarkTypeSetting
@@ -12,11 +15,18 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP // Added import
+import com.example.myapplication.utils.SecurityUtil
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -169,5 +179,47 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch {
             preferencesRepository.updateDefaultStudentBoxOutlineThickness(thickness)
         }
+    }
+
+    val passwordEnabled: StateFlow<Boolean> = preferencesRepository.passwordEnabledFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updatePasswordEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updatePasswordEnabled(enabled)
+        }
+    }
+
+    suspend fun checkPassword(password: String): Boolean {
+        val hash = preferencesRepository.passwordHashFlow.first()
+        return hash == SecurityUtil.hashPassword(password)
+    }
+
+    fun setPassword(password: String) {
+        viewModelScope.launch {
+            preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+        }
+    }
+
+    suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
+        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
+        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { outputStream ->
+            FileInputStream(dbFile).use { inputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+    }
+
+    suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
+        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
+        getApplication<Application>().contentResolver.openInputStream(uri)?.use { inputStream ->
+            FileOutputStream(dbFile).use { outputStream ->
+                inputStream.copyTo(outputStream)
+            }
+        }
+        // Restart the app to apply the new database
+        val intent = getApplication<Application>().packageManager.getLaunchIntentForPackage(getApplication<Application>().packageName)
+        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        getApplication<Application>().startActivity(intent)
     }
 }

@@ -11,7 +11,7 @@ import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.launch
 
-class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
+class HomeworkLogViewModel(application: Application, private val studentId: Int) : AndroidViewModel(application) {
 
     private val studentRepository: StudentRepository
 
@@ -26,7 +26,22 @@ class HomeworkLogViewModel(application: Application, private val studentId: Long
         val studentDao = AppDatabase.getDatabase(application).studentDao()
         val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
         val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
-        studentRepository = StudentRepository(studentDao, behaviorEventDao, homeworkLogDao)
+        val furnitureDao = AppDatabase.getDatabase(application).furnitureDao()
+        val quizLogDao = AppDatabase.getDatabase(application).quizLogDao() // Added this line
+        val studentGroupDao = AppDatabase.getDatabase(application).studentGroupDao() // Added this line
+        val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao() // Added this line
+        val conditionalFormattingRuleDao = AppDatabase.getDatabase(application).conditionalFormattingRuleDao() // Added this line
+
+        studentRepository = StudentRepository(
+            studentDao, 
+            behaviorEventDao, 
+            homeworkLogDao, 
+            furnitureDao, 
+            quizLogDao, // Added to constructor
+            studentGroupDao, // Added to constructor
+            layoutTemplateDao, // Added to constructor
+            conditionalFormattingRuleDao // Added to constructor
+        )
 
         // Initialize homeworkLogsForStudent based on studentId
         // This requires studentId to be available at init.
@@ -40,7 +55,7 @@ class HomeworkLogViewModel(application: Application, private val studentId: Long
     fun addHomeworkLog(assignmentName: String, status: String, comment: String?) {
         viewModelScope.launch {
             val newLog = HomeworkLog(
-                studentId = studentId,
+                studentId = studentId.toLong(),
                 assignmentName = assignmentName,
                 status = status,
                 comment = comment,
@@ -75,7 +90,7 @@ class HomeworkLogViewModel(application: Application, private val studentId: Long
 
 class HomeworkLogViewModelFactory(
     private val application: Application,
-    private val studentId: Long
+    private val studentId: Int
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeworkLogViewModel::class.java)) {

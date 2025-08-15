@@ -41,6 +41,9 @@ class AppPreferencesRepository(private val context: Context) {
         val DEFAULT_STUDENT_BOX_OUTLINE_COLOR = stringPreferencesKey("default_student_box_outline_color")
         val DEFAULT_STUDENT_BOX_TEXT_COLOR = stringPreferencesKey("default_student_box_text_color")
         val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS = intPreferencesKey("default_student_box_outline_thickness")
+
+        val PASSWORD_ENABLED = booleanPreferencesKey("password_enabled")
+        val PASSWORD_HASH = stringPreferencesKey("password_hash")
     }
 
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data
@@ -217,6 +220,28 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] = thickness
+        }
+    }
+
+    val passwordEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PASSWORD_ENABLED] ?: false
+        }
+
+    suspend fun updatePasswordEnabled(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.PASSWORD_ENABLED] = enabled
+        }
+    }
+
+    val passwordHashFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PASSWORD_HASH]
+        }
+
+    suspend fun updatePasswordHash(hash: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.PASSWORD_HASH] = hash
         }
     }
 }

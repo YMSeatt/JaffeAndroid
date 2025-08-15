@@ -20,9 +20,12 @@ import androidx.room.PrimaryKey
 data class HomeworkLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val studentId: Long,
+    val studentId: Int,
     val assignmentName: String,
     val status: String,
     val loggedAt: Long = System.currentTimeMillis(),
-    val comment: String? = null
+    val comment: String? = null,
+    val markValue: Float? = null,
+    val markType: String? = null,
+    val maxMarkValue: Float? = null
 )

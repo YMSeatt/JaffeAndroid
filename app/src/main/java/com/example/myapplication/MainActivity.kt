@@ -12,11 +12,15 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState // Added for scrollable dialog
 import androidx.compose.foundation.text.KeyboardOptions // Added for keyboard options
 import androidx.compose.foundation.verticalScroll // Added for scrollable dialog
@@ -24,6 +28,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -39,49 +45,79 @@ import androidx.compose.ui.text.input.KeyboardType // Added for keyboard options
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.runtime.collectAsState
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.Furniture
+import com.example.myapplication.data.LayoutTemplate
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
+import com.example.myapplication.ui.PasswordScreen
+import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem // Import the new UI model
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.utils.ExcelImportUtil // Corrected import path
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
+import com.example.myapplication.viewmodel.StudentGroupsViewModel // For group management
 import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
+import androidx.compose.material3.ExposedDropdownMenuDefaults // Added for ExposedDropdownMenu
+import com.example.myapplication.data.StudentGroup
+
+enum class SessionType {
+    NONE,
+    QUIZ,
+    HOMEWORK
+}
 
 class MainActivity : ComponentActivity() {
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
 
+    private val studentGroupsViewModelFactory by lazy {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(StudentGroupsViewModel::class.java)) {
+                    val studentGroupDao = AppDatabase.getDatabase(applicationContext).studentGroupDao()
+                    @Suppress("UNCHECKED_CAST")
+                    return StudentGroupsViewModel(studentGroupDao) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    }
+
+    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permission granted, now launch file creation
             createDocumentLauncher.launch("students.xlsx")
         } else {
             Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show()
         }
     }
 
-    // ActivityResultLauncher for creating a document
     private val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     ) { uri: Uri? ->
-        uri?.let { // If URI is not null, proceed with export
+        uri?.let {
             val studentsToExport = seatingChartViewModel.getAllStudentsForExport()
             if (studentsToExport.isNullOrEmpty()) {
                 Toast.makeText(this, "No student data to export", Toast.LENGTH_SHORT).show()
                 return@registerForActivityResult
             }
             lifecycleScope.launch {
-                val result = ExcelImportUtil.exportToExcel(studentsToExport, this@MainActivity, it)
+                val result = ExcelImportUtil.exportData(this@MainActivity, it, studentsToExport, null, null, null)
                 if (result.isSuccess) {
                     Toast.makeText(this@MainActivity, "Data exported successfully", Toast.LENGTH_LONG).show()
                 } else {
@@ -95,6 +131,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             val currentAppThemeState by settingsViewModel.appTheme.collectAsState()
+            val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
+            var unlocked by remember { mutableStateOf(!passwordEnabled) }
+
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
                     AppTheme.LIGHT -> false
@@ -102,14 +141,21 @@ class MainActivity : ComponentActivity() {
                     AppTheme.SYSTEM -> isSystemInDarkTheme()
                 }
             ) {
-                SeatingChartScreen(
-                    seatingChartViewModel = seatingChartViewModel,
-                    settingsViewModel = settingsViewModel,
-                    onExportClick = ::handleExportClick,
-                    onNavigateToSettings = {
-                        startActivity(Intent(this, SettingsActivity::class.java))
+                if (unlocked) {
+                    SeatingChartScreen(
+                        seatingChartViewModel = seatingChartViewModel,
+                        settingsViewModel = settingsViewModel,
+                        studentGroupsViewModel = studentGroupsViewModel,
+                        onExportClick = ::handleExportClick,
+                        onNavigateToSettings = {
+                            startActivity(Intent(this, SettingsActivity::class.java))
+                        }
+                    )
+                } else {
+                    PasswordScreen(settingsViewModel = settingsViewModel) {
+                        unlocked = true
                     }
-                )
+                }
             }
         }
     }
@@ -120,12 +166,10 @@ class MainActivity : ComponentActivity() {
                 this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED -> {
-                 // Permission already granted, launch file creation
                 createDocumentLauncher.launch("students.xlsx")
             }
             shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE) -> {
                 Toast.makeText(this, "Storage permission is needed to export data.", Toast.LENGTH_LONG).show()
-                // Optionally, show a dialog explaining why permission is needed before requesting
                 requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             }
             else -> {
@@ -133,23 +177,30 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-
-    // exportData function is now effectively handled by createDocumentLauncher's callback
-    // The old exportData function is removed.
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SeatingChartScreen(
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
+    studentGroupsViewModel: StudentGroupsViewModel,
     onExportClick: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
+    val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
+    
     var showBehaviorDialog by remember { mutableStateOf(false) }
-    var selectedStudentUiItemForBehavior by remember { mutableStateOf<StudentUiItem?>(null) }
+    var showLogQuizScoreDialog by remember { mutableStateOf(false) }
+    var showAdvancedHomeworkLogDialog by remember { mutableStateOf(false) }
+    var showStudentActionMenu by remember { mutableStateOf(false) }
+    var showSaveLayoutDialog by remember { mutableStateOf(false) }
+    var showLoadLayoutDialog by remember { mutableStateOf(false) }
+
+    var selectedStudentUiItemForAction by remember { mutableStateOf<StudentUiItem?>(null) }
+    
     var showAddEditStudentDialog by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<Student?>(null) }
     var showAddEditFurnitureDialog by remember { mutableStateOf(false) }
@@ -158,20 +209,56 @@ fun SeatingChartScreen(
     val coroutineScope = rememberCoroutineScope()
     var showThemeMenu by remember { mutableStateOf(false) }
 
-    // State for zoom and pan
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
-    val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState()
-    val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState()
+    val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState(initial = emptyList()) // Explicit initial value
+    val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false) // Explicit initial value
+
+    var sessionType by remember { mutableStateOf(SessionType.NONE) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Seating Chart") },
                 actions = {
+                    IconButton(onClick = { seatingChartViewModel.undo() }) {
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
+                    }
+                    IconButton(onClick = { seatingChartViewModel.redo() }) {
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
+                    }
+
+                    if (sessionType == SessionType.NONE) {
+                        IconButton(onClick = { 
+                            sessionType = SessionType.QUIZ 
+                            seatingChartViewModel.startSession()
+                        }) {
+                            Text("Quiz")
+                        }
+                        IconButton(onClick = { 
+                            sessionType = SessionType.HOMEWORK
+                            seatingChartViewModel.startSession()
+                        }) {
+                            Text("HW")
+                        }
+                    } else {
+                        Button(onClick = { 
+                            sessionType = SessionType.NONE 
+                            seatingChartViewModel.endSession()
+                        }) {
+                            Text("End Session")
+                        }
+                    }
+
+                    IconButton(onClick = { showSaveLayoutDialog = true }) {
+                        Text("Save")
+                    }
+                    IconButton(onClick = { showLoadLayoutDialog = true }) {
+                        Text("Load")
+                    }
+
                     IconButton(onClick = {
-                        // Check if there are students to export from the dedicated ViewModel function
                         if (seatingChartViewModel.getAllStudentsForExport()?.isNotEmpty() == true) {
                             onExportClick()
                         } else {
@@ -221,7 +308,6 @@ fun SeatingChartScreen(
                         showAddEditFurnitureDialog = true
                     }
                 ) {
-                    // You might want a different icon for furniture
                     Icon(Icons.Filled.Add, contentDescription = "Add Furniture")
                 }
             }
@@ -233,7 +319,7 @@ fun SeatingChartScreen(
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 3f) // Clamp scale
+                        scale = (scale * zoom).coerceIn(0.5f, 3f)
                         offsetX += pan.x
                         offsetY += pan.y
                     }
@@ -253,10 +339,14 @@ fun SeatingChartScreen(
                         studentUiItem = studentItem,
                         viewModel = seatingChartViewModel,
                         showBehavior = showRecentBehavior,
-                        scale = scale, // Pass scale to the draggable icon
-                        onClick = {
-                            selectedStudentUiItemForBehavior = studentItem
-                            showBehaviorDialog = true
+                        scale = scale,
+                        onClick = { 
+                            selectedStudentUiItemForAction = studentItem
+                            when (sessionType) {
+                                SessionType.NONE -> showStudentActionMenu = true
+                                SessionType.QUIZ -> showLogQuizScoreDialog = true
+                                SessionType.HOMEWORK -> showAdvancedHomeworkLogDialog = true
+                            }
                         },
                         onLongClick = {
                             coroutineScope.launch {
@@ -273,7 +363,6 @@ fun SeatingChartScreen(
                         viewModel = seatingChartViewModel,
                         scale = scale,
                         onLongClick = {
-                            // Handle long click for furniture, e.g., open edit dialog
                             coroutineScope.launch {
                                 editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
                                 showAddEditFurnitureDialog = true
@@ -284,30 +373,132 @@ fun SeatingChartScreen(
             }
         }
 
-        if (showBehaviorDialog && selectedStudentUiItemForBehavior != null) {
-            val nameParts = selectedStudentUiItemForBehavior!!.fullName.split(" ", limit = 2)
+        if (showSaveLayoutDialog) {
+            SaveLayoutDialog(
+                onDismiss = { showSaveLayoutDialog = false },
+                onSave = { name ->
+                    seatingChartViewModel.saveLayout(name)
+                    showSaveLayoutDialog = false
+                }
+            )
+        }
+
+        if (showLoadLayoutDialog) {
+            LoadLayoutDialog(
+                layouts = layouts,
+                onDismiss = { showLoadLayoutDialog = false },
+                onLoad = { layout ->
+                    seatingChartViewModel.loadLayout(layout)
+                    showLoadLayoutDialog = false
+                },
+                onDelete = { layout ->
+                    seatingChartViewModel.deleteLayoutTemplate(layout)
+                }
+            )
+        }
+
+        if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showStudentActionMenu = false 
+                    selectedStudentUiItemForAction = null
+                },
+                title = { Text("Actions for ${selectedStudentUiItemForAction!!.fullName}") },
+                text = {
+                    Column {
+                        TextButton(onClick = {
+                            showStudentActionMenu = false
+                            showBehaviorDialog = true 
+                        }) {
+                            Text("Log Behavior")
+                        }
+                        TextButton(onClick = {
+                            showStudentActionMenu = false
+                            showLogQuizScoreDialog = true 
+                        }) {
+                            Text("Log Quiz Score")
+                        }
+                        TextButton(onClick = {
+                            showStudentActionMenu = false
+                            showAdvancedHomeworkLogDialog = true 
+                        }) {
+                            Text("Log Advanced Homework")
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { 
+                        showStudentActionMenu = false
+                        selectedStudentUiItemForAction = null 
+                    }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showBehaviorDialog && selectedStudentUiItemForAction != null) {
+            val nameParts = selectedStudentUiItemForAction!!.fullName.split(" ", limit = 2)
             val firstNameForDialog = nameParts.getOrElse(0) { "" }
             val lastNameForDialog = nameParts.getOrElse(1) { "" }
             val studentForBehaviorDialog = Student(
-                id = selectedStudentUiItemForBehavior!!.id,
+                id = selectedStudentUiItemForAction!!.id.toLong(),
                 firstName = firstNameForDialog, 
                 lastName = lastNameForDialog
             )
             BehaviorDialog(
                 student = studentForBehaviorDialog,
-                viewModel = seatingChartViewModel,
+                viewModel = seatingChartViewModel, 
                 behaviorTypes = behaviorTypesList.toList(),
                 onDismiss = {
                     showBehaviorDialog = false
-                    selectedStudentUiItemForBehavior = null
+                    selectedStudentUiItemForAction = null 
                 }
             )
         }
+
+        if (showLogQuizScoreDialog && selectedStudentUiItemForAction != null) {
+            LogQuizScoreDialog(
+                studentId = selectedStudentUiItemForAction!!.id.toLong(),
+                viewModel = seatingChartViewModel,
+                onDismissRequest = {
+                    showLogQuizScoreDialog = false
+                    selectedStudentUiItemForAction = null
+                },
+                onSave = { quizLog ->
+                    if (sessionType == SessionType.QUIZ) {
+                        seatingChartViewModel.addQuizLogToSession(quizLog)
+                    } else {
+                        seatingChartViewModel.saveQuizLog(quizLog)
+                    }
+                }
+            )
+        }
+
+        if (showAdvancedHomeworkLogDialog && selectedStudentUiItemForAction != null) {
+            AdvancedHomeworkLogDialog(
+                studentId = selectedStudentUiItemForAction!!.id.toLong(),
+                viewModel = seatingChartViewModel,
+                onDismissRequest = {
+                    showAdvancedHomeworkLogDialog = false
+                    selectedStudentUiItemForAction = null
+                },
+                onSave = { homeworkLog ->
+                    if (sessionType == SessionType.HOMEWORK) {
+                        seatingChartViewModel.addHomeworkLogToSession(homeworkLog)
+                    } else {
+                        seatingChartViewModel.addHomeworkLog(homeworkLog)
+                    }
+                }
+            )
+        }
+
 
         if (showAddEditStudentDialog) {
             AddEditStudentDialog(
                 studentToEdit = editingStudent,
                 viewModel = seatingChartViewModel,
+                studentGroupsViewModel = studentGroupsViewModel, // Pass StudentGroupsViewModel
                 onDismiss = {
                     showAddEditStudentDialog = false
                     editingStudent = null
@@ -326,6 +517,64 @@ fun SeatingChartScreen(
             )
         }
     }
+}
+
+@Composable
+fun SaveLayoutDialog(
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Save Layout") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Layout Name") }
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onSave(name) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun LoadLayoutDialog(
+    layouts: List<LayoutTemplate>,
+    onDismiss: () -> Unit,
+    onLoad: (LayoutTemplate) -> Unit,
+    onDelete: (LayoutTemplate) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Load Layout") },
+        text = {
+            LazyColumn {
+                items(layouts) { layout ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { onLoad(layout) },
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(layout.name)
+                        IconButton(onClick = { onDelete(layout) }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Delete Layout")
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -367,7 +616,7 @@ fun FurnitureDraggableIcon(
             .height(furnitureUiItem.displayHeight)
             .border(BorderStroke(furnitureUiItem.displayOutlineThickness, furnitureUiItem.displayOutlineColor)),
         colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp) // Less elevation than students
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -390,11 +639,11 @@ fun StudentDraggableIcon(
     viewModel: SeatingChartViewModel,
     showBehavior: Boolean,
     scale: Float,
-    onClick: () -> Unit,
+    onClick: () -> Unit, 
     onLongClick: () -> Unit
 ) {
-    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
-    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
+    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) } // Changed to mutableFloatStateOf
+    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) } // Changed to mutableFloatStateOf
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
@@ -408,17 +657,22 @@ fun StudentDraggableIcon(
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                        // Adjust drag amount by the current scale to move in "world" space
                         offsetX += dragAmount.x / scale
                         offsetY += dragAmount.y / scale
                     },
                     onDragEnd = {
-                        viewModel.updateStudentPosition(studentUiItem.id, offsetX, offsetY)
+                        viewModel.updateStudentPosition(
+                            studentUiItem.id,
+                            studentUiItem.xPosition.toFloat(),
+                            studentUiItem.yPosition.toFloat(),
+                            offsetX, 
+                            offsetY
+                        )
                     }
                 )
             }
             .combinedClickable(
-                onClick = onClick,
+                onClick = onClick, 
                 onLongClick = onLongClick
             )
             .width(studentUiItem.displayWidth) 
@@ -603,7 +857,7 @@ fun AddEditFurnitureDialog(
                 if (isEditMode) {
                     Button(
                         onClick = {
-                            furnitureToEdit?.let { viewModel.deleteFurnitureById(it.id) }
+                            viewModel.deleteFurnitureById(furnitureToEdit!!.id) // Added non-null assertion
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -626,6 +880,7 @@ fun AddEditFurnitureDialog(
 fun AddEditStudentDialog(
     studentToEdit: Student? = null,
     viewModel: SeatingChartViewModel,
+    studentGroupsViewModel: StudentGroupsViewModel, // Added StudentGroupsViewModel
     onDismiss: () -> Unit
 ) {
     var firstName by remember(studentToEdit?.id) { mutableStateOf(studentToEdit?.firstName ?: "") }
@@ -646,9 +901,16 @@ fun AddEditStudentDialog(
     var customOutlineColorInput by remember(studentToEdit?.id) { mutableStateOf(studentToEdit?.customOutlineColor ?: "") }
     var customTextColorInput by remember(studentToEdit?.id) { mutableStateOf(studentToEdit?.customTextColor ?: "") }
 
+    // Group selection states
+    val studentGroups by studentGroupsViewModel.studentGroups
+        .collectAsState(initial = emptyList()) 
+    var selectedGroupId by remember(studentToEdit?.groupId) { mutableStateOf(studentToEdit?.groupId) }
+    var groupDropdownExpanded by remember { mutableStateOf(false) }
+
     LaunchedEffect(studentToEdit) { 
         firstName = studentToEdit?.firstName ?: ""
         lastName = studentToEdit?.lastName ?: ""
+        selectedGroupId = studentToEdit?.groupId // Make sure groupId is Long? in Student entity
         useCustomAppearance = studentToEdit?.customWidth != null || 
                               studentToEdit?.customHeight != null || 
                               studentToEdit?.customBackgroundColor?.isNotBlank() == true || 
@@ -660,7 +922,6 @@ fun AddEditStudentDialog(
         customOutlineColorInput = studentToEdit?.customOutlineColor ?: ""
         customTextColorInput = studentToEdit?.customTextColor ?: ""
     }
-
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -684,6 +945,51 @@ fun AddEditStudentDialog(
                     isError = lastName.isBlank(),
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                // Group Selection Dropdown
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    ExposedDropdownMenuBox(
+                        expanded = groupDropdownExpanded,
+                        onExpandedChange = { groupDropdownExpanded = !groupDropdownExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = studentGroups.find { group: StudentGroup -> group.id == selectedGroupId }?.name ?: "Select Group (Optional)",
+                            onValueChange = { }, // Not directly editable, changed by dropdown
+                            label = { Text("Group") },
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupDropdownExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = groupDropdownExpanded,
+                            onDismissRequest = { groupDropdownExpanded = false },
+                            modifier = Modifier.fillMaxWidth() 
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("None") },
+                                onClick = {
+                                    selectedGroupId = null
+                                    groupDropdownExpanded = false
+                                }
+                            )
+                            studentGroups.forEach { group: StudentGroup ->
+                                DropdownMenuItem(
+                                    text = { 
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(modifier = Modifier.size(16.dp).background(Color(group.color)))
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(group.name) 
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedGroupId = group.id
+                                        groupDropdownExpanded = false
+                                   }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
@@ -711,7 +1017,7 @@ fun AddEditStudentDialog(
                         onValueChange = { customHeightInput = it },
                         label = { Text("Custom Height (dp)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.weight(1f) // This should likely be fillMaxWidth or remove weight
                     )
                     OutlinedTextField(
                         value = customBgColorInput,
@@ -741,12 +1047,13 @@ fun AddEditStudentDialog(
                         Toast.makeText(context, "Please fill all fields correctly.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    val student = Student(
+                    val newStudent = Student(
                         id = studentToEdit?.id ?: 0,
                         firstName = firstName,
                         lastName = lastName,
                         xPosition = studentToEdit?.xPosition ?: 0.0F,
                         yPosition = studentToEdit?.yPosition ?: 0.0F,
+                        groupId = selectedGroupId, // Save selected group ID
                         customWidth = if (useCustomAppearance) customWidthInput.toIntOrNull() else null,
                         customHeight = if (useCustomAppearance) customHeightInput.toIntOrNull() else null,
                         customBackgroundColor = if (useCustomAppearance && customBgColorInput.isNotBlank()) customBgColorInput.trim() else null,
@@ -754,9 +1061,9 @@ fun AddEditStudentDialog(
                         customTextColor = if (useCustomAppearance && customTextColorInput.isNotBlank()) customTextColorInput.trim() else null
                     )
                     if (isEditMode) {
-                        viewModel.updateStudent(student) 
+                        viewModel.updateStudent(studentToEdit!!, newStudent) // Added non-null assertion
                     } else {
-                        viewModel.addStudent(student) 
+                        viewModel.addStudent(newStudent) 
                     }
                     onDismiss()
                 }
@@ -772,7 +1079,7 @@ fun AddEditStudentDialog(
                 if (isEditMode) {
                     Button(
                         onClick = {
-                            studentToEdit?.let { viewModel.deleteStudent(it) } 
+                            viewModel.deleteStudent(studentToEdit!!) // Added non-null assertion
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)

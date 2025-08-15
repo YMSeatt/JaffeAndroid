@@ -1,5 +1,9 @@
 package com.example.myapplication.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -11,11 +15,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.preferences.QuizMarkTypeSetting
+import com.example.myapplication.ui.dialogs.ChangePasswordDialog
+import com.example.myapplication.ui.dialogs.SetPasswordDialog
+import com.example.myapplication.utils.ExcelImportUtil
 import com.example.myapplication.viewmodel.SettingsViewModel
+import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
 
@@ -23,13 +33,23 @@ import java.util.UUID
 @Composable
 fun SettingsScreen(
     settingsViewModel: SettingsViewModel,
+    studentRepository: StudentRepository,
+    onNavigateToStudentGroups: () -> Unit,
+    onNavigateToConditionalFormatting: () -> Unit,
+    onNavigateToExport: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+
     val recentLogsLimit by settingsViewModel.recentLogsLimit.collectAsState()
-    // New state for recent behavior incidents limit
     val recentBehaviorIncidentsLimit by settingsViewModel.recentBehaviorIncidentsLimit.collectAsState()
     val useInitialsForBehavior by settingsViewModel.useInitialsForBehavior.collectAsState()
     val appTheme by settingsViewModel.appTheme.collectAsState()
+    val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
+
+    var showSetPasswordDialog by remember { mutableStateOf(false) }
+    var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState()
     var newBehaviorType by remember { mutableStateOf("") }
@@ -51,22 +71,75 @@ fun SettingsScreen(
     var quizMarkTypeNameError by remember { mutableStateOf<String?>(null) }
     var quizMarkPointsError by remember { mutableStateOf<String?>(null) }
 
-    // Collect states for default student box appearance
     val defaultWidth by settingsViewModel.defaultStudentBoxWidth.collectAsState()
     val defaultHeight by settingsViewModel.defaultStudentBoxHeight.collectAsState()
     val defaultBgColor by settingsViewModel.defaultStudentBoxBackgroundColor.collectAsState()
     val defaultOutlineColor by settingsViewModel.defaultStudentBoxOutlineColor.collectAsState()
     val defaultTextColor by settingsViewModel.defaultStudentBoxTextColor.collectAsState()
-    val defaultOutlineThickness by settingsViewModel.defaultStudentBoxOutlineThickness.collectAsState() // New state
+    val defaultOutlineThickness by settingsViewModel.defaultStudentBoxOutlineThickness.collectAsState()
 
-    // Local states for text field inputs for student box appearance
     var defaultWidthInput by remember(defaultWidth) { mutableStateOf(defaultWidth.toString()) }
     var defaultHeightInput by remember(defaultHeight) { mutableStateOf(defaultHeight.toString()) }
     var defaultBgColorInput by remember(defaultBgColor) { mutableStateOf(defaultBgColor) }
     var defaultOutlineColorInput by remember(defaultOutlineColor) { mutableStateOf(defaultOutlineColor) }
     var defaultTextColorInput by remember(defaultTextColor) { mutableStateOf(defaultTextColor) }
-    var defaultOutlineThicknessInput by remember(defaultOutlineThickness) { mutableStateOf(defaultOutlineThickness.toString()) } // New input state
+    var defaultOutlineThicknessInput by remember(defaultOutlineThickness) { mutableStateOf(defaultOutlineThickness.toString()) }
 
+    val importStudentsLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                coroutineScope.launch {
+                    ExcelImportUtil.importStudentsFromExcel(it, context, studentRepository)
+                }
+            }
+        }
+    )
+
+    val backupLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/octet-stream"),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                coroutineScope.launch {
+                    settingsViewModel.backupDatabase(it)
+                }
+            }
+        }
+    )
+
+    val restoreLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                coroutineScope.launch {
+                    settingsViewModel.restoreDatabase(it)
+                }
+            }
+        }
+    )
+
+    if (showSetPasswordDialog) {
+        SetPasswordDialog(
+            onDismiss = { showSetPasswordDialog = false },
+            onSave = { password ->
+                settingsViewModel.setPassword(password)
+                settingsViewModel.updatePasswordEnabled(true)
+            }
+        )
+    }
+
+    if (showChangePasswordDialog) {
+        ChangePasswordDialog(
+            onDismiss = { showChangePasswordDialog = false },
+            onSave = { oldPassword, newPassword ->
+                coroutineScope.launch {
+                    if (settingsViewModel.checkPassword(oldPassword)) {
+                        settingsViewModel.setPassword(newPassword)
+                    }
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -74,7 +147,7 @@ fun SettingsScreen(
                 title = { Text("Settings") },
                 navigationIcon = {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") // Updated icon
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -86,15 +159,58 @@ fun SettingsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Recent Homework Logs Limit Setting
+            item {
+                Button(onClick = onNavigateToStudentGroups, modifier = Modifier.fillMaxWidth()) {
+                    Text("Manage Student Groups")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onNavigateToConditionalFormatting, modifier = Modifier.fillMaxWidth()) {
+                    Text("Manage Conditional Formatting Rules")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onNavigateToExport, modifier = Modifier.fillMaxWidth()) {
+                    Text("Export Data")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { importStudentsLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Import Students from Excel")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { backupLauncher.launch("seating_chart_backup.db") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Backup Database")
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { restoreLauncher.launch("application/octet-stream") }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Restore Database")
+                }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+            }
+
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Enable Password Protection", modifier = Modifier.weight(1f))
+                    Switch(checked = passwordEnabled, onCheckedChange = { 
+                        if (it) {
+                            showSetPasswordDialog = true
+                        } else {
+                            settingsViewModel.updatePasswordEnabled(false)
+                        }
+                    })
+                }
+                Button(onClick = { showChangePasswordDialog = true }, enabled = passwordEnabled) {
+                    Text("Change Password")
+                }
+                HorizontalDivider()
+            }
+
             item {
                 Text("Number of recent homework logs to display:", style = MaterialTheme.typography.titleMedium)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Slider(
                         value = recentLogsLimit.toFloat(),
                         onValueChange = { settingsViewModel.updateRecentLogsLimit(it.toInt()) },
-                        valueRange = 1f..10f, // Adjusted range if needed
-                        steps = 8, // for 1-10, means 9 steps (10-1 = 9)
+                        valueRange = 1f..10f,
+                        steps = 8,
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -103,15 +219,14 @@ fun SettingsScreen(
                 HorizontalDivider()
             }
 
-            // Recent Behavior Incidents Limit Setting - NEW
             item {
                 Text("Number of recent behavior incidents to display:", style = MaterialTheme.typography.titleMedium)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Slider(
                         value = recentBehaviorIncidentsLimit.toFloat(),
                         onValueChange = { settingsViewModel.updateRecentBehaviorIncidentsLimit(it.toInt()) },
-                        valueRange = 1f..10f, // Example range, adjust as needed
-                        steps = 8,      // For 1-10, means 9 steps (10-1 = 9)
+                        valueRange = 1f..10f,
+                        steps = 8,
                         modifier = Modifier.weight(1f)
                     )
                     Spacer(Modifier.width(8.dp))
@@ -120,7 +235,6 @@ fun SettingsScreen(
                 HorizontalDivider()
             }
 
-            // Use Initials for Behavior Setting
             item {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -135,7 +249,6 @@ fun SettingsScreen(
                 HorizontalDivider()
             }
 
-            // App Theme Setting
             item {
                 Text("App Theme:", style = MaterialTheme.typography.titleMedium)
                 AppTheme.entries.forEach { theme ->
@@ -154,7 +267,6 @@ fun SettingsScreen(
                 HorizontalDivider()
             }
 
-            // Default Student Box Appearance Settings
             item {
                 Text("Default Student Box Appearance", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
@@ -185,7 +297,6 @@ fun SettingsScreen(
                     value = defaultBgColorInput,
                     onValueChange = {
                         defaultBgColorInput = it
-                        // Basic validation for hex-like, can be improved
                         if (it.startsWith("#") && it.length == 7 || it.length == 9) {
                             settingsViewModel.updateDefaultStudentBoxBackgroundColor(it)
                         }
@@ -222,7 +333,7 @@ fun SettingsScreen(
                     value = defaultOutlineThicknessInput,
                     onValueChange = {
                         defaultOutlineThicknessInput = it
-                        it.toIntOrNull()?.let { value -> settingsViewModel.updateDefaultStudentBoxOutlineThickness(value.coerceIn(0, 10)) } // Coerce to a reasonable range e.g. 0-10dp
+                        it.toIntOrNull()?.let { value -> settingsViewModel.updateDefaultStudentBoxOutlineThickness(value.coerceIn(0, 10)) } 
                     },
                     label = { Text("Default Box Outline Thickness (dp)") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -231,7 +342,6 @@ fun SettingsScreen(
                 HorizontalDivider(Modifier.padding(top = 16.dp))
             }
 
-            // Manage Behavior Types
             item {
                 Text("Manage Behavior Types", style = MaterialTheme.typography.titleMedium)
             }
@@ -265,7 +375,7 @@ fun SettingsScreen(
                     if (newBehaviorType.isNotBlank()) {
                         val updatedList = behaviorTypesList.toMutableSet().apply { add(newBehaviorType.trim()) }
                         settingsViewModel.updateBehaviorTypes(updatedList)
-                        newBehaviorType = "" // Clear field
+                        newBehaviorType = "" 
                         behaviorTypeError = null
                     } else {
                         behaviorTypeError = "Name cannot be blank."
@@ -276,7 +386,6 @@ fun SettingsScreen(
                 HorizontalDivider(Modifier.padding(top = 8.dp))
             }
 
-            // Manage Homework Assignment Names/Types
             item {
                 Text("Manage Homework Assignment Names/Types", style = MaterialTheme.typography.titleMedium)
             }
@@ -310,7 +419,7 @@ fun SettingsScreen(
                     if (newHomeworkAssignmentType.isNotBlank()) {
                         val updatedList = homeworkAssignmentTypesList.toMutableSet().apply { add(newHomeworkAssignmentType.trim()) }
                         settingsViewModel.updateHomeworkAssignmentTypes(updatedList)
-                        newHomeworkAssignmentType = "" // Clear field
+                        newHomeworkAssignmentType = ""
                         homeworkAssignmentTypeError = null
                     } else {
                         homeworkAssignmentTypeError = "Name cannot be blank."
@@ -321,7 +430,6 @@ fun SettingsScreen(
                 HorizontalDivider(Modifier.padding(top = 8.dp))
             }
 
-            // Manage Homework Statuses
             item {
                 Text("Manage Homework Statuses", style = MaterialTheme.typography.titleMedium)
             }
@@ -355,7 +463,7 @@ fun SettingsScreen(
                     if (newHomeworkStatus.isNotBlank()) {
                         val updatedList = homeworkStatusesList.toMutableSet().apply { add(newHomeworkStatus.trim()) }
                         settingsViewModel.updateHomeworkStatuses(updatedList)
-                        newHomeworkStatus = "" // Clear field
+                        newHomeworkStatus = ""
                         homeworkStatusError = null
                     } else {
                         homeworkStatusError = "Status cannot be blank."
@@ -366,7 +474,6 @@ fun SettingsScreen(
                 HorizontalDivider(Modifier.padding(top = 8.dp))
             }
 
-            // Manage Quiz Mark Types
             item {
                 Text("Manage Quiz Mark Types", style = MaterialTheme.typography.titleMedium)
             }

@@ -20,7 +20,7 @@ import androidx.room.PrimaryKey
 data class BehaviorEvent(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val studentId: Int,
+    val studentId: Long,
     val type: String, // e.g., "Talking", "Out of Seat"
     val timestamp: Long,
     val comment: String?
