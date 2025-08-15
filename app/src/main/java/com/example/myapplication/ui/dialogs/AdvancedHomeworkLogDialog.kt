@@ -1,0 +1,92 @@
+package com.example.myapplication.ui.dialogs
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.Student
+import com.example.myapplication.viewmodel.SeatingChartViewModel
+import kotlinx.coroutines.launch
+
+@Composable
+fun AdvancedHomeworkLogDialog(
+    student: Student,
+    viewModel: SeatingChartViewModel,
+    onDismiss: () -> Unit
+) {
+    var homeworkName by remember { mutableStateOf("") }
+    var numItems by remember { mutableStateOf("") }
+    var marks by remember { mutableStateOf("") }
+    var comment by remember { mutableStateOf("") }
+    val coroutineScope = rememberCoroutineScope()
+    val isFormValid = homeworkName.isNotBlank()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Log Homework for ${student.firstName} ${student.lastName}") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = homeworkName,
+                    onValueChange = { homeworkName = it },
+                    label = { Text("Homework Name") },
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = homeworkName.isBlank()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = numItems,
+                    onValueChange = { numItems = it },
+                    label = { Text("Number of Items") },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = marks,
+                    onValueChange = { marks = it },
+                    label = { Text("Marks (e.g. 8/10 or A+)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                 Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Comment") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val log = HomeworkLog(
+                        studentId = student.id,
+                        homeworkName = homeworkName,
+                        timestamp = System.currentTimeMillis(),
+                        marksData = marks,
+                        numItems = numItems.toIntOrNull(),
+                        comment = comment,
+                        status = "Completed"
+                    )
+                    coroutineScope.launch {
+                        viewModel.addHomeworkLog(log)
+                    }
+                    onDismiss()
+                },
+                enabled = isFormValid
+            ) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
