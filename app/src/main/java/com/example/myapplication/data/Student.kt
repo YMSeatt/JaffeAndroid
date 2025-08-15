@@ -8,8 +8,8 @@ data class Student(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
     val stringId: String? = null, // For JSON sync, e.g., "student_1"
-    var firstName: String,
-    var lastName: String,
+    val firstName: String,
+    val lastName: String,
     var nickname: String? = null,
     var gender: String = "Boy",
     var groupId: String? = null,
