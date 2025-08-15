@@ -7,18 +7,19 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class], version = 5, exportSchema = false) // Incremented version to 5
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class], version = 6, exportSchema = false) // Incremented version to 6
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
     abstract fun behaviorEventDao(): BehaviorEventDao
     abstract fun homeworkLogDao(): HomeworkLogDao
+    abstract fun furnitureDao(): FurnitureDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        val MIGRATION_1_2 = object : Migration(1, 2) { /* ... existing migration ... */ 
+        val MIGRATION_1_2 = object : Migration(1, 2) { /* ... existing migration ... */
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
                     CREATE TABLE students_new (
@@ -37,7 +38,7 @@ abstract class AppDatabase : RoomDatabase() {
                 database.execSQL("ALTER TABLE students_new RENAME TO students")
             }
         }
-        val MIGRATION_2_3 = object : Migration(2, 3) { /* ... existing migration ... */ 
+        val MIGRATION_2_3 = object : Migration(2, 3) { /* ... existing migration ... */
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("""
                     CREATE TABLE homework_logs (
@@ -69,9 +70,33 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE students ADD COLUMN initials TEXT")
-                // You might want to populate existing rows with generated initials here
-                // For example, by querying all students, generating initials, and updating them.
-                // This example keeps it simple by adding the column as nullable.
+            }
+        }
+
+        // Migration from version 5 to 6: Adds new fields to Student and creates Furniture table
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add new columns to students table
+                database.execSQL("ALTER TABLE students ADD COLUMN stringId TEXT")
+                database.execSQL("ALTER TABLE students ADD COLUMN nickname TEXT")
+                database.execSQL("ALTER TABLE students ADD COLUMN gender TEXT NOT NULL DEFAULT 'Boy'")
+                database.execSQL("ALTER TABLE students ADD COLUMN groupId TEXT")
+
+                // Create new furniture table
+                database.execSQL("""
+                    CREATE TABLE furniture (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        stringId TEXT,
+                        name TEXT NOT NULL,
+                        type TEXT NOT NULL,
+                        xPosition REAL NOT NULL,
+                        yPosition REAL NOT NULL,
+                        width INTEGER NOT NULL,
+                        height INTEGER NOT NULL,
+                        fillColor TEXT,
+                        outlineColor TEXT
+                    )
+                """.trimIndent())
             }
         }
 
@@ -82,9 +107,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "seating_chart_database"
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5) // Added MIGRATION_3_4 and MIGRATION_4_5
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6) // Added MIGRATION_5_6
                 // Consider removing fallbackToDestructiveMigration in production if you want to ensure all migrations are handled explicitly.
-                .fallbackToDestructiveMigration() 
+                .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance
                 instance

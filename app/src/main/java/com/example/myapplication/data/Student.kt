@@ -7,8 +7,12 @@ import androidx.room.PrimaryKey
 data class Student(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
+    val stringId: String? = null, // For JSON sync, e.g., "student_1"
     val firstName: String,
     val lastName: String,
+    var nickname: String? = null,
+    var gender: String = "Boy",
+    var groupId: String? = null,
     var initials: String? = null, // Customizable, can be null
     var xPosition: Float = 0f,
     var yPosition: Float = 0f,
