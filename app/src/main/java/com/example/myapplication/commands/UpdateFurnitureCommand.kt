@@ -9,10 +9,10 @@ class UpdateFurnitureCommand(
     private val newFurniture: Furniture
 ) : Command {
     override fun execute() {
-        viewModel.updateFurniture(newFurniture)
+        viewModel.internalUpdateFurniture(newFurniture)
     }
 
     override fun undo() {
-        viewModel.updateFurniture(oldFurniture)
+        viewModel.internalUpdateFurniture(oldFurniture)
     }
 }
