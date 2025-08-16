@@ -8,7 +8,7 @@ class LogHomeworkCommand(
     private val log: HomeworkLog
 ) : Command {
     override fun execute() {
-        viewModel.addHomeworkLog(log)
+        viewModel.internalAddHomeworkLog(log)
     }
 
     override fun undo() {
