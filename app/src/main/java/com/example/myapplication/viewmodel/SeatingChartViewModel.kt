@@ -49,8 +49,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     val studentsForDisplay = MediatorLiveData<List<StudentUiItem>>()
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
-    private val undoStack = Stack<SeatingChartState>()
-    private val redoStack = Stack<SeatingChartState>()
+    private val commandUndoStack = Stack<com.example.myapplication.commands.Command>()
+    private val commandRedoStack = Stack<com.example.myapplication.commands.Command>()
 
     // In-memory session data
     private var sessionQuizLogs = mutableListOf<QuizLog>()
@@ -93,44 +93,19 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
 
-    private fun saveStateForUndo() {
-        val currentState = SeatingChartState(
-            students = allStudents.value ?: emptyList(),
-            furniture = allFurniture.value ?: emptyList()
-        )
-        undoStack.push(currentState)
-        redoStack.clear() // Clear redo stack whenever a new action is performed
-    }
-
     fun undo() {
-        if (undoStack.isNotEmpty()) {
-            val currentState = SeatingChartState(
-                students = allStudents.value ?: emptyList(),
-                furniture = allFurniture.value ?: emptyList()
-            )
-            redoStack.push(currentState)
-
-            val prevState = undoStack.pop()
-            viewModelScope.launch(Dispatchers.IO) {
-                studentDao.updateAll(prevState.students)
-                furnitureDao.updateAll(prevState.furniture)
-            }
+        if (commandUndoStack.isNotEmpty()) {
+            val command = commandUndoStack.pop()
+            command.undo()
+            commandRedoStack.push(command)
         }
     }
 
     fun redo() {
-        if (redoStack.isNotEmpty()) {
-            val currentState = SeatingChartState(
-                students = allStudents.value ?: emptyList(),
-                furniture = allFurniture.value ?: emptyList()
-            )
-            undoStack.push(currentState)
-
-            val nextState = redoStack.pop()
-            viewModelScope.launch(Dispatchers.IO) {
-                studentDao.updateAll(nextState.students)
-                furnitureDao.updateAll(nextState.furniture)
-            }
+        if (commandRedoStack.isNotEmpty()) {
+            val command = commandRedoStack.pop()
+            command.execute()
+            commandUndoStack.push(command)
         }
     }
 
@@ -140,90 +115,100 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
 
     // Student operations
-    fun addStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
-        studentDao.insert(student)
+    fun addStudent(student: Student) {
+        val command = com.example.myapplication.commands.AddStudentCommand(this, student)
+        executeCommand(command)
     }
 
     fun internalAddStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
         studentDao.insert(student)
     }
 
-    fun updateStudent(oldStudent: Student, newStudent: Student) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
-        val originalState = SeatingChartState(
-            students = allStudents.value?.map { if (it.id == oldStudent.id) oldStudent else it } ?: emptyList(),
-            furniture = allFurniture.value ?: emptyList()
-        )
-        // This is a simplified undo state. A more robust implementation might need more details.
-        // For now, we're just saving the state before the update.
-        undoStack.push(originalState)
+    fun updateStudent(oldStudent: Student, newStudent: Student) {
+        val command = com.example.myapplication.commands.UpdateStudentCommand(this, oldStudent, newStudent)
+        executeCommand(command)
+    }
 
-        studentDao.update(newStudent)
+    fun internalUpdateStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
+        studentDao.update(student)
     }
 
 
-    fun deleteStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
+    fun deleteStudent(student: Student) {
+        val command = com.example.myapplication.commands.DeleteStudentCommand(this, student)
+        executeCommand(command)
+    }
+
+    fun internalDeleteStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
         studentDao.delete(student)
     }
 
-    fun updateStudentPosition(studentId: Int, oldX: Float, oldY: Float, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
-        // Find the original student state before the drag
-        val originalStudent = studentDao.getStudentById(studentId)
-        originalStudent?.let {
-            val originalState = SeatingChartState(
-                students = allStudents.value?.map {
-                    if (it.id == studentId) it.copy(xPosition = oldX, yPosition = oldY) else it
-                } ?: emptyList(),
-                furniture = allFurniture.value ?: emptyList()
-            )
-            undoStack.push(originalState)
-        }
+    fun updateStudentPosition(studentId: Int, oldX: Float, oldY: Float, newX: Float, newY: Float) {
+        val command = com.example.myapplication.commands.MoveStudentCommand(this, studentId, oldX, oldY, newX, newY)
+        executeCommand(command)
+    }
 
+    fun internalUpdateStudentPosition(studentId: Long, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
         studentDao.updatePosition(studentId, newX, newY)
     }
 
+
     suspend fun getStudentForEditing(studentId: Int): Student? = withContext(Dispatchers.IO) {
-        return@withContext studentDao.getStudentById(studentId)
+        return@withContext studentDao.getStudentById(studentId.toLong())
     }
 
     // Furniture operations
-    fun addFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
+    fun addFurniture(furniture: Furniture) {
+        val command = com.example.myapplication.commands.AddFurnitureCommand(this, furniture)
+        executeCommand(command)
+    }
+
+    fun internalAddFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
         furnitureDao.insert(furniture)
     }
 
-    fun updateFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
+    fun updateFurniture(oldFurniture: Furniture, newFurniture: Furniture) {
+        val command = com.example.myapplication.commands.UpdateFurnitureCommand(this, oldFurniture, newFurniture)
+        executeCommand(command)
+    }
+
+    fun internalUpdateFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
         furnitureDao.update(furniture)
     }
 
-    fun deleteFurnitureById(furnitureId: Int) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
-        furnitureDao.deleteById(furnitureId)
+    fun deleteFurnitureById(furnitureId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val furniture = furnitureDao.getFurnitureById(furnitureId)
+            furniture?.let {
+                val command = com.example.myapplication.commands.DeleteFurnitureCommand(this, it)
+                executeCommand(command)
+            }
+        }
+    }
+
+    fun internalDeleteFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
+        furnitureDao.delete(furniture)
     }
 
 // In SeatingChartViewModel.kt
 
-    fun updateFurniturePosition(furnitureId: Int, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
-        val originalFurniture = furnitureDao.getFurnitureById(furnitureId)
-        originalFurniture?.let {
-            val originalState = SeatingChartState(
-                students = allStudents.value ?: emptyList(),
-                furniture = allFurniture.value?.map {
-                    if (it.id == furnitureId) it.copy(xPosition = originalFurniture.xPosition, yPosition = originalFurniture.yPosition) else it
-                } ?: emptyList()
-            )
-            undoStack.push(originalState)
+    fun updateFurniturePosition(furnitureId: Int, newX: Float, newY: Float) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val furniture = furnitureDao.getFurnitureById(furnitureId.toLong())
+            furniture?.let {
+                val command = com.example.myapplication.commands.MoveFurnitureCommand(this, furnitureId, it.xPosition, it.yPosition, newX, newY)
+                executeCommand(command)
+            }
         }
+    }
+
+    fun internalUpdateFurniturePosition(furnitureId: Long, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
         furnitureDao.updatePosition(furnitureId, newX, newY)
     }
 
 
     suspend fun getFurnitureById(furnitureId: Int): Furniture? = withContext(Dispatchers.IO) {
-        return@withContext furnitureDao.getFurnitureById(furnitureId)
+        return@withContext furnitureDao.getFurnitureById(furnitureId.toLong())
     }
 
     // Layout operations
@@ -248,39 +233,81 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         layoutTemplateDao.insert(layout)
     }
 
-    fun loadLayout(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
-        saveStateForUndo()
+    fun loadLayout(layout: LayoutTemplate) {
+        val oldStudents = allStudents.value ?: emptyList()
+        val oldFurniture = allFurniture.value ?: emptyList()
+        val command = com.example.myapplication.commands.LoadLayoutCommand(this, layout, oldStudents, oldFurniture)
+        executeCommand(command)
+    }
+
+    fun internalLoadLayout(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
         val studentPositions = JSONArray(layout.studentPositions)
         for (i in 0 until studentPositions.length()) {
             val pos = studentPositions.getJSONObject(i)
-            studentDao.updatePosition(pos.getInt("id"), pos.getDouble("x").toFloat(), pos.getDouble("y").toFloat())
+            studentDao.updatePosition(pos.getLong("id"), pos.getDouble("x").toFloat(), pos.getDouble("y").toFloat())
         }
 
         val furniturePositions = JSONArray(layout.furniturePositions)
         for (i in 0 until furniturePositions.length()) {
             val pos = furniturePositions.getJSONObject(i)
-            furnitureDao.updatePosition(pos.getInt("id"), pos.getDouble("x").toFloat(), pos.getDouble("y").toFloat())
+            furnitureDao.updatePosition(pos.getLong("id"), pos.getDouble("x").toFloat(), pos.getDouble("y").toFloat())
         }
+    }
+
+    fun internalUpdateAll(students: List<Student>, furniture: List<Furniture>) = viewModelScope.launch(Dispatchers.IO) {
+        studentDao.updateAll(students)
+        furnitureDao.updateAll(furniture)
     }
 
     fun deleteLayoutTemplate(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
         layoutTemplateDao.delete(layout)
     }
 
-    fun addBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
+    fun addBehaviorEvent(event: BehaviorEvent) {
+        val command = com.example.myapplication.commands.LogBehaviorCommand(this, event)
+        executeCommand(command)
+    }
+
+    fun internalAddBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
         behaviorEventDao.insert(event)
         withContext(Dispatchers.Main) {
             updateStudentsForDisplay()
         }
     }
+
+    fun deleteBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
+        behaviorEventDao.delete(event)
+        withContext(Dispatchers.Main) {
+            updateStudentsForDisplay()
+        }
+    }
+
     // QuizLog operations
-    fun saveQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
+    fun saveQuizLog(log: QuizLog) {
+        val command = com.example.myapplication.commands.LogQuizCommand(this, log)
+        executeCommand(command)
+    }
+
+    fun internalSaveQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
         quizLogDao.insert(log)
     }
 
+    fun deleteQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
+        quizLogDao.delete(log)
+    }
+
     // HomeworkLog operations
-    fun addHomeworkLog(log: HomeworkLog) = viewModelScope.launch(Dispatchers.IO) {
+    fun addHomeworkLog(log: HomeworkLog) {
+        val command = com.example.myapplication.commands.LogHomeworkCommand(this, log)
+        executeCommand(command)
+    }
+
+    fun internalAddHomeworkLog(log: HomeworkLog) = viewModelScope.launch(Dispatchers.IO) {
         homeworkLogDao.insert(log)
+    }
+
+    fun deleteHomeworkLog(log: HomeworkLog) = viewModelScope.launch(Dispatchers.IO) {
+        homeworkLogDao.delete(log)
     }
 
     fun startSession() {
@@ -342,7 +369,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         shouldIncludeUngrouped: Boolean
     ) {
         viewModelScope.launch {
-            saveStateForUndo()
+            // This should also be a command
 
             // 1. Fetch students based on selection
             val studentsToAssign = mutableListOf<Student>()
@@ -393,6 +420,12 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             studentDao.updateAll(studentsToAssign)
         }
     }
+}
+
+private fun executeCommand(command: com.example.myapplication.commands.Command) {
+    command.execute()
+    commandUndoStack.push(command)
+    commandRedoStack.clear()
 }
 
 private fun Furniture.toUiItem(): FurnitureUiItem {

@@ -1,0 +1,17 @@
+package com.example.myapplication.commands
+
+import com.example.myapplication.data.Furniture
+import com.example.myapplication.viewmodel.SeatingChartViewModel
+
+class DeleteFurnitureCommand(
+    private val viewModel: SeatingChartViewModel,
+    private val furniture: Furniture
+) : Command {
+    override fun execute() {
+        viewModel.internalDeleteFurniture(furniture)
+    }
+
+    override fun undo() {
+        viewModel.internalAddFurniture(furniture)
+    }
+}

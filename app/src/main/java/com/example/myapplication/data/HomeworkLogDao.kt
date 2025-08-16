@@ -10,10 +10,16 @@ import androidx.room.Update
 @Dao
 interface HomeworkLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertHomeworkLog(homeworkLog: HomeworkLog)
+    suspend fun insert(homeworkLog: HomeworkLog)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(homeworkLogs: List<HomeworkLog>)
 
     @Update
     suspend fun updateHomeworkLog(homeworkLog: HomeworkLog)
+
+    @Delete
+    suspend fun delete(homeworkLog: HomeworkLog)
 
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC")
     fun getHomeworkLogsForStudent(studentId: Int): LiveData<List<HomeworkLog>>
