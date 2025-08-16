@@ -50,6 +50,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.Furniture
@@ -1063,7 +1064,9 @@ fun AddEditStudentDialog(
                     if (isEditMode) {
                         viewModel.updateStudent(studentToEdit!!, newStudent) // Added non-null assertion
                     } else {
-                        viewModel.addStudent(newStudent) 
+                        // viewModel.addStudent(newStudent) 
+                        val command = AddStudentCommand(viewModel, newStudent)
+                        command.execute()
                     }
                     onDismiss()
                 }

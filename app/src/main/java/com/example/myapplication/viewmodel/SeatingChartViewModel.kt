@@ -145,6 +145,11 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         studentDao.insert(student)
     }
 
+    fun internalAddStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
+        saveStateForUndo()
+        studentDao.insert(student)
+    }
+
     fun updateStudent(oldStudent: Student, newStudent: Student) = viewModelScope.launch(Dispatchers.IO) {
         saveStateForUndo()
         val originalState = SeatingChartState(
