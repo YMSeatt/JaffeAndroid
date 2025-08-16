@@ -8,7 +8,7 @@ class LogQuizCommand(
     private val log: QuizLog
 ) : Command {
     override fun execute() {
-        viewModel.saveQuizLog(log)
+        viewModel.internalSaveQuizLog(log)
     }
 
     override fun undo() {
