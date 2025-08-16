@@ -11,10 +11,10 @@ class MoveFurnitureCommand(
     private val newY: Float
 ) : Command {
     override fun execute() {
-        viewModel.updateFurniturePosition(furnitureId, newX, newY)
+        viewModel.internalUpdateFurniturePosition(furnitureId.toLong(), newX, newY)
     }
 
     override fun undo() {
-        viewModel.updateFurniturePosition(furnitureId, oldX, oldY)
+        viewModel.internalUpdateFurniturePosition(furnitureId.toLong(), oldX, oldY)
     }
 }
