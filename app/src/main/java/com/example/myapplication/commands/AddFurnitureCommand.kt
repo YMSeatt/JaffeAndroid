@@ -8,10 +8,10 @@ class AddFurnitureCommand(
     private val furniture: Furniture
 ) : Command {
     override fun execute() {
-        viewModel.addFurniture(furniture)
+        viewModel.internalAddFurniture(furniture)
     }
 
     override fun undo() {
-        viewModel.deleteFurnitureById(furniture.id)
+        viewModel.internalDeleteFurniture(furniture)
     }
 }
