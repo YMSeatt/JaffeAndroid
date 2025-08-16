@@ -12,6 +12,6 @@ class AddStudentCommand(
     }
 
     override fun undo() {
-        viewModel.deleteStudent(student)
+        viewModel.internalDeleteStudent(student)
     }
 }
