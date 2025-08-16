@@ -8,7 +8,7 @@ class LogBehaviorCommand(
     private val event: BehaviorEvent
 ) : Command {
     override fun execute() {
-        viewModel.addBehaviorEvent(event)
+        viewModel.internalAddBehaviorEvent(event)
     }
 
     override fun undo() {
