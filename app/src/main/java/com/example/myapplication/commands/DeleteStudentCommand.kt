@@ -8,7 +8,7 @@ class DeleteStudentCommand(
     private val student: Student
 ) : Command {
     override fun execute() {
-        viewModel.deleteStudent(student)
+        viewModel.internalDeleteStudent(student)
     }
 
     override fun undo() {
