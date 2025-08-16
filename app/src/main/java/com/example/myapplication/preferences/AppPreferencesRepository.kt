@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.builtins.ListSerializer
+
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -28,10 +28,6 @@ class AppPreferencesRepository(private val context: Context) {
         val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit") // New key
         val USE_INITIALS_FOR_BEHAVIOR = booleanPreferencesKey("use_initials_for_behavior")
         val APP_THEME = stringPreferencesKey("app_theme")
-        val BEHAVIOR_TYPES_LIST = stringSetPreferencesKey("behavior_types_list")
-        val HOMEWORK_ASSIGNMENT_TYPES_LIST = stringSetPreferencesKey("homework_assignment_types_list")
-        val HOMEWORK_STATUSES_LIST = stringSetPreferencesKey("homework_statuses_list")
-        val QUIZ_MARK_TYPES_LIST = stringPreferencesKey("quiz_mark_types_list") // Stored as JSON string
         val SHOW_RECENT_BEHAVIOR = booleanPreferencesKey("show_recent_behavior")
 
         // New keys for default student box appearance
@@ -121,27 +117,6 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateHomeworkStatuses(statuses: Set<String>) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_STATUSES_LIST] = statuses
-        }
-    }
-
-    val quizMarkTypesListFlow: Flow<List<QuizMarkTypeSetting>> = context.dataStore.data
-        .map { preferences ->
-            val jsonString = preferences[PreferencesKeys.QUIZ_MARK_TYPES_LIST]
-            if (jsonString.isNullOrEmpty()) {
-                emptyList()
-            } else {
-                try {
-                    Json.decodeFromString(ListSerializer(QuizMarkTypeSetting.serializer()), jsonString)
-                } catch (e: Exception) {
-                    emptyList() // Fallback to empty list on error
-                }
-            }
-        }
-
-    suspend fun updateQuizMarkTypes(types: List<QuizMarkTypeSetting>) {
-        context.dataStore.edit { settings ->
-            val jsonString = Json.encodeToString(ListSerializer(QuizMarkTypeSetting.serializer()), types)
-            settings[PreferencesKeys.QUIZ_MARK_TYPES_LIST] = jsonString
         }
     }
 

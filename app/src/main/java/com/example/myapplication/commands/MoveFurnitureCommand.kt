@@ -1,0 +1,20 @@
+package com.example.myapplication.commands
+
+import com.example.myapplication.viewmodel.SeatingChartViewModel
+
+class MoveFurnitureCommand(
+    private val viewModel: SeatingChartViewModel,
+    private val furnitureId: Int,
+    private val oldX: Float,
+    private val oldY: Float,
+    private val newX: Float,
+    private val newY: Float
+) : Command {
+    override fun execute() {
+        viewModel.updateFurniturePosition(furnitureId, newX, newY)
+    }
+
+    override fun undo() {
+        viewModel.updateFurniturePosition(furnitureId, oldX, oldY)
+    }
+}

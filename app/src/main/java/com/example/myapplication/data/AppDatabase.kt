@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class], version = 8, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 10, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -18,6 +18,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun studentGroupDao(): StudentGroupDao
     abstract fun layoutTemplateDao(): LayoutTemplateDao
     abstract fun conditionalFormattingRuleDao(): ConditionalFormattingRuleDao
+    abstract fun customBehaviorDao(): CustomBehaviorDao
+    abstract fun customHomeworkTypeDao(): CustomHomeworkTypeDao
+    abstract fun customHomeworkStatusDao(): CustomHomeworkStatusDao
+    abstract fun quizTemplateDao(): QuizTemplateDao
+    abstract fun homeworkTemplateDao(): HomeworkTemplateDao
+    abstract fun quizMarkTypeDao(): QuizMarkTypeDao
 
     companion object {
         const val DATABASE_NAME = "seating_chart_database"
@@ -120,6 +126,8 @@ abstract class AppDatabase : RoomDatabase() {
                         maxMarkValue REAL,
                         loggedAt INTEGER NOT NULL,
                         comment TEXT,
+                        marksData TEXT NOT NULL DEFAULT '{}',
+                        numQuestions INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
@@ -302,6 +310,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_behaviors` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_statuses` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `quiz_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)")
+                database.execSQL("CREATE TABLE IF NOT EXISTS `homework_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)")
+            }
+        }
+
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("CREATE TABLE IF NOT EXISTS `quiz_mark_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultPoints` REAL NOT NULL, `contributesToTotal` INTEGER NOT NULL, `isExtraCredit` INTEGER NOT NULL)")
+            }
+        }
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -309,7 +333,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8) // Added MIGRATION_7_8
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10) // Added MIGRATION_9_10
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

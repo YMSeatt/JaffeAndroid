@@ -6,9 +6,12 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.CustomBehavior
+import com.example.myapplication.data.CustomHomeworkStatus
+import com.example.myapplication.data.CustomHomeworkType
+import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
-import com.example.myapplication.preferences.QuizMarkTypeSetting
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
@@ -27,10 +30,16 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import androidx.lifecycle.LiveData
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
     private val preferencesRepository = AppPreferencesRepository(application)
+    private val db = AppDatabase.getDatabase(application)
+    private val customBehaviorDao = db.customBehaviorDao()
+    private val customHomeworkTypeDao = db.customHomeworkTypeDao()
+    private val customHomeworkStatusDao = db.customHomeworkStatusDao()
+    private val quizMarkTypeDao = db.quizMarkTypeDao()
 
     val recentLogsLimit: StateFlow<Int> = preferencesRepository.recentLogsLimitFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for homework logs
@@ -80,41 +89,38 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    val behaviorTypesList: StateFlow<Set<String>> = preferencesRepository.behaviorTypesListFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
-
-    fun updateBehaviorTypes(types: Set<String>) {
-        viewModelScope.launch {
-            preferencesRepository.updateBehaviorTypes(types)
-        }
+    val customBehaviors: LiveData<List<CustomBehavior>> = customBehaviorDao.getAllCustomBehaviors()
+    fun addCustomBehavior(name: String) = viewModelScope.launch {
+        customBehaviorDao.insert(CustomBehavior(name = name))
+    }
+    fun deleteCustomBehavior(customBehavior: CustomBehavior) = viewModelScope.launch {
+        customBehaviorDao.delete(customBehavior)
     }
 
-    val homeworkAssignmentTypesList: StateFlow<Set<String>> = preferencesRepository.homeworkAssignmentTypesListFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
-
-    fun updateHomeworkAssignmentTypes(types: Set<String>) {
-        viewModelScope.launch {
-            preferencesRepository.updateHomeworkAssignmentTypes(types)
-        }
+    val customHomeworkTypes: LiveData<List<CustomHomeworkType>> = customHomeworkTypeDao.getAllCustomHomeworkTypes()
+    fun addCustomHomeworkType(name: String) = viewModelScope.launch {
+        customHomeworkTypeDao.insert(CustomHomeworkType(name = name))
+    }
+    fun deleteCustomHomeworkType(customHomeworkType: CustomHomeworkType) = viewModelScope.launch {
+        customHomeworkTypeDao.delete(customHomeworkType)
     }
 
-    val homeworkStatusesList: StateFlow<Set<String>> = preferencesRepository.homeworkStatusesListFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptySet())
-
-    fun updateHomeworkStatuses(statuses: Set<String>) {
-        viewModelScope.launch {
-            preferencesRepository.updateHomeworkStatuses(statuses)
-        }
+    val customHomeworkStatuses: LiveData<List<CustomHomeworkStatus>> = customHomeworkStatusDao.getAllCustomHomeworkStatuses()
+    fun addCustomHomeworkStatus(name: String) = viewModelScope.launch {
+        customHomeworkStatusDao.insert(CustomHomeworkStatus(name = name))
+    }
+    fun deleteCustomHomeworkStatus(customHomeworkStatus: CustomHomeworkStatus) = viewModelScope.launch {
+        customHomeworkStatusDao.delete(customHomeworkStatus)
     }
 
-    val quizMarkTypesList: StateFlow<List<QuizMarkTypeSetting>> = preferencesRepository.quizMarkTypesListFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
-    fun updateQuizMarkTypes(types: List<QuizMarkTypeSetting>) {
-        viewModelScope.launch {
-            preferencesRepository.updateQuizMarkTypes(types)
-        }
+    val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes()
+    fun addQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
+        quizMarkTypeDao.insert(quizMarkType)
     }
+    fun deleteQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
+        quizMarkTypeDao.delete(quizMarkType)
+    }
+
 
     val showRecentBehavior: StateFlow<Boolean> = preferencesRepository.showRecentBehaviorFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, true)

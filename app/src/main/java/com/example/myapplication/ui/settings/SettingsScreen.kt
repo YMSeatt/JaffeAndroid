@@ -19,8 +19,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.StudentRepository
+import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.preferences.AppTheme
-import com.example.myapplication.preferences.QuizMarkTypeSetting
 import com.example.myapplication.ui.dialogs.ChangePasswordDialog
 import com.example.myapplication.ui.dialogs.SetPasswordDialog
 import com.example.myapplication.utils.ExcelImportUtil
@@ -28,6 +28,7 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import java.util.Locale
 import java.util.UUID
+import androidx.compose.runtime.livedata.observeAsState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,19 +52,19 @@ fun SettingsScreen(
     var showSetPasswordDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
 
-    val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState()
+    val behaviorTypesList by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     var newBehaviorType by remember { mutableStateOf("") }
     var behaviorTypeError by remember { mutableStateOf<String?>(null) }
 
-    val homeworkAssignmentTypesList by settingsViewModel.homeworkAssignmentTypesList.collectAsState()
+    val homeworkAssignmentTypesList by settingsViewModel.customHomeworkTypes.observeAsState(initial = emptyList())
     var newHomeworkAssignmentType by remember { mutableStateOf("") }
     var homeworkAssignmentTypeError by remember { mutableStateOf<String?>(null) }
 
-    val homeworkStatusesList by settingsViewModel.homeworkStatusesList.collectAsState()
+    val homeworkStatusesList by settingsViewModel.customHomeworkStatuses.observeAsState(initial = emptyList())
     var newHomeworkStatus by remember { mutableStateOf("") }
     var homeworkStatusError by remember { mutableStateOf<String?>(null) }
 
-    val quizMarkTypesList by settingsViewModel.quizMarkTypesList.collectAsState()
+    val quizMarkTypesList by settingsViewModel.quizMarkTypes.observeAsState(initial = emptyList())
     var newQuizMarkTypeName by remember { mutableStateOf("") }
     var newQuizMarkDefaultPoints by remember { mutableStateOf("") }
     var newQuizMarkContributesToTotal by remember { mutableStateOf(false) }
@@ -345,16 +346,15 @@ fun SettingsScreen(
             item {
                 Text("Manage Behavior Types", style = MaterialTheme.typography.titleMedium)
             }
-            items(behaviorTypesList.toList()) { type ->
+            items(behaviorTypesList) { type ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(type)
+                    Text(type.name)
                     IconButton(onClick = {
-                        val updatedList = behaviorTypesList.toMutableSet().apply { remove(type) }
-                        settingsViewModel.updateBehaviorTypes(updatedList)
+                        settingsViewModel.deleteCustomBehavior(type)
                     }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Remove behavior type")
                     }
@@ -373,9 +373,8 @@ fun SettingsScreen(
                 }
                 Button(onClick = {
                     if (newBehaviorType.isNotBlank()) {
-                        val updatedList = behaviorTypesList.toMutableSet().apply { add(newBehaviorType.trim()) }
-                        settingsViewModel.updateBehaviorTypes(updatedList)
-                        newBehaviorType = "" 
+                        settingsViewModel.addCustomBehavior(newBehaviorType.trim())
+                        newBehaviorType = ""
                         behaviorTypeError = null
                     } else {
                         behaviorTypeError = "Name cannot be blank."
@@ -389,16 +388,15 @@ fun SettingsScreen(
             item {
                 Text("Manage Homework Assignment Names/Types", style = MaterialTheme.typography.titleMedium)
             }
-            items(homeworkAssignmentTypesList.toList()) { type ->
+            items(homeworkAssignmentTypesList) { type ->
                  Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(type)
+                    Text(type.name)
                     IconButton(onClick = {
-                        val updatedList = homeworkAssignmentTypesList.toMutableSet().apply { remove(type) }
-                        settingsViewModel.updateHomeworkAssignmentTypes(updatedList)
+                        settingsViewModel.deleteCustomHomeworkType(type)
                     }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Remove homework assignment type")
                     }
@@ -417,8 +415,7 @@ fun SettingsScreen(
                 }
                 Button(onClick = {
                     if (newHomeworkAssignmentType.isNotBlank()) {
-                        val updatedList = homeworkAssignmentTypesList.toMutableSet().apply { add(newHomeworkAssignmentType.trim()) }
-                        settingsViewModel.updateHomeworkAssignmentTypes(updatedList)
+                        settingsViewModel.addCustomHomeworkType(newHomeworkAssignmentType.trim())
                         newHomeworkAssignmentType = ""
                         homeworkAssignmentTypeError = null
                     } else {
@@ -433,16 +430,15 @@ fun SettingsScreen(
             item {
                 Text("Manage Homework Statuses", style = MaterialTheme.typography.titleMedium)
             }
-            items(homeworkStatusesList.toList()) { status ->
+            items(homeworkStatusesList) { status ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(status)
+                    Text(status.name)
                     IconButton(onClick = {
-                        val updatedList = homeworkStatusesList.toMutableSet().apply { remove(status) }
-                        settingsViewModel.updateHomeworkStatuses(updatedList)
+                        settingsViewModel.deleteCustomHomeworkStatus(status)
                     }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Remove homework status")
                     }
@@ -461,8 +457,7 @@ fun SettingsScreen(
                 }
                 Button(onClick = {
                     if (newHomeworkStatus.isNotBlank()) {
-                        val updatedList = homeworkStatusesList.toMutableSet().apply { add(newHomeworkStatus.trim()) }
-                        settingsViewModel.updateHomeworkStatuses(updatedList)
+                        settingsViewModel.addCustomHomeworkStatus(newHomeworkStatus.trim())
                         newHomeworkStatus = ""
                         homeworkStatusError = null
                     } else {
@@ -483,8 +478,7 @@ fun SettingsScreen(
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(markType.name, style = MaterialTheme.typography.bodyLarge)
                             IconButton(onClick = {
-                                val updatedList = quizMarkTypesList.toMutableList().apply { remove(markType) }
-                                settingsViewModel.updateQuizMarkTypes(updatedList)
+                                settingsViewModel.deleteQuizMarkType(markType)
                             }) {
                                 Icon(Icons.Filled.Delete, contentDescription = "Remove quiz mark type")
                             }
@@ -555,15 +549,13 @@ fun SettingsScreen(
                         }
 
                         if (isValid && pointsValue != null) {
-                            val newMarkType = QuizMarkTypeSetting(
-                                id = UUID.randomUUID().toString(),
+                            val newMarkType = QuizMarkType(
                                 name = newQuizMarkTypeName.trim(),
                                 defaultPoints = pointsValue,
                                 contributesToTotal = newQuizMarkContributesToTotal,
                                 isExtraCredit = newQuizMarkIsExtraCredit
                             )
-                            val updatedList = quizMarkTypesList.toMutableList().apply { add(newMarkType) }
-                            settingsViewModel.updateQuizMarkTypes(updatedList)
+                            settingsViewModel.addQuizMarkType(newMarkType)
                             newQuizMarkTypeName = ""
                             newQuizMarkDefaultPoints = ""
                             newQuizMarkContributesToTotal = false

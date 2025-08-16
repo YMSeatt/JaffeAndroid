@@ -10,6 +10,9 @@ interface BehaviorEventDao {
     @Insert
     suspend fun insertBehaviorEvent(event: BehaviorEvent)
 
+    @Delete
+    suspend fun delete(event: BehaviorEvent)
+
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC")
     fun getBehaviorEventsForStudent(studentId: Int): LiveData<List<BehaviorEvent>>
 
