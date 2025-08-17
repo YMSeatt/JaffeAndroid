@@ -1,18 +1,30 @@
 package com.example.myapplication.data
 
+import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface QuizLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(log: QuizLog)
+    suspend fun insertQuizLog(log: QuizLog)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(logs: List<QuizLog>)
 
+    @Update
+    suspend fun updateQuizLog(log: QuizLog)
+
     @Delete
-    suspend fun delete(log: QuizLog)
+    suspend fun deleteQuizLog(log: QuizLog)
+
+    @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId ORDER BY loggedAt DESC")
+    fun getQuizLogsForStudent(studentId: Long): LiveData<List<QuizLog>>
+
+    @Query("SELECT * FROM quiz_logs ORDER BY loggedAt DESC")
+    fun getAllQuizLogs(): LiveData<List<QuizLog>>
 }

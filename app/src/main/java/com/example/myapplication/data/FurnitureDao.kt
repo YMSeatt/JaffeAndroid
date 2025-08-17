@@ -16,11 +16,11 @@ interface FurnitureDao {
     suspend fun update(furniture: Furniture)
 
     @Query("DELETE FROM furniture WHERE id = :id")
-    suspend fun deleteById(id: Int)
+    suspend fun deleteById(id: Long)
 
     @Query("SELECT * FROM furniture")
     fun getAllFurniture(): Flow<List<Furniture>>
 
     @Query("SELECT * FROM furniture WHERE id = :id")
-    suspend fun getFurnitureById(id: Int): Furniture?
+    suspend fun getFurnitureById(id: Long): Furniture?
 }

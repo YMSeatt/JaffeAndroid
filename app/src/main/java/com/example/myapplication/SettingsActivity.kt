@@ -8,10 +8,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.ui.settings.SettingsNavHost
-import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
+import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class SettingsActivity : ComponentActivity() {
     private val settingsViewModel: SettingsViewModel by viewModels()

@@ -6,8 +6,6 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -40,6 +38,10 @@ class AppPreferencesRepository(private val context: Context) {
 
         val PASSWORD_ENABLED = booleanPreferencesKey("password_enabled")
         val PASSWORD_HASH = stringPreferencesKey("password_hash")
+
+        val BEHAVIOR_TYPES_LIST = stringSetPreferencesKey("behavior_types_list")
+        val HOMEWORK_ASSIGNMENT_TYPES_LIST = stringSetPreferencesKey("homework_assignment_types_list")
+        val HOMEWORK_STATUSES_LIST = stringSetPreferencesKey("homework_statuses_list")
     }
 
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data

@@ -11,7 +11,7 @@ import androidx.room.Update
 @Dao
 interface HomeworkLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(homeworkLog: HomeworkLog)
+    suspend fun insertHomeworkLog(homeworkLog: HomeworkLog)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(homeworkLogs: List<HomeworkLog>)
@@ -23,7 +23,7 @@ interface HomeworkLogDao {
     suspend fun delete(homeworkLog: HomeworkLog)
 
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC")
-    fun getHomeworkLogsForStudent(studentId: Int): LiveData<List<HomeworkLog>>
+    fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>>
 
     @Query("SELECT * FROM homework_logs ORDER BY loggedAt DESC")
     fun getAllHomeworkLogs(): LiveData<List<HomeworkLog>>
@@ -32,5 +32,5 @@ interface HomeworkLogDao {
     suspend fun deleteHomeworkLog(logId: Long)
 
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
-    fun getRecentHomeworkLogsForStudent(studentId: Int, limit: Int): LiveData<List<HomeworkLog>>
+    fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>>
 }

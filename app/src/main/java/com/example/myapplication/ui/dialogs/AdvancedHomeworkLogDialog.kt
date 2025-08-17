@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -14,6 +13,10 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import kotlinx.coroutines.flow.collectAsState
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,11 +28,11 @@ fun AdvancedHomeworkLogDialog(
 ) {
     var assignmentName by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
-    val homeworkTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList())
+    val homeworkTemplates by viewModel.allHomeworkTemplates.collectAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
-    val homeworkTypes by viewModel.customHomeworkTypes.observeAsState(initial = emptyList())
+    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(initial = emptyList())
     var selectedHomeworkType by remember { mutableStateOf("") }
-    val homeworkStatuses by viewModel.customHomeworkStatuses.observeAsState(initial = emptyList())
+    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(initial = emptyList())
     var selectedHomeworkStatus by remember { mutableStateOf("") }
 
 
@@ -72,9 +75,9 @@ fun AdvancedHomeworkLogDialog(
                         ) {
                             homeworkTypes.forEach { type ->
                                 DropdownMenuItem(
-                                    text = { Text(type.name) },
+                                    text = { Text(type) },
                                     onClick = {
-                                        selectedHomeworkType = type.name
+                                        selectedHomeworkType = type
                                         homeworkTypeExpanded = false
                                     }
                                 )
@@ -101,9 +104,9 @@ fun AdvancedHomeworkLogDialog(
                         ) {
                             homeworkStatuses.forEach { status ->
                                 DropdownMenuItem(
-                                    text = { Text(status.name) },
+                                    text = { Text(status) },
                                     onClick = {
-                                        selectedHomeworkStatus = status.name
+                                        selectedHomeworkStatus = status
                                         homeworkStatusExpanded = false
                                     }
                                 )
@@ -159,13 +162,12 @@ fun AdvancedHomeworkLogDialog(
             Button(
                 onClick = {
                     val log = HomeworkLog(
-                        studentId = studentId,
+                        studentId = studentId.toInt(), // Cast Long to Int
                         assignmentName = assignmentName,
                         status = selectedHomeworkStatus,
                         comment = comment,
                         loggedAt = System.currentTimeMillis(),
-                        // TODO: Serialize marksData map to JSON string
-                        marksData = ""
+                        marksData = Json.encodeToString(marksData.toMap()) // Serialize marksData map to JSON string
                     )
                     onSave(log)
                     onDismissRequest()

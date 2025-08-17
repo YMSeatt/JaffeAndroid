@@ -213,7 +213,8 @@ fun SeatingChartScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
-    val behaviorTypesList by settingsViewModel.behaviorTypesList.collectAsState(initial = emptyList()) // Explicit initial value
+    val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList()) // Corrected to observe LiveData
+    val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } } // Extract names
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false) // Explicit initial value
 
     var sessionType by remember { mutableStateOf(SessionType.NONE) }
@@ -450,7 +451,7 @@ fun SeatingChartScreen(
             BehaviorDialog(
                 student = studentForBehaviorDialog,
                 viewModel = seatingChartViewModel, 
-                behaviorTypes = behaviorTypesList.toList(),
+                behaviorTypes = behaviorTypeNames, // Pass extracted names
                 onDismiss = {
                     showBehaviorDialog = false
                     selectedStudentUiItemForAction = null 
@@ -713,7 +714,7 @@ fun StudentDraggableIcon(
 fun BehaviorDialog(
     student: Student, 
     viewModel: SeatingChartViewModel,
-    behaviorTypes: List<String>, 
+    behaviorTypes: List<String>,
     onDismiss: () -> Unit
 ) {
     var selectedBehavior by remember { mutableStateOf("") }
@@ -842,7 +843,7 @@ fun AddEditFurnitureDialog(
                     )
                     if (isEditMode) {
                         // Pass the updated furniture object
-                        viewModel.updateFurniture(furnitureToEdit!!, updatedFurniture) 
+                        viewModel.updateFurniture(furnitureToEdit, updatedFurniture)
                     } else {
                         viewModel.addFurniture(updatedFurniture)
                     }
@@ -857,10 +858,12 @@ fun AddEditFurnitureDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (isEditMode && furnitureToEdit != null) { // Added null check for furnitureToEdit
+                if (isEditMode) {
                     Button(
                         onClick = {
-                            viewModel.deleteFurnitureById(furnitureToEdit.id) 
+                            furnitureToEdit?.let { f ->
+                                viewModel.deleteFurnitureById(f.id.toLong())
+                            }
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -968,28 +971,21 @@ fun AddEditStudentDialog(
                             onDismissRequest = { groupDropdownExpanded = false },
                             modifier = Modifier.fillMaxWidth() 
                         ) {
-                            DropdownMenuItem(
-                                text = { Text("None") },
-                                onClick = {
-                                    selectedGroupId = null
-                                    groupDropdownExpanded = false
-                                }
-                            )
-                            studentGroups.forEach { group: StudentGroup ->
+                            studentGroups.forEach { group ->
                                 DropdownMenuItem(
                                     text = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            group.color?.let { // Added null check for group.color
-                                                Box(modifier = Modifier.size(16.dp).background(Color(android.graphics.Color.parseColor(it)))) // Use android.graphics.Color.parseColor for hex strings
+                                            group.color?.let { 
+                                                Box(modifier = Modifier.size(16.dp).background(Color(android.graphics.Color.parseColor(it)))) 
                                             }
                                             Spacer(Modifier.width(8.dp))
-                                            Text(group.name ?: "")  // Added null check for group.name
+                                            Text(group.name)
                                         }
                                     },
                                     onClick = {
                                         selectedGroupId = group.id
                                         groupDropdownExpanded = false
-                                   }
+                                    }
                                 )
                             }
                         }
@@ -1065,8 +1061,8 @@ fun AddEditStudentDialog(
                         customOutlineColor = if (useCustomAppearance && customOutlineColorInput.isNotBlank()) customOutlineColorInput.trim() else null,
                         customTextColor = if (useCustomAppearance && customTextColorInput.isNotBlank()) customTextColorInput.trim() else null
                     )
-                    if (isEditMode && studentToEdit != null) { // Added null check for studentToEdit
-                        viewModel.updateStudent(studentToEdit, newStudent) 
+                    if (isEditMode) {
+                        viewModel.updateStudent(studentToEdit!!, newStudent) 
                     } else {
                         // viewModel.addStudent(newStudent) 
                         val command = AddStudentCommand(viewModel, newStudent)
@@ -1083,10 +1079,12 @@ fun AddEditStudentDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (isEditMode && studentToEdit != null) { // Added null check for studentToEdit
+                if (isEditMode) {
                     Button(
                         onClick = {
-                            viewModel.deleteStudent(studentToEdit) 
+                            studentToEdit?.let { student ->
+                                viewModel.deleteStudent(student)
+                            }
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -1105,4 +1103,3 @@ fun AddEditStudentDialog(
         }
     )
 }
-

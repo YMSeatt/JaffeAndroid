@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface StudentDao {
@@ -42,4 +43,16 @@ interface StudentDao {
 
     @Query("SELECT s.id FROM students s WHERE s.stringId = :stringId")
     suspend fun getStudentIdByStringId(stringId: String): Long?
+
+    @Query("UPDATE students SET xPosition = :x, yPosition = :y WHERE id = :id")
+    suspend fun updatePosition(id: Long, x: Float, y: Float)
+
+    @Update
+    suspend fun updateAll(students: List<Student>)
+
+    @Query("SELECT * FROM students WHERE groupId IN (:groupIds)")
+    fun getStudentsByGroupIds(groupIds: List<Long>): Flow<List<Student>>
+
+    @Query("SELECT * FROM students WHERE groupId IS NULL")
+    fun getUngroupedStudents(): Flow<List<Student>>
 }

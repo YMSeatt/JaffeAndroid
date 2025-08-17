@@ -21,7 +21,7 @@ class StudentRepository(
     val allFurniture: Flow<List<Furniture>> = furnitureDao.getAllFurniture()
 
     // Student methods
-    suspend fun getStudentByIdNonLiveData(studentId: Int): Student? { // Changed from Long to Int
+    suspend fun getStudentByIdNonLiveData(studentId: Long): Student? {
         return withContext(Dispatchers.IO) {
             studentDao.getStudentByIdNonLiveData(studentId)
         }
@@ -48,7 +48,7 @@ class StudentRepository(
     // BehaviorEvent methods
     fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>> = behaviorEventDao.getAllBehaviorEvents()
 
-    fun getRecentBehaviorEventsForStudent(studentId: Int, limit: Int): LiveData<List<BehaviorEvent>> {
+    fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>> {
         return studentDao.getRecentBehaviorEventsForStudent(studentId, limit)
     }
 
@@ -71,13 +71,13 @@ class StudentRepository(
         }
     }
 
-    suspend fun deleteFurnitureById(id: Int) {
+    suspend fun deleteFurnitureById(id: Long) {
         withContext(Dispatchers.IO) {
             furnitureDao.deleteById(id)
         }
     }
 
-    suspend fun getFurnitureById(id: Int): Furniture? {
+    suspend fun getFurnitureById(id: Long): Furniture? {
         return withContext(Dispatchers.IO) {
             furnitureDao.getFurnitureById(id)
         }
@@ -96,7 +96,7 @@ class StudentRepository(
         }
     }
 
-    fun getHomeworkLogsForStudent(studentId: Int): LiveData<List<HomeworkLog>> {
+    fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getHomeworkLogsForStudent(studentId)
     }
 
@@ -110,7 +110,7 @@ class StudentRepository(
         }
     }
 
-    fun getRecentHomeworkLogsForStudent(studentId: Int, limit: Int): LiveData<List<HomeworkLog>> {
+    fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getRecentHomeworkLogsForStudent(studentId, limit)
     }
 
@@ -133,7 +133,7 @@ class StudentRepository(
         }
     }
 
-    fun getQuizLogsForStudent(studentId: Int): LiveData<List<QuizLog>> {
+    fun getQuizLogsForStudent(studentId: Long): LiveData<List<QuizLog>> {
         return quizLogDao.getQuizLogsForStudent(studentId)
     }
 
