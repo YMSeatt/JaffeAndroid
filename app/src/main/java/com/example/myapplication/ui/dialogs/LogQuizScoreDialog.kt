@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -27,8 +28,8 @@ fun LogQuizScoreDialog(
     var quizName by remember { mutableStateOf("") }
     var numQuestions by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
-    val quizMarkTypes by viewModel.quizMarkTypes.observeAsState(initial = emptyList())
-    val quizTemplates by viewModel.allQuizTemplates.observeAsState(initial = emptyList())
+    val quizMarkTypes by viewModel.quizMarkTypes.collectAsState(initial = emptyList())
+    val quizTemplates by viewModel.allQuizTemplates.collectAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
 
     val marksData = remember { mutableStateMapOf<String, String>() }
@@ -92,9 +93,9 @@ fun LogQuizScoreDialog(
 
                 items(quizMarkTypes) { markType ->
                     OutlinedTextField(
-                        value = marksData[markType.name] ?: "",
-                        onValueChange = { marksData[markType.name] = it },
-                        label = { Text(markType.name) },
+                        value = marksData[markType] ?: "",
+                        onValueChange = { marksData[markType] = it },
+                        label = { Text(markType) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     )
@@ -120,7 +121,10 @@ fun LogQuizScoreDialog(
                         loggedAt = System.currentTimeMillis(),
                         // TODO: Serialize marksData map to JSON string
                         marksData = "",
-                        numQuestions = numQuestions.toIntOrNull() ?: 0
+                        numQuestions = numQuestions.toIntOrNull() ?: 0,
+                        markValue = null,
+                        markType = null,
+                        maxMarkValue = null
                     )
                     onSave(log)
                     onDismissRequest()

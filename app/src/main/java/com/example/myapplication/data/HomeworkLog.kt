@@ -20,7 +20,7 @@ import androidx.room.PrimaryKey
 data class HomeworkLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val studentId: Int,
+    val studentId: Long,
     val assignmentName: String,
     val status: String,
     val loggedAt: Long = System.currentTimeMillis(),

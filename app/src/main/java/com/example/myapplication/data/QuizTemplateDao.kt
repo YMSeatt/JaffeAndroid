@@ -20,5 +20,5 @@ interface QuizTemplateDao {
     suspend fun delete(quizTemplate: QuizTemplate)
 
     @Query("SELECT * FROM quiz_templates ORDER BY name ASC")
-    fun getAllQuizTemplates(): LiveData<List<QuizTemplate>>
+    fun getAllQuizTemplates(): kotlinx.coroutines.flow.Flow<List<QuizTemplate>>
 }

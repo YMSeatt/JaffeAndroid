@@ -20,5 +20,5 @@ interface HomeworkTemplateDao {
     suspend fun delete(homeworkTemplate: HomeworkTemplate)
 
     @Query("SELECT * FROM homework_templates ORDER BY name ASC")
-    fun getAllHomeworkTemplates(): LiveData<List<HomeworkTemplate>>
+    fun getAllHomeworkTemplates(): kotlinx.coroutines.flow.Flow<List<HomeworkTemplate>>
 }

@@ -7,11 +7,11 @@ class DeleteFurnitureCommand(
     private val viewModel: SeatingChartViewModel,
     private val furniture: Furniture
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalDeleteFurniture(furniture)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalAddFurniture(furniture)
     }
 }

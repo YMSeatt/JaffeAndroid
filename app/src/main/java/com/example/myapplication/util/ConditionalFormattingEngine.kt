@@ -109,7 +109,7 @@ object ConditionalFormattingEngine {
                 val cutoffTime = System.currentTimeMillis() - timeWindowHours * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
-                    it.studentId == student.id &&
+                    it.studentId == student.id.toLong() &&
                     it.type.equals(behaviorName, ignoreCase = true) &&
                     it.timestamp >= cutoffTime
                 }
@@ -121,7 +121,7 @@ object ConditionalFormattingEngine {
                 val scoreThresholdPercent = condition.score_threshold_percent ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id) return@any false
+                    if (log.studentId != student.id.toLong()) return@any false
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
                     val score = log.markValue
@@ -143,13 +143,13 @@ object ConditionalFormattingEngine {
             }
             "live_quiz_response" -> {
                 if (!isLiveQuizActive) return false
-                val studentScores = liveQuizScores[student.id] ?: return false
+                val studentScores = liveQuizScores[student.id.toLong()] ?: return false
                 val lastResponse = studentScores["last_response"] as? String ?: return false
                 lastResponse.equals(condition.quiz_response, ignoreCase = true)
             }
             "live_homework_yes_no" -> {
                 if (!isLiveHomeworkActive) return false
-                val studentScores = liveHomeworkScores[student.id] ?: return false
+                val studentScores = liveHomeworkScores[student.id.toLong()] ?: return false
                 val homeworkTypeId = condition.homework_type_id ?: return false
                 val homeworkResponse = condition.homework_response ?: return false
                 val studentResponse = studentScores[homeworkTypeId] as? String ?: return false
@@ -157,7 +157,7 @@ object ConditionalFormattingEngine {
             }
             "live_homework_select" -> {
                 if (!isLiveHomeworkActive) return false
-                val studentScores = liveHomeworkScores[student.id] ?: return false
+                val studentScores = liveHomeworkScores[student.id.toLong()] ?: return false
                 val homeworkOptionName = condition.homework_option_name ?: return false
                 val selectedOptions = studentScores["selected_options"] as? List<*> ?: return false
                 selectedOptions.any { it.toString().equals(homeworkOptionName, ignoreCase = true) }
@@ -168,7 +168,7 @@ object ConditionalFormattingEngine {
                 val countThreshold = condition.mark_count_threshold ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id) return@any false
+                    if (log.studentId != student.id.toLong()) return@any false
                     try {
                         val marksData = json.decodeFromString<Map<String, Int>>(log.marksData)
                         val count = marksData[markTypeId] ?: 0

@@ -160,7 +160,7 @@ class StudentRepository(
         }
     }
 
-    fun getAllStudentGroups(): LiveData<List<StudentGroup>> {
+    fun getAllStudentGroups(): Flow<List<StudentGroup>> {
         return studentGroupDao.getAllStudentGroups()
     }
 
