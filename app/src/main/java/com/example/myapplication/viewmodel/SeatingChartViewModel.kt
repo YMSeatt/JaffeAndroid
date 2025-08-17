@@ -114,7 +114,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     private fun updateStudentsForDisplay() {
         viewModelScope.launch {
             val students = allStudents.value ?: return@launch
-            val groups = studentGroupDao.getAllStudentGroups().first()
+            val groups = studentGroups.value
             val studentsWithBehavior = students.map { student ->
                 val mostRecentEvent = behaviorEventDao.getMostRecentBehaviorForStudent(student.id)
                 student.toStudentUiItem(
