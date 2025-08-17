@@ -232,8 +232,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun internalUpdateFurniture(furniture: Furniture) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun internalUpdateFurniture(furniture: Furniture) {
+        withContext(Dispatchers.IO) {
             repository.updateFurniture(furniture)
         }
     }
