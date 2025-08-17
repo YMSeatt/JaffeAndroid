@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalSerializationApi::class, kotlinx.serialization.InternalSerializationApi::class)
 package com.example.myapplication.util
 
 import com.example.myapplication.data.StudentDetailsForDisplay
@@ -7,25 +8,28 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.HomeworkLog
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.InternalSerializationApi
 
 // Data classes to represent the JSON structure in ConditionalFormattingRule
 @Serializable
 data class Condition(
     val type: String,
-    val group_id: Long? = null,
-    val behavior_name: String? = null,
-    val count_threshold: Int? = null,
-    val time_window_hours: Int? = null,
-    val quiz_response: String? = null,
-    val homework_type_id: String? = null,
-    val homework_response: String? = null,
-    val homework_option_name: String? = null,
+    @SerialName("group_id") val groupId: Long? = null,
+    @SerialName("behavior_name") val behaviorName: String? = null,
+    @SerialName("count_threshold") val countThreshold: Int? = null,
+    @SerialName("time_window_hours") val timeWindowHours: Int? = null,
+    @SerialName("quiz_response") val quizResponse: String? = null,
+    @SerialName("homework_type_id") val homeworkTypeId: String? = null,
+    @SerialName("homework_response") val homeworkResponse: String? = null,
+    @SerialName("homework_option_name") val homeworkOptionName: String? = null,
     val operator: String? = null,
-    val quiz_name_contains: String? = null,
-    val score_threshold_percent: Double? = null,
-    val mark_type_id: String? = null,
-    val mark_operator: String? = null,
-    val mark_count_threshold: Int? = null
+    @SerialName("quiz_name_contains") val quizNameContains: String? = null,
+    @SerialName("score_threshold_percent") val scoreThresholdPercent: Double? = null,
+    @SerialName("mark_type_id") val markTypeId: String? = null,
+    @SerialName("mark_operator") val markOperator: String? = null,
+    @SerialName("mark_count_threshold") val markCountThreshold: Int? = null
 )
 
 @Serializable
@@ -101,15 +105,15 @@ object ConditionalFormattingEngine {
         currentMode: String
     ): Boolean {
         return when (condition.type) {
-            "group" -> student.groupId == condition.group_id
+            "group" -> student.groupId == condition.groupId
             "behavior_count" -> {
-                val behaviorName = condition.behavior_name ?: return false
-                val countThreshold = condition.count_threshold ?: return false
-                val timeWindowHours = condition.time_window_hours ?: 24
+                val behaviorName = condition.behaviorName ?: return false
+                val countThreshold = condition.countThreshold ?: return false
+                val timeWindowHours = condition.timeWindowHours ?: 24
                 val cutoffTime = System.currentTimeMillis() - timeWindowHours * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
-                    it.studentId == student.id &&
+                    it.studentId == student.id.toLong() &&
                     it.type.equals(behaviorName, ignoreCase = true) &&
                     it.timestamp >= cutoffTime
                 }
@@ -117,11 +121,11 @@ object ConditionalFormattingEngine {
             }
             "quiz_score_threshold" -> {
                 val operator = condition.operator ?: return false
-                val quizNameContains = condition.quiz_name_contains ?: ""
-                val scoreThresholdPercent = condition.score_threshold_percent ?: return false
+                val quizNameContains = condition.quizNameContains ?: ""
+                val scoreThresholdPercent = condition.scoreThresholdPercent ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id) return@any false
+                    if (log.studentId != student.id.toLong()) return@any false
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
                     val score = log.markValue
@@ -143,32 +147,32 @@ object ConditionalFormattingEngine {
             }
             "live_quiz_response" -> {
                 if (!isLiveQuizActive) return false
-                val studentScores = liveQuizScores[student.id] ?: return false
+                val studentScores = liveQuizScores[student.id.toLong()] ?: return false
                 val lastResponse = studentScores["last_response"] as? String ?: return false
-                lastResponse.equals(condition.quiz_response, ignoreCase = true)
+                lastResponse.equals(condition.quizResponse, ignoreCase = true)
             }
             "live_homework_yes_no" -> {
                 if (!isLiveHomeworkActive) return false
-                val studentScores = liveHomeworkScores[student.id] ?: return false
-                val homeworkTypeId = condition.homework_type_id ?: return false
-                val homeworkResponse = condition.homework_response ?: return false
+                val studentScores = liveHomeworkScores[student.id.toLong()] ?: return false
+                val homeworkTypeId = condition.homeworkTypeId ?: return false
+                val homeworkResponse = condition.homeworkResponse ?: return false
                 val studentResponse = studentScores[homeworkTypeId] as? String ?: return false
                 studentResponse.equals(homeworkResponse, ignoreCase = true)
             }
             "live_homework_select" -> {
                 if (!isLiveHomeworkActive) return false
-                val studentScores = liveHomeworkScores[student.id] ?: return false
-                val homeworkOptionName = condition.homework_option_name ?: return false
+                val studentScores = liveHomeworkScores[student.id.toLong()] ?: return false
+                val homeworkOptionName = condition.homeworkOptionName ?: return false
                 val selectedOptions = studentScores["selected_options"] as? List<*> ?: return false
                 selectedOptions.any { it.toString().equals(homeworkOptionName, ignoreCase = true) }
             }
             "quiz_mark_count" -> {
-                val markTypeId = condition.mark_type_id ?: return false
-                val operator = condition.mark_operator ?: return false
-                val countThreshold = condition.mark_count_threshold ?: return false
+                val markTypeId = condition.markTypeId ?: return false
+                val operator = condition.markOperator ?: return false
+                val countThreshold = condition.markCountThreshold ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id) return@any false
+                    if (log.studentId != student.id.toLong()) return@any false
                     try {
                         val marksData = json.decodeFromString<Map<String, Int>>(log.marksData)
                         val count = marksData[markTypeId] ?: 0

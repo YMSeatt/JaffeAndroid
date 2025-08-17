@@ -13,12 +13,14 @@ class StudentRepository(
     private val quizLogDao: QuizLogDao, // Added QuizLogDao
     private val studentGroupDao: StudentGroupDao, // Added StudentGroupDao
     private val layoutTemplateDao: LayoutTemplateDao, // Added LayoutTemplateDao
-    private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao // Added ConditionalFormattingRuleDao
+    private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao, // Added ConditionalFormattingRuleDao
+    private val quizMarkTypeDao: QuizMarkTypeDao
 ) {
 
     val studentsForDisplay: LiveData<List<StudentDetailsForDisplay>> = studentDao.getStudentsForDisplay()
     val allStudents: LiveData<List<Student>> = studentDao.getAllStudents()
     val allFurniture: Flow<List<Furniture>> = furnitureDao.getAllFurniture()
+    val allQuizMarkTypes: Flow<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes()
 
     // Student methods
     suspend fun getStudentByIdNonLiveData(studentId: Long): Student? {
@@ -144,24 +146,24 @@ class StudentRepository(
     // StudentGroup methods
     suspend fun insertStudentGroup(studentGroup: StudentGroup) {
         withContext(Dispatchers.IO) {
-            studentGroupDao.insertStudentGroup(studentGroup)
+            studentGroupDao.insert(studentGroup)
         }
     }
 
     suspend fun updateStudentGroup(studentGroup: StudentGroup) {
         withContext(Dispatchers.IO) {
-            studentGroupDao.updateStudentGroup(studentGroup)
+            studentGroupDao.update(studentGroup)
         }
     }
 
     suspend fun deleteStudentGroup(studentGroup: StudentGroup) {
         withContext(Dispatchers.IO) {
-            studentGroupDao.deleteStudentGroup(studentGroup)
+            studentGroupDao.delete(studentGroup)
         }
     }
 
-    fun getAllStudentGroups(): LiveData<List<StudentGroup>> {
-        return studentGroupDao.getAllStudentGroups()
+    fun getAllStudentGroups(): Flow<List<StudentGroup>> {
+        return studentGroupDao.getAllGroups()
     }
 
     suspend fun getStudentGroupById(id: Long): StudentGroup? {

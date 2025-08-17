@@ -9,12 +9,21 @@ import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 object ExcelImportUtil {
+
+    @Serializable
+    private data class MarksData(
+        val markValue: Double?,
+        val markType: String?,
+        val maxMarkValue: Double?
+    )
 
     private fun getCellStringValue(cell: Cell?): String? {
         return when (cell?.cellType) {
@@ -28,13 +37,13 @@ object ExcelImportUtil {
         uri: Uri,
         context: Context,
         studentRepository: StudentRepository
-    ): Result<Int> = withContext(Dispatchers.IO) { 
+    ): Result<Int> = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 val workbook = WorkbookFactory.create(inputStream)
                 val sheet = workbook.getSheetAt(0)
 
-                if (sheet == null || sheet.physicalNumberOfRows <= 1) { 
+                if (sheet == null || sheet.physicalNumberOfRows <= 1) {
                     return@withContext Result.failure(Exception("Sheet is empty, contains only a header, or not found"))
                 }
 
@@ -58,7 +67,7 @@ object ExcelImportUtil {
                 }
 
                 var importedStudentCount = 0
-                for (i in 1..sheet.lastRowNum) { 
+                for (i in 1..sheet.lastRowNum) {
                     val row = sheet.getRow(i) ?: continue
 
                     val firstNameCell = row.getCell(firstNameCol)
@@ -66,7 +75,7 @@ object ExcelImportUtil {
 
                     val firstName = getCellStringValue(firstNameCell)
                     val lastName = getCellStringValue(lastNameCell)
-                    
+
                     if (firstName.isNullOrEmpty() || lastName.isNullOrEmpty()) {
                         continue
                     }
@@ -75,7 +84,7 @@ object ExcelImportUtil {
                     studentRepository.insertStudent(student)
                     importedStudentCount++
                 }
-                
+
                 if (importedStudentCount == 0 && sheet.lastRowNum > 0) {
                     return@withContext Result.failure(Exception("No valid student data found in the sheet after the header. All rows were skipped."))
                 }
@@ -92,7 +101,7 @@ object ExcelImportUtil {
     }
 
     suspend fun exportData(
-        context: Context, 
+        context: Context,
         uri: Uri,
         students: List<Student>?,
         behaviorLogs: List<BehaviorEvent>?,
@@ -102,7 +111,7 @@ object ExcelImportUtil {
         try {
             val workbook = XSSFWorkbook()
 
-            students?.let { 
+            students?.let { studentList ->
                 val sheet = workbook.createSheet("Students")
                 val headerRow = sheet.createRow(0)
                 val headers = listOf(
@@ -113,28 +122,28 @@ object ExcelImportUtil {
                 headers.forEachIndexed { index, header ->
                     headerRow.createCell(index).setCellValue(header)
                 }
-                it.forEachIndexed { index, student ->
+                studentList.forEachIndexed { index, student ->
                     val dataRow = sheet.createRow(index + 1)
-                    dataRow.createCell(0).setCellValue(student.id.toDouble()) 
+                    dataRow.createCell(0).setCellValue(student.id.toDouble())
                     dataRow.createCell(1).setCellValue(student.firstName)
                     dataRow.createCell(2).setCellValue(student.lastName)
                     dataRow.createCell(3).setCellValue(student.initials ?: "")
                     dataRow.createCell(4).setCellValue(student.xPosition.toDouble())
                     dataRow.createCell(5).setCellValue(student.yPosition.toDouble())
-                    student.customWidth?.let { dataRow.createCell(6).setCellValue(it.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
-                    student.customHeight?.let { dataRow.createCell(7).setCellValue(it.toDouble()) } ?: dataRow.createCell(7).setCellValue("")
+                    student.customWidth?.let { width -> dataRow.createCell(6).setCellValue(width.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
+                    student.customHeight?.let { height -> dataRow.createCell(7).setCellValue(height.toDouble()) } ?: dataRow.createCell(7).setCellValue("")
                     dataRow.createCell(8).setCellValue(student.customBackgroundColor ?: "")
                     dataRow.createCell(9).setCellValue(student.customOutlineColor ?: "")
                     dataRow.createCell(10).setCellValue(student.customTextColor ?: "")
                 }
             }
 
-            behaviorLogs?.let {
+            behaviorLogs?.let { logs ->
                 val sheet = workbook.createSheet("Behavior Logs")
                 val headerRow = sheet.createRow(0)
                 val headers = listOf("ID", "Student ID", "Type", "Timestamp", "Comment")
                 headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                it.forEachIndexed { index, log ->
+                logs.forEachIndexed { index, log ->
                     val dataRow = sheet.createRow(index + 1)
                     dataRow.createCell(0).setCellValue(log.id.toDouble())
                     dataRow.createCell(1).setCellValue(log.studentId.toDouble())
@@ -144,12 +153,12 @@ object ExcelImportUtil {
                 }
             }
 
-            homeworkLogs?.let {
+            homeworkLogs?.let { logs ->
                 val sheet = workbook.createSheet("Homework Logs")
                 val headerRow = sheet.createRow(0)
                 val headers = listOf("ID", "Student ID", "Assignment", "Status", "Logged At", "Comment", "Mark Value", "Mark Type", "Max Mark")
                 headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                it.forEachIndexed { index, log ->
+                logs.forEachIndexed { index, log ->
                     val dataRow = sheet.createRow(index + 1)
                     dataRow.createCell(0).setCellValue(log.id.toDouble())
                     dataRow.createCell(1).setCellValue(log.studentId.toDouble())
@@ -157,25 +166,32 @@ object ExcelImportUtil {
                     dataRow.createCell(3).setCellValue(log.status)
                     dataRow.createCell(4).setCellValue(log.loggedAt.toDouble())
                     dataRow.createCell(5).setCellValue(log.comment ?: "")
-                    log.markValue?.let { dataRow.createCell(6).setCellValue(it.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
-                    dataRow.createCell(7).setCellValue(log.markType ?: "")
-                    log.maxMarkValue?.let { dataRow.createCell(8).setCellValue(it.toDouble()) } ?: dataRow.createCell(8).setCellValue("")
+                    log.marksData?.let {
+                        val marks = Json.decodeFromString<MarksData>(it)
+                        marks.markValue?.let { value -> dataRow.createCell(6).setCellValue(value) } ?: dataRow.createCell(6).setCellValue("")
+                        dataRow.createCell(7).setCellValue(marks.markType ?: "")
+                        marks.maxMarkValue?.let { value -> dataRow.createCell(8).setCellValue(value) } ?: dataRow.createCell(8).setCellValue("")
+                    } ?: run {
+                        dataRow.createCell(6).setCellValue("")
+                        dataRow.createCell(7).setCellValue("")
+                        dataRow.createCell(8).setCellValue("")
+                    }
                 }
             }
 
-            quizLogs?.let {
+            quizLogs?.let { logs ->
                 val sheet = workbook.createSheet("Quiz Logs")
                 val headerRow = sheet.createRow(0)
                 val headers = listOf("ID", "Student ID", "Quiz Name", "Mark Value", "Mark Type", "Max Mark", "Logged At", "Comment")
                 headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                it.forEachIndexed { index, log ->
+                logs.forEachIndexed { index, log ->
                     val dataRow = sheet.createRow(index + 1)
                     dataRow.createCell(0).setCellValue(log.id.toDouble())
                     dataRow.createCell(1).setCellValue(log.studentId.toDouble())
                     dataRow.createCell(2).setCellValue(log.quizName)
-                    log.markValue?.let { dataRow.createCell(3).setCellValue(it.toDouble()) } ?: dataRow.createCell(3).setCellValue("")
+                    log.markValue?.let { value -> dataRow.createCell(3).setCellValue(value) } ?: dataRow.createCell(3).setCellValue("")
                     dataRow.createCell(4).setCellValue(log.markType ?: "")
-                    log.maxMarkValue?.let { dataRow.createCell(5).setCellValue(it.toDouble()) } ?: dataRow.createCell(5).setCellValue("")
+                    log.maxMarkValue?.let { value -> dataRow.createCell(5).setCellValue(value) } ?: dataRow.createCell(5).setCellValue("")
                     dataRow.createCell(6).setCellValue(log.loggedAt.toDouble())
                     dataRow.createCell(7).setCellValue(log.comment ?: "")
                 }
@@ -184,7 +200,7 @@ object ExcelImportUtil {
             context.contentResolver.openOutputStream(uri)?.use { outputStream ->
                 workbook.write(outputStream)
             } ?: return@withContext Result.failure(Exception("Failed to open output stream from URI"))
-            
+
             workbook.close()
             Result.success(Unit)
 

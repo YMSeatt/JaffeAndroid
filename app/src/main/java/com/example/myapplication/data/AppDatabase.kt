@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 10, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 12, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -326,6 +326,97 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create a new table with the desired schema
+                db.execSQL("""
+                    CREATE TABLE homework_logs_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        studentId INTEGER NOT NULL,
+                        assignmentName TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        loggedAt INTEGER NOT NULL,
+                        comment TEXT,
+                        marksData TEXT,
+                        FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+
+                // Copy data from the old table to the new one, transforming the marks columns into a single JSON string.
+                db.execSQL("""
+                    INSERT INTO homework_logs_new (id, studentId, assignmentName, status, loggedAt, comment, marksData)
+                    SELECT 
+                        id, 
+                        studentId, 
+                        assignmentName, 
+                        status, 
+                        loggedAt, 
+                        comment, 
+                        CASE 
+                            WHEN markValue IS NOT NULL THEN 
+                                '{"markValue":' || markValue || ',"markType":"' || COALESCE(markType, '') || '","maxMarkValue":' || COALESCE(maxMarkValue, 'null') || '}'
+                            ELSE NULL 
+                        END 
+                    FROM homework_logs
+                """.trimIndent())
+
+                // Drop the old table
+                db.execSQL("DROP TABLE homework_logs")
+
+                // Rename the new table to the original name
+                db.execSQL("ALTER TABLE homework_logs_new RENAME TO homework_logs")
+
+                // Recreate the index
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_homework_logs_studentId ON homework_logs(studentId)")
+            }
+        }
+
+        val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create a new table with the desired schema
+                db.execSQL("""
+                    CREATE TABLE quiz_logs_new (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        studentId INTEGER NOT NULL,
+                        quizName TEXT NOT NULL,
+                        loggedAt INTEGER NOT NULL,
+                        comment TEXT,
+                        marksData TEXT NOT NULL,
+                        numQuestions INTEGER NOT NULL,
+                        FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
+                    )
+                """.trimIndent())
+
+                // Copy data from the old table to the new one, transforming the marks columns into a single JSON string.
+                db.execSQL("""
+                    INSERT INTO quiz_logs_new (id, studentId, quizName, loggedAt, comment, marksData, numQuestions)
+                    SELECT 
+                        id, 
+                        studentId, 
+                        quizName, 
+                        loggedAt, 
+                        comment, 
+                        CASE 
+                            WHEN markValue IS NOT NULL THEN 
+                                '{"markValue":' || markValue || ',"markType":"' || COALESCE(markType, '') || '","maxMarkValue":' || COALESCE(maxMarkValue, 'null') || '}'
+                            ELSE '{}' 
+                        END,
+                        0
+                    FROM quiz_logs
+                """.trimIndent())
+
+                // Drop the old table
+                db.execSQL("DROP TABLE quiz_logs")
+
+                // Rename the new table to the original name
+                db.execSQL("ALTER TABLE quiz_logs_new RENAME TO quiz_logs")
+
+                // Recreate the index
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_quiz_logs_studentId ON quiz_logs(studentId)")
+            }
+        }
+
+
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -333,7 +424,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10) // Added MIGRATION_9_10
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12) // Added MIGRATION_11_12
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

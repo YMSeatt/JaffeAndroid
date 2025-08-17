@@ -27,10 +27,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -113,7 +113,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         customHomeworkStatusDao.delete(customHomeworkStatus)
     }
 
-    val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes()
+    val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
     fun addQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.insert(quizMarkType)
     }

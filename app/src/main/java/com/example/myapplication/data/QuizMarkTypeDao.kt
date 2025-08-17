@@ -7,6 +7,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface QuizMarkTypeDao {
@@ -20,5 +21,5 @@ interface QuizMarkTypeDao {
     suspend fun delete(quizMarkType: QuizMarkType)
 
     @Query("SELECT * FROM quiz_mark_types ORDER BY name ASC")
-    fun getAllQuizMarkTypes(): LiveData<List<QuizMarkType>>
+    fun getAllQuizMarkTypes(): Flow<List<QuizMarkType>>
 }

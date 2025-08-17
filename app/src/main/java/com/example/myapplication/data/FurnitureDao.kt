@@ -1,6 +1,7 @@
 package com.example.myapplication.data
 
 import androidx.room.Dao
+import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -15,6 +16,9 @@ interface FurnitureDao {
     @Update
     suspend fun update(furniture: Furniture)
 
+    @Delete
+    suspend fun delete(furniture: Furniture)
+
     @Query("DELETE FROM furniture WHERE id = :id")
     suspend fun deleteById(id: Long)
 
@@ -23,4 +27,10 @@ interface FurnitureDao {
 
     @Query("SELECT * FROM furniture WHERE id = :id")
     suspend fun getFurnitureById(id: Long): Furniture?
+
+    @Query("UPDATE furniture SET xPosition = :newX, yPosition = :newY WHERE id = :furnitureId")
+    suspend fun updatePosition(furnitureId: Long, newX: Float, newY: Float)
+
+    @Update
+    suspend fun updateAll(furniture: List<Furniture>)
 }

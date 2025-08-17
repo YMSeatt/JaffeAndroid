@@ -3,49 +3,42 @@ package com.example.myapplication.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.switchMap
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.launch
 
-class HomeworkLogViewModel(application: Application, private val studentId: Int) : AndroidViewModel(application) {
+class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
 
     private val studentRepository: StudentRepository
 
     // LiveData to hold the list of homework logs for the current studentId
     val homeworkLogsForStudent: LiveData<List<HomeworkLog>>
 
-    // Potentially a LiveData for a single selected log if we add edit functionality
-    // private val _selectedHomeworkLog = MutableLiveData<HomeworkLog?>()
-    // val selectedHomeworkLog: LiveData<HomeworkLog?> = _selectedHomeworkLog
-
     init {
         val studentDao = AppDatabase.getDatabase(application).studentDao()
         val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
         val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
         val furnitureDao = AppDatabase.getDatabase(application).furnitureDao()
-        val quizLogDao = AppDatabase.getDatabase(application).quizLogDao() // Added this line
-        val studentGroupDao = AppDatabase.getDatabase(application).studentGroupDao() // Added this line
-        val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao() // Added this line
-        val conditionalFormattingRuleDao = AppDatabase.getDatabase(application).conditionalFormattingRuleDao() // Added this line
+        val quizLogDao = AppDatabase.getDatabase(application).quizLogDao()
+        val studentGroupDao = AppDatabase.getDatabase(application).studentGroupDao()
+        val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao()
+        val conditionalFormattingRuleDao = AppDatabase.getDatabase(application).conditionalFormattingRuleDao()
+        val quizMarkTypeDao = AppDatabase.getDatabase(application).quizMarkTypeDao()
 
         studentRepository = StudentRepository(
-            studentDao, 
-            behaviorEventDao, 
-            homeworkLogDao, 
-            furnitureDao, 
-            quizLogDao, // Added to constructor
-            studentGroupDao, // Added to constructor
-            layoutTemplateDao, // Added to constructor
-            conditionalFormattingRuleDao // Added to constructor
+            studentDao,
+            behaviorEventDao,
+            homeworkLogDao,
+            furnitureDao,
+            quizLogDao,
+            studentGroupDao,
+            layoutTemplateDao,
+            conditionalFormattingRuleDao,
+            quizMarkTypeDao
         )
 
-        // Initialize homeworkLogsForStudent based on studentId
-        // This requires studentId to be available at init.
-        // If studentId can change, this setup needs to be more dynamic.
         homeworkLogsForStudent = studentRepository.getHomeworkLogsForStudent(studentId)
     }
 
@@ -55,11 +48,11 @@ class HomeworkLogViewModel(application: Application, private val studentId: Int)
     fun addHomeworkLog(assignmentName: String, status: String, comment: String?) {
         viewModelScope.launch {
             val newLog = HomeworkLog(
-                studentId = studentId.toLong(),
+                studentId = studentId.toInt(),
                 assignmentName = assignmentName,
                 status = status,
                 comment = comment,
-                loggedAt = System.currentTimeMillis() // Or allow setting a custom date
+                loggedAt = System.currentTimeMillis()
             )
             studentRepository.insertHomeworkLog(newLog)
         }
@@ -73,24 +66,11 @@ class HomeworkLogViewModel(application: Application, private val studentId: Int)
             studentRepository.deleteHomeworkLog(logId)
         }
     }
-
-    // If we need to load a specific log for viewing/editing:
-    // fun loadHomeworkLogById(logId: Long) {
-    //     viewModelScope.launch {
-    //         // Assuming a repository method getHomeworkLogById(logId) exists
-    //         // _selectedHomeworkLog.value = studentRepository.getHomeworkLogById(logId) 
-    //     }
-    // }
 }
-
-// We might need a ViewModelProvider.Factory if the ViewModel has constructor parameters
-// that the default factory doesn't handle (like studentId here).
-// For simple cases with just Application and other known types, it might work,
-// but for `studentId: Long`, a factory is typically needed.
 
 class HomeworkLogViewModelFactory(
     private val application: Application,
-    private val studentId: Int
+    private val studentId: Long
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeworkLogViewModel::class.java)) {

@@ -7,7 +7,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -15,6 +14,9 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +37,15 @@ fun LogQuizScoreDialog(
 
     LaunchedEffect(selectedTemplate) {
         selectedTemplate?.let { template ->
-            // TODO: Deserialize template.marksData and populate the marksData map
+            if (template.marksData.isNotBlank()) {
+                try {
+                    val deserializedMarks = Json.decodeFromString<Map<String, String>>(template.marksData)
+                    marksData.clear()
+                    marksData.putAll(deserializedMarks)
+                } catch (_: Exception) {
+                    // Handle decoding error if necessary
+                }
+            }
         }
     }
 
@@ -113,14 +123,18 @@ fun LogQuizScoreDialog(
         confirmButton = {
             Button(
                 onClick = {
+                    val serializedMarks = Json.encodeToString(marksData.toMap())
                     val log = QuizLog(
                         studentId = studentId,
                         quizName = quizName,
                         comment = comment,
                         loggedAt = System.currentTimeMillis(),
-                        // TODO: Serialize marksData map to JSON string
-                        marksData = "",
-                        numQuestions = numQuestions.toIntOrNull() ?: 0
+                        marksData = serializedMarks,
+                        numQuestions = numQuestions.toIntOrNull() ?: 0,
+                        id = TODO(),
+                        markValue = TODO(),
+                        markType = TODO(),
+                        maxMarkValue = TODO()
                     )
                     onSave(log)
                     onDismissRequest()
