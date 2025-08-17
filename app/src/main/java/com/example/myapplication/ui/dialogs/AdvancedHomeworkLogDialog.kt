@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -13,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
-import kotlinx.coroutines.flow.collectAsState
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -28,11 +28,11 @@ fun AdvancedHomeworkLogDialog(
 ) {
     var assignmentName by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
-    val homeworkTemplates by viewModel.allHomeworkTemplates.collectAsState(initial = emptyList())
+    val homeworkTemplates by viewModel.allHomeworkTemplates.collectAsState(emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
-    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(initial = emptyList())
+    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(emptyList())
     var selectedHomeworkType by remember { mutableStateOf("") }
-    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(initial = emptyList())
+    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(emptyList())
     var selectedHomeworkStatus by remember { mutableStateOf("") }
 
 
@@ -162,7 +162,7 @@ fun AdvancedHomeworkLogDialog(
             Button(
                 onClick = {
                     val log = HomeworkLog(
-                        studentId = studentId.toInt(), // Cast Long to Int
+                        studentId = studentId,
                         assignmentName = assignmentName,
                         status = selectedHomeworkStatus,
                         comment = comment,

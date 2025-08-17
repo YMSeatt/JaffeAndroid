@@ -11,7 +11,7 @@ import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.launch
 
-class HomeworkLogViewModel(application: Application, private val studentId: Int) : AndroidViewModel(application) {
+class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
 
     private val studentRepository: StudentRepository
 
@@ -55,7 +55,7 @@ class HomeworkLogViewModel(application: Application, private val studentId: Int)
     fun addHomeworkLog(assignmentName: String, status: String, comment: String?) {
         viewModelScope.launch {
             val newLog = HomeworkLog(
-                studentId = studentId.toLong(),
+                studentId = studentId,
                 assignmentName = assignmentName,
                 status = status,
                 comment = comment,
@@ -90,7 +90,7 @@ class HomeworkLogViewModel(application: Application, private val studentId: Int)
 
 class HomeworkLogViewModelFactory(
     private val application: Application,
-    private val studentId: Int
+    private val studentId: Long
 ) : androidx.lifecycle.ViewModelProvider.Factory {
     override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(HomeworkLogViewModel::class.java)) {

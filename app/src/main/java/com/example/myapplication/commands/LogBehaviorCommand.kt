@@ -7,11 +7,11 @@ class LogBehaviorCommand(
     private val viewModel: SeatingChartViewModel,
     private val event: BehaviorEvent
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalAddBehaviorEvent(event)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.deleteBehaviorEvent(event)
     }
 }

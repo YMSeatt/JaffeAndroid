@@ -1064,9 +1064,7 @@ fun AddEditStudentDialog(
                     if (isEditMode) {
                         viewModel.updateStudent(studentToEdit!!, newStudent) 
                     } else {
-                        // viewModel.addStudent(newStudent) 
-                        val command = AddStudentCommand(viewModel, newStudent)
-                        command.execute()
+                        viewModel.addStudent(newStudent)
                     }
                     onDismiss()
                 }

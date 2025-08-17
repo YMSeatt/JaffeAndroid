@@ -7,11 +7,11 @@ class LogQuizCommand(
     private val viewModel: SeatingChartViewModel,
     private val log: QuizLog
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalSaveQuizLog(log)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.deleteQuizLog(log)
     }
 }

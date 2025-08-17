@@ -8,11 +8,11 @@ class UpdateStudentCommand(
     private val oldStudent: Student,
     private val newStudent: Student
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalUpdateStudent(newStudent)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalUpdateStudent(oldStudent)
     }
 }

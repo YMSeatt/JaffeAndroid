@@ -11,30 +11,24 @@ import kotlinx.coroutines.launch
 
 class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : ViewModel() {
 
-    val studentGroups: StateFlow<List<StudentGroup>> = studentGroupDao.getAllGroups()
+    val studentGroups: StateFlow<List<StudentGroup>> = studentGroupDao.getAllStudentGroups()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun addGroup(groupName: String, groupColor: String) { // Modified to take name and color
         viewModelScope.launch {
-            studentGroupDao.insert(StudentGroup(name = groupName, color = groupColor))
+            studentGroupDao.insertStudentGroup(StudentGroup(name = groupName, color = groupColor))
         }
     }
 
     fun updateGroup(group: StudentGroup) {
         viewModelScope.launch {
-            studentGroupDao.update(group)
+            studentGroupDao.updateStudentGroup(group)
         }
     }
 
     fun deleteGroup(group: StudentGroup) {
         viewModelScope.launch {
-            studentGroupDao.delete(group)
-        }
-    }
-
-    fun deleteGroupById(groupId: Long) { // Added for convenience
-        viewModelScope.launch {
-            studentGroupDao.deleteGroupById(groupId)
+            studentGroupDao.deleteStudentGroup(group)
         }
     }
 }

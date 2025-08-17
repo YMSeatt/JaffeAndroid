@@ -157,9 +157,6 @@ object ExcelImportUtil {
                     dataRow.createCell(3).setCellValue(log.status)
                     dataRow.createCell(4).setCellValue(log.loggedAt.toDouble())
                     dataRow.createCell(5).setCellValue(log.comment ?: "")
-                    log.markValue?.let { dataRow.createCell(6).setCellValue(it.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
-                    dataRow.createCell(7).setCellValue(log.markType ?: "")
-                    log.maxMarkValue?.let { dataRow.createCell(8).setCellValue(it.toDouble()) } ?: dataRow.createCell(8).setCellValue("")
                 }
             }
 

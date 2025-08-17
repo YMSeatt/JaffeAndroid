@@ -8,11 +8,11 @@ class UpdateFurnitureCommand(
     private val oldFurniture: Furniture,
     private val newFurniture: Furniture
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalUpdateFurniture(newFurniture)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalUpdateFurniture(oldFurniture)
     }
 }
