@@ -32,8 +32,8 @@ abstract class AppDatabase : RoomDatabase() {
         private var INSTANCE: AppDatabase? = null
 
         val MIGRATION_1_2 = object : Migration(1, 2) { /* ... existing migration ... */
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("""
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
                     CREATE TABLE students_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         firstName TEXT NOT NULL,
@@ -42,17 +42,17 @@ abstract class AppDatabase : RoomDatabase() {
                         yPosition REAL NOT NULL DEFAULT 0.0
                     )
                 """.trimIndent())
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO students_new (id, firstName, lastName)
                     SELECT id, firstName, lastName FROM students
                 """.trimIndent())
-                database.execSQL("DROP TABLE students")
-                database.execSQL("ALTER TABLE students_new RENAME TO students")
+                db.execSQL("DROP TABLE students")
+                db.execSQL("ALTER TABLE students_new RENAME TO students")
             }
         }
         val MIGRATION_2_3 = object : Migration(2, 3) { /* ... existing migration ... */
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("""
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
                     CREATE TABLE homework_logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         studentId INTEGER NOT NULL,
@@ -63,39 +63,39 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_homework_logs_studentId ON homework_logs(studentId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_homework_logs_studentId ON homework_logs(studentId)")
             }
         }
 
         // Migration from version 3 to 4: Adds custom display fields to Student table
         val MIGRATION_3_4 = object : Migration(3, 4) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE students ADD COLUMN customWidth INTEGER")
-                database.execSQL("ALTER TABLE students ADD COLUMN customHeight INTEGER")
-                database.execSQL("ALTER TABLE students ADD COLUMN customBackgroundColor TEXT")
-                database.execSQL("ALTER TABLE students ADD COLUMN customOutlineColor TEXT")
-                database.execSQL("ALTER TABLE students ADD COLUMN customTextColor TEXT")
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE students ADD COLUMN customWidth INTEGER")
+                db.execSQL("ALTER TABLE students ADD COLUMN customHeight INTEGER")
+                db.execSQL("ALTER TABLE students ADD COLUMN customBackgroundColor TEXT")
+                db.execSQL("ALTER TABLE students ADD COLUMN customOutlineColor TEXT")
+                db.execSQL("ALTER TABLE students ADD COLUMN customTextColor TEXT")
             }
         }
 
         // Migration from version 4 to 5: Adds initials field to Student table
         val MIGRATION_4_5 = object : Migration(4, 5) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE students ADD COLUMN initials TEXT")
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE students ADD COLUMN initials TEXT")
             }
         }
 
         // Migration from version 5 to 6: Adds new fields to Student and creates Furniture table
         val MIGRATION_5_6 = object : Migration(5, 6) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // Add new columns to students table
-                database.execSQL("ALTER TABLE students ADD COLUMN stringId TEXT")
-                database.execSQL("ALTER TABLE students ADD COLUMN nickname TEXT")
-                database.execSQL("ALTER TABLE students ADD COLUMN gender TEXT NOT NULL DEFAULT 'Boy'")
-                database.execSQL("ALTER TABLE students ADD COLUMN groupId TEXT") // Will be updated to Long in MIGRATION_6_7
+                db.execSQL("ALTER TABLE students ADD COLUMN stringId TEXT")
+                db.execSQL("ALTER TABLE students ADD COLUMN nickname TEXT")
+                db.execSQL("ALTER TABLE students ADD COLUMN gender TEXT NOT NULL DEFAULT 'Boy'")
+                db.execSQL("ALTER TABLE students ADD COLUMN groupId TEXT") // Will be updated to Long in MIGRATION_6_7
 
                 // Create new furniture table
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE furniture (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         stringId TEXT,
@@ -114,9 +114,9 @@ abstract class AppDatabase : RoomDatabase() {
 
         // Migration from version 6 to 7: Adds new tables and updates HomeworkLog and Student
         val MIGRATION_6_7 = object : Migration(6, 7) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // Create QuizLog table
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE quiz_logs (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         studentId INTEGER NOT NULL,
@@ -131,10 +131,10 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_quiz_logs_studentId ON quiz_logs(studentId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_quiz_logs_studentId ON quiz_logs(studentId)")
 
                 // Create StudentGroup table
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE student_groups (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
@@ -143,7 +143,7 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
 
                 // Create LayoutTemplate table
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE layout_templates (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
@@ -152,7 +152,7 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
 
                 // Create ConditionalFormattingRule table
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE conditional_formatting_rules (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         name TEXT NOT NULL,
@@ -164,12 +164,12 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
 
                 // Update HomeworkLog table
-                database.execSQL("ALTER TABLE homework_logs ADD COLUMN markValue REAL")
-                database.execSQL("ALTER TABLE homework_logs ADD COLUMN markType TEXT")
-                database.execSQL("ALTER TABLE homework_logs ADD COLUMN maxMarkValue REAL")
+                db.execSQL("ALTER TABLE homework_logs ADD COLUMN markValue REAL")
+                db.execSQL("ALTER TABLE homework_logs ADD COLUMN markType TEXT")
+                db.execSQL("ALTER TABLE homework_logs ADD COLUMN maxMarkValue REAL")
 
                 // Recreate Students table to change groupId type (SQLite doesn't directly support ALTER COLUMN TYPE)
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE students_temp_for_groupid_update (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         stringId TEXT,
@@ -189,20 +189,20 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(groupId) REFERENCES student_groups(id) ON DELETE SET NULL
                     )
                 """.trimIndent())
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO students_temp_for_groupid_update (id, stringId, firstName, lastName, nickname, initials, gender, xPosition, yPosition, customWidth, customHeight, customBackgroundColor, customOutlineColor, customTextColor, groupId)
                     SELECT id, stringId, firstName, lastName, nickname, initials, gender, xPosition, yPosition, customWidth, customHeight, customBackgroundColor, customOutlineColor, customTextColor, CASE WHEN groupId GLOB '[0-9]*' THEN CAST(groupId AS INTEGER) ELSE NULL END FROM students
                 """.trimIndent())
-                database.execSQL("DROP TABLE students")
-                database.execSQL("ALTER TABLE students_temp_for_groupid_update RENAME TO students")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_students_groupId ON students(groupId)")
+                db.execSQL("DROP TABLE students")
+                db.execSQL("ALTER TABLE students_temp_for_groupid_update RENAME TO students")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_students_groupId ON students(groupId)")
             }
         }
 
         val MIGRATION_7_8 = object : Migration(7, 8) {
-            override fun migrate(database: SupportSQLiteDatabase) {
+            override fun migrate(db: SupportSQLiteDatabase) {
                 // Create a new table with the correct id type (INTEGER for Long)
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE students_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         stringId TEXT,
@@ -223,17 +223,17 @@ abstract class AppDatabase : RoomDatabase() {
                 """.trimIndent())
 
                 // Copy data from the old table to the new table
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO students_new (id, stringId, firstName, lastName, nickname, gender, groupId, initials, xPosition, yPosition, customWidth, customHeight, customBackgroundColor, customOutlineColor, customTextColor)
                     SELECT id, stringId, firstName, lastName, nickname, gender, groupId, initials, xPosition, yPosition, customWidth, customHeight, customBackgroundColor, customOutlineColor, customTextColor
                     FROM students
                 """.trimIndent())
 
                 // Drop the old table
-                database.execSQL("DROP TABLE students")
+                db.execSQL("DROP TABLE students")
 
                 // Rename the new table to the original name
-                database.execSQL("ALTER TABLE students_new RENAME TO students")
+                db.execSQL("ALTER TABLE students_new RENAME TO students")
 
                 // Recreate indexes and foreign keys if necessary (Room handles this for entities)
                 // For foreign keys, Room usually recreates them on table recreation.
@@ -242,7 +242,7 @@ abstract class AppDatabase : RoomDatabase() {
 
                 // Update foreign key constraints for tables referencing students.id
                 // HomeworkLog
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE homework_logs_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         studentId INTEGER NOT NULL,
@@ -256,17 +256,17 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO homework_logs_new (id, studentId, assignmentName, status, loggedAt, comment, markValue, markType, maxMarkValue)
                     SELECT id, studentId, assignmentName, status, loggedAt, comment, markValue, markType, maxMarkValue
                     FROM homework_logs
                 """.trimIndent())
-                database.execSQL("DROP TABLE homework_logs")
-                database.execSQL("ALTER TABLE homework_logs_new RENAME TO homework_logs")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_homework_logs_studentId ON homework_logs(studentId)")
+                db.execSQL("DROP TABLE homework_logs")
+                db.execSQL("ALTER TABLE homework_logs_new RENAME TO homework_logs")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_homework_logs_studentId ON homework_logs(studentId)")
 
                 // QuizLog
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE quiz_logs_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         studentId INTEGER NOT NULL,
@@ -279,17 +279,17 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO quiz_logs_new (id, studentId, quizName, markValue, markType, maxMarkValue, loggedAt, comment)
                     SELECT id, studentId, quizName, markValue, markType, maxMarkValue, loggedAt, comment
                     FROM quiz_logs
                 """.trimIndent())
-                database.execSQL("DROP TABLE quiz_logs")
-                database.execSQL("ALTER TABLE quiz_logs_new RENAME TO quiz_logs")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_quiz_logs_studentId ON quiz_logs(studentId)")
+                db.execSQL("DROP TABLE quiz_logs")
+                db.execSQL("ALTER TABLE quiz_logs_new RENAME TO quiz_logs")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_quiz_logs_studentId ON quiz_logs(studentId)")
 
                 // BehaviorEvent
-                database.execSQL("""
+                db.execSQL("""
                     CREATE TABLE behavior_events_new (
                         id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                         studentId INTEGER NOT NULL,
@@ -299,30 +299,30 @@ abstract class AppDatabase : RoomDatabase() {
                         FOREIGN KEY(studentId) REFERENCES students(id) ON DELETE CASCADE
                     )
                 """.trimIndent())
-                database.execSQL("""
+                db.execSQL("""
                     INSERT INTO behavior_events_new (id, studentId, type, timestamp, comment)
                     SELECT id, studentId, type, timestamp, comment
                     FROM behavior_events
                 """.trimIndent())
-                database.execSQL("DROP TABLE behavior_events")
-                database.execSQL("ALTER TABLE behavior_events_new RENAME TO behavior_events")
-                database.execSQL("CREATE INDEX IF NOT EXISTS index_behavior_events_studentId ON behavior_events(studentId)")
+                db.execSQL("DROP TABLE behavior_events")
+                db.execSQL("ALTER TABLE behavior_events_new RENAME TO behavior_events")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_behavior_events_studentId ON behavior_events(studentId)")
             }
         }
 
         val MIGRATION_8_9 = object : Migration(8, 9) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_behaviors` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
-                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
-                database.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_statuses` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
-                database.execSQL("CREATE TABLE IF NOT EXISTS `quiz_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)")
-                database.execSQL("CREATE TABLE IF NOT EXISTS `homework_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)")
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `custom_behaviors` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `custom_homework_statuses` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `quiz_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `homework_templates` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `marksData` TEXT NOT NULL)") //Fixed: Removed an extra ')' that was causing a syntax error.
             }
         }
 
         val MIGRATION_9_10 = object : Migration(9, 10) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("CREATE TABLE IF NOT EXISTS `quiz_mark_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultPoints` REAL NOT NULL, `contributesToTotal` INTEGER NOT NULL, `isExtraCredit` INTEGER NOT NULL)")
+            override fun migrate(db: SupportSQLiteDatabase) { // Renamed 'database' to 'db'
+                db.execSQL("CREATE TABLE IF NOT EXISTS `quiz_mark_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultPoints` REAL NOT NULL, `contributesToTotal` INTEGER NOT NULL, `isExtraCredit` INTEGER NOT NULL)")
             }
         }
 

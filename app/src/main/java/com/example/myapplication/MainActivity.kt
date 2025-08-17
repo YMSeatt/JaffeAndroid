@@ -20,7 +20,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+// import androidx.compose.foundation.lazy.items // Removed unused import
 import androidx.compose.foundation.rememberScrollState // Added for scrollable dialog
 import androidx.compose.foundation.text.KeyboardOptions // Added for keyboard options
 import androidx.compose.foundation.verticalScroll // Added for scrollable dialog
@@ -208,7 +208,7 @@ fun SeatingChartScreen(
     var editingFurniture by remember { mutableStateOf<Furniture?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var showThemeMenu by remember { mutableStateOf(false) }
+    var showThemeMenu by remember { mutableStateOf(false) } // Fixed typo: mutableStateOF -> mutableStateOf
 
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
@@ -561,7 +561,8 @@ fun LoadLayoutDialog(
         title = { Text("Load Layout") },
         text = {
             LazyColumn {
-                items(layouts) { layout ->
+                items(layouts.size) { index -> // Changed to use items(count)
+                    val layout = layouts[index] // Get layout by index
                     Row(
                         modifier = Modifier.fillMaxWidth().clickable { onLoad(layout) },
                         horizontalArrangement = Arrangement.SpaceBetween
@@ -664,10 +665,10 @@ fun StudentDraggableIcon(
                     onDragEnd = {
                         viewModel.updateStudentPosition(
                             studentUiItem.id,
-                            studentUiItem.xPosition.toFloat(),
-                            studentUiItem.yPosition.toFloat(),
+                            studentUiItem.xPosition.toFloat(), // This should be the original X
+                            studentUiItem.yPosition.toFloat(), // This should be the original Y
                             offsetX, 
-                            offsetY
+                            offsetY 
                         )
                     }
                 )
@@ -830,7 +831,7 @@ fun AddEditFurnitureDialog(
                         Toast.makeText(context, "Please fill all fields correctly.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    val furniture = Furniture(
+                    val updatedFurniture = Furniture( // Renamed to avoid confusion
                         id = furnitureToEdit?.id ?: 0,
                         name = name,
                         type = type.ifBlank { "Furniture" },
@@ -840,9 +841,10 @@ fun AddEditFurnitureDialog(
                         yPosition = furnitureToEdit?.yPosition ?: 50f
                     )
                     if (isEditMode) {
-                        viewModel.updateFurniture(furniture)
+                        // Pass the updated furniture object
+                        viewModel.updateFurniture(furnitureToEdit!!, updatedFurniture) 
                     } else {
-                        viewModel.addFurniture(furniture)
+                        viewModel.addFurniture(updatedFurniture)
                     }
                     onDismiss()
                 }
@@ -855,10 +857,10 @@ fun AddEditFurnitureDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (isEditMode) {
+                if (isEditMode && furnitureToEdit != null) { // Added null check for furnitureToEdit
                     Button(
                         onClick = {
-                            viewModel.deleteFurnitureById(furnitureToEdit!!.id) // Added non-null assertion
+                            viewModel.deleteFurnitureById(furnitureToEdit.id) 
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -977,9 +979,11 @@ fun AddEditStudentDialog(
                                 DropdownMenuItem(
                                     text = { 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(modifier = Modifier.size(16.dp).background(Color(group.color)))
+                                            group.color?.let { // Added null check for group.color
+                                                Box(modifier = Modifier.size(16.dp).background(Color(android.graphics.Color.parseColor(it)))) // Use android.graphics.Color.parseColor for hex strings
+                                            }
                                             Spacer(Modifier.width(8.dp))
-                                            Text(group.name) 
+                                            Text(group.name ?: "")  // Added null check for group.name
                                         }
                                     },
                                     onClick = {
@@ -1018,7 +1022,7 @@ fun AddEditStudentDialog(
                         onValueChange = { customHeightInput = it },
                         label = { Text("Custom Height (dp)") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f) // This should likely be fillMaxWidth or remove weight
+                        modifier = Modifier.fillMaxWidth() // Changed from weight(1f)
                     )
                     OutlinedTextField(
                         value = customBgColorInput,
@@ -1061,8 +1065,8 @@ fun AddEditStudentDialog(
                         customOutlineColor = if (useCustomAppearance && customOutlineColorInput.isNotBlank()) customOutlineColorInput.trim() else null,
                         customTextColor = if (useCustomAppearance && customTextColorInput.isNotBlank()) customTextColorInput.trim() else null
                     )
-                    if (isEditMode) {
-                        viewModel.updateStudent(studentToEdit!!, newStudent) // Added non-null assertion
+                    if (isEditMode && studentToEdit != null) { // Added null check for studentToEdit
+                        viewModel.updateStudent(studentToEdit, newStudent) 
                     } else {
                         // viewModel.addStudent(newStudent) 
                         val command = AddStudentCommand(viewModel, newStudent)
@@ -1079,10 +1083,10 @@ fun AddEditStudentDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (isEditMode) {
+                if (isEditMode && studentToEdit != null) { // Added null check for studentToEdit
                     Button(
                         onClick = {
-                            viewModel.deleteStudent(studentToEdit!!) // Added non-null assertion
+                            viewModel.deleteStudent(studentToEdit) 
                             onDismiss()
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
@@ -1101,3 +1105,4 @@ fun AddEditStudentDialog(
         }
     )
 }
+

@@ -44,7 +44,7 @@ suspend fun exportToExcel(context: Context, students: List<StudentDetailsForDisp
 
     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
     behaviorEvents.forEach { event ->
-        val student = students.find { it.id == event.studentId }
+        val student = students.find { it.id.toLong() == event.studentId }
         val row = behaviorSheet.createRow(rowNum++)
         row.createCell(0).setCellValue(event.id.toString())
         row.createCell(1).setCellValue(event.studentId.toString())
