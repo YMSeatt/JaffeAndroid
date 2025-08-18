@@ -28,6 +28,12 @@ interface HomeworkLogDao {
     @Query("SELECT * FROM homework_logs ORDER BY loggedAt DESC")
     fun getAllHomeworkLogs(): LiveData<List<HomeworkLog>>
 
+    @Query("SELECT * FROM homework_logs ORDER BY loggedAt DESC")
+    suspend fun getAllHomeworkLogsList(): List<HomeworkLog>
+
+    @Query("SELECT * FROM homework_logs WHERE loggedAt BETWEEN :startDate AND :endDate AND (:studentIds IS NULL OR studentId IN (:studentIds)) ORDER BY loggedAt ASC")
+    suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog>
+
     @Query("DELETE FROM homework_logs WHERE id = :logId")
     suspend fun deleteHomeworkLog(logId: Long)
 

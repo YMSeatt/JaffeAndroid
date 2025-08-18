@@ -1,10 +1,17 @@
 package com.example.myapplication.viewmodel
 
 import android.app.Application
+import android.content.Context
+import android.net.Uri
 import android.util.Log
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.*
-import com.example.myapplication.R.*
+import androidx.core.graphics.toColorInt
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import com.example.myapplication.commands.AddFurnitureCommand
 import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.commands.Command
@@ -20,6 +27,7 @@ import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.ExportData
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
@@ -33,6 +41,7 @@ import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppPreferencesRepository
+import com.example.myapplication.ui.dialogs.ExportFilterOptions
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
@@ -76,6 +85,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     val allStudents: LiveData<List<Student>>
     val allFurniture: LiveData<List<Furniture>>
     val allLayoutTemplates: LiveData<List<LayoutTemplate>>
+    val allBehaviorEvents: LiveData<List<BehaviorEvent>>
+    val allHomeworkLogs: LiveData<List<HomeworkLog>>
+    val allQuizLogs: LiveData<List<QuizLog>>
     val studentsForDisplay = MediatorLiveData<List<StudentUiItem>>()
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
@@ -112,17 +124,20 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             quizMarkTypeDao
         )
         allStudents = repository.allStudents
-        allFurniture = repository.allFurniture.asLiveData()
+        allFurniture = repository.getAllFurniture()
         allLayoutTemplates = repository.getAllLayoutTemplates()
+        allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
+        allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
+        allQuizLogs = quizLogDao.getAllQuizLogs()
         allQuizTemplates = quizTemplateDao.getAllQuizTemplates().asLiveData()
-        quizMarkTypes = repository.allQuizMarkTypes.asLiveData()
+        quizMarkTypes = repository.getAllQuizMarkTypes()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
 
 
         studentsForDisplay.addSource(allStudents) {
             updateStudentsForDisplay()
         }
-        studentsForDisplay.addSource(studentGroupDao.getAllGroups().asLiveData()) {
+        studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) {
             updateStudentsForDisplay()
         }
 
@@ -134,7 +149,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     private fun updateStudentsForDisplay() {
         viewModelScope.launch {
             val students = allStudents.value ?: return@launch
-            val groups = studentGroupDao.getAllGroups().first()
+            val groups = studentGroupDao.getAllStudentGroups().first()
             val studentsWithBehavior = students.map { student ->
                 val mostRecentEvent =
                     behaviorEventDao.getMostRecentBehaviorForStudent(student.id)
@@ -170,6 +185,67 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun getAllStudentsForExport(): List<Student>? {
         return allStudents.value
+    }
+
+    suspend fun getExportData(): ExportData = withContext(Dispatchers.IO) {
+        val students = allStudents.value ?: emptyList()
+        val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+        val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+        val quizLogs = quizLogDao.getAllQuizLogsList()
+        return@withContext ExportData(students, behaviorEvents, homeworkLogs, quizLogs)
+    }
+
+    suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent> {
+        return behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate, studentIds)
+    }
+
+    suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog> {
+        return homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate, studentIds)
+    }
+
+    suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog> {
+        return quizLogDao.getFilteredQuizLogs(startDate, endDate, studentIds)
+    }
+
+    suspend fun exportFilteredData(
+        context: Context,
+        uri: Uri,
+        filterOptions: ExportFilterOptions
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        val allStudentsList = allStudents.value ?: emptyList()
+        val filteredBehaviorLogs = if (filterOptions.exportBehaviorLogs) {
+            getFilteredBehaviorEvents(
+                filterOptions.startDate!!,
+                filterOptions.endDate!!,
+                filterOptions.selectedStudentIds
+            )
+        } else emptyList()
+
+        val filteredHomeworkLogs = if (filterOptions.exportHomeworkLogs) {
+            getFilteredHomeworkLogs(
+                filterOptions.startDate!!,
+                filterOptions.endDate!!,
+                filterOptions.selectedStudentIds
+            )
+        } else emptyList()
+
+        val filteredQuizLogs = if (filterOptions.exportQuizLogs) {
+            getFilteredQuizLogs(
+                filterOptions.startDate!!,
+                filterOptions.endDate!!,
+                filterOptions.selectedStudentIds
+            )
+        } else emptyList()
+
+        return@withContext com.example.myapplication.utils.ExcelImportUtil.exportData(
+            context = context,
+            uri = uri,
+            filterOptions = filterOptions,
+            allStudents = allStudentsList,
+            behaviorLogs = filteredBehaviorLogs,
+            homeworkLogs = filteredHomeworkLogs,
+            quizLogs = filteredQuizLogs
+        )
     }
 
 
@@ -243,7 +319,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
 
     suspend fun getStudentForEditing(studentId: Int): Student? = withContext(Dispatchers.IO) {
-        return@withContext repository.getStudentByIdNonLiveData(studentId.toLong())
+        return@withContext repository.getStudentById(studentId.toLong())
     }
 
     // Furniture operations
@@ -289,7 +365,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun internalDeleteFurniture(furniture: Furniture) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteFurnitureById(furniture.id)
+            repository.deleteFurniture(furniture)
         }
     }
 
@@ -512,7 +588,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun loadGroupsForRandomAssignment() {
         viewModelScope.launch {
-            _groupsForRandomAssignment.value = repository.getAllStudentGroups().first()
+            _groupsForRandomAssignment.value = studentGroupDao.getAllStudentGroups().first()
         }
     }
 
@@ -586,13 +662,13 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         return FurnitureUiItem(
             id = this.id,
             name = this.name,
-            stringId = string.app_name,
+            stringId = this.stringId,
             xPosition = this.xPosition,
             yPosition = this.yPosition,
-            type = string.app_name.toString(),
-            displayBackgroundColor = color.black,
-            displayOutlineColor = color.black,
-            displayTextColor = color.black,
+            type = this.type,
+            displayBackgroundColor = this.fillColor?.let { androidx.compose.ui.graphics.Color(it.toColorInt()) } ?: androidx.compose.ui.graphics.Color.LightGray,
+            displayOutlineColor = this.outlineColor?.let { androidx.compose.ui.graphics.Color(it.toColorInt()) } ?: androidx.compose.ui.graphics.Color.Black,
+            displayTextColor = androidx.compose.ui.graphics.Color.Black,
             displayOutlineThickness = 20.dp,
             displayWidth = this.width.dp,
             displayHeight = this.height.dp

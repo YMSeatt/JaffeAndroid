@@ -10,8 +10,6 @@ import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.launch
 
 class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
-    class HomeworkLogViewModel(application: Application, private val studentId: Long) :
-        AndroidViewModel(application) {
 
         private val studentRepository: StudentRepository
 
@@ -66,10 +64,9 @@ class HomeworkLogViewModel(application: Application, private val studentId: Long
          */
         fun deleteHomeworkLog(logId: Long) {
             viewModelScope.launch {
-                studentRepository.deleteHomeworkLog(logId)
+                studentRepository.deleteHomeworkLogById(logId)
             }
         }
-    }
 
     class HomeworkLogViewModelFactory(
         private val application: Application,

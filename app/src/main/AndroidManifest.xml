@@ -29,6 +29,15 @@
             android:name=".SettingsActivity"
             android:label="Settings"
             android:theme="@style/Theme.MyApplication" />
+    <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.myapplication.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

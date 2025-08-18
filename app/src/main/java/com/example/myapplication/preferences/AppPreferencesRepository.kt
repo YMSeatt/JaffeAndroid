@@ -25,6 +25,7 @@ class AppPreferencesRepository(private val context: Context) {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
         val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit") // New key
         val USE_INITIALS_FOR_BEHAVIOR = booleanPreferencesKey("use_initials_for_behavior")
+        val USE_FULL_NAME_FOR_STUDENT = booleanPreferencesKey("use_full_name_for_student")
         val APP_THEME = stringPreferencesKey("app_theme")
         val SHOW_RECENT_BEHAVIOR = booleanPreferencesKey("show_recent_behavior")
 
@@ -75,6 +76,17 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateUseInitialsForBehavior(useInitials: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_INITIALS_FOR_BEHAVIOR] = useInitials
+        }
+    }
+
+    val useFullNameForStudentFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.USE_FULL_NAME_FOR_STUDENT] ?: false // Default to false
+        }
+
+    suspend fun updateUseFullNameForStudent(useFullName: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.USE_FULL_NAME_FOR_STUDENT] = useFullName
         }
     }
 

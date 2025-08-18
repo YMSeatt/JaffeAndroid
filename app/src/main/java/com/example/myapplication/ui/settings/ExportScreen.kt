@@ -40,7 +40,7 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportData(context, it, students, null, null, null)
+                        ExcelImportUtil.exportDataToTempFile(context, students, null, null, null)
                     }
                     ExportType.BEHAVIOR -> {
                         val behaviorLogs = studentRepository.getAllBehaviorEvents().value
@@ -48,7 +48,7 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No behavior logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportData(context, it, null, behaviorLogs, null, null)
+                        ExcelImportUtil.exportDataToTempFile(context, null, behaviorLogs, null, null)
                     }
                     ExportType.HOMEWORK -> {
                         val homeworkLogs = studentRepository.getAllHomeworkLogs().value
@@ -56,7 +56,7 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No homework logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportData(context, it, null, null, homeworkLogs, null)
+                        ExcelImportUtil.exportDataToTempFile(context, null, null, homeworkLogs, null)
                     }
                     ExportType.QUIZ -> {
                         val quizLogs = studentRepository.getAllQuizLogs().value
@@ -64,13 +64,22 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No quiz logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportData(context, it, null, null, null, quizLogs)
+                        ExcelImportUtil.exportDataToTempFile(context, null, null, null, quizLogs)
                     }
                     ExportType.NONE -> {
                         return@launch
                     }
                 }
-                handleExportResult(result, context)
+                if (result != null) {
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        result.inputStream().use { inputStream ->
+                            inputStream.copyTo(outputStream)
+                        }
+                    }
+                    Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
+                } else {
+                    Toast.makeText(context, "Failed to export data", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

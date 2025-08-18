@@ -31,8 +31,8 @@ fun LogQuizScoreDialog(
     var quizName by remember { mutableStateOf("") }
     var numQuestions by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
-    val quizMarkTypes by viewModel.quizMarkTypes.collectAsState(initial = emptyList())
-    val quizTemplates by viewModel.allQuizTemplates.collectAsState(initial = emptyList())
+    val quizMarkTypes by viewModel.quizMarkTypes.observeAsState(initial = emptyList())
+    val quizTemplates by viewModel.allQuizTemplates.observeAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
 
     val marksData = remember { mutableStateMapOf<String, String>() }

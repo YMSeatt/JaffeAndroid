@@ -1,14 +1,13 @@
 package com.example.myapplication.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-
-private val StudentGroupsViewModel.viewModelScope: Any
+import kotlinx.coroutines.launch
 
 class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : ViewModel() {
 
@@ -17,23 +16,21 @@ class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : Vie
 
     fun addGroup(groupName: String, groupColor: String) { // Modified to take name and color
         viewModelScope.launch {
-            studentGroupDao.insertStudentGroup(StudentGroup(name = groupName, color = groupColor))
+            studentGroupDao.insert(StudentGroup(name = groupName, color = groupColor))
         }
     }
 
     fun updateGroup(group: StudentGroup) {
         viewModelScope.launch {
-            studentGroupDao.updateStudentGroup(group)
+            studentGroupDao.update(group)
         }
     }
 
     fun deleteGroup(group: StudentGroup) {
         viewModelScope.launch {
-            studentGroupDao.deleteStudentGroup(group)
+            studentGroupDao.delete(group)
         }
     }
 }
 
-private fun Any.launch(block: suspend (CoroutineScope) -> Unit) {
-    TODO("Not yet implemented")
-}
+

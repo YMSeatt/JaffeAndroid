@@ -46,8 +46,10 @@ fun SettingsScreen(
     val recentLogsLimit by settingsViewModel.recentLogsLimit.collectAsState()
     val recentBehaviorIncidentsLimit by settingsViewModel.recentBehaviorIncidentsLimit.collectAsState()
     val useInitialsForBehavior by settingsViewModel.useInitialsForBehavior.collectAsState()
+    val useFullNameForStudent by settingsViewModel.useFullNameForStudent.collectAsState()
     val appTheme by settingsViewModel.appTheme.collectAsState()
     val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
+    val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState()
 
     var showSetPasswordDialog by remember { mutableStateOf(false) }
     var showChangePasswordDialog by remember { mutableStateOf(false) }
@@ -245,6 +247,26 @@ fun SettingsScreen(
                     Switch(
                         checked = useInitialsForBehavior,
                         onCheckedChange = { settingsViewModel.updateUseInitialsForBehavior(it) }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Use full name for student boxes", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = useFullNameForStudent,
+                        onCheckedChange = { settingsViewModel.updateUseFullNameForStudent(it) }
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Show recent behavior on student boxes", modifier = Modifier.weight(1f))
+                    Switch(
+                        checked = showRecentBehavior,
+                        onCheckedChange = { settingsViewModel.updateShowRecentBehavior(it) }
                     )
                 }
                 HorizontalDivider()

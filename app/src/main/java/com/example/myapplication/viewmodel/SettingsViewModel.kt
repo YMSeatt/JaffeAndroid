@@ -76,6 +76,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    val useFullNameForStudent: StateFlow<Boolean> = preferencesRepository.useFullNameForStudentFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateUseFullNameForStudent(useFullName: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateUseFullNameForStudent(useFullName)
+        }
+    }
+
     val appTheme: StateFlow<AppTheme> = preferencesRepository.appThemeFlow
         .map { themeName ->
             try {

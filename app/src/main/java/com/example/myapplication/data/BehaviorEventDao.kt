@@ -21,6 +21,12 @@ interface BehaviorEventDao {
     @Query("SELECT * FROM behavior_events ORDER BY timestamp DESC")
     fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>>
 
+    @Query("SELECT * FROM behavior_events ORDER BY timestamp DESC")
+    suspend fun getAllBehaviorEventsList(): List<BehaviorEvent>
+
+    @Query("SELECT * FROM behavior_events WHERE timestamp BETWEEN :startDate AND :endDate AND (:studentIds IS NULL OR studentId IN (:studentIds)) ORDER BY timestamp ASC")
+    suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent>
+
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getMostRecentBehaviorForStudent(studentId: Long): BehaviorEvent?
 

@@ -21,6 +21,7 @@ fun Student.toStudentUiItem(
         displayOutlineColor = this.customOutlineColor?.let { Color(it.toColorInt()) } ?: Color.DarkGray,
         displayTextColor = this.customTextColor?.let { Color(it.toColorInt()) } ?: Color.Black,
         displayOutlineThickness = 1.dp,
-        recentBehaviorDescription = recentBehaviorDescription
+        recentBehaviorDescription = recentBehaviorDescription,
+        groupColor = groupColor?.let { Color(it.toColorInt()) }
     )
 }

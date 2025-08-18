@@ -27,7 +27,4 @@ interface StudentGroupDao {
 
     @Query("DELETE FROM student_groups WHERE id = :groupId")
     suspend fun deleteGroupById(groupId: Long)
-    fun insertStudentGroup(studentGroup: StudentGroup)
-    fun updateStudentGroup(group: StudentGroup)
-    fun deleteStudentGroup(group: StudentGroup)
 }

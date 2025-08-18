@@ -42,7 +42,7 @@ android {
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1" // Align with Compose BOM
+        kotlinCompilerExtensionVersion = "1.6.0" // Align with Compose BOM
     }
 }
 

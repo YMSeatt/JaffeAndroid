@@ -9,11 +9,15 @@ import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.apache.poi.ss.usermodel.Cell
 import org.apache.poi.ss.usermodel.CellType
 import org.apache.poi.ss.usermodel.WorkbookFactory
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import com.example.myapplication.ui.dialogs.ExportFilterOptions
+import com.example.myapplication.ui.dialogs.ExportType
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 object ExcelImportUtil {
@@ -100,15 +104,18 @@ object ExcelImportUtil {
         }
     }
 
-    suspend fun exportData(
+    @OptIn(kotlinx.serialization.InternalSerializationApi::class)
+    suspend fun exportDataToTempFile(
         context: Context,
-        uri: Uri,
         students: List<Student>?,
         behaviorLogs: List<BehaviorEvent>?,
         homeworkLogs: List<HomeworkLog>?,
         quizLogs: List<QuizLog>?
-    ): Result<Unit> = withContext(Dispatchers.IO) {
+    ): java.io.File? = withContext(Dispatchers.IO) {
         try {
+            val tempFile = java.io.File.createTempFile("seating_chart_export", ".xlsx", context.cacheDir)
+            val uri = Uri.fromFile(tempFile)
+
             val workbook = XSSFWorkbook()
 
             students?.let { studentList ->
@@ -197,9 +204,150 @@ object ExcelImportUtil {
                 }
             }
 
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            java.io.FileOutputStream(tempFile).use { outputStream ->
                 workbook.write(outputStream)
-            } ?: return@withContext Result.failure(Exception("Failed to open output stream from URI"))
+            }
+            workbook.close()
+            tempFile
+
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    @OptIn(kotlinx.serialization.InternalSerializationApi::class)
+    suspend fun exportData(
+        context: Context,
+        uri: Uri,
+        filterOptions: ExportFilterOptions,
+        allStudents: List<Student>,
+        behaviorLogs: List<BehaviorEvent>,
+        homeworkLogs: List<HomeworkLog>,
+        quizLogs: List<QuizLog>
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val workbook = XSSFWorkbook()
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+
+            val masterLogHeaders = listOf(
+                "Student Name", "Day", "Timestamp", "Log Type", "Details", "Comment"
+            )
+
+            val studentMap = allStudents.associateBy { it.id }
+
+            fun getStudentFullName(studentId: Long): String {
+                val student = studentMap[studentId]
+                return "${student?.firstName ?: ""} ${student?.lastName ?: ""}".trim()
+            }
+
+            fun addLogEntryToSheet(
+                sheet: org.apache.poi.ss.usermodel.Sheet,
+                rowIndex: Int,
+                studentId: Long,
+                logType: String,
+                timestamp: Long,
+                details: String,
+                comment: String?
+            ) {
+                val row = sheet.createRow(rowIndex)
+                row.createCell(0).setCellValue(getStudentFullName(studentId))
+                row.createCell(1).setCellValue(dayFormat.format(Date(timestamp)))
+                row.createCell(2).setCellValue(dateFormat.format(Date(timestamp)))
+                row.createCell(3).setCellValue(logType)
+                row.createCell(4).setCellValue(details)
+                row.createCell(5).setCellValue(comment ?: "")
+            }
+
+            if (filterOptions.exportType == ExportType.MASTER_LOG) {
+                val sheet = workbook.createSheet("Master Log")
+                val headerRow = sheet.createRow(0)
+                masterLogHeaders.forEachIndexed { index, header ->
+                    headerRow.createCell(index).setCellValue(header)
+                }
+
+                var rowIndex = 1
+
+                if (filterOptions.exportBehaviorLogs) {
+                    behaviorLogs.forEach { log ->
+                        addLogEntryToSheet(
+                            sheet, rowIndex++, log.studentId, "Behavior", log.timestamp,
+                            log.type, log.comment
+                        )
+                    }
+                }
+                if (filterOptions.exportHomeworkLogs) {
+                    homeworkLogs.forEach { log ->
+                        val details = "${log.assignmentName} - ${log.status}" +
+                                (log.marksData?.let { " (${it})" } ?: "")
+                        addLogEntryToSheet(
+                            sheet, rowIndex++, log.studentId, "Homework", log.loggedAt,
+                            details, log.comment
+                        )
+                    }
+                }
+                if (filterOptions.exportQuizLogs) {
+                    quizLogs.forEach { log ->
+                        val details = "${log.quizName}" +
+                                (log.markType?.let { " - ${it}" } ?: "") +
+                                (log.markValue?.let { " (${it})" } ?: "") +
+                                (log.numQuestions?.let { " / ${it}" } ?: "")
+                        addLogEntryToSheet(
+                            sheet, rowIndex++, log.studentId, "Quiz", log.loggedAt,
+                            details, log.comment
+                        )
+                    }
+                }
+            } else { // Individual Student Sheets
+                val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id) }
+
+                studentsToExport.forEach { student ->
+                    val sheet = workbook.createSheet(getStudentFullName(student.id))
+                    val headerRow = sheet.createRow(0)
+                    masterLogHeaders.forEachIndexed { index, header ->
+                        headerRow.createCell(index).setCellValue(header)
+                    }
+
+                    var rowIndex = 1
+
+                    if (filterOptions.exportBehaviorLogs) {
+                        behaviorLogs.filter { it.studentId == student.id }.forEach { log ->
+                            addLogEntryToSheet(
+                                sheet, rowIndex++, log.studentId, "Behavior", log.timestamp,
+                                log.type, log.comment
+                            )
+                        }
+                    }
+                    if (filterOptions.exportHomeworkLogs) {
+                        homeworkLogs.filter { it.studentId == student.id }.forEach { log ->
+                            val details = "${log.assignmentName} - ${log.status}" +
+                                    (log.marksData?.let { " (${it})" } ?: "")
+                            addLogEntryToSheet(
+                                sheet, rowIndex++, log.studentId, "Homework", log.loggedAt,
+                                details, log.comment
+                            )
+                        }
+                    }
+                    if (filterOptions.exportQuizLogs) {
+                        quizLogs.filter { it.studentId == student.id }.forEach { log ->
+                            val details = "${log.quizName}" +
+                                    (log.markType?.let { " - ${it}" } ?: "") +
+                                    (log.markValue?.let { " (${it})" } ?: "") +
+                                    (log.numQuestions?.let { " / ${it}" } ?: "")
+                            addLogEntryToSheet(
+                                sheet, rowIndex++, log.studentId, "Quiz", log.loggedAt,
+                                details, log.comment
+                            )
+                        }
+                    }
+                }
+            }
+
+            val outputStream = context.contentResolver.openOutputStream(uri)
+                ?: throw Exception("Failed to open output stream from URI")
+            outputStream.use {
+                workbook.write(it)
+            }
 
             workbook.close()
             Result.success(Unit)

@@ -21,8 +21,6 @@ data class StudentDetailsForDisplay(
     // Fields calculated/set by the ViewModel AFTER Room has created the object
     // These are not part of the Room-mapped constructor.
     @Ignore
-    var groupId: Long? = null
-    @Ignore
     var displayWidth: Int = 120 // Default width from AppPreferencesRepository constants
     @Ignore
     var displayHeight: Int = 100 // Default height from AppPreferencesRepository constants
