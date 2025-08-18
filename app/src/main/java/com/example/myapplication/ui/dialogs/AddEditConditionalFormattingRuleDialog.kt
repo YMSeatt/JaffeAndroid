@@ -86,7 +86,7 @@ fun AddEditConditionalFormattingRuleDialog(
             if (isEditMode) {
                 Button(
                     onClick = {
-                        viewModel.deleteRule(rule!!)
+                        viewModel.deleteRule(rule)
                         onDismiss()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
