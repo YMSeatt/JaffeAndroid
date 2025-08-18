@@ -306,8 +306,8 @@ object ExcelImportUtil {
                 val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id) }
 
                 studentsToExport.forEach { student ->
-                    val sheetName = getStudentFullName(student.id.toLong())
-                        .replace(Regex("[\\\\/*?\\[\\]]"), "_") // Replace invalid characters
+                    val sheetName = getStudentFullName(student.id)
+                        .replace(Regex("[\\/*?\\[\\]]"), "_") // Replace invalid characters
                         .take(31) // Excel sheet name limit
                     val sheet = workbook.createSheet(sheetName)
                     val headerRow = sheet.createRow(0)
