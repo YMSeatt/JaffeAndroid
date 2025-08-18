@@ -36,10 +36,17 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     private val preferencesRepository = AppPreferencesRepository(application)
     private val db = AppDatabase.getDatabase(application)
+    private val studentDao = db.studentDao()
+    private val furnitureDao = db.furnitureDao()
+    private val studentGroupDao = db.studentGroupDao()
+    private val layoutTemplateDao = db.layoutTemplateDao()
+    private val conditionalFormattingRuleDao = db.conditionalFormattingRuleDao()
     private val customBehaviorDao = db.customBehaviorDao()
     private val customHomeworkTypeDao = db.customHomeworkTypeDao()
     private val customHomeworkStatusDao = db.customHomeworkStatusDao()
     private val quizMarkTypeDao = db.quizMarkTypeDao()
+    private val quizTemplateDao = db.quizTemplateDao()
+    private val homeworkTemplateDao = db.homeworkTemplateDao()
 
     val recentLogsLimit: StateFlow<Int> = preferencesRepository.recentLogsLimitFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for homework logs
@@ -93,6 +100,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun addCustomBehavior(name: String) = viewModelScope.launch {
         customBehaviorDao.insert(CustomBehavior(name = name))
     }
+    fun updateCustomBehavior(customBehavior: CustomBehavior) = viewModelScope.launch {
+        customBehaviorDao.update(customBehavior)
+    }
     fun deleteCustomBehavior(customBehavior: CustomBehavior) = viewModelScope.launch {
         customBehaviorDao.delete(customBehavior)
     }
@@ -100,6 +110,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val customHomeworkTypes: LiveData<List<CustomHomeworkType>> = customHomeworkTypeDao.getAllCustomHomeworkTypes()
     fun addCustomHomeworkType(name: String) = viewModelScope.launch {
         customHomeworkTypeDao.insert(CustomHomeworkType(name = name))
+    }
+    fun updateCustomHomeworkType(customHomeworkType: CustomHomeworkType) = viewModelScope.launch {
+        customHomeworkTypeDao.update(customHomeworkType)
     }
     fun deleteCustomHomeworkType(customHomeworkType: CustomHomeworkType) = viewModelScope.launch {
         customHomeworkTypeDao.delete(customHomeworkType)
@@ -109,6 +122,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun addCustomHomeworkStatus(name: String) = viewModelScope.launch {
         customHomeworkStatusDao.insert(CustomHomeworkStatus(name = name))
     }
+    fun updateCustomHomeworkStatus(customHomeworkStatus: CustomHomeworkStatus) = viewModelScope.launch {
+        customHomeworkStatusDao.update(customHomeworkStatus)
+    }
     fun deleteCustomHomeworkStatus(customHomeworkStatus: CustomHomeworkStatus) = viewModelScope.launch {
         customHomeworkStatusDao.delete(customHomeworkStatus)
     }
@@ -116,6 +132,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
     fun addQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.insert(quizMarkType)
+    }
+    fun updateQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
+        quizMarkTypeDao.update(quizMarkType)
     }
     fun deleteQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.delete(quizMarkType)

@@ -27,4 +27,10 @@ interface QuizLogDao {
 
     @Query("SELECT * FROM quiz_logs ORDER BY loggedAt DESC")
     fun getAllQuizLogs(): LiveData<List<QuizLog>>
+
+    @Query("SELECT * FROM quiz_logs WHERE id = :id")
+    suspend fun getQuizLogById(id: Long): QuizLog?
+
+    @Query("DELETE FROM quiz_logs WHERE id = :id")
+    suspend fun deleteQuizLogById(id: Long)
 }

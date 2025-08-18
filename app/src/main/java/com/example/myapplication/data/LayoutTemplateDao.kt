@@ -21,4 +21,10 @@ interface LayoutTemplateDao {
 
     @Query("SELECT * FROM layout_templates ORDER BY name ASC")
     fun getAllLayoutTemplates(): LiveData<List<LayoutTemplate>>
+
+    @Query("SELECT * FROM layout_templates WHERE id = :id")
+    suspend fun getLayoutTemplateById(id: Long): LayoutTemplate?
+
+    @Query("DELETE FROM layout_templates WHERE id = :id")
+    suspend fun deleteLayoutTemplateById(id: Long)
 }

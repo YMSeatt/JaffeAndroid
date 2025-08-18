@@ -33,4 +33,7 @@ interface HomeworkLogDao {
 
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     fun getRecentHomeworkLogsForStudent(studentId: Long, limit: Int): LiveData<List<HomeworkLog>>
+
+    @Query("SELECT * FROM homework_logs WHERE id = :id")
+    suspend fun getHomeworkLogById(id: Long): HomeworkLog?
 }

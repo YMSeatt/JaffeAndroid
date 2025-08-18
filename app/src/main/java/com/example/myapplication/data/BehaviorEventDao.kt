@@ -5,6 +5,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 
 @Dao
 interface BehaviorEventDao {
@@ -25,4 +26,13 @@ interface BehaviorEventDao {
 
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>
+
+    @Query("SELECT * FROM behavior_events WHERE id = :id")
+    suspend fun getBehaviorEventById(id: Long): BehaviorEvent?
+
+    @Query("DELETE FROM behavior_events WHERE id = :id")
+    suspend fun deleteBehaviorEventById(id: Long)
+    
+    @Update
+    suspend fun updateBehaviorEvent(event: BehaviorEvent)
 }

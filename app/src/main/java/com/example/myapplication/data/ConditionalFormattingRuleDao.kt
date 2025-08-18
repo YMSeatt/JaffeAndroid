@@ -21,4 +21,10 @@ interface ConditionalFormattingRuleDao {
 
     @Query("SELECT * FROM conditional_formatting_rules ORDER BY priority ASC")
     fun getAllRules(): LiveData<List<ConditionalFormattingRule>>
+
+    @Query("SELECT * FROM conditional_formatting_rules WHERE id = :id")
+    suspend fun getRuleById(id: Long): ConditionalFormattingRule?
+
+    @Query("DELETE FROM conditional_formatting_rules WHERE id = :id")
+    suspend fun deleteRuleById(id: Long)
 }
