@@ -64,7 +64,7 @@ fun AdvancedHomeworkLogDialog(
                     marksData.clear()
                     marksData.putAll(deserializedMarks)
                 } catch (e: Exception) {
-                    // Handle error if needed
+                    // TODO: Consider logging this exception for easier debugging.
                 }
             }
         }
