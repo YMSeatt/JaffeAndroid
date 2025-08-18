@@ -303,10 +303,13 @@ object ExcelImportUtil {
                     }
                 }
             } else { // Individual Student Sheets
-                val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id) }
+                val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id.toLong()) }
 
                 studentsToExport.forEach { student ->
-                    val sheet = workbook.createSheet(getStudentFullName(student.id))
+                    val sheetName = getStudentFullName(student.id.toLong())
+                        .replace(Regex("[\\\\/*?\\[\\]]"), "_") // Replace invalid characters
+                        .take(31) // Excel sheet name limit
+                    val sheet = workbook.createSheet(sheetName)
                     val headerRow = sheet.createRow(0)
                     masterLogHeaders.forEachIndexed { index, header ->
                         headerRow.createCell(index).setCellValue(header)

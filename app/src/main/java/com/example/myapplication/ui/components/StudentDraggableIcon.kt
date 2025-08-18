@@ -95,7 +95,7 @@ fun StudentDraggableIcon(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = studentUiItem.nickname ?: studentUiItem.fullName,
+                        text = studentUiItem.fullName,
                         color = studentUiItem.displayTextColor
                     )
                     if (showBehavior) {

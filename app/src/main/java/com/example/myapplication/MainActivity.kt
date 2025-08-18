@@ -336,8 +336,16 @@ fun SeatingChartScreen(
                     var showViewMenu by remember { mutableStateOf(false) }
                     var showEditMenu by remember { mutableStateOf(false) }
 
-                    IconButton(onClick = { selectMode = !selectMode }) {
-                        Text(if (selectMode) "Exit Select Mode" else "Select Mode")
+                    IconButton(onClick = {
+                        selectMode = !selectMode
+                        if (!selectMode) {
+                            seatingChartViewModel.clearSelection()
+                        }
+                    }) {
+                        Text(
+                            if (selectMode) "Exit" else "Select",
+                            modifier = Modifier.width(50.dp)
+                        )
                     }
 
                     if (selectMode && selectedStudentIds.isNotEmpty()) {
