@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,9 +45,9 @@ fun AdvancedHomeworkLogDialog(
     var comment by remember { mutableStateOf("") }
     val homeworkTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
-    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(initial = emptyList())
+    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(emptyList())
     var selectedHomeworkType by remember { mutableStateOf("") }
-    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(initial = emptyList())
+    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(emptyList())
     var selectedHomeworkStatus by remember { mutableStateOf("") }
 
 
@@ -182,7 +183,7 @@ fun AdvancedHomeworkLogDialog(
             Button(
                 onClick = {
                     val log = HomeworkLog(
-                        studentId = studentId.toInt(), // Cast Long to Int
+                        studentId = studentId,
                         assignmentName = assignmentName,
                         status = selectedHomeworkStatus,
                         comment = comment,

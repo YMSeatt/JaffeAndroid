@@ -10,6 +10,7 @@ import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.launch
 
 class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
+class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
 
     private val studentRepository: StudentRepository
 

@@ -10,11 +10,11 @@ class MoveStudentCommand(
     private val newX: Float,
     private val newY: Float
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalUpdateStudentPosition(studentId.toLong(), newX, newY)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalUpdateStudentPosition(studentId.toLong(), oldX, oldY)
     }
 }

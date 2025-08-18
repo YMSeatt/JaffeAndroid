@@ -11,11 +11,11 @@ class LoadLayoutCommand(
     private val oldStudents: List<Student>,
     private val oldFurniture: List<Furniture>
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalLoadLayout(layout)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalUpdateAll(oldStudents, oldFurniture)
     }
 }

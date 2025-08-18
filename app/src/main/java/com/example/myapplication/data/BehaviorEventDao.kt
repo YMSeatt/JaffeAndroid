@@ -15,13 +15,16 @@ interface BehaviorEventDao {
     suspend fun delete(event: BehaviorEvent)
 
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC")
-    fun getBehaviorEventsForStudent(studentId: Int): LiveData<List<BehaviorEvent>>
+    fun getBehaviorEventsForStudent(studentId: Long): LiveData<List<BehaviorEvent>>
 
     @Query("SELECT * FROM behavior_events ORDER BY timestamp DESC")
     fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>>
 
+    @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getMostRecentBehaviorForStudent(studentId: Long): BehaviorEvent?
+
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecentBehaviorEventsForStudent(studentId: Int, limit: Int): LiveData<List<BehaviorEvent>>
+    fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>
 
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getMostRecentBehaviorForStudent(studentId: Long): BehaviorEvent?

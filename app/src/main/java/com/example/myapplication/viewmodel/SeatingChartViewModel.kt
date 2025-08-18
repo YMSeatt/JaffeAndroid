@@ -71,8 +71,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     val quizMarkTypes: LiveData<List<QuizMarkType>>
 
 
-    private val commandUndoStack = Stack<com.example.myapplication.commands.Command>()
-    private val commandRedoStack = Stack<com.example.myapplication.commands.Command>()
+    private val commandUndoStack = Stack<Command>()
+    private val commandRedoStack = Stack<Command>()
 
     // In-memory session data
     private var sessionQuizLogs = mutableListOf<QuizLog>()
@@ -99,6 +99,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         allQuizTemplates = quizTemplateDao.getAllQuizTemplates()
         quizMarkTypes = repository.allQuizMarkTypes.asLiveData()
 
+        studentsForDisplay.addSource(allStudents) {
         studentsForDisplay.addSource(allStudents) {
             updateStudentsForDisplay()
         }
@@ -129,17 +130,21 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun undo() {
         if (commandUndoStack.isNotEmpty()) {
-            val command = commandUndoStack.pop()
-            command.undo()
-            commandRedoStack.push(command)
+            viewModelScope.launch {
+                val command = commandUndoStack.pop()
+                command.undo()
+                commandRedoStack.push(command)
+            }
         }
     }
 
     fun redo() {
         if (commandRedoStack.isNotEmpty()) {
-            val command = commandRedoStack.pop()
-            command.execute()
-            commandUndoStack.push(command)
+            viewModelScope.launch {
+                val command = commandRedoStack.pop()
+                command.execute()
+                commandUndoStack.push(command)
+            }
         }
     }
 
@@ -150,40 +155,56 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // Student operations
     fun addStudent(student: Student) {
-        val command = com.example.myapplication.commands.AddStudentCommand(this, student)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = AddStudentCommand(this@SeatingChartViewModel, student)
+            executeCommand(command)
+        }
     }
 
-    fun internalAddStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertStudent(student)
+    suspend fun internalAddStudent(student: Student) {
+        withContext(Dispatchers.IO) {
+            repository.insertStudent(student)
+        }
     }
 
     fun updateStudent(oldStudent: Student, newStudent: Student) {
-        val command = com.example.myapplication.commands.UpdateStudentCommand(this, oldStudent, newStudent)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, newStudent)
+            executeCommand(command)
+        }
     }
 
-    fun internalUpdateStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        repository.updateStudent(student)
+    suspend fun internalUpdateStudent(student: Student) {
+        withContext(Dispatchers.IO) {
+            repository.updateStudent(student)
+        }
     }
 
 
     fun deleteStudent(student: Student) {
-        val command = com.example.myapplication.commands.DeleteStudentCommand(this, student)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = DeleteStudentCommand(this@SeatingChartViewModel, student)
+            executeCommand(command)
+        }
     }
 
-    fun internalDeleteStudent(student: Student) = viewModelScope.launch(Dispatchers.IO) {
-        repository.deleteStudent(student)
+    suspend fun internalDeleteStudent(student: Student) {
+        withContext(Dispatchers.IO) {
+            repository.deleteStudent(student)
+        }
     }
 
     fun updateStudentPosition(studentId: Int, oldX: Float, oldY: Float, newX: Float, newY: Float) {
-        val command = com.example.myapplication.commands.MoveStudentCommand(this, studentId, oldX, oldY, newX, newY)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = MoveStudentCommand(this@SeatingChartViewModel, studentId, oldX, oldY, newX, newY)
+            executeCommand(command)
+        }
     }
 
-    fun internalUpdateStudentPosition(studentId: Long, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
-        studentDao.updatePosition(studentId, newX, newY)
+    suspend fun internalUpdateStudentPosition(studentId: Long, newX: Float, newY: Float) {
+        withContext(Dispatchers.IO) {
+            studentDao.updatePosition(studentId, newX, newY)
+        }
     }
 
 
@@ -193,21 +214,29 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // Furniture operations
     fun addFurniture(furniture: Furniture) {
-        val command = com.example.myapplication.commands.AddFurnitureCommand(this, furniture)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = AddFurnitureCommand(this@SeatingChartViewModel, furniture)
+            executeCommand(command)
+        }
     }
 
-    fun internalAddFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertFurniture(furniture)
+    suspend fun internalAddFurniture(furniture: Furniture) {
+        withContext(Dispatchers.IO) {
+            repository.insertFurniture(furniture)
+        }
     }
 
     fun updateFurniture(oldFurniture: Furniture, newFurniture: Furniture) {
-        val command = com.example.myapplication.commands.UpdateFurnitureCommand(this, oldFurniture, newFurniture)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = UpdateFurnitureCommand(this@SeatingChartViewModel, oldFurniture, newFurniture)
+            executeCommand(command)
+        }
     }
 
-    fun internalUpdateFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
-        repository.updateFurniture(furniture)
+    suspend fun internalUpdateFurniture(furniture: Furniture) {
+        withContext(Dispatchers.IO) {
+            repository.updateFurniture(furniture)
+        }
     }
 
     fun deleteFurnitureById(furnitureId: Long) {
@@ -220,8 +249,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun internalDeleteFurniture(furniture: Furniture) = viewModelScope.launch(Dispatchers.IO) {
-        furnitureDao.delete(furniture)
+    fun internalDeleteFurniture(furniture: Furniture) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteFurnitureById(furniture.id)
+        }
     }
 
 // In SeatingChartViewModel.kt
@@ -236,8 +267,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun internalUpdateFurniturePosition(furnitureId: Long, newX: Float, newY: Float) = viewModelScope.launch(Dispatchers.IO) {
-        furnitureDao.updatePosition(furnitureId, newX, newY)
+    fun internalUpdateFurniturePosition(furnitureId: Long, newX: Float, newY: Float) {
+        viewModelScope.launch(Dispatchers.IO) {
+            furnitureDao.updatePosition(furnitureId, newX, newY)
+        }
     }
 
 
@@ -273,10 +306,12 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun loadLayout(layout: LayoutTemplate) {
-        val oldStudents = allStudents.value ?: emptyList()
-        val oldFurniture = allFurniture.value ?: emptyList()
-        val command = com.example.myapplication.commands.LoadLayoutCommand(this, layout, oldStudents, oldFurniture)
-        executeCommand(command)
+        viewModelScope.launch {
+            val oldStudents = allStudents.value ?: emptyList()
+            val oldFurniture = allFurniture.value ?: emptyList()
+            val command = LoadLayoutCommand(this@SeatingChartViewModel, layout, oldStudents, oldFurniture)
+            executeCommand(command)
+        }
     }
 
     fun internalLoadLayout(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
@@ -294,9 +329,11 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun internalUpdateAll(students: List<Student>, furniture: List<Furniture>) = viewModelScope.launch(Dispatchers.IO) {
-        studentDao.updateAll(students)
-        furnitureDao.updateAll(furniture)
+    fun internalUpdateAll(students: List<Student>, furniture: List<Furniture>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            studentDao.updateAll(students)
+            furnitureDao.updateAll(furniture)
+        }
     }
 
     fun deleteLayoutTemplate(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
@@ -304,14 +341,18 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun addBehaviorEvent(event: BehaviorEvent) {
-        val command = com.example.myapplication.commands.LogBehaviorCommand(this, event)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = LogBehaviorCommand(this@SeatingChartViewModel, event)
+            executeCommand(command)
+        }
     }
 
-    fun internalAddBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertBehaviorEvent(event)
-        withContext(Dispatchers.Main) {
-            updateStudentsForDisplay()
+    fun internalAddBehaviorEvent(event: BehaviorEvent) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insertBehaviorEvent(event)
+            withContext(Dispatchers.Main) {
+                updateStudentsForDisplay()
+            }
         }
     }
 
@@ -324,12 +365,16 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // QuizLog operations
     fun saveQuizLog(log: QuizLog) {
-        val command = com.example.myapplication.commands.LogQuizCommand(this, log)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = LogQuizCommand(this@SeatingChartViewModel, log)
+            executeCommand(command)
+        }
     }
 
-    fun internalSaveQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertQuizLog(log)
+    fun internalSaveQuizLog(log: QuizLog) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insertQuizLog(log)
+        }
     }
 
     fun deleteQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
@@ -338,12 +383,16 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     // HomeworkLog operations
     fun addHomeworkLog(log: HomeworkLog) {
-        val command = com.example.myapplication.commands.LogHomeworkCommand(this, log)
-        executeCommand(command)
+        viewModelScope.launch {
+            val command = LogHomeworkCommand(this@SeatingChartViewModel, log)
+            executeCommand(command)
+        }
     }
 
-    fun internalAddHomeworkLog(log: HomeworkLog) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insertHomeworkLog(log)
+    fun internalAddHomeworkLog(log: HomeworkLog) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.insertHomeworkLog(log)
+        }
     }
 
     fun deleteHomeworkLog(log: HomeworkLog) = viewModelScope.launch(Dispatchers.IO) {
@@ -403,6 +452,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             repository.getAllStudentGroups().collect {
                 _groupsForRandomAssignment.value = it
             }
+            _groupsForRandomAssignment.value = repository.getAllStudentGroups().first()
         }
     }
 
@@ -465,9 +515,23 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     // Moved executeCommand to be a member function to access command stacks
-    private fun executeCommand(command: com.example.myapplication.commands.Command) {
+    private suspend fun executeCommand(command: Command) {
         command.execute()
         commandUndoStack.push(command)
         commandRedoStack.clear()
     }
+}
+
+private fun Furniture.toUiItem(): FurnitureUiItem {
+    return FurnitureUiItem(
+        id = this.id,
+        name = this.name,
+        xPosition = this.xPosition,
+        yPosition = this.yPosition,
+        // Example of how you might determine display properties.
+        // In a real app, this could be based on furniture.type or other properties.
+        displayWidth = this.width.dp,
+        displayHeight = this.height.dp
+        // Other properties determined here
+    )
 }

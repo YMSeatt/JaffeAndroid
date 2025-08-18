@@ -7,11 +7,11 @@ class DeleteStudentCommand(
     private val viewModel: SeatingChartViewModel,
     private val student: Student
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalDeleteStudent(student)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.internalAddStudent(student)
     }
 }

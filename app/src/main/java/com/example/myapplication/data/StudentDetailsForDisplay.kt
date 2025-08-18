@@ -4,7 +4,8 @@ import androidx.room.Ignore
 
 data class StudentDetailsForDisplay(
     // Fields directly mapped by Room from the query
-    val id: Int,
+    val id: Long,
+    val groupId: Long?,
     val firstName: String,
     val lastName: String,
     var initials: String?, // Added initials field

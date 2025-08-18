@@ -7,11 +7,11 @@ class LogHomeworkCommand(
     private val viewModel: SeatingChartViewModel,
     private val log: HomeworkLog
 ) : Command {
-    override fun execute() {
+    override suspend fun execute() {
         viewModel.internalAddHomeworkLog(log)
     }
 
-    override fun undo() {
+    override suspend fun undo() {
         viewModel.deleteHomeworkLog(log)
     }
 }
