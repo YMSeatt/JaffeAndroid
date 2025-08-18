@@ -15,6 +15,6 @@ data class StudentUiItem(
     val displayOutlineColor: Color,
     val displayTextColor: Color,
     val displayOutlineThickness: Dp, // Assuming this is needed, similar to StudentDetailsForDisplay
-    val recentBehaviorDescription: String?,
+    val recentBehaviorDescription: List<String>,
     val groupColor: Color?
 )

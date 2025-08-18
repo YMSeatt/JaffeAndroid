@@ -2,7 +2,9 @@ package com.example.myapplication.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
+@Serializable
 @Entity(tableName = "students")
 data class Student(
     @PrimaryKey(autoGenerate = true)
