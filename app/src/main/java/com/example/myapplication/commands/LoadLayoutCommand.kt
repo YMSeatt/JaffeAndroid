@@ -1,8 +1,8 @@
 package com.example.myapplication.commands
 
+import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.LayoutTemplate
 import com.example.myapplication.data.Student
-import com.example.myapplication.data.Furniture
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 
 class LoadLayoutCommand(

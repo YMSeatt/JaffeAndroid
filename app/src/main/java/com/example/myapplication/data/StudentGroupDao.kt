@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StudentGroupDao {
     @Query("SELECT * FROM student_groups ORDER BY name ASC")
-    fun getAllStudentGroups(): kotlinx.coroutines.flow.Flow<List<StudentGroup>>
+    fun getAllStudentGroups(): Flow<List<StudentGroup>>
 
     @Query("SELECT * FROM student_groups WHERE id = :groupId")
     suspend fun getStudentGroupById(groupId: Long): StudentGroup?

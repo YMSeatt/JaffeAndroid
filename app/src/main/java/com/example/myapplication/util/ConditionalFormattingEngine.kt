@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalSerializationApi::class, kotlinx.serialization.InternalSerializationApi::class)
+@file:OptIn(ExperimentalSerializationApi::class, InternalSerializationApi::class)
 package com.example.myapplication.util
 
 import com.example.myapplication.data.StudentDetailsForDisplay

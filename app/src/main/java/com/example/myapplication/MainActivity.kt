@@ -50,8 +50,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
-import com.example.myapplication.commands.AddStudentCommand
-import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.LayoutTemplate
@@ -71,6 +69,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 import androidx.compose.material3.ExposedDropdownMenuDefaults // Added for ExposedDropdownMenu
+import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.StudentGroup
 
 enum class SessionType {
@@ -588,8 +587,8 @@ fun FurnitureDraggableIcon(
     scale: Float,
     onLongClick: () -> Unit
 ) {
-    var offsetX by remember { mutableStateOf(furnitureUiItem.xPosition) }
-    var offsetY by remember { mutableStateOf(furnitureUiItem.yPosition) }
+    var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
+    var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
 
     LaunchedEffect(furnitureUiItem.xPosition, furnitureUiItem.yPosition) {
         offsetX = furnitureUiItem.xPosition
@@ -647,8 +646,8 @@ fun StudentDraggableIcon(
     onClick: () -> Unit, 
     onLongClick: () -> Unit
 ) {
-    var offsetX by remember { mutableStateOf(studentUiItem.xPosition.toFloat()) } // Changed to mutableFloatStateOf
-    var offsetY by remember { mutableStateOf(studentUiItem.yPosition.toFloat()) } // Changed to mutableFloatStateOf
+    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) } // Changed to mutableFloatStateOf
+    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) } // Changed to mutableFloatStateOf
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
@@ -847,7 +846,7 @@ fun AddEditFurnitureDialog(
                     )
                     if (isEditMode) {
                         // Pass the updated furniture object
-                        viewModel.updateFurniture(furnitureToEdit, updatedFurniture)
+                        viewModel.updateFurniture(furnitureToEdit!!, updatedFurniture)
                     } else {
                         viewModel.addFurniture(updatedFurniture)
                     }
@@ -865,8 +864,8 @@ fun AddEditFurnitureDialog(
                 if (isEditMode) {
                     Button(
                         onClick = {
-                            furnitureToEdit?.let { f ->
-                                viewModel.deleteFurnitureById(f.id.toLong())
+                            furnitureToEdit?.let {
+                                viewModel.deleteFurnitureById(it.id.toLong())
                             }
                             onDismiss()
                         },
@@ -1066,7 +1065,7 @@ fun AddEditStudentDialog(
                         customTextColor = if (useCustomAppearance && customTextColorInput.isNotBlank()) customTextColorInput.trim() else null
                     )
                     if (isEditMode) {
-                        viewModel.updateStudent(studentToEdit!!, newStudent) 
+                        viewModel.updateStudent(studentToEdit, newStudent) 
                     } else {
                         viewModel.addStudent(newStudent)
                     }
@@ -1084,8 +1083,8 @@ fun AddEditStudentDialog(
                 if (isEditMode) {
                     Button(
                         onClick = {
-                            studentToEdit?.let { student ->
-                                viewModel.deleteStudent(student)
+                            studentToEdit?.let {
+                                viewModel.deleteStudent(it)
                             }
                             onDismiss()
                         },

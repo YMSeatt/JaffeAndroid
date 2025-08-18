@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     id("org.jetbrains.kotlin.plugin.serialization") version "2.2.10"
     id("kotlin-kapt")
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -66,6 +67,9 @@ dependencies {
     // Lifecycle ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
 
+    // Hilt
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
 
     // Room
     implementation("androidx.room:room-runtime:2.6.1")
