@@ -148,15 +148,18 @@ object ExcelImportUtil {
             behaviorLogs?.let { logs ->
                 val sheet = workbook.createSheet("Behavior Logs")
                 val headerRow = sheet.createRow(0)
-                val headers = listOf("ID", "Student ID", "Type", "Timestamp", "Comment")
+                val headers = listOf("ID", "Student Name", "Day", "Type", "Timestamp", "Comment")
+                val studentMap = students?.associateBy { it.id }
+                val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
                 headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
                 logs.forEachIndexed { index, log ->
                     val dataRow = sheet.createRow(index + 1)
                     dataRow.createCell(0).setCellValue(log.id.toDouble())
-                    dataRow.createCell(1).setCellValue(log.studentId.toDouble())
-                    dataRow.createCell(2).setCellValue(log.type)
-                    dataRow.createCell(3).setCellValue(log.timestamp.toDouble())
-                    dataRow.createCell(4).setCellValue(log.comment ?: "")
+                    dataRow.createCell(1).setCellValue(studentMap?.get(log.studentId)?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown")
+                    dataRow.createCell(2).setCellValue(dayFormat.format(Date(log.timestamp)))
+                    dataRow.createCell(3).setCellValue(log.type)
+                    dataRow.createCell(4).setCellValue(log.timestamp.toDouble())
+                    dataRow.createCell(5).setCellValue(log.comment ?: "")
                 }
             }
 
@@ -225,6 +228,7 @@ object ExcelImportUtil {
         homeworkLogs: List<HomeworkLog>,
         quizLogs: List<QuizLog>
     ): Result<Unit> = withContext(Dispatchers.IO) {
+        android.util.Log.d("ExcelExport", "Starting export. Students: ${allStudents.size}, Behaviors: ${behaviorLogs.size}, Homework: ${homeworkLogs.size}, Quizzes: ${quizLogs.size}")
         try {
             val workbook = XSSFWorkbook()
             val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
@@ -344,15 +348,20 @@ object ExcelImportUtil {
             }
 
             val outputStream = context.contentResolver.openOutputStream(uri)
-                ?: throw Exception("Failed to open output stream from URI")
+            if (outputStream == null) {
+                android.util.Log.e("ExcelExport", "Failed to open output stream from URI")
+                throw Exception("Failed to open output stream from URI")
+            }
             outputStream.use {
                 workbook.write(it)
             }
 
             workbook.close()
+            android.util.Log.d("ExcelExport", "Export successful")
             Result.success(Unit)
 
         } catch (e: Exception) {
+            android.util.Log.e("ExcelExport", "Error exporting data", e)
             Result.failure(Exception("Error exporting data: ${e.message}", e))
         }
     }

@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.Dp
 data class StudentUiItem(
     val id: Int,
     val fullName: String,
+    val nickname: String?,
     val initials: String,
     val xPosition: Double,
     val yPosition: Double,
@@ -16,5 +17,6 @@ data class StudentUiItem(
     val displayTextColor: Color,
     val displayOutlineThickness: Dp, // Assuming this is needed, similar to StudentDetailsForDisplay
     val recentBehaviorDescription: List<String>,
+    val recentHomeworkDescription: List<String>,
     val groupColor: Color?
 )

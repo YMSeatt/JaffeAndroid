@@ -43,6 +43,14 @@ class AppPreferencesRepository(private val context: Context) {
         val BEHAVIOR_TYPES_LIST = stringSetPreferencesKey("behavior_types_list")
         val HOMEWORK_ASSIGNMENT_TYPES_LIST = stringSetPreferencesKey("homework_assignment_types_list")
         val HOMEWORK_STATUSES_LIST = stringSetPreferencesKey("homework_statuses_list")
+
+        val STICKY_QUIZ_NAME_DURATION_SECONDS = intPreferencesKey("sticky_quiz_name_duration_seconds")
+        val STICKY_HOMEWORK_NAME_DURATION_SECONDS = intPreferencesKey("sticky_homework_name_duration_seconds")
+        val LAST_QUIZ_NAME = stringPreferencesKey("last_quiz_name")
+        val LAST_QUIZ_TIMESTAMP = longPreferencesKey("last_quiz_timestamp")
+        val LAST_HOMEWORK_NAME = stringPreferencesKey("last_homework_name")
+        val LAST_HOMEWORK_TIMESTAMP = longPreferencesKey("last_homework_timestamp")
+        val BEHAVIOR_INITIALS_MAP = stringPreferencesKey("behavior_initials_map")
     }
 
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data
@@ -231,6 +239,73 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updatePasswordHash(hash: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.PASSWORD_HASH] = hash
+        }
+    }
+
+    val stickyQuizNameDurationSecondsFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.STICKY_QUIZ_NAME_DURATION_SECONDS] ?: 0
+        }
+
+    suspend fun updateStickyQuizNameDurationSeconds(duration: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.STICKY_QUIZ_NAME_DURATION_SECONDS] = duration
+        }
+    }
+
+    val stickyHomeworkNameDurationSecondsFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] ?: 0
+        }
+
+    suspend fun updateStickyHomeworkNameDurationSeconds(duration: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] = duration
+        }
+    }
+
+    val lastQuizNameFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_QUIZ_NAME]
+        }
+
+    suspend fun updateLastQuizName(name: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LAST_QUIZ_NAME] = name
+            settings[PreferencesKeys.LAST_QUIZ_TIMESTAMP] = System.currentTimeMillis()
+        }
+    }
+
+    val lastQuizTimestampFlow: Flow<Long?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_QUIZ_TIMESTAMP]
+        }
+
+    val lastHomeworkNameFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_HOMEWORK_NAME]
+        }
+
+    suspend fun updateLastHomeworkName(name: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LAST_HOMEWORK_NAME] = name
+            settings[PreferencesKeys.LAST_HOMEWORK_TIMESTAMP] = System.currentTimeMillis()
+        }
+    }
+
+    val lastHomeworkTimestampFlow: Flow<Long?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_HOMEWORK_TIMESTAMP]
+        }
+
+    val behaviorInitialsMapFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.BEHAVIOR_INITIALS_MAP] ?: ""
+        }
+
+    suspend fun updateBehaviorInitialsMap(map: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.BEHAVIOR_INITIALS_MAP] = map
         }
     }
 }

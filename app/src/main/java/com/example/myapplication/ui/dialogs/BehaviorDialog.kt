@@ -29,7 +29,7 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BehaviorDialog(
-    student: Student,
+    studentIds: List<Long>,
     viewModel: SeatingChartViewModel,
     behaviorTypes: List<String>,
     onDismiss: () -> Unit
@@ -39,7 +39,7 @@ fun BehaviorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Behavior for ${student.firstName} ${student.lastName}") },
+        title = { Text("Log Behavior for ${studentIds.size} students") },
         text = {
             Column {
                 OutlinedTextField(
@@ -61,13 +61,15 @@ fun BehaviorDialog(
                     items(behaviorTypes) { behaviorType ->
                         Button(
                             onClick = {
-                                val behaviorEvent = BehaviorEvent(
-                                    studentId = student.id,
-                                    comment = notes,
-                                    type = behaviorType,
-                                    timestamp = System.currentTimeMillis()
-                                )
-                                viewModel.addBehaviorEvent(behaviorEvent)
+                                studentIds.forEach { studentId ->
+                                    val behaviorEvent = BehaviorEvent(
+                                        studentId = studentId,
+                                        comment = notes,
+                                        type = behaviorType,
+                                        timestamp = System.currentTimeMillis()
+                                    )
+                                    viewModel.addBehaviorEvent(behaviorEvent)
+                                }
                                 onDismiss()
                             },
                             modifier = Modifier.fillMaxWidth()

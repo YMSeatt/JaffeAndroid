@@ -16,6 +16,7 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
@@ -23,12 +24,27 @@ import kotlinx.serialization.decodeFromString
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogQuizScoreDialog(
-    studentId: Long,
+    studentIds: List<Long>,
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit,
-    onSave: (QuizLog) -> Unit
+    onSave: (List<QuizLog>) -> Unit
 ) {
-    var quizName by remember { mutableStateOf("") }
+    val stickyQuizNameDuration by settingsViewModel.stickyQuizNameDurationSeconds.collectAsState(0)
+    val lastQuizName by settingsViewModel.lastQuizName.collectAsState(null)
+    val lastQuizTimestamp by settingsViewModel.lastQuizTimestamp.collectAsState(null)
+
+    var quizName by remember {
+        mutableStateOf(
+            if (stickyQuizNameDuration > 0 && lastQuizName != null && lastQuizTimestamp != null &&
+                (System.currentTimeMillis() - lastQuizTimestamp!!) / 1000 < stickyQuizNameDuration
+            ) {
+                lastQuizName!!
+            } else {
+                ""
+            }
+        )
+    }
     var numQuestions by remember { mutableStateOf("") }
     var comment by remember { mutableStateOf("") }
     val quizMarkTypes by viewModel.quizMarkTypes.observeAsState(initial = emptyList())
@@ -126,19 +142,21 @@ fun LogQuizScoreDialog(
             Button(
                 onClick = {
                     val serializedMarks = Json.encodeToString(marksData.toMap())
-                    val log = QuizLog(
-                        id = 0,
-                        studentId = studentId,
-                        quizName = quizName,
-                        comment = comment,
-                        loggedAt = System.currentTimeMillis(),
-                        marksData = serializedMarks,
-                        numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        markValue = null,
-                        markType = null,
-                        maxMarkValue = null
-                    )
-                    onSave(log)
+                    val logs = studentIds.map { studentId ->
+                        QuizLog(
+                            id = 0,
+                            studentId = studentId,
+                            quizName = quizName,
+                            comment = comment,
+                            loggedAt = System.currentTimeMillis(),
+                            marksData = serializedMarks,
+                            numQuestions = numQuestions.toIntOrNull() ?: 0,
+                            markValue = null,
+                            markType = null,
+                            maxMarkValue = null
+                        )
+                    }
+                    onSave(logs)
                     onDismissRequest()
                 }
             ) {
