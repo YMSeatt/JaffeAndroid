@@ -105,120 +105,6 @@ object ExcelImportUtil {
     }
 
     @OptIn(kotlinx.serialization.InternalSerializationApi::class)
-    suspend fun exportDataToTempFile(
-        context: Context,
-        students: List<Student>?,
-        behaviorLogs: List<BehaviorEvent>?,
-        homeworkLogs: List<HomeworkLog>?,
-        quizLogs: List<QuizLog>?
-    ): java.io.File? = withContext(Dispatchers.IO) {
-        try {
-            val tempFile = java.io.File.createTempFile("seating_chart_export", ".xlsx", context.cacheDir)
-            val uri = Uri.fromFile(tempFile)
-
-            val workbook = XSSFWorkbook()
-
-            students?.let { studentList ->
-                val sheet = workbook.createSheet("Students")
-                val headerRow = sheet.createRow(0)
-                val headers = listOf(
-                    "ID", "First Name", "Last Name", "Initials",
-                    "X Position", "Y Position", "Custom Width", "Custom Height",
-                    "Custom Background Color", "Custom Outline Color", "Custom Text Color"
-                )
-                headers.forEachIndexed { index, header ->
-                    headerRow.createCell(index).setCellValue(header)
-                }
-                studentList.forEachIndexed { index, student ->
-                    val dataRow = sheet.createRow(index + 1)
-                    dataRow.createCell(0).setCellValue(student.id.toDouble())
-                    dataRow.createCell(1).setCellValue(student.firstName)
-                    dataRow.createCell(2).setCellValue(student.lastName)
-                    dataRow.createCell(3).setCellValue(student.initials ?: "")
-                    dataRow.createCell(4).setCellValue(student.xPosition.toDouble())
-                    dataRow.createCell(5).setCellValue(student.yPosition.toDouble())
-                    student.customWidth?.let { width -> dataRow.createCell(6).setCellValue(width.toDouble()) } ?: dataRow.createCell(6).setCellValue("")
-                    student.customHeight?.let { height -> dataRow.createCell(7).setCellValue(height.toDouble()) } ?: dataRow.createCell(7).setCellValue("")
-                    dataRow.createCell(8).setCellValue(student.customBackgroundColor ?: "")
-                    dataRow.createCell(9).setCellValue(student.customOutlineColor ?: "")
-                    dataRow.createCell(10).setCellValue(student.customTextColor ?: "")
-                }
-            }
-
-            behaviorLogs?.let { logs ->
-                val sheet = workbook.createSheet("Behavior Logs")
-                val headerRow = sheet.createRow(0)
-                val headers = listOf("ID", "Student Name", "Day", "Type", "Timestamp", "Comment")
-                val studentMap = students?.associateBy { it.id }
-                val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
-                headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                logs.forEachIndexed { index, log ->
-                    val dataRow = sheet.createRow(index + 1)
-                    dataRow.createCell(0).setCellValue(log.id.toDouble())
-                    dataRow.createCell(1).setCellValue(studentMap?.get(log.studentId)?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown")
-                    dataRow.createCell(2).setCellValue(dayFormat.format(Date(log.timestamp)))
-                    dataRow.createCell(3).setCellValue(log.type)
-                    dataRow.createCell(4).setCellValue(log.timestamp.toDouble())
-                    dataRow.createCell(5).setCellValue(log.comment ?: "")
-                }
-            }
-
-            homeworkLogs?.let { logs ->
-                val sheet = workbook.createSheet("Homework Logs")
-                val headerRow = sheet.createRow(0)
-                val headers = listOf("ID", "Student ID", "Assignment", "Status", "Logged At", "Comment", "Mark Value", "Mark Type", "Max Mark")
-                headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                logs.forEachIndexed { index, log ->
-                    val dataRow = sheet.createRow(index + 1)
-                    dataRow.createCell(0).setCellValue(log.id.toDouble())
-                    dataRow.createCell(1).setCellValue(log.studentId.toDouble())
-                    dataRow.createCell(2).setCellValue(log.assignmentName)
-                    dataRow.createCell(3).setCellValue(log.status)
-                    dataRow.createCell(4).setCellValue(log.loggedAt.toDouble())
-                    dataRow.createCell(5).setCellValue(log.comment ?: "")
-                    log.marksData?.let {
-                        val marks = Json.decodeFromString<MarksData>(it)
-                        marks.markValue?.let { value -> dataRow.createCell(6).setCellValue(value) } ?: dataRow.createCell(6).setCellValue("")
-                        dataRow.createCell(7).setCellValue(marks.markType ?: "")
-                        marks.maxMarkValue?.let { value -> dataRow.createCell(8).setCellValue(value) } ?: dataRow.createCell(8).setCellValue("")
-                    } ?: run {
-                        dataRow.createCell(6).setCellValue("")
-                        dataRow.createCell(7).setCellValue("")
-                        dataRow.createCell(8).setCellValue("")
-                    }
-                }
-            }
-
-            quizLogs?.let { logs ->
-                val sheet = workbook.createSheet("Quiz Logs")
-                val headerRow = sheet.createRow(0)
-                val headers = listOf("ID", "Student ID", "Quiz Name", "Mark Value", "Mark Type", "Max Mark", "Logged At", "Comment")
-                headers.forEachIndexed { index, header -> headerRow.createCell(index).setCellValue(header) }
-                logs.forEachIndexed { index, log ->
-                    val dataRow = sheet.createRow(index + 1)
-                    dataRow.createCell(0).setCellValue(log.id.toDouble())
-                    dataRow.createCell(1).setCellValue(log.studentId.toDouble())
-                    dataRow.createCell(2).setCellValue(log.quizName)
-                    log.markValue?.let { value -> dataRow.createCell(3).setCellValue(value) } ?: dataRow.createCell(3).setCellValue("")
-                    dataRow.createCell(4).setCellValue(log.markType ?: "")
-                    log.maxMarkValue?.let { value -> dataRow.createCell(5).setCellValue(value) } ?: dataRow.createCell(5).setCellValue("")
-                    dataRow.createCell(6).setCellValue(log.loggedAt.toDouble())
-                    dataRow.createCell(7).setCellValue(log.comment ?: "")
-                }
-            }
-
-            java.io.FileOutputStream(tempFile).use { outputStream ->
-                workbook.write(outputStream)
-            }
-            workbook.close()
-            tempFile
-
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    @OptIn(kotlinx.serialization.InternalSerializationApi::class)
     suspend fun exportData(
         context: Context,
         uri: Uri,
@@ -242,7 +128,7 @@ object ExcelImportUtil {
 
             fun getStudentFullName(studentId: Long): String {
                 val student = studentMap[studentId]
-                return "${student?.firstName ?: ""} ${student?.lastName ?: ""}".trim()
+                return "${student?.firstName.orEmpty()} ${student?.lastName.orEmpty()}".trim()
             }
 
             fun addLogEntryToSheet(
@@ -254,13 +140,17 @@ object ExcelImportUtil {
                 details: String,
                 comment: String?
             ) {
-                val row = sheet.createRow(rowIndex)
-                row.createCell(0).setCellValue(getStudentFullName(studentId))
-                row.createCell(1).setCellValue(dayFormat.format(Date(timestamp)))
-                row.createCell(2).setCellValue(dateFormat.format(Date(timestamp)))
-                row.createCell(3).setCellValue(logType)
-                row.createCell(4).setCellValue(details)
-                row.createCell(5).setCellValue(comment ?: "")
+                try {
+                    val row = sheet.createRow(rowIndex)
+                    row.createCell(0).setCellValue(getStudentFullName(studentId))
+                    row.createCell(1).setCellValue(dayFormat.format(Date(timestamp)))
+                    row.createCell(2).setCellValue(dateFormat.format(Date(timestamp)))
+                    row.createCell(3).setCellValue(logType)
+                    row.createCell(4).setCellValue(details)
+                    row.createCell(5).setCellValue(comment ?: "")
+                } catch (e: Exception) {
+                    android.util.Log.e("ExcelExport", "Error adding log entry to sheet", e)
+                }
             }
 
             if (filterOptions.exportType == ExportType.MASTER_LOG) {
@@ -283,7 +173,7 @@ object ExcelImportUtil {
                 if (filterOptions.exportHomeworkLogs) {
                     homeworkLogs.forEach { log ->
                         val details = "${log.assignmentName} - ${log.status}" +
-                                (log.marksData?.let { " (${it})" } ?: "")
+                                (log.marksData?.let { " ($it)" } ?: "")
                         addLogEntryToSheet(
                             sheet, rowIndex++, log.studentId, "Homework", log.loggedAt,
                             details, log.comment
@@ -293,9 +183,9 @@ object ExcelImportUtil {
                 if (filterOptions.exportQuizLogs) {
                     quizLogs.forEach { log ->
                         val details = "${log.quizName}" +
-                                (log.markType?.let { " - ${it}" } ?: "") +
-                                (log.markValue?.let { " (${it})" } ?: "") +
-                                (log.numQuestions?.let { " / ${it}" } ?: "")
+                                (log.markType?.let { " - $it" } ?: "") +
+                                (log.markValue?.let { " ($it)" } ?: "") +
+                                (log.numQuestions?.let { " / $it" } ?: "")
                         addLogEntryToSheet(
                             sheet, rowIndex++, log.studentId, "Quiz", log.loggedAt,
                             details, log.comment
@@ -307,7 +197,7 @@ object ExcelImportUtil {
 
                 studentsToExport.forEach { student ->
                     val sheetName = getStudentFullName(student.id)
-                        .replace(Regex("[\\/*?\\[\\]]"), "_") // Replace invalid characters
+                        .replace(Regex("[\\/*?[\\]]"), "_") // Replace invalid characters
                         .take(31) // Excel sheet name limit
                     val sheet = workbook.createSheet(sheetName)
                     val headerRow = sheet.createRow(0)
@@ -328,7 +218,7 @@ object ExcelImportUtil {
                     if (filterOptions.exportHomeworkLogs) {
                         homeworkLogs.filter { it.studentId == student.id }.forEach { log ->
                             val details = "${log.assignmentName} - ${log.status}" +
-                                    (log.marksData?.let { " (${it})" } ?: "")
+                                    (log.marksData?.let { " ($it)" } ?: "")
                             addLogEntryToSheet(
                                 sheet, rowIndex++, log.studentId, "Homework", log.loggedAt,
                                 details, log.comment
@@ -338,9 +228,9 @@ object ExcelImportUtil {
                     if (filterOptions.exportQuizLogs) {
                         quizLogs.filter { it.studentId == student.id }.forEach { log ->
                             val details = "${log.quizName}" +
-                                    (log.markType?.let { " - ${it}" } ?: "") +
-                                    (log.markValue?.let { " (${it})" } ?: "") +
-                                    (log.numQuestions?.let { " / ${it}" } ?: "")
+                                    (log.markType?.let { " - $it" } ?: "") +
+                                    (log.markValue?.let { " ($it)" } ?: "") +
+                                    (log.numQuestions?.let { " / $it" } ?: "")
                             addLogEntryToSheet(
                                 sheet, rowIndex++, log.studentId, "Quiz", log.loggedAt,
                                 details, log.comment
@@ -361,10 +251,16 @@ object ExcelImportUtil {
 
             workbook.close()
             android.util.Log.d("ExcelExport", "Export successful")
+            withContext(Dispatchers.Main) {
+                android.widget.Toast.makeText(context, "Export successful", android.widget.Toast.LENGTH_SHORT).show()
+            }
             Result.success(Unit)
 
         } catch (e: Exception) {
             android.util.Log.e("ExcelExport", "Error exporting data", e)
+            withContext(Dispatchers.Main) {
+                android.widget.Toast.makeText(context, "Error exporting data: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+            }
             Result.failure(Exception("Error exporting data: ${e.message}", e))
         }
     }

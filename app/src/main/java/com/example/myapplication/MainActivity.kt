@@ -1,6 +1,5 @@
 package com.example.myapplication
 
-import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -18,13 +17,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,7 +49,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -219,68 +217,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun ExportOptionsDialog(
-    showDialog: Boolean,
-    onDismiss: () -> Unit,
-    createDocumentLauncher: ActivityResultLauncher<String>,
-    context: Context,
-    seatingChartViewModel: SeatingChartViewModel,
-    lifecycleScope: LifecycleCoroutineScope
-) {
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Export Options") },
-            text = { Text("How would you like to export the data?") },
-            confirmButton = {
-                Button(onClick = {
-                    // Save to Device
-                    createDocumentLauncher.launch("seating_chart_data.xlsx")
-                    onDismiss() // Dismiss dialog after action
-                }) {
-                    Text("Save to Device")
-                }
-            },
-            dismissButton = {
-                Button(onClick = {
-                    // Share File
-                    lifecycleScope.launch {
-                        val exportData = seatingChartViewModel.getExportData()
-                        if (exportData.students.isEmpty()) {
-                            Toast.makeText(context, "No student data to share", Toast.LENGTH_SHORT).show()
-                            onDismiss() // Dismiss dialog even if no data
-                            return@launch
-                        }
-                        val tempFile = ExcelImportUtil.exportDataToTempFile(
-                            context = context,
-                            students = exportData.students,
-                            behaviorLogs = exportData.behaviorEvents,
-                            homeworkLogs = exportData.homeworkLogs,
-                            quizLogs = exportData.quizLogs
-                        )
-                        tempFile?.let { tempFile ->
-                            val fileUri: Uri = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                tempFile
-                            )
-                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                                putExtra(Intent.EXTRA_STREAM, fileUri)
-                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                            }
-                            context.startActivity(Intent.createChooser(shareIntent, "Share Excel File"))
-                        } ?: Toast.makeText(context, "Failed to create share file", Toast.LENGTH_SHORT).show()
-                    }
-                    onDismiss() // Dismiss dialog after action
-                }) {
-                    Text("Share File")
-                }
-            }
-        )
-    }
-}
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -336,15 +273,18 @@ fun SeatingChartScreen(
                     var showViewMenu by remember { mutableStateOf(false) }
                     var showEditMenu by remember { mutableStateOf(false) }
 
-                    IconButton(onClick = {
-                        selectMode = !selectMode
-                        if (!selectMode) {
-                            seatingChartViewModel.clearSelection()
-                        }
-                    }) {
+                    TextButton(
+                        onClick = {
+                            selectMode = !selectMode
+                            if (!selectMode) {
+                                seatingChartViewModel.clearSelection()
+                            }
+                        },
+                        modifier = Modifier.width(100.dp) // Apply width to TextButton directly
+                    ) {
                         Text(
                             if (selectMode) "Exit" else "Select",
-                            modifier = Modifier.width(50.dp)
+                            maxLines = 1
                         )
                     }
 

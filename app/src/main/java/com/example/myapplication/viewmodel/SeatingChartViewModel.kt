@@ -225,15 +225,27 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent> {
-        return behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate, studentIds)
+        return if (studentIds.isNullOrEmpty()) {
+            behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
+        } else {
+            behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
+        }
     }
 
     suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog> {
-        return homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate, studentIds)
+        return if (studentIds.isNullOrEmpty()) {
+            homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
+        } else {
+            homeworkLogDao.getFilteredHomeworkLogsWithStudents(startDate, endDate, studentIds)
+        }
     }
 
     suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog> {
-        return quizLogDao.getFilteredQuizLogs(startDate, endDate, studentIds)
+        return if (studentIds.isNullOrEmpty()) {
+            quizLogDao.getFilteredQuizLogs(startDate, endDate)
+        } else {
+            quizLogDao.getFilteredQuizLogsWithStudents(startDate, endDate, studentIds)
+        }
     }
 
     suspend fun exportFilteredData(

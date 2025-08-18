@@ -31,8 +31,11 @@ interface QuizLogDao {
     @Query("SELECT * FROM quiz_logs ORDER BY loggedAt DESC")
     suspend fun getAllQuizLogsList(): List<QuizLog>
 
-    @Query("SELECT * FROM quiz_logs WHERE loggedAt BETWEEN :startDate AND :endDate AND (:studentIds IS NULL OR studentId IN (:studentIds)) ORDER BY loggedAt ASC")
-    suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog>
+    @Query("SELECT * FROM quiz_logs WHERE loggedAt BETWEEN :startDate AND :endDate ORDER BY loggedAt ASC")
+    suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long): List<QuizLog>
+
+    @Query("SELECT * FROM quiz_logs WHERE loggedAt BETWEEN :startDate AND :endDate AND studentId IN (:studentIds) ORDER BY loggedAt ASC")
+    suspend fun getFilteredQuizLogsWithStudents(startDate: Long, endDate: Long, studentIds: List<Long>): List<QuizLog>
 
     @Query("SELECT * FROM quiz_logs WHERE id = :id")
     suspend fun getQuizLogById(id: Long): QuizLog?
