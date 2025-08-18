@@ -438,6 +438,7 @@ fun SeatingChartScreen(
                                                 .replaceFirstChar { it.titlecase(Locale.getDefault()) })
                                     },
                                     onClick = {
+                                        seatingChartViewModel.endSession()
                                         sessionType = mode
                                         seatingChartViewModel.startSession()
                                         showModeMenu = false
@@ -507,7 +508,6 @@ fun SeatingChartScreen(
                         onClick = {
                             selectedStudentUiItemForAction = studentItem
                             when (sessionType) {
-                                SessionType.NONE -> showStudentActionMenu = true
                                 SessionType.BEHAVIOR -> showBehaviorDialog = true
                                 SessionType.QUIZ -> showLogQuizScoreDialog = true
                                 SessionType.HOMEWORK -> showAdvancedHomeworkLogDialog = true

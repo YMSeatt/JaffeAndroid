@@ -38,47 +38,51 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
     ) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
-                val jsonString = when (exportType) {
-                    ExportType.STUDENTS -> {
-                        val students = studentRepository.allStudents.value
-                        if (students.isNullOrEmpty()) {
-                            Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
+                try {
+                    val jsonString = when (exportType) {
+                        ExportType.STUDENTS -> {
+                            val students = studentRepository.allStudents.value
+                            if (students.isNullOrEmpty()) {
+                                Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            Json.encodeToString(students)
+                        }
+                        ExportType.BEHAVIOR -> {
+                            val behaviorLogs = studentRepository.getAllBehaviorEvents().value
+                            if (behaviorLogs.isNullOrEmpty()) {
+                                Toast.makeText(context, "No behavior logs to export", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            Json.encodeToString(behaviorLogs)
+                        }
+                        ExportType.HOMEWORK -> {
+                            val homeworkLogs = studentRepository.getAllHomeworkLogs().value
+                            if (homeworkLogs.isNullOrEmpty()) {
+                                Toast.makeText(context, "No homework logs to export", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            Json.encodeToString(homeworkLogs)
+                        }
+                        ExportType.QUIZ -> {
+                            val quizLogs = studentRepository.getAllQuizLogs().value
+                            if (quizLogs.isNullOrEmpty()) {
+                                Toast.makeText(context, "No quiz logs to export", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            Json.encodeToString(quizLogs)
+                        }
+                        ExportType.NONE -> {
                             return@launch
                         }
-                        Json.encodeToString(students)
                     }
-                    ExportType.BEHAVIOR -> {
-                        val behaviorLogs = studentRepository.getAllBehaviorEvents().value
-                        if (behaviorLogs.isNullOrEmpty()) {
-                            Toast.makeText(context, "No behavior logs to export", Toast.LENGTH_SHORT).show()
-                            return@launch
-                        }
-                        Json.encodeToString(behaviorLogs)
+                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                        outputStream.write(jsonString.toByteArray())
                     }
-                    ExportType.HOMEWORK -> {
-                        val homeworkLogs = studentRepository.getAllHomeworkLogs().value
-                        if (homeworkLogs.isNullOrEmpty()) {
-                            Toast.makeText(context, "No homework logs to export", Toast.LENGTH_SHORT).show()
-                            return@launch
-                        }
-                        Json.encodeToString(homeworkLogs)
-                    }
-                    ExportType.QUIZ -> {
-                        val quizLogs = studentRepository.getAllQuizLogs().value
-                        if (quizLogs.isNullOrEmpty()) {
-                            Toast.makeText(context, "No quiz logs to export", Toast.LENGTH_SHORT).show()
-                            return@launch
-                        }
-                        Json.encodeToString(quizLogs)
-                    }
-                    ExportType.NONE -> {
-                        return@launch
-                    }
+                    Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Failed to export data: ${e.message}", Toast.LENGTH_LONG).show()
                 }
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    outputStream.write(jsonString.toByteArray())
-                }
-                Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
             }
         }
     }
