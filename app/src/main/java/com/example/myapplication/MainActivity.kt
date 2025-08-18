@@ -588,48 +588,50 @@ fun FurnitureDraggableIcon(
     scale: Float,
     onLongClick: () -> Unit
 ) {
-    var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
-    var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
+    var offsetX by remember { mutableStateOf(furnitureUiItem.xPosition) }
+    var offsetY by remember { mutableStateOf(furnitureUiItem.yPosition) }
 
     LaunchedEffect(furnitureUiItem.xPosition, furnitureUiItem.yPosition) {
         offsetX = furnitureUiItem.xPosition
         offsetY = furnitureUiItem.yPosition
     }
 
-    Card(
-        modifier = Modifier
-            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-            .pointerInput(furnitureUiItem.id) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        offsetX += dragAmount.x / scale
-                        offsetY += dragAmount.y / scale
-                    },
-                    onDragEnd = {
-                        viewModel.updateFurniturePosition(furnitureUiItem.id, offsetX, offsetY)
-                    }
+    key(furnitureUiItem) {
+        Card(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .pointerInput(furnitureUiItem.id) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x / scale
+                            offsetY += dragAmount.y / scale
+                        },
+                        onDragEnd = {
+                            viewModel.updateFurniturePosition(furnitureUiItem.id, offsetX, offsetY)
+                        }
+                    )
+                }
+                .combinedClickable(
+                    onClick = { /* Furniture might not have a default click action */ },
+                    onLongClick = onLongClick
+                )
+                .width(furnitureUiItem.displayWidth)
+                .height(furnitureUiItem.displayHeight)
+                .border(BorderStroke(furnitureUiItem.displayOutlineThickness, furnitureUiItem.displayOutlineColor)),
+            colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize().padding(4.dp)
+            ) {
+                Text(
+                    text = furnitureUiItem.name,
+                    color = furnitureUiItem.displayTextColor,
+                    style = MaterialTheme.typography.bodySmall
                 )
             }
-            .combinedClickable(
-                onClick = { /* Furniture might not have a default click action */ },
-                onLongClick = onLongClick
-            )
-            .width(furnitureUiItem.displayWidth)
-            .height(furnitureUiItem.displayHeight)
-            .border(BorderStroke(furnitureUiItem.displayOutlineThickness, furnitureUiItem.displayOutlineColor)),
-        colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().padding(4.dp)
-        ) {
-            Text(
-                text = furnitureUiItem.name,
-                color = furnitureUiItem.displayTextColor,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
@@ -645,63 +647,65 @@ fun StudentDraggableIcon(
     onClick: () -> Unit, 
     onLongClick: () -> Unit
 ) {
-    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) } // Changed to mutableFloatStateOf
-    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) } // Changed to mutableFloatStateOf
+    var offsetX by remember { mutableStateOf(studentUiItem.xPosition.toFloat()) } // Changed to mutableFloatStateOf
+    var offsetY by remember { mutableStateOf(studentUiItem.yPosition.toFloat()) } // Changed to mutableFloatStateOf
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
         offsetY = studentUiItem.yPosition.toFloat()
     }
 
-    Card(
-        modifier = Modifier
-            .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-            .pointerInput(studentUiItem.id) {
-                detectDragGestures(
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        offsetX += dragAmount.x / scale
-                        offsetY += dragAmount.y / scale
-                    },
-                    onDragEnd = {
-                        viewModel.updateStudentPosition(
-                            studentUiItem.id,
-                            studentUiItem.xPosition.toFloat(), // This should be the original X
-                            studentUiItem.yPosition.toFloat(), // This should be the original Y
-                            offsetX, 
-                            offsetY 
-                        )
-                    }
+    key(studentUiItem) {
+        Card(
+            modifier = Modifier
+                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .pointerInput(studentUiItem.id) {
+                    detectDragGestures(
+                        onDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetX += dragAmount.x / scale
+                            offsetY += dragAmount.y / scale
+                        },
+                        onDragEnd = {
+                            viewModel.updateStudentPosition(
+                                studentUiItem.id,
+                                studentUiItem.xPosition.toFloat(), // This should be the original X
+                                studentUiItem.yPosition.toFloat(), // This should be the original Y
+                                offsetX,
+                                offsetY
+                            )
+                        }
+                    )
+                }
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = onLongClick
                 )
-            }
-            .combinedClickable(
-                onClick = onClick, 
-                onLongClick = onLongClick
-            )
-            .width(studentUiItem.displayWidth) 
-            .height(studentUiItem.displayHeight) 
-            .border(BorderStroke(studentUiItem.displayOutlineThickness, studentUiItem.displayOutlineColor)), 
-        colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor), 
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.fillMaxSize().padding(8.dp)
+                .width(studentUiItem.displayWidth)
+                .height(studentUiItem.displayHeight)
+                .border(BorderStroke(studentUiItem.displayOutlineThickness, studentUiItem.displayOutlineColor)),
+            colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = studentUiItem.initials, 
-                    color = studentUiItem.displayTextColor 
-                )
-                if (showBehavior) {
-                    studentUiItem.recentBehaviorDescription?.let {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.bodySmall,
-                            maxLines = 2,
-                            color = studentUiItem.displayTextColor 
-                        )
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize().padding(8.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = studentUiItem.initials,
+                        color = studentUiItem.displayTextColor
+                    )
+                    if (showBehavior) {
+                        studentUiItem.recentBehaviorDescription?.let {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = it,
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 2,
+                                color = studentUiItem.displayTextColor
+                            )
+                        }
                     }
                 }
             }

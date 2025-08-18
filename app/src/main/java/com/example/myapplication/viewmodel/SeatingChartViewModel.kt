@@ -17,6 +17,7 @@ import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
+import com.example.myapplication.ui.model.toUiItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -30,7 +31,6 @@ import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.preferences.AppPreferencesRepository
-import com.example.myapplication.ui.model.toUiItem
 import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.flow.collect
 
