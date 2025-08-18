@@ -246,14 +246,62 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
+        AppDatabase.getDatabase(getApplication()).close()
         getApplication<Application>().contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(dbFile).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
         }
-        // Restart the app to apply the new database
-        val intent = getApplication<Application>().packageManager.getLaunchIntentForPackage(getApplication<Application>().packageName)
-        intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        getApplication<Application>().startActivity(intent)
     }
+
+    val stickyQuizNameDurationSeconds: StateFlow<Int> = preferencesRepository.stickyQuizNameDurationSecondsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    fun updateStickyQuizNameDurationSeconds(duration: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateStickyQuizNameDurationSeconds(duration)
+        }
+    }
+
+    val stickyHomeworkNameDurationSeconds: StateFlow<Int> = preferencesRepository.stickyHomeworkNameDurationSecondsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    fun updateStickyHomeworkNameDurationSeconds(duration: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateStickyHomeworkNameDurationSeconds(duration)
+        }
+    }
+
+    val behaviorInitialsMap: StateFlow<String> = preferencesRepository.behaviorInitialsMapFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateBehaviorInitialsMap(map: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateBehaviorInitialsMap(map)
+        }
+    }
+
+    val lastQuizName: StateFlow<String?> = preferencesRepository.lastQuizNameFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    fun updateLastQuizName(name: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLastQuizName(name)
+        }
+    }
+
+    val lastQuizTimestamp: StateFlow<Long?> = preferencesRepository.lastQuizTimestampFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    val lastHomeworkName: StateFlow<String?> = preferencesRepository.lastHomeworkNameFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    fun updateLastHomeworkName(name: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLastHomeworkName(name)
+        }
+    }
+
+    val lastHomeworkTimestamp: StateFlow<Long?> = preferencesRepository.lastHomeworkTimestampFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
 }

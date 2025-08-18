@@ -39,4 +39,7 @@ interface QuizLogDao {
 
     @Query("DELETE FROM quiz_logs WHERE id = :id")
     suspend fun deleteQuizLogById(id: Long)
+
+    @Query("DELETE FROM quiz_logs WHERE studentId = :studentId")
+    suspend fun deleteByStudentId(studentId: Long)
 }

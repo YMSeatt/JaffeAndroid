@@ -44,4 +44,7 @@ interface BehaviorEventDao {
     
     @Update
     suspend fun updateBehaviorEvent(event: BehaviorEvent)
+
+    @Query("DELETE FROM behavior_events WHERE studentId = :studentId")
+    suspend fun deleteByStudentId(studentId: Long)
 }

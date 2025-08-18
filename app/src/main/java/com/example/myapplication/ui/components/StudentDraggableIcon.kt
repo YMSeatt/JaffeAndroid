@@ -40,7 +40,8 @@ fun StudentDraggableIcon(
     viewModel: SeatingChartViewModel,
     showBehavior: Boolean,
     scale: Float,
-    onClick: () -> Unit, 
+    isSelected: Boolean,
+    onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
@@ -81,8 +82,8 @@ fun StudentDraggableIcon(
                 .height(studentUiItem.displayHeight)
                 .border(
                     BorderStroke(
-                        studentUiItem.displayOutlineThickness,
-                        studentUiItem.displayOutlineColor
+                        if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
+                        if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor
                     )
                 ),
             colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
@@ -94,7 +95,7 @@ fun StudentDraggableIcon(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = studentUiItem.fullName,
+                        text = studentUiItem.nickname ?: studentUiItem.fullName,
                         color = studentUiItem.displayTextColor
                     )
                     if (showBehavior) {
@@ -102,6 +103,15 @@ fun StudentDraggableIcon(
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 3,
+                                color = studentUiItem.displayTextColor
+                            )
+                        }
+                        if (studentUiItem.recentHomeworkDescription.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
                                 color = studentUiItem.displayTextColor

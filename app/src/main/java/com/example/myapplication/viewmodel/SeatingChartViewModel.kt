@@ -109,6 +109,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     private var sessionHomeworkLogs = mutableListOf<HomeworkLog>()
     private var isSessionActive = false
 
+    val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
+
     init {
         val studentDb = AppDatabase.getDatabase(application)
         studentDao = studentDb.studentDao()
@@ -150,11 +152,34 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             val students = allStudents.value ?: return@launch
             val groups = studentGroupDao.getAllStudentGroups().first()
+            val behaviorLimit = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.first()
+            val homeworkLimit = appPreferencesRepository.recentLogsLimitFlow.first()
+            val useInitials = appPreferencesRepository.useInitialsForBehaviorFlow.first()
+            val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
+                .split(",")
+                .mapNotNull {
+                    val parts = it.split(":")
+                    if (parts.size == 2) parts[0] to parts[1] else null
+                }
+                .toMap()
+
             val studentsWithBehavior = students.map { student ->
                 val recentEvents =
-                    behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, 3)
+                    behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
+                val recentHomework =
+                    homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
+
+                val behaviorDescription = recentEvents.map {
+                    if (useInitials) {
+                        behaviorInitialsMap[it.type] ?: it.type.first().toString()
+                    } else {
+                        it.type
+                    }
+                }
+
                 student.toStudentUiItem(
-                    recentBehaviorDescription = recentEvents.map { it.type },
+                    recentBehaviorDescription = behaviorDescription,
+                    recentHomeworkDescription = recentHomework.map { it.assignmentName },
                     groupColor = groups.find { group -> group.id == student.groupId }?.color
                 )
             }
@@ -291,6 +316,16 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun deleteStudents(studentIds: Set<Int>) {
+        viewModelScope.launch {
+            val studentsToDelete = allStudents.value?.filter { studentIds.contains(it.id.toInt()) }
+            studentsToDelete?.forEach {
+                val command = DeleteStudentCommand(this@SeatingChartViewModel, it)
+                executeCommand(command)
+            }
+        }
+    }
+
     fun updateStudentPosition(
         studentId: Int,
         oldX: Float,
@@ -320,6 +355,21 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     suspend fun getStudentForEditing(studentId: Int): Student? = withContext(Dispatchers.IO) {
         return@withContext repository.getStudentById(studentId.toLong())
+    }
+
+    suspend fun studentExists(firstName: String, lastName: String): Boolean {
+        return repository.studentExists(firstName, lastName)
+    }
+
+    fun changeBoxSize(studentIds: Set<Int>, width: Int, height: Int) {
+        viewModelScope.launch {
+            val studentsToUpdate = allStudents.value?.filter { studentIds.contains(it.id.toInt()) }
+            studentsToUpdate?.forEach {
+                val updatedStudent = it.copy(customWidth = width, customHeight = height)
+                val command = UpdateStudentCommand(this@SeatingChartViewModel, it, updatedStudent)
+                executeCommand(command)
+            }
+        }
     }
 
     // Furniture operations

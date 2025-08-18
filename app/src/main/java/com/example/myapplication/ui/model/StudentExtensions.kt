@@ -7,11 +7,13 @@ import com.example.myapplication.data.Student
 
 fun Student.toStudentUiItem(
     recentBehaviorDescription: List<String>,
+    recentHomeworkDescription: List<String>,
     groupColor: String?
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
         fullName = "${this.firstName} ${this.lastName}",
+        nickname = this.nickname,
         initials = this.initials ?: this.getGeneratedInitials(),
         xPosition = this.xPosition.toDouble(),
         yPosition = this.yPosition.toDouble(),
@@ -22,6 +24,7 @@ fun Student.toStudentUiItem(
         displayTextColor = this.customTextColor?.let { Color(it.toColorInt()) } ?: Color.Black,
         displayOutlineThickness = 1.dp,
         recentBehaviorDescription = recentBehaviorDescription,
+        recentHomeworkDescription = recentHomeworkDescription,
         groupColor = groupColor?.let { Color(it.toColorInt()) }
     )
 }

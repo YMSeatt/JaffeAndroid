@@ -88,11 +88,15 @@ fun StudentsTab(seatingChartViewModel: SeatingChartViewModel) {
 @Composable
 fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val behaviorLogs by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
+    val students by seatingChartViewModel.allStudents.observeAsState(initial = emptyList())
+    val studentMap = remember(students) { students.associateBy { it.id } }
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val dayFormatter = remember { SimpleDateFormat("EEEE", Locale.getDefault()) }
 
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(behaviorLogs) {
-            Text(text = "Student ID: ${it.studentId}, Type: ${it.type}, Timestamp: ${dateFormatter.format(Date(it.timestamp))}, Comment: ${it.comment ?: "N/A"}")
+            val studentName = studentMap[it.studentId]?.let { student -> "${student.firstName} ${student.lastName}" } ?: "Unknown"
+            Text(text = "Student: $studentName, Day: ${dayFormatter.format(Date(it.timestamp))}, Type: ${it.type}, Timestamp: ${dateFormatter.format(Date(it.timestamp))}, Comment: ${it.comment ?: "N/A"}")
         }
     }
 }

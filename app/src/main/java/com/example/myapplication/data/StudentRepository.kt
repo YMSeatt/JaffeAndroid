@@ -29,7 +29,14 @@ class StudentRepository(
         studentDao.updateStudent(student)
     }
     suspend fun deleteStudent(student: Student) = withContext(Dispatchers.IO) {
+        behaviorEventDao.deleteByStudentId(student.id)
+        homeworkLogDao.deleteByStudentId(student.id)
+        quizLogDao.deleteByStudentId(student.id)
         studentDao.deleteStudent(student)
+    }
+
+    suspend fun studentExists(firstName: String, lastName: String): Boolean = withContext(Dispatchers.IO) {
+        studentDao.studentExists(firstName, lastName)
     }
 
     fun getAllBehaviorEvents(): LiveData<List<BehaviorEvent>> {

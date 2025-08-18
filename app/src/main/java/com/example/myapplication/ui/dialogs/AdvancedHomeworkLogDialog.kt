@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -41,10 +42,25 @@ import kotlinx.serialization.json.Json
 fun AdvancedHomeworkLogDialog(
     studentId: Long,
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit,
     onSave: (HomeworkLog) -> Unit
 ) {
-    var assignmentName by remember { mutableStateOf("") }
+    val stickyHomeworkNameDuration by settingsViewModel.stickyHomeworkNameDurationSeconds.collectAsState(0)
+    val lastHomeworkName by settingsViewModel.lastHomeworkName.collectAsState(null)
+    val lastHomeworkTimestamp by settingsViewModel.lastHomeworkTimestamp.collectAsState(null)
+
+    var assignmentName by remember {
+        mutableStateOf(
+            if (stickyHomeworkNameDuration > 0 && lastHomeworkName != null && lastHomeworkTimestamp != null &&
+                (System.currentTimeMillis() - lastHomeworkTimestamp!!) / 1000 < stickyHomeworkNameDuration
+            ) {
+                lastHomeworkName!!
+            } else {
+                ""
+            }
+        )
+    }
     var comment by remember { mutableStateOf("") }
     val homeworkTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
