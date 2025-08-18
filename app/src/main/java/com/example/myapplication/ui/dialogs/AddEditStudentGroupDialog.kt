@@ -67,7 +67,7 @@ fun AddEditStudentGroupDialog(
             if (isEditMode) {
                 Button(
                     onClick = {
-                        viewModel.deleteStudentGroup(group!!)
+                        viewModel.deleteStudentGroup(group)
                         onDismiss()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
