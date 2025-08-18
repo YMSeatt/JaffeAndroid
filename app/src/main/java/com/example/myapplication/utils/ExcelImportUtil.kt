@@ -303,7 +303,7 @@ object ExcelImportUtil {
                     }
                 }
             } else { // Individual Student Sheets
-                val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id.toLong()) }
+                val studentsToExport = allStudents.filter { filterOptions.selectedStudentIds.contains(it.id) }
 
                 studentsToExport.forEach { student ->
                     val sheetName = getStudentFullName(student.id.toLong())
