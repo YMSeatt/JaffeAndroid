@@ -1,13 +1,14 @@
 package com.example.myapplication.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+
+private val StudentGroupsViewModel.viewModelScope: Any
 
 class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : ViewModel() {
 
@@ -31,4 +32,8 @@ class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : Vie
             studentGroupDao.deleteStudentGroup(group)
         }
     }
+}
+
+private fun Any.launch(block: suspend (CoroutineScope) -> Unit) {
+    TODO("Not yet implemented")
 }

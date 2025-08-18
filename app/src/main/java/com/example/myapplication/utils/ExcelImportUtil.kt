@@ -18,7 +18,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
 object ExcelImportUtil {
 
-    @Serializable
+    @kotlinx.serialization.InternalSerializationApi
     private data class MarksData(
         val markValue: Double?,
         val markType: String?,

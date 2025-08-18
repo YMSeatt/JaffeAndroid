@@ -1,6 +1,11 @@
 package com.example.myapplication.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -22,4 +27,7 @@ interface StudentGroupDao {
 
     @Query("DELETE FROM student_groups WHERE id = :groupId")
     suspend fun deleteGroupById(groupId: Long)
+    fun insertStudentGroup(studentGroup: StudentGroup)
+    fun updateStudentGroup(group: StudentGroup)
+    fun deleteStudentGroup(group: StudentGroup)
 }
