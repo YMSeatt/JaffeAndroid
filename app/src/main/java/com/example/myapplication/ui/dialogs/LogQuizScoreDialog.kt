@@ -104,9 +104,9 @@ fun LogQuizScoreDialog(
 
                 items(quizMarkTypes) { markType ->
                     OutlinedTextField(
-                        value = marksData[markType] ?: "",
-                        onValueChange = { marksData[markType] = it },
-                        label = { Text(markType) },
+                        value = marksData[markType.name] ?: "",
+                        onValueChange = { marksData[markType.name] = it },
+                        label = { Text(markType.name) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     )
@@ -127,16 +127,16 @@ fun LogQuizScoreDialog(
                 onClick = {
                     val serializedMarks = Json.encodeToString(marksData.toMap())
                     val log = QuizLog(
+                        id = 0,
                         studentId = studentId,
                         quizName = quizName,
                         comment = comment,
                         loggedAt = System.currentTimeMillis(),
                         marksData = serializedMarks,
                         numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        id = TODO(),
-                        markValue = TODO(),
-                        markType = TODO(),
-                        maxMarkValue = TODO()
+                        markValue = null,
+                        markType = null,
+                        maxMarkValue = null
                     )
                     onSave(log)
                     onDismissRequest()

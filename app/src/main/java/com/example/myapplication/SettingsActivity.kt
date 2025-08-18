@@ -7,6 +7,7 @@ import androidx.activity.viewModels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.settings.SettingsNavHost
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
@@ -14,28 +15,42 @@ import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class SettingsActivity : ComponentActivity() {
+
+    private val db by lazy { AppDatabase.getDatabase(applicationContext) }
+    private val studentRepository by lazy {
+        StudentRepository(
+            studentDao = db.studentDao(),
+            behaviorEventDao = db.behaviorEventDao(),
+            homeworkLogDao = db.homeworkLogDao(),
+            furnitureDao = db.furnitureDao(),
+            quizLogDao = db.quizLogDao(),
+            studentGroupDao = db.studentGroupDao(),
+            layoutTemplateDao = db.layoutTemplateDao(),
+            conditionalFormattingRuleDao = db.conditionalFormattingRuleDao(),
+            quizMarkTypeDao = db.quizMarkTypeDao()
+        )
+    }
+
     private val settingsViewModel: SettingsViewModel by viewModels()
 
-    private val studentGroupsViewModelFactory by lazy {
+    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(StudentGroupsViewModel::class.java)) {
-                    val studentGroupDao = AppDatabase.getDatabase(applicationContext).studentGroupDao()
                     @Suppress("UNCHECKED_CAST")
-                    return StudentGroupsViewModel(studentGroupDao) as T
+                    return StudentGroupsViewModel(db.studentGroupDao()) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
         }
     }
 
-    private val conditionalFormattingRuleViewModelFactory by lazy {
+    private val conditionalFormattingRuleViewModel: ConditionalFormattingRuleViewModel by viewModels {
         object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(ConditionalFormattingRuleViewModel::class.java)) {
-                    val conditionalFormattingRuleDao = AppDatabase.getDatabase(applicationContext).conditionalFormattingRuleDao()
                     @Suppress("UNCHECKED_CAST")
-                    return ConditionalFormattingRuleViewModel(conditionalFormattingRuleDao) as T
+                    return ConditionalFormattingRuleViewModel(db.conditionalFormattingRuleDao()) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }
@@ -46,7 +61,13 @@ class SettingsActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyApplicationTheme {
-                SettingsNavHost()
+                SettingsNavHost(
+                    settingsViewModel = settingsViewModel,
+                    studentRepository = studentRepository,
+                    studentGroupsViewModel = studentGroupsViewModel,
+                    conditionalFormattingRuleViewModel = conditionalFormattingRuleViewModel,
+                    onDismiss = { finish() }
+                )
             }
         }
     }
