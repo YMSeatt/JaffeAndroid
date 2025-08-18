@@ -158,8 +158,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
                 .split(",")
                 .mapNotNull {
-                    val parts = it.split(":")
-                    if (parts.size == 2) parts[0] to parts[1] else null
+                    val parts = it.trim().split(":")
+                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
                 }
                 .toMap()
 
