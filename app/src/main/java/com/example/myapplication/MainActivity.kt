@@ -81,7 +81,6 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 
 enum class SessionType {
-    NONE,
     BEHAVIOR,
     QUIZ,
     HOMEWORK
@@ -320,9 +319,7 @@ fun SeatingChartScreen(
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
-    val useFullNameForStudent by settingsViewModel.useFullNameForStudent.collectAsState(initial = false)
-
-    var sessionType by remember { mutableStateOf(SessionType.NONE) }
+    var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
 
     Scaffold(
         topBar = {
@@ -427,14 +424,7 @@ fun SeatingChartScreen(
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) {
-                            Text(
-                                when (sessionType) {
-                                    SessionType.NONE -> "Default"
-                                    SessionType.BEHAVIOR -> "Behavior"
-                                    SessionType.QUIZ -> "Quiz"
-                                    SessionType.HOMEWORK -> "Homework"
-                                }
-                            )
+                            Text(sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) })
                         }
                         DropdownMenu(
                             expanded = showModeMenu,
@@ -449,11 +439,7 @@ fun SeatingChartScreen(
                                     },
                                     onClick = {
                                         sessionType = mode
-                                        if (mode == SessionType.NONE) {
-                                            seatingChartViewModel.endSession()
-                                        } else {
-                                            seatingChartViewModel.startSession()
-                                        }
+                                        seatingChartViewModel.startSession()
                                         showModeMenu = false
                                     }
                                 )
@@ -517,7 +503,6 @@ fun SeatingChartScreen(
                         studentUiItem = studentItem,
                         viewModel = seatingChartViewModel,
                         showBehavior = showRecentBehavior,
-                        useFullName = useFullNameForStudent,
                         scale = scale,
                         onClick = {
                             selectedStudentUiItemForAction = studentItem

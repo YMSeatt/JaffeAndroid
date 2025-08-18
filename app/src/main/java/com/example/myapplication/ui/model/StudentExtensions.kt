@@ -6,7 +6,7 @@ import androidx.core.graphics.toColorInt
 import com.example.myapplication.data.Student
 
 fun Student.toStudentUiItem(
-    recentBehaviorDescription: String?,
+    recentBehaviorDescription: List<String>,
     groupColor: String?
 ): StudentUiItem {
     return StudentUiItem(

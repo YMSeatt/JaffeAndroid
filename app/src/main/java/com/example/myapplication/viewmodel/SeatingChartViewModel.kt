@@ -151,10 +151,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val students = allStudents.value ?: return@launch
             val groups = studentGroupDao.getAllStudentGroups().first()
             val studentsWithBehavior = students.map { student ->
-                val mostRecentEvent =
-                    behaviorEventDao.getMostRecentBehaviorForStudent(student.id)
+                val recentEvents =
+                    behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, 3)
                 student.toStudentUiItem(
-                    recentBehaviorDescription = mostRecentEvent?.type,
+                    recentBehaviorDescription = recentEvents.map { it.type },
                     groupColor = groups.find { group -> group.id == student.groupId }?.color
                 )
             }

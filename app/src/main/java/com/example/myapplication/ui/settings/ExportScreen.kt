@@ -14,8 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.StudentRepository
-import com.example.myapplication.utils.ExcelImportUtil
+import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.QuizLog
+import com.example.myapplication.data.Student
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private enum class ExportType {
     NONE, STUDENTS, BEHAVIOR, HOMEWORK, QUIZ
@@ -29,18 +34,18 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
     var exportType by remember { mutableStateOf(ExportType.NONE) }
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
-                val result = when (exportType) {
+                val jsonString = when (exportType) {
                     ExportType.STUDENTS -> {
                         val students = studentRepository.allStudents.value
                         if (students.isNullOrEmpty()) {
                             Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportDataToTempFile(context, students, null, null, null)
+                        Json.encodeToString(students)
                     }
                     ExportType.BEHAVIOR -> {
                         val behaviorLogs = studentRepository.getAllBehaviorEvents().value
@@ -48,7 +53,7 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No behavior logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportDataToTempFile(context, null, behaviorLogs, null, null)
+                        Json.encodeToString(behaviorLogs)
                     }
                     ExportType.HOMEWORK -> {
                         val homeworkLogs = studentRepository.getAllHomeworkLogs().value
@@ -56,7 +61,7 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No homework logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportDataToTempFile(context, null, null, homeworkLogs, null)
+                        Json.encodeToString(homeworkLogs)
                     }
                     ExportType.QUIZ -> {
                         val quizLogs = studentRepository.getAllQuizLogs().value
@@ -64,22 +69,16 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                             Toast.makeText(context, "No quiz logs to export", Toast.LENGTH_SHORT).show()
                             return@launch
                         }
-                        ExcelImportUtil.exportDataToTempFile(context, null, null, null, quizLogs)
+                        Json.encodeToString(quizLogs)
                     }
                     ExportType.NONE -> {
                         return@launch
                     }
                 }
-                if (result != null) {
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        result.inputStream().use { inputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-                    Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(context, "Failed to export data", Toast.LENGTH_LONG).show()
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    outputStream.write(jsonString.toByteArray())
                 }
+                Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
             }
         }
     }
@@ -103,30 +102,30 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
         ) {
             Button(onClick = {
                 exportType = ExportType.STUDENTS
-                createDocumentLauncher.launch("students.xlsx")
+                createDocumentLauncher.launch("students.json")
             }) {
-                Text("Export Students")
+                Text("Export Students to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = {
                 exportType = ExportType.BEHAVIOR
-                createDocumentLauncher.launch("behavior_logs.xlsx")
+                createDocumentLauncher.launch("behavior_logs.json")
             }) {
-                Text("Export Behavior Logs")
+                Text("Export Behavior Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = {
                 exportType = ExportType.HOMEWORK
-                createDocumentLauncher.launch("homework_logs.xlsx")
+                createDocumentLauncher.launch("homework_logs.json")
             }) {
-                Text("Export Homework Logs")
+                Text("Export Homework Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(onClick = {
                 exportType = ExportType.QUIZ
-                createDocumentLauncher.launch("quiz_logs.xlsx")
+                createDocumentLauncher.launch("quiz_logs.json")
             }) {
-                Text("Export Quiz Logs")
+                Text("Export Quiz Logs to JSON")
             }
         }
     }

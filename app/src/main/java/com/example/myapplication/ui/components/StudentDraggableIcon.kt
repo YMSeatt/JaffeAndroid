@@ -39,7 +39,6 @@ fun StudentDraggableIcon(
     studentUiItem: StudentUiItem,
     viewModel: SeatingChartViewModel,
     showBehavior: Boolean,
-    useFullName: Boolean,
     scale: Float,
     onClick: () -> Unit, 
     onLongClick: () -> Unit
@@ -95,16 +94,16 @@ fun StudentDraggableIcon(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (useFullName) studentUiItem.fullName else studentUiItem.initials,
+                        text = studentUiItem.fullName,
                         color = studentUiItem.displayTextColor
                     )
                     if (showBehavior) {
-                        studentUiItem.recentBehaviorDescription?.let {
+                        if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = it,
+                                text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
-                                maxLines = 2,
+                                maxLines = 3,
                                 color = studentUiItem.displayTextColor
                             )
                         }
