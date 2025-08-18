@@ -663,7 +663,7 @@ fun SeatingChartScreen(
             val studentIds = if (selectMode) {
                 selectedStudentIds.map { it.toLong() }
             } else {
-                listOf(selectedStudentUiItemForAction!!.id.toLong())
+                listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
             }
             LogQuizScoreDialog(
                 studentIds = studentIds,
