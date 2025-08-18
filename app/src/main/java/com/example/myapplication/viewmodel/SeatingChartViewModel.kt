@@ -111,6 +111,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
 
+    fun clearSelection() {
+        selectedStudentIds.value = emptySet()
+    }
+
     init {
         val studentDb = AppDatabase.getDatabase(application)
         studentDao = studentDb.studentDao()
@@ -313,6 +317,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     suspend fun internalDeleteStudent(student: Student) {
         withContext(Dispatchers.IO) {
             repository.deleteStudent(student)
+            withContext(Dispatchers.Main) {
+                updateStudentsForDisplay()
+            }
         }
     }
 
