@@ -246,7 +246,6 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 inputStream.copyTo(outputStream)
             }
         }
-        _restoreComplete.postValue(true)
     }
 
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
@@ -257,6 +256,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 inputStream.copyTo(outputStream)
             }
         }
+        _restoreComplete.postValue(true)
     }
 
     val stickyQuizNameDurationSeconds: StateFlow<Int> = preferencesRepository.stickyQuizNameDurationSecondsFlow

@@ -22,7 +22,8 @@ data class Student(
     val customHeight: Int? = null,          // e.g., in dp
     val customBackgroundColor: String? = null, // e.g., hex string like "#FFFFFF"
     val customOutlineColor: String? = null,  // e.g., hex string
-    val customTextColor: String? = null      // e.g., hex string
+    val customTextColor: String? = null,      // e.g., hex string
+    val customOutlineThickness: Int? = null // e.g., in dp
 ) {
     // Secondary constructor or init block could be used for auto-generation
     // if a more complex logic is needed, or handle it in the ViewModel/Repository

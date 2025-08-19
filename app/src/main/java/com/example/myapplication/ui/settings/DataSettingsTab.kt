@@ -42,6 +42,8 @@ import com.example.myapplication.utils.ExcelImportUtil
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
+private const val DATABASE_BACKUP_FILENAME = "student_organizer_backup.db"
+
 @Composable
 fun DataSettingsTab(
     settingsViewModel: SettingsViewModel,
@@ -311,23 +313,13 @@ fun DataSettingsTab(
             }
             Button(
                 onClick = {
-                    var isValid = true
-                    if (newQuizMarkTypeName.isBlank()) {
-                        quizMarkTypeNameError = "Name cannot be blank."
-                        isValid = false
-                    } else {
-                        quizMarkTypeNameError = null
-                    }
-
+                    val isNameValid = newQuizMarkTypeName.isNotBlank()
                     val pointsValue = newQuizMarkDefaultPoints.toDoubleOrNull()
-                    if (pointsValue == null) {
-                        quizMarkPointsError = "Points must be a valid number."
-                        isValid = false
-                    } else {
-                        quizMarkPointsError = null
-                    }
 
-                    if (isValid && pointsValue != null) {
+                    quizMarkTypeNameError = if (isNameValid) null else "Name cannot be blank."
+                    quizMarkPointsError = if (pointsValue != null) null else "Points must be a valid number."
+
+                    if (isNameValid && pointsValue != null) {
                         val newMarkType = QuizMarkType(
                             name = newQuizMarkTypeName.trim(),
                             defaultPoints = pointsValue,
@@ -339,8 +331,6 @@ fun DataSettingsTab(
                         newQuizMarkDefaultPoints = ""
                         newQuizMarkContributesToTotal = false
                         newQuizMarkIsExtraCredit = false
-                        quizMarkTypeNameError = null
-                        quizMarkPointsError = null
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
