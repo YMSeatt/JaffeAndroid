@@ -37,7 +37,8 @@ fun FurnitureDraggableIcon(
     furnitureUiItem: FurnitureUiItem,
     viewModel: SeatingChartViewModel,
     scale: Float,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    noAnimations: Boolean
 ) {
     var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
     var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
@@ -80,7 +81,7 @@ fun FurnitureDraggableIcon(
                     )
                 ),
             colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,

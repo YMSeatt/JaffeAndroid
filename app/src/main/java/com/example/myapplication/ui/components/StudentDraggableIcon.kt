@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.model.StudentUiItem
@@ -42,7 +43,8 @@ fun StudentDraggableIcon(
     scale: Float,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit
+    onLongClick: () -> Unit,
+    noAnimations: Boolean
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
@@ -87,7 +89,7 @@ fun StudentDraggableIcon(
                     )
                 ),
             colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(defaultElevation = 4.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
@@ -96,7 +98,8 @@ fun StudentDraggableIcon(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = studentUiItem.fullName,
-                        color = studentUiItem.displayTextColor
+                        color = studentUiItem.displayTextColor,
+                        textAlign = TextAlign.Center
                     )
                     if (showBehavior) {
                         if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
@@ -105,7 +108,8 @@ fun StudentDraggableIcon(
                                 text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
-                                color = studentUiItem.displayTextColor
+                                color = studentUiItem.displayTextColor,
+                                textAlign = TextAlign.Center
                             )
                         }
                         if (studentUiItem.recentHomeworkDescription.isNotEmpty()) {
@@ -114,7 +118,8 @@ fun StudentDraggableIcon(
                                 text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 3,
-                                color = studentUiItem.displayTextColor
+                                color = studentUiItem.displayTextColor,
+                                textAlign = TextAlign.Center
                             )
                         }
                     }

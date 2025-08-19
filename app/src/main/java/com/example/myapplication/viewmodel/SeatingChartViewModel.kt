@@ -47,6 +47,8 @@ import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -147,8 +149,29 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             updateStudentsForDisplay()
         }
 
+        observePreferenceChanges()
+
         furnitureForDisplay.addSource(allFurniture) { furnitureList ->
             furnitureForDisplay.value = furnitureList.map { it.toUiItem() }
+        }
+    }
+
+    private fun observePreferenceChanges() {
+        viewModelScope.launch {
+            combine(
+                appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
+                appPreferencesRepository.recentLogsLimitFlow,
+                appPreferencesRepository.useInitialsForBehaviorFlow,
+                appPreferencesRepository.behaviorInitialsMapFlow,
+                appPreferencesRepository.defaultStudentBoxWidthFlow,
+                appPreferencesRepository.defaultStudentBoxHeightFlow,
+                appPreferencesRepository.defaultStudentBoxBackgroundColorFlow,
+                appPreferencesRepository.defaultStudentBoxOutlineColorFlow,
+                appPreferencesRepository.defaultStudentBoxTextColorFlow,
+                appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow
+            ) { _ ->
+                updateStudentsForDisplay()
+            }.collect()
         }
     }
 
@@ -167,6 +190,13 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 }
                 .toMap()
 
+            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
+            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
+            val defaultBgColor = appPreferencesRepository.defaultStudentBoxBackgroundColorFlow.first()
+            val defaultOutlineColor = appPreferencesRepository.defaultStudentBoxOutlineColorFlow.first()
+            val defaultTextColor = appPreferencesRepository.defaultStudentBoxTextColorFlow.first()
+            val defaultOutlineThickness = appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow.first()
+
             val studentsWithBehavior = students.map { student ->
                 val recentEvents =
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
@@ -184,7 +214,13 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 student.toStudentUiItem(
                     recentBehaviorDescription = behaviorDescription,
                     recentHomeworkDescription = recentHomework.map { it.assignmentName },
-                    groupColor = groups.find { group -> group.id == student.groupId }?.color
+                    groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                    defaultWidth = defaultWidth,
+                    defaultHeight = defaultHeight,
+                    defaultBackgroundColor = defaultBgColor,
+                    defaultOutlineColor = defaultOutlineColor,
+                    defaultTextColor = defaultTextColor,
+                    defaultOutlineThickness = defaultOutlineThickness
                 )
             }
             studentsForDisplay.postValue(studentsWithBehavior)

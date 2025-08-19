@@ -16,6 +16,7 @@ import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 import com.example.myapplication.ui.dialogs.ExportFilterOptions
 import com.example.myapplication.ui.dialogs.ExportType
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -117,8 +118,12 @@ object ExcelImportUtil {
         android.util.Log.d("ExcelExport", "Starting export. Students: ${allStudents.size}, Behaviors: ${behaviorLogs.size}, Homework: ${homeworkLogs.size}, Quizzes: ${quizLogs.size}")
         try {
             val workbook = XSSFWorkbook()
-            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-            val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
+            val dayFormat = SimpleDateFormat("EEEE", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("UTC")
+            }
 
             val masterLogHeaders = listOf(
                 "Student Name", "Day", "Timestamp", "Log Type", "Details", "Comment"

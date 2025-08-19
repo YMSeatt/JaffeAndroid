@@ -1,6 +1,10 @@
 package com.example.myapplication.ui.settings
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -18,7 +22,15 @@ fun SettingsNavHost(
     onDismiss: () -> Unit
 ) {
     val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "settings") {
+    val noAnimations by settingsViewModel.noAnimations.collectAsState()
+
+    NavHost(
+        navController = navController,
+        startDestination = "settings",
+        enterTransition = { if (noAnimations) EnterTransition.None else fadeIn() },
+        exitTransition = { if (noAnimations) ExitTransition.None else fadeOut() }
+    ) {
+    ) {
         composable("settings") {
             SettingsScreen(
                 settingsViewModel = settingsViewModel,

@@ -164,7 +164,14 @@ fun ExportFilterDialog(
             Button(onClick = {
                 val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val startMillis = try { dateFormat.parse(startDate)?.time } catch (e: Exception) { null }
-                val endMillis = try { dateFormat.parse(endDate)?.time } catch (e: Exception) { null }
+                val endMillis = try {
+                    val calendar = Calendar.getInstance()
+                    calendar.time = dateFormat.parse(endDate)!!
+                    calendar.set(Calendar.HOUR_OF_DAY, 23)
+                    calendar.set(Calendar.MINUTE, 59)
+                    calendar.set(Calendar.SECOND, 59)
+                    calendar.timeInMillis
+                } catch (e: Exception) { null }
 
                 if (startMillis == null || endMillis == null) {
                     // Show error or toast
