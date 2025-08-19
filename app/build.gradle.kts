@@ -66,6 +66,7 @@ dependencies {
 
     // Lifecycle ViewModel Compose
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.0-beta02")
 
     // Hilt
     implementation(libs.hilt.android)
@@ -95,6 +96,9 @@ dependencies {
     // Accompanist Pager
     implementation("com.google.accompanist:accompanist-pager:0.28.0")
     implementation("com.google.accompanist:accompanist-pager-indicators:0.28.0")
+
+    // Color Picker
+    implementation("com.github.skydoves:colorpicker-compose:1.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

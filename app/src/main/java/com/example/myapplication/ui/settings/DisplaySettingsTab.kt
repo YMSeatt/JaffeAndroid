@@ -20,16 +20,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.viewmodel.SettingsViewModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.painterResource
+import com.example.myapplication.R
+import com.example.myapplication.ui.dialogs.ColorPickerDialog
 
 @Composable
 fun DisplaySettingsTab(
     settingsViewModel: SettingsViewModel
 ) {
+    var showColorPicker by remember { mutableStateOf(false) }
+    var colorPickerTarget by remember { mutableStateOf("") }
     val recentLogsLimit by settingsViewModel.recentLogsLimit.collectAsStateWithLifecycle()
     val recentBehaviorIncidentsLimit by settingsViewModel.recentBehaviorIncidentsLimit.collectAsState()
     val useInitialsForBehavior by settingsViewModel.useInitialsForBehavior.collectAsState()
@@ -139,42 +152,101 @@ fun DisplaySettingsTab(
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = defaultBgColorInput,
-            onValueChange = {
-                defaultBgColorInput = it
-                if (it.startsWith("#") && it.length == 7 || it.length == 9) {
-                    settingsViewModel.updateDefaultStudentBoxBackgroundColor(it)
-                }
-            },
-            label = { Text("Default Background Color (e.g., #RRGGBB)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = defaultBgColorInput,
+                onValueChange = {
+                    defaultBgColorInput = it
+                    try {
+                        // Attempt to parse to validate the color format
+                        android.graphics.Color.parseColor(it)
+                        settingsViewModel.updateDefaultStudentBoxBackgroundColor(it)
+                    } catch (e: IllegalArgumentException) {
+                        // Optionally handle invalid color input, e.g., show an error
+                    }
+                },
+                label = { Text("Default Background Color") },
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = {
+                colorPickerTarget = "bg"
+                showColorPicker = true
+            }) {
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose Color")
+            }
+        }
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = defaultOutlineColorInput,
-            onValueChange = {
-                defaultOutlineColorInput = it
-                if (it.startsWith("#") && it.length == 7 || it.length == 9) {
-                    settingsViewModel.updateDefaultStudentBoxOutlineColor(it)
-                }
-            },
-            label = { Text("Default Outline Color (e.g., #RRGGBB)") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = defaultOutlineColorInput,
+                onValueChange = {
+                    defaultOutlineColorInput = it
+                    try {
+                        // Attempt to parse to validate the color format
+                        android.graphics.Color.parseColor(it)
+                        settingsViewModel.updateDefaultStudentBoxOutlineColor(it)
+                    } catch (e: IllegalArgumentException) {
+                        // Optionally handle invalid color input, e.g., show an error
+                    }
+                },
+                label = { Text("Default Outline Color") },
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = {
+                colorPickerTarget = "outline"
+                showColorPicker = true
+            }) {
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose Color")
+            }
+        }
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = defaultTextColorInput,
-            onValueChange = {
-                defaultTextColorInput = it
-                if (it.startsWith("#") && it.length == 7 || it.length == 9) {
-                    settingsViewModel.updateDefaultStudentBoxTextColor(it)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = defaultTextColorInput,
+                onValueChange = {
+                    defaultTextColorInput = it
+                    try {
+                        // Attempt to parse to validate the color format
+                        android.graphics.Color.parseColor(it)
+                        settingsViewModel.updateDefaultStudentBoxTextColor(it)
+                    } catch (e: IllegalArgumentException) {
+                        // Optionally handle invalid color input, e.g., show an error
+                    }
+                },
+                label = { Text("Default Text Color") },
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = {
+                colorPickerTarget = "text"
+                showColorPicker = true
+            }) {
+                Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose Color")
+            }
+        }
+
+        if (showColorPicker) {
+            ColorPickerDialog(
+                onDismissRequest = { showColorPicker = false },
+                onColorSelected = { color ->
+                    val hexColor = String.format("#%06X", (0xFFFFFF and color.toArgb()))
+                    when (colorPickerTarget) {
+                        "bg" -> {
+                            defaultBgColorInput = hexColor
+                            settingsViewModel.updateDefaultStudentBoxBackgroundColor(hexColor)
+                        }
+                        "outline" -> {
+                            defaultOutlineColorInput = hexColor
+                            settingsViewModel.updateDefaultStudentBoxOutlineColor(hexColor)
+                        }
+                        "text" -> {
+                            defaultTextColorInput = hexColor
+                            settingsViewModel.updateDefaultStudentBoxTextColor(hexColor)
+                        }
+                    }
+                    showColorPicker = false
                 }
-            },
-            label = { Text("Default Text Color (e.g., #RRGGBB)") },
-            modifier = Modifier.fillMaxWidth()
-        )
-        Spacer(Modifier.height(8.dp))
+            )
+        }
         OutlinedTextField(
             value = defaultOutlineThicknessInput,
             onValueChange = {

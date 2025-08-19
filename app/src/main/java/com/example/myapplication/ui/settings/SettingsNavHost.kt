@@ -2,6 +2,8 @@ package com.example.myapplication.ui.settings
 
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,7 +31,6 @@ fun SettingsNavHost(
         startDestination = "settings",
         enterTransition = { if (noAnimations) EnterTransition.None else fadeIn() },
         exitTransition = { if (noAnimations) ExitTransition.None else fadeOut() }
-    ) {
     ) {
         composable("settings") {
             SettingsScreen(
