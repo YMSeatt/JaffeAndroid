@@ -12,7 +12,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
@@ -27,10 +29,12 @@ fun CustomDropdownMenu(
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (expanded) {
+        val density = LocalDensity.current
+        val intOffset = with(density) { IntOffset(offset.x.roundToPx(), offset.y.roundToPx()) }
         Popup(
             onDismissRequest = onDismissRequest,
             properties = PopupProperties(focusable = true),
-            offset = offset
+            offset = intOffset
         ) {
             val enter = if (noAnimations) EnterTransition.None else fadeIn()
             val exit = if (noAnimations) ExitTransition.None else fadeOut()

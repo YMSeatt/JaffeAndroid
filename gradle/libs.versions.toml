@@ -13,8 +13,10 @@ material = "1.10.0"
 hilt = "2.51.1"
 startupRuntime = "1.2.0"
 lifecycleViewmodelKtx = "2.9.2"
+androidx-palette = "1.0.0"
 
 [libraries]
+androidx-palette-ktx = { group = "androidx.palette", name = "palette-ktx", version.ref = "androidx-palette" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }

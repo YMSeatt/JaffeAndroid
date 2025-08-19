@@ -42,12 +42,13 @@ android {
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.6.0" // Align with Compose BOM
+        kotlinCompilerExtensionVersion = "1.5.14" // Align with Compose BOM
     }
 }
 
 dependencies {
 
+    implementation(libs.androidx.palette.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

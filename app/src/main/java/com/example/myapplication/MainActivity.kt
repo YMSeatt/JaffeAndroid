@@ -264,6 +264,7 @@ fun SeatingChartScreen(
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
+    val noAnimations by settingsViewModel.noAnimations.collectAsState()
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
 
     Scaffold(
@@ -514,7 +515,8 @@ fun SeatingChartScreen(
                                     seatingChartViewModel.getStudentForEditing(studentItem.id)
                                 showAddEditStudentDialog = true
                             }
-                        }
+                        },
+                        noAnimations = noAnimations
                     )
                 }
                 furniture.forEach { furnitureItem ->
@@ -528,7 +530,8 @@ fun SeatingChartScreen(
                                     seatingChartViewModel.getFurnitureById(furnitureItem.id)
                                 showAddEditFurnitureDialog = true
                             }
-                        }
+                        },
+                        noAnimations = noAnimations
                     )
                 }
             }
