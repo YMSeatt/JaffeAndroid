@@ -30,7 +30,7 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 fun DisplaySettingsTab(
     settingsViewModel: SettingsViewModel
 ) {
-    val recentLogsLimit by settingsViewModel.recentLogsLimit.collectAsState()
+    val recentLogsLimit by settingsViewModel.recentLogsLimit.collectAsStateWithLifecycle()
     val recentBehaviorIncidentsLimit by settingsViewModel.recentBehaviorIncidentsLimit.collectAsState()
     val useInitialsForBehavior by settingsViewModel.useInitialsForBehavior.collectAsState()
     val useFullNameForStudent by settingsViewModel.useFullNameForStudent.collectAsState()
