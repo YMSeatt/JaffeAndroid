@@ -100,7 +100,8 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
-        val pagerState = rememberPagerState(pageCount = { 4 })
+        val tabs = listOf("General", "Display", "Data", "Advanced")
+        val pagerState = rememberPagerState(pageCount = { tabs.size })
         val coroutineScope = rememberCoroutineScope()
 
         Column(modifier = Modifier.padding(paddingValues)) {
