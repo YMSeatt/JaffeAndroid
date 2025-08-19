@@ -29,7 +29,7 @@ fun GeneralSettingsTab(
     onShowSetPasswordDialog: () -> Unit,
     onShowChangePasswordDialog: () -> Unit
 ) {
-    val appTheme by settingsViewModel.appTheme.collectAsState()
+    val appTheme by settingsViewModel.appTheme.collectAsStateWithLifecycle()
     val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
     val noAnimations by settingsViewModel.noAnimations.collectAsState()
     val autosaveInterval by settingsViewModel.autosaveInterval.collectAsState()
