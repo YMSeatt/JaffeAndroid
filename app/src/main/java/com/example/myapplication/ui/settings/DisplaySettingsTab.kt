@@ -172,7 +172,7 @@ fun DisplaySettingsTab(
                 colorPickerTarget = "bg"
                 showColorPicker = true
             }) {
-                Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose Color")
+                Icon(Icons.Filled.Palette, contentDescription = "Choose Color")
             }
         }
         Spacer(Modifier.height(8.dp))
