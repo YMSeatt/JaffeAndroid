@@ -112,7 +112,7 @@ fun DataSettingsTab(
                 Text("Import Students from Excel")
             }
             Spacer(Modifier.height(8.dp))
-            Button(onClick = { backupLauncher.launch("seating_chart_backup.db") }, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = { backupLauncher.launch(DATABASE_BACKUP_FILENAME) }, modifier = Modifier.fillMaxWidth()) {
                 Text("Backup Database")
             }
             Spacer(Modifier.height(8.dp))
