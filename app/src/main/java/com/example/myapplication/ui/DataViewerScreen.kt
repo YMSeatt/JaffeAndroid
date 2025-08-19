@@ -26,6 +26,7 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
 
 enum class ViewerTab {
     STUDENTS,
@@ -90,8 +91,8 @@ fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val behaviorLogs by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
     val students by seatingChartViewModel.allStudents.observeAsState(initial = emptyList())
     val studentMap = remember(students) { students.associateBy { it.id } }
-    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
-    val dayFormatter = remember { SimpleDateFormat("EEEE", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
+    val dayFormatter = remember { SimpleDateFormat("EEEE", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(behaviorLogs) {
@@ -104,7 +105,7 @@ fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
 @Composable
 fun HomeworkLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val homeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
-    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(homeworkLogs) {
@@ -116,7 +117,7 @@ fun HomeworkLogsTab(seatingChartViewModel: SeatingChartViewModel) {
 @Composable
 fun QuizLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val quizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
-    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(quizLogs) {

@@ -51,6 +51,12 @@ class AppPreferencesRepository(private val context: Context) {
         val LAST_HOMEWORK_NAME = stringPreferencesKey("last_homework_name")
         val LAST_HOMEWORK_TIMESTAMP = longPreferencesKey("last_homework_timestamp")
         val BEHAVIOR_INITIALS_MAP = stringPreferencesKey("behavior_initials_map")
+        val NO_ANIMATIONS = booleanPreferencesKey("no_animations")
+        val AUTOSAVE_INTERVAL = intPreferencesKey("autosave_interval")
+        val GRID_SNAP_ENABLED = booleanPreferencesKey("grid_snap_enabled")
+        val GRID_SIZE = intPreferencesKey("grid_size")
+        val SHOW_RULERS = booleanPreferencesKey("show_rulers")
+        val SHOW_GRID = booleanPreferencesKey("show_grid")
     }
 
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data
@@ -308,8 +314,74 @@ class AppPreferencesRepository(private val context: Context) {
             settings[PreferencesKeys.BEHAVIOR_INITIALS_MAP] = map
         }
     }
+
+    val noAnimationsFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.NO_ANIMATIONS] ?: false
+        }
+
+    suspend fun updateNoAnimations(noAnimations: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.NO_ANIMATIONS] = noAnimations
+        }
+    }
+
+    val autosaveIntervalFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTOSAVE_INTERVAL] ?: 30000
+        }
+
+    suspend fun updateAutosaveInterval(interval: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.AUTOSAVE_INTERVAL] = interval
+        }
+    }
+
+    val gridSnapEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.GRID_SNAP_ENABLED] ?: false
+        }
+
+    suspend fun updateGridSnapEnabled(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.GRID_SNAP_ENABLED] = enabled
+        }
+    }
+
+    val gridSizeFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.GRID_SIZE] ?: 20
+        }
+
+    suspend fun updateGridSize(size: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.GRID_SIZE] = size
+        }
+    }
+
+    val showRulersFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SHOW_RULERS] ?: false
+        }
+
+    suspend fun updateShowRulers(show: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.SHOW_RULERS] = show
+        }
+    }
+
+    val showGridFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SHOW_GRID] ?: false
+        }
+
+    suspend fun updateShowGrid(show: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.SHOW_GRID] = show
+        }
+    }
 }
 
 enum class AppTheme {
-    LIGHT, DARK, SYSTEM
+    LIGHT, DARK, SYSTEM, DYNAMIC
 }

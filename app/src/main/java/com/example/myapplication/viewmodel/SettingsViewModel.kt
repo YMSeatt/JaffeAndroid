@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,6 +48,9 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val quizMarkTypeDao = db.quizMarkTypeDao()
     private val quizTemplateDao = db.quizTemplateDao()
     private val homeworkTemplateDao = db.homeworkTemplateDao()
+
+    private val _restoreComplete = MutableLiveData<Boolean>()
+    val restoreComplete: LiveData<Boolean> = _restoreComplete
 
     val recentLogsLimit: StateFlow<Int> = preferencesRepository.recentLogsLimitFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for homework logs
@@ -242,6 +246,7 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
                 inputStream.copyTo(outputStream)
             }
         }
+        _restoreComplete.postValue(true)
     }
 
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
@@ -304,4 +309,58 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     val lastHomeworkTimestamp: StateFlow<Long?> = preferencesRepository.lastHomeworkTimestampFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    val noAnimations: StateFlow<Boolean> = preferencesRepository.noAnimationsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateNoAnimations(noAnimations: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateNoAnimations(noAnimations)
+        }
+    }
+
+    val autosaveInterval: StateFlow<Int> = preferencesRepository.autosaveIntervalFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 30000)
+
+    fun updateAutosaveInterval(interval: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateAutosaveInterval(interval)
+        }
+    }
+
+    val gridSnapEnabled: StateFlow<Boolean> = preferencesRepository.gridSnapEnabledFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateGridSnapEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateGridSnapEnabled(enabled)
+        }
+    }
+
+    val gridSize: StateFlow<Int> = preferencesRepository.gridSizeFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 20)
+
+    fun updateGridSize(size: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateGridSize(size)
+        }
+    }
+
+    val showRulers: StateFlow<Boolean> = preferencesRepository.showRulersFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateShowRulers(show: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateShowRulers(show)
+        }
+    }
+
+    val showGrid: StateFlow<Boolean> = preferencesRepository.showGridFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateShowGrid(show: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateShowGrid(show)
+        }
+    }
 }

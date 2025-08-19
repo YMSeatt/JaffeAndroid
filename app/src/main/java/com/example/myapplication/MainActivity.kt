@@ -192,7 +192,9 @@ class MainActivity : ComponentActivity() {
                     AppTheme.LIGHT -> false
                     AppTheme.DARK -> true
                     AppTheme.SYSTEM -> isSystemInDarkTheme()
-                }
+                    AppTheme.DYNAMIC -> isSystemInDarkTheme()
+                },
+                dynamicColor = currentAppThemeState == AppTheme.DYNAMIC
             ) {
                 if (unlocked) {
                     SeatingChartScreen(
