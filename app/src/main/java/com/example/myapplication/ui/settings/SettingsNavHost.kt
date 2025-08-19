@@ -27,8 +27,9 @@ fun SettingsNavHost(
     NavHost(
         navController = navController,
         startDestination = "settings",
-        enterTransition = { EnterTransition.None },
-        exitTransition = { ExitTransition.None }
+        enterTransition = { if (noAnimations) EnterTransition.None else fadeIn() },
+        exitTransition = { if (noAnimations) ExitTransition.None else fadeOut() }
+    ) {
     ) {
         composable("settings") {
             SettingsScreen(
