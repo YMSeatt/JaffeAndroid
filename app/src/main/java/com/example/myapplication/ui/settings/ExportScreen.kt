@@ -10,28 +10,25 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.StudentRepository
-import com.example.myapplication.data.BehaviorEvent
-import com.example.myapplication.data.HomeworkLog
-import com.example.myapplication.data.QuizLog
-import com.example.myapplication.data.Student
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-
-private enum class ExportType {
-    NONE, STUDENTS, BEHAVIOR, HOMEWORK, QUIZ
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var exportType by remember { mutableStateOf(ExportType.NONE) }
+
+    val students by studentRepository.allStudents.observeAsState(initial = emptyList())
+    val behaviorLogs by studentRepository.getAllBehaviorEvents().observeAsState(initial = emptyList())
+    val homeworkLogs by studentRepository.getAllHomeworkLogs().observeAsState(initial = emptyList())
+    val quizLogs by studentRepository.getAllQuizLogs().observeAsState(initial = emptyList())
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
@@ -39,47 +36,22 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
         uri?.let {
             coroutineScope.launch {
                 try {
-                    val jsonString = when (exportType) {
-                        ExportType.STUDENTS -> {
-                            val students = studentRepository.allStudents.value
-                            if (students.isNullOrEmpty()) {
-                                Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
-                            Json.encodeToString(students)
-                        }
-                        ExportType.BEHAVIOR -> {
-                            val behaviorLogs = studentRepository.getAllBehaviorEvents().value
-                            if (behaviorLogs.isNullOrEmpty()) {
-                                Toast.makeText(context, "No behavior logs to export", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
-                            Json.encodeToString(behaviorLogs)
-                        }
-                        ExportType.HOMEWORK -> {
-                            val homeworkLogs = studentRepository.getAllHomeworkLogs().value
-                            if (homeworkLogs.isNullOrEmpty()) {
-                                Toast.makeText(context, "No homework logs to export", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
-                            Json.encodeToString(homeworkLogs)
-                        }
-                        ExportType.QUIZ -> {
-                            val quizLogs = studentRepository.getAllQuizLogs().value
-                            if (quizLogs.isNullOrEmpty()) {
-                                Toast.makeText(context, "No quiz logs to export", Toast.LENGTH_SHORT).show()
-                                return@launch
-                            }
-                            Json.encodeToString(quizLogs)
-                        }
-                        ExportType.NONE -> {
-                            return@launch
-                        }
+                    val jsonString = when (uri.path?.substringAfterLast('/')) {
+                        "students.json" -> Json.encodeToString(students)
+                        "behavior_logs.json" -> Json.encodeToString(behaviorLogs)
+                        "homework_logs.json" -> Json.encodeToString(homeworkLogs)
+                        "quiz_logs.json" -> Json.encodeToString(quizLogs)
+                        else -> ""
                     }
-                    context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                        outputStream.write(jsonString.toByteArray())
+
+                    if (jsonString.isNotEmpty() && jsonString != "[]") {
+                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                            outputStream.write(jsonString.toByteArray())
+                        }
+                        Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
+                    } else {
+                        Toast.makeText(context, "No data to export", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
                 } catch (e: Exception) {
                     Toast.makeText(context, "Failed to export data: ${e.message}", Toast.LENGTH_LONG).show()
                 }
@@ -104,41 +76,33 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                 .padding(paddingValues)
                 .padding(16.dp)
         ) {
-            Button(onClick = {
-                exportType = ExportType.STUDENTS
-                createDocumentLauncher.launch("students.json")
-            }) {
+            Button(
+                onClick = { createDocumentLauncher.launch("students.json") },
+                enabled = students.isNotEmpty()
+            ) {
                 Text("Export Students to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = {
-                exportType = ExportType.BEHAVIOR
-                createDocumentLauncher.launch("behavior_logs.json")
-            }) {
+            Button(
+                onClick = { createDocumentLauncher.launch("behavior_logs.json") },
+                enabled = behaviorLogs.isNotEmpty()
+            ) {
                 Text("Export Behavior Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = {
-                exportType = ExportType.HOMEWORK
-                createDocumentLauncher.launch("homework_logs.json")
-            }) {
+            Button(
+                onClick = { createDocumentLauncher.launch("homework_logs.json") },
+                enabled = homeworkLogs.isNotEmpty()
+            ) {
                 Text("Export Homework Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
-            Button(onClick = {
-                exportType = ExportType.QUIZ
-                createDocumentLauncher.launch("quiz_logs.json")
-            }) {
+            Button(
+                onClick = { createDocumentLauncher.launch("quiz_logs.json") },
+                enabled = quizLogs.isNotEmpty()
+            ) {
                 Text("Export Quiz Logs to JSON")
             }
         }
-    }
-}
-
-private fun handleExportResult(result: Result<Unit>, context: Context) {
-    if (result.isSuccess) {
-        Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
-    } else {
-        Toast.makeText(context, "Failed to export data: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
     }
 }

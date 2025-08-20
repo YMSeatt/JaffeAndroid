@@ -11,6 +11,10 @@ import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.settings.SettingsNavHost
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
@@ -60,7 +64,19 @@ class SettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApplicationTheme {
+            val appTheme by settingsViewModel.appTheme.collectAsState()
+            val noAnimations by settingsViewModel.noAnimations.collectAsState()
+
+            MyApplicationTheme(
+                darkTheme = when (appTheme) {
+                    AppTheme.LIGHT -> false
+                    AppTheme.DARK -> true
+                    AppTheme.SYSTEM -> isSystemInDarkTheme()
+                    AppTheme.DYNAMIC -> isSystemInDarkTheme()
+                },
+                dynamicColor = appTheme == AppTheme.DYNAMIC,
+                disableAnimations = noAnimations
+            ) {
                 SettingsNavHost(
                     settingsViewModel = settingsViewModel,
                     studentRepository = studentRepository,

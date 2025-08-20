@@ -13,9 +13,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
+import kotlin.math.roundToInt
 
 @Composable
 fun CustomDropdownMenu(
@@ -27,10 +29,11 @@ fun CustomDropdownMenu(
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (expanded) {
+        val intOffset = IntOffset(offset.x.value.roundToInt(), offset.y.value.roundToInt())
         Popup(
             onDismissRequest = onDismissRequest,
             properties = PopupProperties(focusable = true),
-            offset = offset
+            offset = intOffset
         ) {
             val enter = if (noAnimations) EnterTransition.None else fadeIn()
             val exit = if (noAnimations) ExitTransition.None else fadeOut()
