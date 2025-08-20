@@ -308,5 +308,48 @@ fun DisplaySettingsTab(
         item {
             HorizontalDivider(Modifier.padding(top = 16.dp))
         }
+
+        item {
+            Text("Canvas Settings", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            val showGrid by settingsViewModel.showGrid.collectAsState()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Show Grid", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = showGrid,
+                    onCheckedChange = { settingsViewModel.updateShowGrid(it) }
+                )
+            }
+        }
+        item {
+            val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Snap to Grid", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = gridSnapEnabled,
+                    onCheckedChange = { settingsViewModel.updateGridSnapEnabled(it) }
+                )
+            }
+        }
+        item {
+            val showRulers by settingsViewModel.showRulers.collectAsState()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Show Rulers", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = showRulers,
+                    onCheckedChange = { settingsViewModel.updateShowRulers(it) }
+                )
+            }
+        }
     }
 }

@@ -30,17 +30,20 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
     val homeworkLogs by studentRepository.getAllHomeworkLogs().observeAsState(initial = emptyList())
     val quizLogs by studentRepository.getAllQuizLogs().observeAsState(initial = emptyList())
 
+    var exportType by remember { mutableStateOf<ExportType?>(null) }
+
+
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         uri?.let {
             coroutineScope.launch {
                 try {
-                    val jsonString = when (uri.path?.substringAfterLast('/')) {
-                        "students.json" -> Json.encodeToString(students)
-                        "behavior_logs.json" -> Json.encodeToString(behaviorLogs)
-                        "homework_logs.json" -> Json.encodeToString(homeworkLogs)
-                        "quiz_logs.json" -> Json.encodeToString(quizLogs)
+                    val jsonString = when (exportType) {
+                        ExportType.STUDENTS -> Json.encodeToString(students)
+                        ExportType.BEHAVIOR_LOGS -> Json.encodeToString(behaviorLogs)
+                        ExportType.HOMEWORK_LOGS -> Json.encodeToString(homeworkLogs)
+                        ExportType.QUIZ_LOGS -> Json.encodeToString(quizLogs)
                         else -> ""
                     }
 
@@ -77,32 +80,50 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
                 .padding(16.dp)
         ) {
             Button(
-                onClick = { createDocumentLauncher.launch("students.json") },
+                onClick = {
+                    exportType = ExportType.STUDENTS
+                    createDocumentLauncher.launch("students.json")
+                          },
                 enabled = students.isNotEmpty()
             ) {
                 Text("Export Students to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { createDocumentLauncher.launch("behavior_logs.json") },
+                onClick = {
+                    exportType = ExportType.BEHAVIOR_LOGS
+                    createDocumentLauncher.launch("behavior_logs.json")
+                          },
                 enabled = behaviorLogs.isNotEmpty()
             ) {
                 Text("Export Behavior Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { createDocumentLauncher.launch("homework_logs.json") },
+                onClick = {
+                    exportType = ExportType.HOMEWORK_LOGS
+                    createDocumentLauncher.launch("homework_logs.json")
+                          },
                 enabled = homeworkLogs.isNotEmpty()
             ) {
                 Text("Export Homework Logs to JSON")
             }
             Spacer(modifier = Modifier.height(8.dp))
             Button(
-                onClick = { createDocumentLauncher.launch("quiz_logs.json") },
+                onClick = {
+                    exportType = ExportType.QUIZ_LOGS
+                    createDocumentLauncher.launch("quiz_logs.json")
+                          },
                 enabled = quizLogs.isNotEmpty()
             ) {
                 Text("Export Quiz Logs to JSON")
             }
         }
     }
+}
+enum class ExportType {
+    STUDENTS,
+    BEHAVIOR_LOGS,
+    HOMEWORK_LOGS,
+    QUIZ_LOGS
 }

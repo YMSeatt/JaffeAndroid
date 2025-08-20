@@ -10,6 +10,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -65,11 +69,23 @@ fun DataViewerScreen(
                     )
                 }
             }
-            when (selectedTab) {
-                ViewerTab.STUDENTS -> StudentsTab(seatingChartViewModel)
-                ViewerTab.BEHAVIOR_LOGS -> BehaviorLogsTab(seatingChartViewModel)
-                ViewerTab.HOMEWORK_LOGS -> HomeworkLogsTab(seatingChartViewModel)
-                ViewerTab.QUIZ_LOGS -> QuizLogsTab(seatingChartViewModel)
+            Column(modifier = Modifier.weight(1f)) {
+                when (selectedTab) {
+                    ViewerTab.STUDENTS -> StudentsTab(seatingChartViewModel)
+                    ViewerTab.BEHAVIOR_LOGS -> BehaviorLogsTab(seatingChartViewModel)
+                    ViewerTab.HOMEWORK_LOGS -> HomeworkLogsTab(seatingChartViewModel)
+                    ViewerTab.QUIZ_LOGS -> QuizLogsTab(seatingChartViewModel)
+                }
+            }
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                Button(onClick = onDismiss) {
+                    Text("Back")
+                }
             }
         }
     }
