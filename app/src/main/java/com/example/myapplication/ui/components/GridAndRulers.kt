@@ -33,7 +33,7 @@ fun GridAndRulers(
             val top = -offsetY / scale
             val bottom = top + canvasHeight / scale
 
-            var x = (left / gridSizePx).toInt() * gridSizePx
+            var x = floor(left / gridSizePx) * gridSizePx
             while (x < right) {
                 drawLine(
                     start = Offset(x, top),
@@ -44,7 +44,7 @@ fun GridAndRulers(
                 x += gridSizePx
             }
 
-            var y = (top / gridSizePx).toInt() * gridSizePx
+            var y = floor(top / gridSizePx) * gridSizePx
             while (y < bottom) {
                 drawLine(
                     start = Offset(left, y),
