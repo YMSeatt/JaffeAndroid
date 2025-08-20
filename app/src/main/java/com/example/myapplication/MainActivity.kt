@@ -187,6 +187,8 @@ class MainActivity : ComponentActivity() {
             val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
             var unlocked by remember { mutableStateOf(!passwordEnabled) }
 
+            val noAnimations by settingsViewModel.noAnimations.collectAsState()
+
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
                     AppTheme.LIGHT -> false
@@ -194,7 +196,8 @@ class MainActivity : ComponentActivity() {
                     AppTheme.SYSTEM -> isSystemInDarkTheme()
                     AppTheme.DYNAMIC -> isSystemInDarkTheme()
                 },
-                dynamicColor = currentAppThemeState == AppTheme.DYNAMIC
+                dynamicColor = currentAppThemeState == AppTheme.DYNAMIC,
+                disableAnimations = noAnimations
             ) {
                 if (unlocked) {
                     SeatingChartScreen(
@@ -484,6 +487,7 @@ fun SeatingChartScreen(
                     )
             ) {
                 students.forEach { studentItem ->
+                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
                     StudentDraggableIcon(
                         studentUiItem = studentItem,
                         viewModel = seatingChartViewModel,
@@ -514,10 +518,12 @@ fun SeatingChartScreen(
                                     seatingChartViewModel.getStudentForEditing(studentItem.id)
                                 showAddEditStudentDialog = true
                             }
-                        }
+                        },
+                        noAnimations = noAnimations
                     )
                 }
                 furniture.forEach { furnitureItem ->
+                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
                     FurnitureDraggableIcon(
                         furnitureUiItem = furnitureItem,
                         viewModel = seatingChartViewModel,
@@ -528,7 +534,8 @@ fun SeatingChartScreen(
                                     seatingChartViewModel.getFurnitureById(furnitureItem.id)
                                 showAddEditFurnitureDialog = true
                             }
-                        }
+                        },
+                        noAnimations = noAnimations
                     )
                 }
             }

@@ -1,7 +1,8 @@
 package com.example.myapplication.ui.theme
 
-import android.app.Activity
 import android.os.Build
+import androidx.compose.animation.core.AnimationSpec
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -9,6 +10,8 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
@@ -33,11 +36,18 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+// Add a CompositionLocal for animations
+val LocalAnimationSpec = staticCompositionLocalOf<AnimationSpec<Float>> {
+    tween() // Default animation spec
+}
+
+
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
+    disableAnimations: Boolean = false, // Add this parameter
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -50,9 +60,17 @@ fun MyApplicationTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    val animationSpec: AnimationSpec<Float> = if (disableAnimations) {
+        tween(durationMillis = 0)
+    } else {
+        tween()
+    }
+
+    CompositionLocalProvider(LocalAnimationSpec provides animationSpec) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.dialogs.ChangePasswordDialog
 import com.example.myapplication.ui.dialogs.SetPasswordDialog
+import com.example.myapplication.ui.theme.LocalAnimationSpec
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -49,6 +50,7 @@ fun SettingsScreen(
     var showChangePasswordDialog by remember { mutableStateOf(false) }
 
     val restoreComplete by settingsViewModel.restoreComplete.observeAsState(false)
+    val animationSpec = LocalAnimationSpec.current
 
     if (restoreComplete) {
         AlertDialog(
