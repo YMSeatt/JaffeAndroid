@@ -60,6 +60,7 @@ import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
 import com.example.myapplication.ui.PasswordScreen
 import com.example.myapplication.ui.components.FurnitureDraggableIcon
+import com.example.myapplication.ui.components.GridAndRulers
 import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
@@ -486,11 +487,18 @@ fun SeatingChartScreen(
                         translationY = offsetY
                     )
             ) {
+                GridAndRulers(
+                    settingsViewModel = settingsViewModel,
+                    scale = scale,
+                    offsetX = offsetX,
+                    offsetY = offsetY
+                )
                 students.forEach { studentItem ->
                     val noAnimations by settingsViewModel.noAnimations.collectAsState()
                     StudentDraggableIcon(
                         studentUiItem = studentItem,
                         viewModel = seatingChartViewModel,
+                        settingsViewModel = settingsViewModel,
                         showBehavior = showRecentBehavior,
                         scale = scale,
                         isSelected = selectedStudentIds.contains(studentItem.id),
@@ -527,6 +535,7 @@ fun SeatingChartScreen(
                     FurnitureDraggableIcon(
                         furnitureUiItem = furnitureItem,
                         viewModel = seatingChartViewModel,
+                        settingsViewModel = settingsViewModel,
                         scale = scale,
                         onLongClick = {
                             coroutineScope.launch {

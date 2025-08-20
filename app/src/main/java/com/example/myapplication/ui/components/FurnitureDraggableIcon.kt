@@ -20,9 +20,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.example.myapplication.viewmodel.SettingsViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
@@ -36,12 +38,15 @@ import kotlin.math.roundToInt
 fun FurnitureDraggableIcon(
     furnitureUiItem: FurnitureUiItem,
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     scale: Float,
     onLongClick: () -> Unit,
     noAnimations: Boolean
 ) {
     var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
     var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
+    val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
+    val gridSize by settingsViewModel.gridSize.collectAsState()
 
     LaunchedEffect(furnitureUiItem.xPosition, furnitureUiItem.yPosition) {
         offsetX = furnitureUiItem.xPosition
@@ -60,10 +65,20 @@ fun FurnitureDraggableIcon(
                             offsetY += dragAmount.y / scale
                         },
                         onDragEnd = {
+                            val finalX = if (gridSnapEnabled) {
+                                (offsetX / gridSize).roundToInt() * gridSize
+                            } else {
+                                offsetX
+                            }
+                            val finalY = if (gridSnapEnabled) {
+                                (offsetY / gridSize).roundToInt() * gridSize
+                            } else {
+                                offsetY
+                            }
                             viewModel.updateFurniturePosition(
                                 furnitureUiItem.id,
-                                offsetX,
-                                offsetY
+                                finalX.toFloat(),
+                                finalY.toFloat()
                             )
                         }
                     )

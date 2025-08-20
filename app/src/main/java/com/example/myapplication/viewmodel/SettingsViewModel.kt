@@ -252,11 +252,20 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
         AppDatabase.getDatabase(getApplication()).close()
         getApplication<Application>().contentResolver.openInputStream(uri)?.use { inputStream ->
-            FileOutputStream(dbFile).use { outputStream ->
+            FileOutputStream(dbFile, false).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
         }
-        _restoreComplete.postValue(true)
+        _restoreComplete.postValue(true) // This will trigger the restart
+    }
+
+    fun triggerRebirth() {
+        val packageManager = getApplication<Application>().packageManager
+        val intent = packageManager.getLaunchIntentForPackage(getApplication<Application>().packageName)
+        val componentName = intent!!.component
+        val mainIntent = Intent.makeRestartActivityTask(componentName)
+        getApplication<Application>().startActivity(mainIntent)
+        Runtime.getRuntime().exit(0)
     }
 
     val stickyQuizNameDurationSeconds: StateFlow<Int> = preferencesRepository.stickyQuizNameDurationSecondsFlow

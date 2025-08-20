@@ -22,9 +22,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.example.myapplication.viewmodel.SettingsViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +41,7 @@ import kotlin.math.roundToInt
 fun StudentDraggableIcon(
     studentUiItem: StudentUiItem,
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     showBehavior: Boolean,
     scale: Float,
     isSelected: Boolean,
@@ -48,6 +51,9 @@ fun StudentDraggableIcon(
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
+    val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
+    val gridSize by settingsViewModel.gridSize.collectAsState()
+
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
@@ -66,12 +72,23 @@ fun StudentDraggableIcon(
                             offsetY += dragAmount.y / scale
                         },
                         onDragEnd = {
+                            val finalX = if (gridSnapEnabled) {
+                                (offsetX / gridSize).roundToInt() * gridSize
+                            } else {
+                                offsetX.roundToInt()
+                            }
+                            val finalY = if (gridSnapEnabled) {
+                                (offsetY / gridSize).roundToInt() * gridSize
+                            } else {
+                                offsetY.roundToInt()
+                            }
+
                             viewModel.updateStudentPosition(
                                 studentUiItem.id,
                                 studentUiItem.xPosition.toFloat(),
                                 studentUiItem.yPosition.toFloat(),
-                                offsetX,
-                                offsetY
+                                finalX.toFloat(),
+                                finalY.toFloat()
                             )
                         }
                     )
