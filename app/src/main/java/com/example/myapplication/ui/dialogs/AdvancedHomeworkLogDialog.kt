@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.dialogs
 
+import android.util.Log
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -32,7 +33,6 @@ import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -40,11 +40,11 @@ import kotlinx.serialization.json.Json
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdvancedHomeworkLogDialog(
-    studentId: Long,
+    studentIds: List<Long>,
     viewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit,
-    onSave: (HomeworkLog) -> Unit
+    onSave: (List<HomeworkLog>) -> Unit
 ) {
     val stickyHomeworkNameDuration by settingsViewModel.stickyHomeworkNameDurationSeconds.collectAsState(0)
     val lastHomeworkName by settingsViewModel.lastHomeworkName.collectAsState(null)
@@ -80,7 +80,7 @@ fun AdvancedHomeworkLogDialog(
                     marksData.clear()
                     marksData.putAll(deserializedMarks)
                 } catch (e: Exception) {
-                    // TODO: Consider logging this exception for easier debugging.
+                    Log.e("AdvancedHomeworkLogDialog", "Error deserializing marksData", e)
                 }
             }
         }
@@ -217,15 +217,17 @@ fun AdvancedHomeworkLogDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val log = HomeworkLog(
-                        studentId = studentId,
-                        assignmentName = assignmentName,
-                        status = selectedHomeworkStatus,
-                        comment = comment,
-                        loggedAt = System.currentTimeMillis(),
-                        marksData = Json.encodeToString(marksData.toMap()) // Serialize marksData map to JSON string
-                    )
-                    onSave(log)
+                    val logs = studentIds.map { studentId ->
+                        HomeworkLog(
+                            studentId = studentId,
+                            assignmentName = assignmentName,
+                            status = selectedHomeworkStatus,
+                            comment = comment,
+                            loggedAt = System.currentTimeMillis(),
+                            marksData = Json.encodeToString(marksData.toMap()) // Serialize marksData map to JSON string
+                        )
+                    }
+                    onSave(logs)
                     onDismissRequest()
                 }
             ) {

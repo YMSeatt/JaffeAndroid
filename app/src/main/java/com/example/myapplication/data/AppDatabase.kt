@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 13, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 15, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -421,6 +421,18 @@ abstract class AppDatabase : RoomDatabase() {
                 // Empty migration to fix a bug with the InvalidationTracker.
             }
         }
+        
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Empty migration.
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE students ADD COLUMN customOutlineThickness INTEGER")
+            }
+        }
 
 
         fun getDatabase(context: Context): AppDatabase {
@@ -430,7 +442,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13) // Added MIGRATION_11_12
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15) // Added MIGRATION_11_12
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

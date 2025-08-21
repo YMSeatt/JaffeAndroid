@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.hilt.android)
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.material3)
     kapt(libs.hilt.compiler)
 
     // Room

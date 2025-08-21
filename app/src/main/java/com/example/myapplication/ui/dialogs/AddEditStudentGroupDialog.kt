@@ -96,14 +96,16 @@ fun AddEditStudentGroupDialog(
     )
 }
 
-private fun StudentGroupsViewModel.deleteStudentGroup(group: StudentGroup) {}
+private fun StudentGroupsViewModel.deleteStudentGroup(group: StudentGroup) {
+    deleteGroup(group)
+}
 
 private fun StudentGroupsViewModel.addStudentGroup(newGroup: StudentGroup) {
-    TODO("Not yet implemented")
+    addGroup(newGroup.name, newGroup.color)
 }
 
 private fun StudentGroupsViewModel.updateStudentGroup(newGroup: StudentGroup) {
-    TODO("Not yet implemented")
+    updateGroup(newGroup)
 }
 
 @Composable

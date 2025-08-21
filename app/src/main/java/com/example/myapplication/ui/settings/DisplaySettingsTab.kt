@@ -73,8 +73,8 @@ fun DisplaySettingsTab(
                 Slider(
                     value = recentLogsLimit.toFloat(),
                     onValueChange = { settingsViewModel.updateRecentLogsLimit(it.toInt()) },
-                    valueRange = 1f..10f,
-                    steps = 8,
+                    valueRange = 1f..50f,
+                    steps = 48,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
@@ -93,8 +93,8 @@ fun DisplaySettingsTab(
                 Slider(
                     value = recentBehaviorIncidentsLimit.toFloat(),
                     onValueChange = { settingsViewModel.updateRecentBehaviorIncidentsLimit(it.toInt()) },
-                    valueRange = 1f..10f,
-                    steps = 8,
+                    valueRange = 1f..50f,
+                    steps = 48,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))

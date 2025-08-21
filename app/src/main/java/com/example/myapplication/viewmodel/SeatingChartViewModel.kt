@@ -107,9 +107,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     private val commandRedoStack = Stack<Command>()
 
     // In-memory session data
-    private var sessionQuizLogs = mutableListOf<QuizLog>()
-    private var sessionHomeworkLogs = mutableListOf<HomeworkLog>()
-    private var isSessionActive = false
+    private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
+    private val sessionHomeworkLogs = MutableLiveData<List<HomeworkLog>>(emptyList())
+    val isSessionActive = MutableLiveData<Boolean>(false)
 
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
 
@@ -146,6 +146,15 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             updateStudentsForDisplay()
         }
         studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(sessionQuizLogs) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(sessionHomeworkLogs) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(isSessionActive) {
             updateStudentsForDisplay()
         }
 
@@ -211,9 +220,18 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                     }
                 }
 
+                val sessionLogs = if (isSessionActive.value == true) {
+                    val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
+                    val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "HW: ${it.status}" } ?: emptyList()
+                    quizLogs + homeworkLogs
+                } else {
+                    emptyList()
+                }
+
                 student.toStudentUiItem(
                     recentBehaviorDescription = behaviorDescription,
                     recentHomeworkDescription = recentHomework.map { it.assignmentName },
+                    sessionLogText = sessionLogs,
                     groupColor = groups.find { group -> group.id == student.groupId }?.color,
                     defaultWidth = defaultWidth,
                     defaultHeight = defaultHeight,
@@ -635,35 +653,36 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun startSession() {
-        isSessionActive = true
-        sessionQuizLogs.clear()
-        sessionHomeworkLogs.clear()
+        isSessionActive.value = true
+        sessionQuizLogs.value = emptyList()
+        sessionHomeworkLogs.value = emptyList()
         Log.d("SeatingChartViewModel", "Session started.")
     }
 
 
     fun endSession() {
-        if (isSessionActive) {
+        if (isSessionActive.value == true) {
             viewModelScope.launch(Dispatchers.IO) {
                 // Batch insert the session logs into the database
-                quizLogDao.insertAll(sessionQuizLogs)
-                homeworkLogDao.insertAll(sessionHomeworkLogs)
+                sessionQuizLogs.value?.let { quizLogDao.insertAll(it) }
+                sessionHomeworkLogs.value?.let { homeworkLogDao.insertAll(it) }
                 Log.d(
                     "SeatingChartViewModel",
-                    "Session ended. Saved ${sessionQuizLogs.size} quiz logs and ${sessionHomeworkLogs.size} homework logs."
+                    "Session ended. Saved ${sessionQuizLogs.value?.size} quiz logs and ${sessionHomeworkLogs.value?.size} homework logs."
                 )
                 // Clear the session data
-                sessionQuizLogs.clear()
-                sessionHomeworkLogs.clear()
-                isSessionActive = false
+                sessionQuizLogs.postValue(emptyList())
+                sessionHomeworkLogs.postValue(emptyList())
+                isSessionActive.postValue(false)
             }
         }
     }
 
 
     fun addQuizLogToSession(quizLog: QuizLog) {
-        if (isSessionActive) {
-            sessionQuizLogs.add(quizLog)
+        if (isSessionActive.value == true) {
+            val updatedList = sessionQuizLogs.value.orEmpty() + quizLog
+            sessionQuizLogs.postValue(updatedList)
             Log.d(
                 "SeatingChartViewModel",
                 "Quiz log added to session for student ${quizLog.studentId}."
@@ -677,8 +696,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 // In SeatingChartViewModel.kt, add a similar method for homework logs
 
     fun addHomeworkLogToSession(homeworkLog: HomeworkLog) {
-        if (isSessionActive) {
-            sessionHomeworkLogs.add(homeworkLog)
+        if (isSessionActive.value == true) {
+            val updatedList = sessionHomeworkLogs.value.orEmpty() + homeworkLog
+            sessionHomeworkLogs.postValue(updatedList)
             Log.d(
                 "SeatingChartViewModel",
                 "Homework log added to session for student ${homeworkLog.studentId}."

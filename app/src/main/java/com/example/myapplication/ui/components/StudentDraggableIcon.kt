@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -19,14 +20,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import com.example.myapplication.viewmodel.SettingsViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -94,11 +95,13 @@ fun StudentDraggableIcon(
                     )
                 }
                 .combinedClickable(
-                    onClick = onClick,
+                    onClick = {
+                        onClick()
+                    },
                     onLongClick = onLongClick
                 )
                 .width(studentUiItem.displayWidth)
-                .height(studentUiItem.displayHeight)
+                .heightIn(min = studentUiItem.displayHeight) //TODO: Implement a maximum height for student box based on the current amount of displayed lines in the student's box
                 .border(
                     BorderStroke(
                         if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
@@ -124,7 +127,6 @@ fun StudentDraggableIcon(
                             Text(
                                 text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
-                                maxLines = 3,
                                 color = studentUiItem.displayTextColor,
                                 textAlign = TextAlign.Center
                             )
@@ -134,7 +136,15 @@ fun StudentDraggableIcon(
                             Text(
                                 text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
                                 style = MaterialTheme.typography.bodySmall,
-                                maxLines = 3,
+                                color = studentUiItem.displayTextColor,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                        if (studentUiItem.sessionLogText.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = studentUiItem.sessionLogText.joinToString("\n"),
+                                style = MaterialTheme.typography.bodySmall,
                                 color = studentUiItem.displayTextColor,
                                 textAlign = TextAlign.Center
                             )

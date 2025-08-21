@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,10 +20,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -70,6 +71,8 @@ import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
 import com.example.myapplication.ui.dialogs.ExportFilterDialog
 import com.example.myapplication.ui.dialogs.ExportFilterOptions
 import com.example.myapplication.ui.dialogs.ExportType
+import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
+import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
 import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
@@ -187,6 +190,7 @@ class MainActivity : ComponentActivity() {
             val currentAppThemeState by settingsViewModel.appTheme.collectAsState()
             val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
             var unlocked by remember { mutableStateOf(!passwordEnabled) }
+            var showDataViewer by remember { mutableStateOf(false) }
 
             val noAnimations by settingsViewModel.noAnimations.collectAsState()
 
@@ -201,18 +205,29 @@ class MainActivity : ComponentActivity() {
                 disableAnimations = noAnimations
             ) {
                 if (unlocked) {
-                    SeatingChartScreen(
-                        seatingChartViewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        studentGroupsViewModel = studentGroupsViewModel,
-                        createDocumentLauncher = createDocumentLauncher,
-                        lifecycleScope = lifecycleScope,
-                        onNavigateToSettings = {
-                            startActivity(Intent(this, SettingsActivity::class.java))
-                        },
-                        onPendingExportFilterOptionsChanged = { options -> pendingExportFilterOptions = options },
-                        filteredExportLauncher = filteredExportLauncher
-                    )
+                    if (showDataViewer) {
+                        DataViewerScreen(
+                            seatingChartViewModel = seatingChartViewModel,
+                            onDismiss = { showDataViewer = false }
+                        )
+                        BackHandler {
+                            showDataViewer = false
+                        }
+                    } else {
+                        SeatingChartScreen(
+                            seatingChartViewModel = seatingChartViewModel,
+                            settingsViewModel = settingsViewModel,
+                            studentGroupsViewModel = studentGroupsViewModel,
+                            createDocumentLauncher = createDocumentLauncher,
+                            lifecycleScope = lifecycleScope,
+                            onNavigateToSettings = {
+                                startActivity(Intent(this, SettingsActivity::class.java))
+                            },
+                            onNavigateToDataViewer = { showDataViewer = true },
+                            onPendingExportFilterOptionsChanged = { options -> pendingExportFilterOptions = options },
+                            filteredExportLauncher = filteredExportLauncher
+                        )
+                    }
                 } else {
                     PasswordScreen(settingsViewModel = settingsViewModel) {
                         unlocked = true
@@ -234,6 +249,7 @@ fun SeatingChartScreen(
     createDocumentLauncher: ActivityResultLauncher<String>,
     lifecycleScope: LifecycleCoroutineScope,
     onNavigateToSettings: () -> Unit,
+    onNavigateToDataViewer: () -> Unit,
     onPendingExportFilterOptionsChanged: (ExportFilterOptions?) -> Unit,
     filteredExportLauncher: ActivityResultLauncher<String>
 ) {
@@ -244,11 +260,12 @@ fun SeatingChartScreen(
     
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
+    var showLiveQuizMarkDialog by remember { mutableStateOf(false) }
     var showAdvancedHomeworkLogDialog by remember { mutableStateOf(false) }
+    var showLiveHomeworkMarkDialog by remember { mutableStateOf(false) }
     var showStudentActionMenu by remember { mutableStateOf(false) }
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
-    var showDataViewerDialog by remember { mutableStateOf(false) }
     var showExportFilterDialog by remember { mutableStateOf(false) }
     var showChangeBoxSizeDialog by remember { mutableStateOf(false) }
     var selectMode by remember { mutableStateOf(false) }
@@ -335,10 +352,10 @@ fun SeatingChartScreen(
                     }
 
                     IconButton(onClick = { seatingChartViewModel.undo() }) {
-                        Icon(Icons.Filled.Undo, contentDescription = "Undo")
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo")
                     }
                     IconButton(onClick = { seatingChartViewModel.redo() }) {
-                        Icon(Icons.Filled.Redo, contentDescription = "Redo")
+                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo")
                     }
 
                     IconButton(onClick = { showFileMenu = true }) {
@@ -380,7 +397,7 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("View Data") },
                             onClick = {
-                                showDataViewerDialog = true
+                                onNavigateToDataViewer()
                                 showFileMenu = false
                             }
                         )
@@ -409,6 +426,7 @@ fun SeatingChartScreen(
                     }
 
                     var showModeMenu by remember { mutableStateOf(false) }
+                                        val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) {
@@ -426,12 +444,29 @@ fun SeatingChartScreen(
                                                 .replaceFirstChar { it.titlecase(Locale.getDefault()) })
                                     },
                                     onClick = {
-                                        seatingChartViewModel.endSession()
+                                        if (isSessionActive) {
+                                            seatingChartViewModel.endSession()
+                                        }
                                         sessionType = mode
-                                        seatingChartViewModel.startSession()
                                         showModeMenu = false
                                     }
                                 )
+                            }
+                        }
+                    }
+
+                    if (sessionType == SessionType.QUIZ || sessionType == SessionType.HOMEWORK) {
+                        if (isSessionActive) {
+                            TextButton(onClick = {
+                                seatingChartViewModel.endSession()
+                            }) {
+                                Text("End Session")
+                            }
+                        } else {
+                            TextButton(onClick = {
+                                seatingChartViewModel.startSession()
+                            }) {
+                                Text("Start Session")
                             }
                         }
                     }
@@ -515,8 +550,20 @@ fun SeatingChartScreen(
                                 selectedStudentUiItemForAction = studentItem
                                 when (sessionType) {
                                     SessionType.BEHAVIOR -> showBehaviorDialog = true
-                                    SessionType.QUIZ -> showLogQuizScoreDialog = true
-                                    SessionType.HOMEWORK -> showAdvancedHomeworkLogDialog = true
+                                    SessionType.QUIZ -> {
+                                        if (seatingChartViewModel.isSessionActive.value == true) {
+                                            showLiveQuizMarkDialog = true
+                                        } else {
+                                            showLogQuizScoreDialog = true
+                                        }
+                                    }
+                                    SessionType.HOMEWORK -> {
+                                        if (seatingChartViewModel.isSessionActive.value == true) {
+                                            showLiveHomeworkMarkDialog = true
+                                        } else {
+                                            showAdvancedHomeworkLogDialog = true
+                                        }
+                                    }
                                 }
                             }
                         },
@@ -649,23 +696,60 @@ fun SeatingChartScreen(
             )
         }
 
-        if (showAdvancedHomeworkLogDialog && selectedStudentUiItemForAction != null) {
+        if (showAdvancedHomeworkLogDialog) {
+            val studentIds = if (selectMode) {
+                selectedStudentIds.map { it.toLong() }
+            } else {
+                listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+            }
             AdvancedHomeworkLogDialog(
-                studentId = selectedStudentUiItemForAction!!.id.toLong(),
+                studentIds = studentIds,
                 viewModel = seatingChartViewModel,
                 settingsViewModel = settingsViewModel,
                 onDismissRequest = {
                     showAdvancedHomeworkLogDialog = false
                     selectedStudentUiItemForAction = null
                 },
-                onSave = { homeworkLog ->
+                onSave = { homeworkLogs ->
                     if (sessionType == SessionType.HOMEWORK) {
-                        seatingChartViewModel.addHomeworkLogToSession(homeworkLog)
+                        homeworkLogs.forEach { seatingChartViewModel.addHomeworkLogToSession(it) }
                     } else {
-                        seatingChartViewModel.addHomeworkLog(homeworkLog)
+                        homeworkLogs.forEach { seatingChartViewModel.addHomeworkLog(it) }
                     }
                 }
             )
+        }
+
+        if (showLiveQuizMarkDialog) {
+            selectedStudentUiItemForAction?.let { student ->
+                LiveQuizMarkDialog(
+                    studentId = student.id.toLong(),
+                    viewModel = seatingChartViewModel,
+                    onDismissRequest = {
+                        showLiveQuizMarkDialog = false
+                        selectedStudentUiItemForAction = null
+                    },
+                    onSave = { quizLog ->
+                        seatingChartViewModel.addQuizLogToSession(quizLog)
+                    }
+                )
+            }
+        }
+
+        if (showLiveHomeworkMarkDialog) {
+            selectedStudentUiItemForAction?.let { student ->
+                LiveHomeworkMarkDialog(
+                    studentId = student.id.toLong(),
+                    viewModel = seatingChartViewModel,
+                    onDismissRequest = {
+                        showLiveHomeworkMarkDialog = false
+                        selectedStudentUiItemForAction = null
+                    },
+                    onSave = { homeworkLog ->
+                        seatingChartViewModel.addHomeworkLogToSession(homeworkLog)
+                    }
+                )
+            }
         }
 
 
@@ -691,13 +775,6 @@ fun SeatingChartScreen(
                     showAddEditFurnitureDialog = false
                     editingFurniture = null
                 }
-            )
-        }
-
-        if (showDataViewerDialog) {
-            DataViewerScreen(
-                seatingChartViewModel = seatingChartViewModel,
-                onDismiss = { showDataViewerDialog = false }
             )
         }
 

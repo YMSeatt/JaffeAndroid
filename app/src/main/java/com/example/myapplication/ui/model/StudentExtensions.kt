@@ -15,6 +15,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 fun Student.toStudentUiItem(
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
+    sessionLogText: List<String>,
     groupColor: String?,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
@@ -38,6 +39,7 @@ fun Student.toStudentUiItem(
         displayOutlineThickness = (this.customOutlineThickness ?: defaultOutlineThickness).dp,
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
+        sessionLogText = sessionLogText,
         groupColor = groupColor?.let { Color(it.toColorInt()) }
     )
 }
