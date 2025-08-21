@@ -24,22 +24,27 @@ fun Student.toStudentUiItem(
     defaultTextColor: String = DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
     defaultOutlineThickness: Int = DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
 ): StudentUiItem {
+    val backgroundColor = customBackgroundColor?.let { Color(it.toColorInt()) } ?: Color(defaultBackgroundColor.toColorInt())
+    val outlineColor = customOutlineColor?.let { Color(it.toColorInt()) } ?: groupColor?.let { Color(it.toColorInt()) } ?: Color(defaultOutlineColor.toColorInt())
+    val textColor = customTextColor?.let { Color(it.toColorInt()) } ?: Color(defaultTextColor.toColorInt())
+
     return StudentUiItem(
         id = this.id.toInt(),
-        fullName = "${this.firstName} ${this.lastName}",
-        nickname = this.nickname,
-        initials = this.initials ?: this.getGeneratedInitials(),
-        xPosition = this.xPosition.toDouble(),
-        yPosition = this.yPosition.toDouble(),
-        displayWidth = (this.customWidth ?: defaultWidth).dp,
-        displayHeight = (this.customHeight ?: defaultHeight).dp,
-        displayBackgroundColor = groupColor?.let { Color(it.toColorInt()) } ?: this.customBackgroundColor?.let { Color(it.toColorInt()) } ?: Color(defaultBackgroundColor.toColorInt()),
-        displayOutlineColor = this.customOutlineColor?.let { Color(it.toColorInt()) } ?: Color(defaultOutlineColor.toColorInt()),
-        displayTextColor = this.customTextColor?.let { Color(it.toColorInt()) } ?: Color(defaultTextColor.toColorInt()),
-        displayOutlineThickness = (this.customOutlineThickness ?: defaultOutlineThickness).dp,
+        fullName = "$firstName $lastName",
+        nickname = nickname,
+        initials = "${firstName.first()}${lastName.first()}",
+        xPosition = xPosition.toDouble(),
+        yPosition = yPosition.toDouble(),
+        displayWidth = (customWidth ?: defaultWidth).dp,
+        displayHeight = (customHeight ?: defaultHeight).dp,
+        displayBackgroundColor = backgroundColor,
+        displayOutlineColor = outlineColor,
+        displayTextColor = textColor,
+        displayOutlineThickness = (customOutlineThickness ?: defaultOutlineThickness).dp,
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
         sessionLogText = sessionLogText,
-        groupColor = groupColor?.let { Color(it.toColorInt()) }
+        groupColor = groupColor?.let { Color(it.toColorInt()) },
+        groupId = groupId
     )
 }

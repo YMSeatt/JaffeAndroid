@@ -24,7 +24,7 @@ import com.example.myapplication.viewmodel.StudentGroupsViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentGroupsScreen(viewModel: StudentGroupsViewModel, onDismiss: () -> Unit) {
-    val groups by viewModel.studentGroups.collectAsState(initial = emptyList())
+    val groups by viewModel.allStudentGroups.collectAsState(initial = emptyList())
     var showDialog by remember { mutableStateOf(false) }
     var selectedGroup by remember { mutableStateOf<StudentGroup?>(null) }
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -24,7 +25,6 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -46,9 +46,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.ViewModel
@@ -185,6 +187,21 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private val importStudentsLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            lifecycleScope.launch {
+                val result = seatingChartViewModel.importStudentsFromExcel(this@MainActivity, it)
+                result.onSuccess { count ->
+                    Toast.makeText(this@MainActivity, "$count students imported successfully", Toast.LENGTH_SHORT).show()
+                }.onFailure { error ->
+                    Toast.makeText(this@MainActivity, "Error importing students: ${error.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -220,6 +237,7 @@ class MainActivity : ComponentActivity() {
                             settingsViewModel = settingsViewModel,
                             studentGroupsViewModel = studentGroupsViewModel,
                             createDocumentLauncher = createDocumentLauncher,
+                            importStudentsLauncher = importStudentsLauncher,
                             lifecycleScope = lifecycleScope,
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
@@ -248,6 +266,7 @@ fun SeatingChartScreen(
     settingsViewModel: SettingsViewModel,
     studentGroupsViewModel: StudentGroupsViewModel,
     createDocumentLauncher: ActivityResultLauncher<String>,
+    importStudentsLauncher: ActivityResultLauncher<String>,
     lifecycleScope: LifecycleCoroutineScope,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit,
@@ -289,6 +308,7 @@ fun SeatingChartScreen(
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
     val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState(initial = false)
+    var longPressPosition by remember { mutableStateOf(Offset.Zero) }
 
     Scaffold(
         topBar = {
@@ -314,9 +334,32 @@ fun SeatingChartScreen(
                         )
                     }
 
+                    if (editModeEnabled) {
+                        Row {
+                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("top") }) {
+                                Text("Align Top")
+                            }
+                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("bottom") }) {
+                                Text("Align Bottom")
+                            }
+                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("left") }) {
+                                Text("Align Left")
+                            }
+                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("right") }) {
+                                Text("Align Right")
+                            }
+                            TextButton(onClick = { seatingChartViewModel.distributeSelectedItems("horizontal") }) {
+                                Text("Distribute H")
+                            }
+                            TextButton(onClick = { seatingChartViewModel.distributeSelectedItems("vertical") }) {
+                                Text("Distribute V")
+                            }
+                        }
+                    }
+
                     if (selectMode && selectedStudentIds.isNotEmpty()) {
                         var showActionsMenu by remember { mutableStateOf(false) }
-                        IconButton(onClick = { showActionsMenu = true }) {
+                        TextButton(onClick = { showActionsMenu = true }) {
                             Text("Actions")
                         }
                         DropdownMenu(
@@ -379,6 +422,13 @@ fun SeatingChartScreen(
                             text = { Text("Load Layout") },
                             onClick = {
                                 showLoadLayoutDialog = true
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import Students from Excel") },
+                            onClick = {
+                                importStudentsLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                                 showFileMenu = false
                             }
                         )
@@ -572,9 +622,13 @@ fun SeatingChartScreen(
                                 }
                             }
                         },
-                        onLongClick = {
+                        onLongClick = { position ->
                             selectedStudentUiItemForAction = studentItem
+                            longPressPosition = position
                             showStudentActionMenu = true
+                        },
+                        onResize = { width, height ->
+                            seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt())
                         },
                         noAnimations = noAnimations
                     )
@@ -592,6 +646,9 @@ fun SeatingChartScreen(
                                     seatingChartViewModel.getFurnitureById(furnitureItem.id)
                                 showAddEditFurnitureDialog = true
                             }
+                        },
+                        onResize = { width, height ->
+                            seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt())
                         },
                         noAnimations = noAnimations
                     )
@@ -624,28 +681,103 @@ fun SeatingChartScreen(
         }
 
         if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
+            val student = selectedStudentUiItemForAction!!
+            val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+            var showGroupMenu by remember { mutableStateOf(false) }
+
             DropdownMenu(
                 expanded = showStudentActionMenu,
-                onDismissRequest = { showStudentActionMenu = false }
+                onDismissRequest = { showStudentActionMenu = false },
+                offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
             ) {
                 DropdownMenuItem(
-                    text = { Text("Edit") },
+                    text = { Text("Edit Student") },
                     onClick = {
                         coroutineScope.launch {
                             editingStudent =
-                                seatingChartViewModel.getStudentForEditing(selectedStudentUiItemForAction!!.id)
+                                seatingChartViewModel.getStudentForEditing(student.id.toLong())
                             showAddEditStudentDialog = true
                         }
                         showStudentActionMenu = false
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Customize Style") },
+                    text = { Text("Delete Student") },
+                    onClick = {
+                        seatingChartViewModel.deleteStudents(setOf(student.id))
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Log Behavior") },
+                    onClick = {
+                        showBehaviorDialog = true
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Log Homework") },
+                    onClick = {
+                        showAdvancedHomeworkLogDialog = true
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Log Quiz Score") },
+                    onClick = {
+                        showLogQuizScoreDialog = true
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Change Student Box Style") },
                     onClick = {
                         showStudentStyleDialog = true
                         showStudentActionMenu = false
                     }
                 )
+                DropdownMenuItem(
+                    text = { Text("Clear Recent Logs") },
+                    onClick = {
+                        seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Show Recent Logs") },
+                    onClick = {
+                        seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
+                        showStudentActionMenu = false
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("Assign to Group") },
+                    onClick = { showGroupMenu = true }
+                )
+                if (student.groupId != null) {
+                    DropdownMenuItem(
+                        text = { Text("Remove from Group") },
+                        onClick = {
+                            seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
+                            showStudentActionMenu = false
+                        }
+                    )
+                }
+            }
+            DropdownMenu(
+                expanded = showGroupMenu,
+                onDismissRequest = { showGroupMenu = false }
+            ) {
+                groups.forEach { group ->
+                    DropdownMenuItem(
+                        text = { Text(group.name) },
+                        onClick = {
+                            seatingChartViewModel.assignStudentToGroup(student.id.toLong(), group.id)
+                            showGroupMenu = false
+                            showStudentActionMenu = false
+                        }
+                    )
+                }
             }
         }
 

@@ -20,5 +20,6 @@ data class StudentUiItem(
     val recentBehaviorDescription: List<String>,
     val recentHomeworkDescription: List<String>,
     val groupColor: Color?,
+    val groupId: Long?,
     val sessionLogText: List<String> = emptyList()
 )

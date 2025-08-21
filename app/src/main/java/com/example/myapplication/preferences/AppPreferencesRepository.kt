@@ -58,6 +58,38 @@ class AppPreferencesRepository(private val context: Context) {
         val SHOW_RULERS = booleanPreferencesKey("show_rulers")
         val SHOW_GRID = booleanPreferencesKey("show_grid")
         val EDIT_MODE_ENABLED = booleanPreferencesKey("edit_mode_enabled")
+        val STUDENT_LOGS_LAST_CLEARED = stringSetPreferencesKey("student_logs_last_cleared")
+    }
+
+    val studentLogsLastClearedFlow: Flow<Map<Long, Long>> = context.dataStore.data
+        .map { preferences ->
+            (preferences[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()).associate {
+                val parts = it.split(":")
+                if (parts.size == 2) {
+                    parts[0].toLongOrNull() to parts[1].toLongOrNull()
+                } else {
+                    null to null
+                }
+            }.filter { it.key != null && it.value != null } as Map<Long, Long>
+        }
+
+    suspend fun updateStudentLogsLastCleared(studentId: Long, timestamp: Long) {
+        context.dataStore.edit { settings ->
+            val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
+            val newCleared = currentCleared.toMutableSet()
+            newCleared.removeAll { it.startsWith("$studentId:") }
+            newCleared.add("$studentId:$timestamp")
+            settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] = newCleared
+        }
+    }
+
+    suspend fun removeStudentLogsLastCleared(studentId: Long) {
+        context.dataStore.edit { settings ->
+            val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
+            val newCleared = currentCleared.toMutableSet()
+            newCleared.removeAll { it.startsWith("$studentId:") }
+            settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] = newCleared
+        }
     }
 
     val editModeEnabledFlow: Flow<Boolean> = context.dataStore.data

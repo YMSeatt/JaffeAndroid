@@ -11,7 +11,7 @@ import kotlinx.coroutines.launch
 
 class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : ViewModel() {
 
-    val studentGroups: StateFlow<List<StudentGroup>> = studentGroupDao.getAllStudentGroups()
+    val allStudentGroups: StateFlow<List<StudentGroup>> = studentGroupDao.getAllStudentGroups()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     fun addGroup(groupName: String, groupColor: String) { // Modified to take name and color

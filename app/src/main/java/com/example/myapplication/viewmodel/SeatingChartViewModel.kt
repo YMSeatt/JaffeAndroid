@@ -198,6 +198,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                     if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
                 }
                 .toMap()
+            val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
 
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
@@ -207,10 +208,13 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val defaultOutlineThickness = appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow.first()
 
             val studentsWithBehavior = students.map { student ->
+                val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                 val recentEvents =
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
+                        .filter { it.timestamp > lastCleared }
                 val recentHomework =
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
+                        .filter { it.loggedAt > lastCleared }
 
                 val behaviorDescription = recentEvents.map {
                     if (useInitials) {
@@ -242,6 +246,20 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 )
             }
             studentsForDisplay.postValue(studentsWithBehavior)
+        }
+    }
+
+    fun clearRecentLogsForStudent(studentId: Long) {
+        viewModelScope.launch {
+            appPreferencesRepository.updateStudentLogsLastCleared(studentId, System.currentTimeMillis())
+            updateStudentsForDisplay()
+        }
+    }
+
+    fun showRecentLogsForStudent(studentId: Long) {
+        viewModelScope.launch {
+            appPreferencesRepository.removeStudentLogsLastCleared(studentId)
+            updateStudentsForDisplay()
         }
     }
 
@@ -343,6 +361,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         )
     }
 
+    suspend fun importStudentsFromExcel(context: Context, uri: Uri): Result<Int> {
+        return com.example.myapplication.utils.ExcelImportUtil.importStudentsFromExcel(uri, context, repository)
+    }
+
 
     // Student operations
     fun addStudent(student: Student) {
@@ -399,6 +421,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun deleteStudents(studentId: Int) {
+        deleteStudents(setOf(studentId))
+    }
+
     fun updateStudentPosition(
         studentId: Int,
         oldX: Float,
@@ -426,8 +452,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
 
-    suspend fun getStudentForEditing(studentId: Int): Student? = withContext(Dispatchers.IO) {
-        return@withContext repository.getStudentById(studentId.toLong())
+    suspend fun getStudentForEditing(studentId: Long): Student? = withContext(Dispatchers.IO) {
+        return@withContext repository.getStudentById(studentId)
     }
 
     suspend fun studentExists(firstName: String, lastName: String): Boolean {
@@ -436,7 +462,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun updateStudentStyle(student: Student) {
         viewModelScope.launch {
-            val oldStudent = getStudentForEditing(student.id.toInt()) ?: return@launch
+            val oldStudent = getStudentForEditing(student.id) ?: return@launch
             val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, student)
             executeCommand(command)
         }
@@ -448,6 +474,118 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             studentsToUpdate?.forEach {
                 val updatedStudent = it.copy(customWidth = width, customHeight = height)
                 val command = UpdateStudentCommand(this@SeatingChartViewModel, it, updatedStudent)
+                executeCommand(command)
+            }
+        }
+    }
+
+    fun changeFurnitureSize(furnitureId: Int, width: Int, height: Int) {
+        viewModelScope.launch {
+            val furnitureToUpdate = allFurniture.value?.find { it.id.toLong() == furnitureId.toLong() }
+            furnitureToUpdate?.let {
+                val updatedFurniture = it.copy(width = width, height = height)
+                val command = UpdateFurnitureCommand(this@SeatingChartViewModel, it, updatedFurniture)
+                executeCommand(command)
+            }
+        }
+    }
+
+    fun assignStudentToGroup(studentId: Long, groupId: Long) {
+        viewModelScope.launch {
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(groupId = groupId)
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
+            executeCommand(command)
+        }
+    }
+
+    fun removeStudentFromGroup(studentId: Long) {
+        viewModelScope.launch {
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(groupId = null)
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
+            executeCommand(command)
+        }
+    }
+
+    fun alignSelectedItems(alignment: String) {
+        viewModelScope.launch {
+            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true }
+            if (selectedStudents.isNullOrEmpty()) return@launch
+
+            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
+            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
+
+            val firstStudent = selectedStudents.first()
+            val newStudents = when (alignment) {
+                "top" -> {
+                    val topY = selectedStudents.minOf { it.yPosition }
+                    selectedStudents.map { it.copy(yPosition = topY) }
+                }
+                "bottom" -> {
+                    val bottomY = selectedStudents.maxOf { it.yPosition + (it.customHeight ?: defaultHeight) }
+                    selectedStudents.map { it.copy(yPosition = bottomY - (it.customHeight ?: defaultHeight)) }
+                }
+                "left" -> {
+                    val leftX = selectedStudents.minOf { it.xPosition }
+                    selectedStudents.map { it.copy(xPosition = leftX) }
+                }
+                "right" -> {
+                    val rightX = selectedStudents.maxOf { it.xPosition + (it.customWidth ?: defaultWidth) }
+                    selectedStudents.map { it.copy(xPosition = rightX - (it.customWidth ?: defaultWidth)) }
+                }
+                else -> emptyList()
+            }
+
+            newStudents.forEach { newStudent ->
+                val oldStudent = selectedStudents.find { it.id == newStudent.id } ?: return@forEach
+                val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, newStudent)
+                executeCommand(command)
+            }
+        }
+    }
+
+    fun distributeSelectedItems(distribution: String) {
+        viewModelScope.launch {
+            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true }
+            if (selectedStudents.isNullOrEmpty() || selectedStudents.size < 2) return@launch
+
+            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
+            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
+
+            val newStudents = when (distribution) {
+                "horizontal" -> {
+                    val sortedStudents = selectedStudents.sortedBy { it.xPosition }
+                    val minX = sortedStudents.first().xPosition
+                    val maxX = sortedStudents.last().xPosition + (sortedStudents.last().customWidth ?: defaultWidth)
+                    val totalWidth = sortedStudents.sumOf { it.customWidth ?: defaultWidth }
+                    val spacing = (maxX - minX - totalWidth) / (selectedStudents.size - 1)
+                    var currentX = minX
+                    sortedStudents.map {
+                        val newStudent = it.copy(xPosition = currentX)
+                        currentX += (it.customWidth ?: defaultWidth) + spacing
+                        newStudent
+                    }
+                }
+                "vertical" -> {
+                    val sortedStudents = selectedStudents.sortedBy { it.yPosition }
+                    val minY = sortedStudents.first().yPosition
+                    val maxY = sortedStudents.last().yPosition + (sortedStudents.last().customHeight ?: defaultHeight)
+                    val totalHeight = sortedStudents.sumOf { it.customHeight ?: defaultHeight }
+                    val spacing = (maxY - minY - totalHeight) / (selectedStudents.size - 1)
+                    var currentY = minY
+                    sortedStudents.map {
+                        val newStudent = it.copy(yPosition = currentY)
+                        currentY += (it.customHeight ?: defaultHeight) + spacing
+                        newStudent
+                    }
+                }
+                else -> emptyList()
+            }
+
+            newStudents.forEach { newStudent ->
+                val oldStudent = selectedStudents.find { it.id == newStudent.id } ?: return@forEach
+                val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, newStudent)
                 executeCommand(command)
             }
         }
