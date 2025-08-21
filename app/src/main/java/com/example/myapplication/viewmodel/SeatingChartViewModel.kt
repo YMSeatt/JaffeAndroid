@@ -434,6 +434,14 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         return repository.studentExists(firstName, lastName)
     }
 
+    fun updateStudentStyle(student: Student) {
+        viewModelScope.launch {
+            val oldStudent = getStudentForEditing(student.id.toInt()) ?: return@launch
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, student)
+            executeCommand(command)
+        }
+    }
+
     fun changeBoxSize(studentIds: Set<Int>, width: Int, height: Int) {
         viewModelScope.launch {
             val studentsToUpdate = allStudents.value?.filter { studentIds.contains(it.id.toInt()) }

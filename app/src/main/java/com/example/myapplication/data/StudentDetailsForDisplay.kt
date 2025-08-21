@@ -4,20 +4,22 @@ import androidx.room.Ignore
 
 data class StudentDetailsForDisplay(
     // Fields directly mapped by Room from the query
-    val id: Long,
-    val groupId: Long?,
-    val firstName: String,
-    val lastName: String,
-    var initials: String?, // Added initials field
-    val xPosition: Double,
-    val yPosition: Double,
-    val recentBehaviorDescription: String? = null,
-    val customWidth: Int? = null,
-    val customHeight: Int? = null,
-    val customBackgroundColor: String? = null,
-    val customOutlineColor: String? = null,
-    val customTextColor: String? = null
+    var id: Long = 0,
+    var firstName: String = "",
+    var lastName: String = "",
+    var initials: String? = null, // Added initials field
+    var xPosition: Double = 0.0,
+    var yPosition: Double = 0.0,
+    var customWidth: Int? = null,
+    var customHeight: Int? = null,
+    var customBackgroundColor: String? = null,
+    var customOutlineColor: String? = null,
+    var customTextColor: String? = null
 ) {
+    @Ignore
+    var groupId: Long? = null
+    @Ignore
+    var recentBehaviorDescription: String? = null
     // Fields calculated/set by the ViewModel AFTER Room has created the object
     // These are not part of the Room-mapped constructor.
     @Ignore

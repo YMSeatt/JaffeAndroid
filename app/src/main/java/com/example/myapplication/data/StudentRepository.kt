@@ -4,8 +4,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class StudentRepository(
+@Singleton
+class StudentRepository @Inject constructor(
     private val studentDao: StudentDao,
     private val behaviorEventDao: BehaviorEventDao,
     private val homeworkLogDao: HomeworkLogDao,

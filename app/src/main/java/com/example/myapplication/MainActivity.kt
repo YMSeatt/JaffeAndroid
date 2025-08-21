@@ -76,6 +76,7 @@ import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
 import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
+import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.utils.ExcelImportUtil
@@ -268,6 +269,7 @@ fun SeatingChartScreen(
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
     var showExportFilterDialog by remember { mutableStateOf(false) }
     var showChangeBoxSizeDialog by remember { mutableStateOf(false) }
+    var showStudentStyleDialog by remember { mutableStateOf(false) }
     var selectMode by remember { mutableStateOf(false) }
 
     var selectedStudentUiItemForAction by remember { mutableStateOf<StudentUiItem?>(null) }
@@ -568,11 +570,8 @@ fun SeatingChartScreen(
                             }
                         },
                         onLongClick = {
-                            coroutineScope.launch {
-                                editingStudent =
-                                    seatingChartViewModel.getStudentForEditing(studentItem.id)
-                                showAddEditStudentDialog = true
-                            }
+                            selectedStudentUiItemForAction = studentItem
+                            showStudentActionMenu = true
                         },
                         noAnimations = noAnimations
                     )
@@ -622,37 +621,29 @@ fun SeatingChartScreen(
         }
 
         if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
-            AlertDialog(
-                onDismissRequest = {
-                    showStudentActionMenu = false
-                    selectedStudentUiItemForAction = null
-                },
-                title = { Text("Actions for ${selectedStudentUiItemForAction!!.fullName}") },
-                text = {
-                    Column {
-                        TextButton(onClick = {
-                            showStudentActionMenu = false
-                            showLogQuizScoreDialog = true
-                        }) {
-                            Text("Log Quiz Score")
+            DropdownMenu(
+                expanded = showStudentActionMenu,
+                onDismissRequest = { showStudentActionMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text("Edit") },
+                    onClick = {
+                        coroutineScope.launch {
+                            editingStudent =
+                                seatingChartViewModel.getStudentForEditing(selectedStudentUiItemForAction!!.id)
+                            showAddEditStudentDialog = true
                         }
-                        TextButton(onClick = {
-                            showStudentActionMenu = false
-                            showAdvancedHomeworkLogDialog = true
-                        }) {
-                            Text("Log Advanced Homework")
-                        }
-                    }
-                },
-                confirmButton = {
-                    TextButton(onClick = {
                         showStudentActionMenu = false
-                        selectedStudentUiItemForAction = null
-                    }) {
-                        Text("Cancel")
                     }
-                }
-            )
+                )
+                DropdownMenuItem(
+                    text = { Text("Customize Style") },
+                    onClick = {
+                        showStudentStyleDialog = true
+                        showStudentActionMenu = false
+                    }
+                )
+            }
         }
 
         if (showBehaviorDialog) {
@@ -798,6 +789,16 @@ fun SeatingChartScreen(
                     showChangeBoxSizeDialog = false
                 }
             )
+        }
+
+        if (showStudentStyleDialog) {
+            selectedStudentUiItemForAction?.let { student ->
+                StudentStyleScreen(
+                    studentId = student.id.toLong(),
+                    seatingChartViewModel = seatingChartViewModel,
+                    onDismiss = { showStudentStyleDialog = false }
+                )
+            }
         }
     }
 }

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -29,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -54,6 +54,10 @@ fun StudentDraggableIcon(
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
     val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
+    val defaultStudentBoxHeight by settingsViewModel.defaultStudentBoxHeight.collectAsState()
+    val lineHeight = with(LocalDensity.current) {
+        MaterialTheme.typography.bodySmall.lineHeight.toDp()
+    }
 
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
@@ -101,7 +105,16 @@ fun StudentDraggableIcon(
                     onLongClick = onLongClick
                 )
                 .width(studentUiItem.displayWidth)
-                .heightIn(min = studentUiItem.displayHeight) //TODO: Implement a maximum height for student box based on the current amount of displayed lines in the student's box
+                .height(
+                    calculateStudentIconHeight(
+                        defaultHeight = defaultStudentBoxHeight.dp,
+                        showBehavior = showBehavior,
+                        behaviorText = studentUiItem.recentBehaviorDescription.joinToString("\n"),
+                        homeworkText = studentUiItem.recentHomeworkDescription.joinToString("\n"),
+                        sessionLogText = studentUiItem.sessionLogText.joinToString("\n"),
+                        lineHeight = lineHeight
+                    )
+                )
                 .border(
                     BorderStroke(
                         if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
@@ -113,7 +126,9 @@ fun StudentDraggableIcon(
         ) {
             Box(
                 contentAlignment = Alignment.Center,
-                modifier = Modifier.fillMaxSize().padding(8.dp)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
