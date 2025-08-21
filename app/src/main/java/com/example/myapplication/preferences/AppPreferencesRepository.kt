@@ -57,6 +57,18 @@ class AppPreferencesRepository(private val context: Context) {
         val GRID_SIZE = intPreferencesKey("grid_size")
         val SHOW_RULERS = booleanPreferencesKey("show_rulers")
         val SHOW_GRID = booleanPreferencesKey("show_grid")
+        val EDIT_MODE_ENABLED = booleanPreferencesKey("edit_mode_enabled")
+    }
+
+    val editModeEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.EDIT_MODE_ENABLED] ?: false
+        }
+
+    suspend fun updateEditModeEnabled(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.EDIT_MODE_ENABLED] = enabled
+        }
     }
 
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data

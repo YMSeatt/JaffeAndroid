@@ -372,4 +372,13 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
             preferencesRepository.updateShowGrid(show)
         }
     }
+
+    val editModeEnabled: StateFlow<Boolean> = preferencesRepository.editModeEnabledFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateEditModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateEditModeEnabled(enabled)
+        }
+    }
 }
