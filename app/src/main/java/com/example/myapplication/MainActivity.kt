@@ -288,6 +288,7 @@ fun SeatingChartScreen(
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
+    val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState(initial = false)
 
     Scaffold(
         topBar = {
@@ -480,25 +481,27 @@ fun SeatingChartScreen(
             )
         },
         floatingActionButton = {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                FloatingActionButton(
-                    onClick = {
-                        editingStudent = null
-                        showAddEditStudentDialog = true
-                    }
+            if (editModeEnabled) {
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add Student")
-                }
-                FloatingActionButton(
-                    onClick = {
-                        editingFurniture = null
-                        showAddEditFurnitureDialog = true
+                    FloatingActionButton(
+                        onClick = {
+                            editingStudent = null
+                            showAddEditStudentDialog = true
+                        }
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add Student")
                     }
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add Furniture")
+                    FloatingActionButton(
+                        onClick = {
+                            editingFurniture = null
+                            showAddEditFurnitureDialog = true
+                        }
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add Furniture")
+                    }
                 }
             }
         }

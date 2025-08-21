@@ -37,6 +37,7 @@ fun GeneralSettingsTab(
     val gridSize by settingsViewModel.gridSize.collectAsState()
     val showRulers by settingsViewModel.showRulers.collectAsState()
     val showGrid by settingsViewModel.showGrid.collectAsState()
+    val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState()
 
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -172,6 +173,18 @@ fun GeneralSettingsTab(
                 Switch(
                     checked = showGrid,
                     onCheckedChange = { settingsViewModel.updateShowGrid(it) }
+                )
+            }
+        }
+        item {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Enable Edit Mode", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = editModeEnabled,
+                    onCheckedChange = { settingsViewModel.updateEditModeEnabled(it) }
                 )
             }
         }
