@@ -1,0 +1,51 @@
+{
+  "students": {
+    "1": {
+      "first_name": "John",
+      "last_name": "Doe",
+      "nickname": "Johnny",
+      "full_name": "John Doe",
+      "gender": "Male",
+      "x": 100.0,
+      "y": 200.0,
+      "id": "1",
+      "width": 100.0,
+      "height": 50.0,
+      "original_next_id_num_after_add": 2,
+      "group_id": null,
+      "style_overrides": {
+        "fill_color": "#FFFFFF",
+        "outline_color": "#000000",
+        "font_family": "Arial",
+        "font_size": 12,
+        "font_color": "#000000",
+        "width": 100.0,
+        "height": 50.0
+      }
+    }
+  },
+  "furniture": {},
+  "behavior_log": [
+    {
+      "timestamp": "2023-01-01T12:00:00Z",
+      "student_id": "1",
+      "student_first_name": "John",
+      "student_last_name": "Doe",
+      "behavior": "Good",
+      "comment": "Well done",
+      "type": "Behavior",
+      "day": "Sunday"
+    }
+  ],
+  "homework_log": [],
+  "settings": {
+    "encrypt_data_files": false,
+    "app_password_hash": null
+  },
+  "last_excel_export_path": null,
+  "_per_student_last_cleared": {},
+  "undo_stack": [],
+  "redo_stack": [],
+  "guides": {},
+  "next_guide_id_num": 1
+}

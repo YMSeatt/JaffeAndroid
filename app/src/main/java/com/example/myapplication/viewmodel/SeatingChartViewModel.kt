@@ -365,6 +365,12 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         return com.example.myapplication.utils.ExcelImportUtil.importStudentsFromExcel(uri, context, repository)
     }
 
+    fun importData(context: Context, uri: Uri) {
+        viewModelScope.launch {
+            com.example.myapplication.data.importer.Importer(context).importData(uri)
+        }
+    }
+
 
     // Student operations
     fun addStudent(student: Student) {
