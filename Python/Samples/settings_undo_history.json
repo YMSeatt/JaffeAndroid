@@ -1,0 +1,61 @@
+{
+    "undo": [
+        {
+            "key": "show_grid",
+            "undo_value": true,
+            "redo_value": false,
+            "var_name": "show_grid_var",
+            "tab": "General"
+        },
+        {
+            "key": "show_grid",
+            "undo_value": false,
+            "redo_value": true,
+            "var_name": "show_grid_var",
+            "tab": "General"
+        },
+        {
+            "key": "show_recent_homeworks_on_boxes",
+            "undo_value": true,
+            "redo_value": false,
+            "var_name": "show_recent_hw_var",
+            "tab": "Homework"
+        },
+        {
+            "key": "show_recent_homeworks_on_boxes",
+            "undo_value": false,
+            "redo_value": true,
+            "var_name": "show_recent_hw_var",
+            "tab": "Homework"
+        },
+        {
+            "key": "show_canvas_border_lines",
+            "undo_value": false,
+            "redo_value": true,
+            "var_name": "canvas_border_var",
+            "tab": "General"
+        },
+        {
+            "key": "force_canvas_border_lines",
+            "undo_value": false,
+            "redo_value": true,
+            "var_name": "force_canvas_border_var",
+            "tab": "General"
+        },
+        {
+            "key": "live_homework_session_mode",
+            "undo_value": "Select",
+            "redo_value": "Yes/No",
+            "var_name": "live_hw_mode_var",
+            "tab": "Homework"
+        },
+        {
+            "key": "live_homework_session_mode",
+            "undo_value": "Yes/No",
+            "redo_value": "Select",
+            "var_name": "live_hw_mode_var",
+            "tab": "Homework"
+        }
+    ],
+    "redo": []
+}
