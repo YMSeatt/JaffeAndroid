@@ -26,7 +26,7 @@ class ImporterTest {
     @Before
     fun setup() {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        importer = Importer(context)
+        importer = Importer(context, db)
     }
 
     @After
