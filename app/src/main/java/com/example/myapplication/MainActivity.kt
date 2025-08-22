@@ -138,6 +138,17 @@ class MainActivity : ComponentActivity() {
 
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
 
+    private val importJsonLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            lifecycleScope.launch {
+                seatingChartViewModel.importData(this@MainActivity, it)
+                Toast.makeText(this@MainActivity, "Data imported successfully", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
     val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -174,8 +185,11 @@ class MainActivity : ComponentActivity() {
                         exportBehaviorLogs = true,
                         exportHomeworkLogs = true,
                         exportQuizLogs = true,
-                        selectedStudentIds = emptyList(),
-                        exportType = ExportType.MASTER_LOG
+                        selectedStudentIds = exportData.students.map { s -> s.id },
+                        exportType = ExportType.MASTER_LOG,
+                        includeSummary = true,
+                        separateSheets = true,
+                        includeMasterLog = true
                     )
                 )
                 if (result.isSuccess) {
@@ -238,6 +252,7 @@ class MainActivity : ComponentActivity() {
                             studentGroupsViewModel = studentGroupsViewModel,
                             createDocumentLauncher = createDocumentLauncher,
                             importStudentsLauncher = importStudentsLauncher,
+                            importJsonLauncher = importJsonLauncher,
                             lifecycleScope = lifecycleScope,
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
@@ -267,6 +282,7 @@ fun SeatingChartScreen(
     studentGroupsViewModel: StudentGroupsViewModel,
     createDocumentLauncher: ActivityResultLauncher<String>,
     importStudentsLauncher: ActivityResultLauncher<String>,
+    importJsonLauncher: ActivityResultLauncher<String>,
     lifecycleScope: LifecycleCoroutineScope,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit,
@@ -415,6 +431,13 @@ fun SeatingChartScreen(
                             text = { Text("Save Layout") },
                             onClick = {
                                 showSaveLayoutDialog = true
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import from JSON") },
+                            onClick = {
+                                importJsonLauncher.launch("application/json")
                                 showFileMenu = false
                             }
                         )

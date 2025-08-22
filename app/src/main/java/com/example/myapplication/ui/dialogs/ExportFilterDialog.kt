@@ -35,6 +35,10 @@ fun ExportFilterDialog(
     var studentDropdownExpanded by remember { mutableStateOf(false) }
 
     var exportType by remember { mutableStateOf(ExportType.MASTER_LOG) }
+    var includeSummary by remember { mutableStateOf(true) }
+    var separateSheets by remember { mutableStateOf(true) }
+    var includeMasterLog by remember { mutableStateOf(true) }
+
 
     // Initialize dates to a reasonable default (e.g., last 30 days)
     LaunchedEffect(Unit) {
@@ -158,6 +162,22 @@ fun ExportFilterDialog(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
+
+                item {
+                    Text("Additional Options:", style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeSummary, onCheckedChange = { includeSummary = it })
+                        Text("Include Summary")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = separateSheets, onCheckedChange = { separateSheets = it })
+                        Text("Separate Sheets for each log type")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it })
+                        Text("Include Master Log")
+                    }
+                }
             }
         },
         confirmButton = {
@@ -188,7 +208,10 @@ fun ExportFilterDialog(
                         exportHomeworkLogs = exportHomeworkLogs,
                         exportQuizLogs = exportQuizLogs,
                         selectedStudentIds = if (selectedStudentIds.isEmpty()) allStudents.map { it.id } else selectedStudentIds.toList(),
-                        exportType = exportType
+                        exportType = exportType,
+                        includeSummary = includeSummary,
+                        separateSheets = separateSheets,
+                        includeMasterLog = includeMasterLog
                     )
                 )
                 onDismissRequest()
