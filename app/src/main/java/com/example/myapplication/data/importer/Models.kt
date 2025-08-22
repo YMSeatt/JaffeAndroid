@@ -19,19 +19,19 @@ data class Classroom(
 
 @Serializable
 data class Student(
-    val first_name: String,
-    val last_name: String,
+    @kotlinx.serialization.SerialName("first_name") val firstName: String,
+    @kotlinx.serialization.SerialName("last_name") val lastName: String,
     val nickname: String,
-    val full_name: String,
+    @kotlinx.serialization.SerialName("full_name") val fullName: String,
     val gender: String,
     val x: Double,
     val y: Double,
     val id: String,
     val width: Double,
     val height: Double,
-    val original_next_id_num_after_add: Int,
-    val group_id: String?,
-    val style_overrides: StyleOverrides
+    @kotlinx.serialization.SerialName("original_next_id_num_after_add") val originalNextIdNumAfterAdd: Int,
+    @kotlinx.serialization.SerialName("group_id") val groupId: String?,
+    @kotlinx.serialization.SerialName("style_overrides") val styleOverrides: StyleOverrides
 )
 
 @Serializable
