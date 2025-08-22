@@ -23,9 +23,8 @@ class Importer(private val context: Context) {
     suspend fun importData(uri: Uri) {
         withContext(Dispatchers.IO) {
             try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val reader = BufferedReader(InputStreamReader(inputStream))
-                val jsonString = reader.readText()
+                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                    ?: throw java.io.IOException("Could not open input stream from URI")
                 val classroom = json.decodeFromString<Classroom>(jsonString)
                 val db = AppDatabase.getDatabase(context)
                 val preferencesRepository = AppPreferencesRepository(context)
