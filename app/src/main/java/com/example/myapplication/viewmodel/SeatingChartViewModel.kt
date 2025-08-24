@@ -172,6 +172,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 appPreferencesRepository.defaultStudentBoxOutlineColorFlow,
                 appPreferencesRepository.defaultStudentBoxTextColorFlow,
                 appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow,
+                appPreferencesRepository.defaultStudentBoxCornerRadiusFlow,
+                appPreferencesRepository.defaultStudentBoxPaddingFlow,
                 appPreferencesRepository.defaultStudentFontFamilyFlow,
                 appPreferencesRepository.defaultStudentFontSizeFlow,
                 appPreferencesRepository.defaultStudentFontColorFlow
@@ -203,6 +205,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val defaultOutlineColor = appPreferencesRepository.defaultStudentBoxOutlineColorFlow.first()
             val defaultTextColor = appPreferencesRepository.defaultStudentBoxTextColorFlow.first()
             val defaultOutlineThickness = appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow.first()
+            val defaultCornerRadius = appPreferencesRepository.defaultStudentBoxCornerRadiusFlow.first()
+            val defaultPadding = appPreferencesRepository.defaultStudentBoxPaddingFlow.first()
             val defaultFontFamily = appPreferencesRepository.defaultStudentFontFamilyFlow.first()
             val defaultFontSize = appPreferencesRepository.defaultStudentFontSizeFlow.first()
             val defaultFontColor = appPreferencesRepository.defaultStudentFontColorFlow.first()
@@ -243,6 +247,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                     defaultOutlineColor = defaultOutlineColor,
                     defaultTextColor = defaultTextColor,
                     defaultOutlineThickness = defaultOutlineThickness,
+                    defaultCornerRadius = defaultCornerRadius,
+                    defaultPadding = defaultPadding,
                     defaultFontFamily = defaultFontFamily,
                     defaultFontSize = defaultFontSize,
                     defaultFontColor = defaultFontColor

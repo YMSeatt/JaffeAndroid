@@ -17,6 +17,8 @@ data class StudentUiItem(
     val displayOutlineColor: Color,
     val displayTextColor: Color,
     val displayOutlineThickness: Dp,
+    val displayCornerRadius: Dp,
+    val displayPadding: Dp,
     val fontFamily: String,
     val fontSize: Int,
     val fontColor: Color,

@@ -43,15 +43,17 @@ fun StudentStyleScreen(
     val student by viewModel.student.collectAsState()
 
     // Declare state variables
-    var customBackgroundColor by remember { mutableStateOf("") }
-    var customOutlineColor by remember { mutableStateOf("") }
-    var customTextColor by remember { mutableStateOf("") }
+    val customBackgroundColor = remember { mutableStateOf("") }
+    val customOutlineColor = remember { mutableStateOf("") }
+    val customTextColor = remember { mutableStateOf("") }
     var customWidth by remember { mutableStateOf("") }
     var customHeight by remember { mutableStateOf("") }
+    var customCornerRadius by remember { mutableStateOf("") }
     var customOutlineThickness by remember { mutableStateOf("") }
+    var customPadding by remember { mutableStateOf("") }
     var customFontFamily by remember { mutableStateOf("") }
     var customFontSize by remember { mutableStateOf("") }
-    var customFontColor by remember { mutableStateOf("") }
+    val customFontColor = remember { mutableStateOf("") }
     var expanded by remember { mutableStateOf(false) }
 
     val showColorPicker = remember { mutableStateOf(false) }
@@ -63,15 +65,17 @@ fun StudentStyleScreen(
 
     LaunchedEffect(student) {
         student?.let {
-            customBackgroundColor = it.customBackgroundColor ?: ""
-            customOutlineColor = it.customOutlineColor ?: ""
-            customTextColor = it.customTextColor ?: ""
+            customBackgroundColor.value = it.customBackgroundColor ?: ""
+            customOutlineColor.value = it.customOutlineColor ?: ""
+            customTextColor.value = it.customTextColor ?: ""
             customWidth = it.customWidth?.toString() ?: ""
             customHeight = it.customHeight?.toString() ?: ""
+            customCornerRadius = it.customCornerRadius?.toString() ?: ""
             customOutlineThickness = it.customOutlineThickness?.toString() ?: ""
+            customPadding = it.customPadding?.toString() ?: ""
             customFontFamily = it.customFontFamily ?: ""
             customFontSize = it.customFontSize?.toString() ?: ""
-            customFontColor = it.customFontColor ?: ""
+            customFontColor.value = it.customFontColor ?: ""
         }
     }
 
@@ -93,12 +97,12 @@ fun StudentStyleScreen(
             text = {
                 Column(modifier = Modifier.padding(16.dp)) {
                     TextField(
-                        value = customBackgroundColor,
-                        onValueChange = { customBackgroundColor = it },
+                        value = customBackgroundColor.value,
+                        onValueChange = { customBackgroundColor.value = it },
                         label = { Text("Background Color") },
                         trailingIcon = {
                             Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customBackgroundColor)
+                                colorPickerVar.value = customBackgroundColor
                                 showColorPicker.value = true
                             }) {
                                 Text("...")
@@ -107,12 +111,12 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
-                        value = customOutlineColor,
-                        onValueChange = { customOutlineColor = it },
+                        value = customOutlineColor.value,
+                        onValueChange = { customOutlineColor.value = it },
                         label = { Text("Outline Color") },
                         trailingIcon = {
                             Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customOutlineColor)
+                                colorPickerVar.value = customOutlineColor
                                 showColorPicker.value = true
                             }) {
                                 Text("...")
@@ -121,12 +125,12 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
-                        value = customTextColor,
-                        onValueChange = { customTextColor = it },
+                        value = customTextColor.value,
+                        onValueChange = { customTextColor.value = it },
                         label = { Text("Text Color") },
                         trailingIcon = {
                             Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customTextColor)
+                                colorPickerVar.value = customTextColor
                                 showColorPicker.value = true
                             }) {
                                 Text("...")
@@ -147,9 +151,21 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
+                        value = customCornerRadius,
+                        onValueChange = { customCornerRadius = it },
+                        label = { Text("Corner Radius (dp)") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
                         value = customOutlineThickness,
                         onValueChange = { customOutlineThickness = it },
                         label = { Text("Outline Thickness (dp)") }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = customPadding,
+                        onValueChange = { customPadding = it },
+                        label = { Text("Padding (dp)") }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
@@ -189,12 +205,12 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
-                        value = customFontColor,
-                        onValueChange = { customFontColor = it },
+                        value = customFontColor.value,
+                        onValueChange = { customFontColor.value = it },
                         label = { Text("Font Color") },
                         trailingIcon = {
                             Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customFontColor)
+                                colorPickerVar.value = customFontColor
                                 showColorPicker.value = true
                             }) {
                                 Text("...")
@@ -207,15 +223,17 @@ fun StudentStyleScreen(
                 Button(
                     onClick = {
                         val updatedStudent = student!!.copy(
-                            customBackgroundColor = customBackgroundColor.ifBlank { null },
-                            customOutlineColor = customOutlineColor.ifBlank { null },
-                            customTextColor = customTextColor.ifBlank { null },
+                            customBackgroundColor = customBackgroundColor.value.ifBlank { null },
+                            customOutlineColor = customOutlineColor.value.ifBlank { null },
+                            customTextColor = customTextColor.value.ifBlank { null },
                             customWidth = customWidth.toIntOrNull(),
                             customHeight = customHeight.toIntOrNull(),
+                            customCornerRadius = customCornerRadius.toIntOrNull(),
                             customOutlineThickness = customOutlineThickness.toIntOrNull(),
+                            customPadding = customPadding.toIntOrNull(),
                             customFontFamily = customFontFamily.ifBlank { null },
                             customFontSize = customFontSize.toIntOrNull(),
-                            customFontColor = customFontColor.ifBlank { null }
+                            customFontColor = customFontColor.value.ifBlank { null }
                         )
                         viewModel.updateStudent(seatingChartViewModel, updatedStudent)
                         onDismiss()

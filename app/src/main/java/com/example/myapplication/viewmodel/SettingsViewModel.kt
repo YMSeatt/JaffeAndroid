@@ -17,7 +17,9 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP // Added import
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.utils.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -245,6 +247,24 @@ class SettingsViewModel(
     fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultStudentBoxOutlineThickness(thickness)
+        }
+    }
+
+    val defaultStudentBoxCornerRadius: StateFlow<Int> = preferencesRepository.defaultStudentBoxCornerRadiusFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP)
+
+    fun updateDefaultStudentBoxCornerRadius(cornerRadius: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateDefaultStudentBoxCornerRadius(cornerRadius)
+        }
+    }
+
+    val defaultStudentBoxPadding: StateFlow<Int> = preferencesRepository.defaultStudentBoxPaddingFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, DEFAULT_STUDENT_BOX_PADDING_DP)
+
+    fun updateDefaultStudentBoxPadding(padding: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateDefaultStudentBoxPadding(padding)
         }
     }
 
