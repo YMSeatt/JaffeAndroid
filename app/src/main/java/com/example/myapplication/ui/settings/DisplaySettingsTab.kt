@@ -53,6 +53,8 @@ fun DisplaySettingsTab(
     val defaultOutlineColor by settingsViewModel.defaultStudentBoxOutlineColor.collectAsState()
     val defaultTextColor by settingsViewModel.defaultStudentBoxTextColor.collectAsState()
     val defaultOutlineThickness by settingsViewModel.defaultStudentBoxOutlineThickness.collectAsState()
+    val defaultCornerRadius by settingsViewModel.defaultStudentBoxCornerRadius.collectAsState()
+    val defaultPadding by settingsViewModel.defaultStudentBoxPadding.collectAsState()
 
     var defaultWidthInput by remember(defaultWidth) { mutableStateOf(defaultWidth.toString()) }
     var defaultHeightInput by remember(defaultHeight) { mutableStateOf(defaultHeight.toString()) }
@@ -60,6 +62,8 @@ fun DisplaySettingsTab(
     var defaultOutlineColorInput by remember(defaultOutlineColor) { mutableStateOf(defaultOutlineColor) }
     var defaultTextColorInput by remember(defaultTextColor) { mutableStateOf(defaultTextColor) }
     var defaultOutlineThicknessInput by remember(defaultOutlineThickness) { mutableStateOf(defaultOutlineThickness.toString()) }
+    var defaultCornerRadiusInput by remember(defaultCornerRadius) { mutableStateOf(defaultCornerRadius.toString()) }
+    var defaultPaddingInput by remember(defaultPadding) { mutableStateOf(defaultPadding.toString()) }
 
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -301,6 +305,44 @@ fun DisplaySettingsTab(
                     }
                 },
                 label = { Text("Default Box Outline Thickness (dp)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            OutlinedTextField(
+                value = defaultCornerRadiusInput,
+                onValueChange = {
+                    defaultCornerRadiusInput = it
+                    it.toIntOrNull()?.let { value ->
+                        settingsViewModel.updateDefaultStudentBoxCornerRadius(
+                            value.coerceIn(0, 50)
+                        )
+                    }
+                },
+                label = { Text("Default Box Corner Radius (dp)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            OutlinedTextField(
+                value = defaultPaddingInput,
+                onValueChange = {
+                    defaultPaddingInput = it
+                    it.toIntOrNull()?.let { value ->
+                        settingsViewModel.updateDefaultStudentBoxPadding(
+                            value.coerceIn(0, 50)
+                        )
+                    }
+                },
+                label = { Text("Default Box Padding (dp)") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth()
             )

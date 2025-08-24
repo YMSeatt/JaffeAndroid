@@ -17,6 +17,8 @@ const val DEFAULT_STUDENT_BOX_BG_COLOR_HEX = "#FFFFFFFF" // White, recommend ref
 const val DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX = "#FF000000" // Black for outline, adjust as needed
 const val DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX = "#FF000000"    // Black for text
 const val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP = 1 // Default outline thickness in Dp
+const val DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP = 8
+const val DEFAULT_STUDENT_BOX_PADDING_DP = 4
 const val DEFAULT_STUDENT_FONT_FAMILY = "sans-serif" // Android default
 const val DEFAULT_STUDENT_FONT_SIZE_SP = 16 // Example size in SP
 const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
@@ -39,6 +41,8 @@ class AppPreferencesRepository(private val context: Context) {
         val DEFAULT_STUDENT_BOX_OUTLINE_COLOR = stringPreferencesKey("default_student_box_outline_color")
         val DEFAULT_STUDENT_BOX_TEXT_COLOR = stringPreferencesKey("default_student_box_text_color")
         val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS = intPreferencesKey("default_student_box_outline_thickness")
+        val DEFAULT_STUDENT_BOX_CORNER_RADIUS = intPreferencesKey("default_student_box_corner_radius")
+        val DEFAULT_STUDENT_BOX_PADDING = intPreferencesKey("default_student_box_padding")
 
         val DEFAULT_STUDENT_FONT_FAMILY = stringPreferencesKey("default_student_font_family")
         val DEFAULT_STUDENT_FONT_SIZE = intPreferencesKey("default_student_font_size")
@@ -310,6 +314,28 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] = thickness
+        }
+    }
+
+    val defaultStudentBoxCornerRadiusFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_CORNER_RADIUS] ?: DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
+        }
+
+    suspend fun updateDefaultStudentBoxCornerRadius(cornerRadius: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_STUDENT_BOX_CORNER_RADIUS] = cornerRadius
+        }
+    }
+
+    val defaultStudentBoxPaddingFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_PADDING] ?: DEFAULT_STUDENT_BOX_PADDING_DP
+        }
+
+    suspend fun updateDefaultStudentBoxPadding(padding: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_STUDENT_BOX_PADDING] = padding
         }
     }
 

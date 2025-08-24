@@ -8,7 +8,9 @@ import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 
@@ -25,6 +27,8 @@ fun Student.toStudentUiItem(
     defaultOutlineColor: String = DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX,
     defaultTextColor: String = DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
     defaultOutlineThickness: Int = DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP,
+    defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
+    defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
     defaultFontSize: Int,
     defaultFontColor: String
@@ -50,6 +54,8 @@ fun Student.toStudentUiItem(
         displayOutlineColor = outlineColor,
         displayTextColor = textColor,
         displayOutlineThickness = (customOutlineThickness ?: defaultOutlineThickness).dp,
+        displayCornerRadius = (customCornerRadius ?: defaultCornerRadius).dp,
+        displayPadding = (customPadding ?: defaultPadding).dp,
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
         sessionLogText = sessionLogText,
