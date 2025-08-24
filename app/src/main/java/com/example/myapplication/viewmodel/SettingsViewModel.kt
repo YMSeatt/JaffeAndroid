@@ -419,4 +419,59 @@ class SettingsViewModel(
             preferencesRepository.updateAutoExpandStudentBoxes(enabled)
         }
     }
+
+    val lastExportPath: StateFlow<String?> = preferencesRepository.lastExportPathFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    fun updateLastExportPath(path: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLastExportPath(path)
+        }
+    }
+
+    val encryptDataFiles: StateFlow<Boolean> = preferencesRepository.encryptDataFilesFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
+
+    fun updateEncryptDataFiles(encrypt: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateEncryptDataFiles(encrypt)
+        }
+    }
+
+    suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
+        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
+        val cacheDir = getApplication<Application>().cacheDir
+        val sharedDbFile = java.io.File(cacheDir, "seating_chart_database.db")
+        dbFile.copyTo(sharedDbFile, overwrite = true)
+        return@withContext androidx.core.content.FileProvider.getUriForFile(
+            getApplication(),
+            "com.example.myapplication.fileprovider",
+            sharedDbFile
+        )
+    }
+
+    suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
+        val context = getApplication<Application>()
+        val filename = "screenshot_${System.currentTimeMillis()}.png"
+        val contentValues = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
+            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
+            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES)
+        }
+
+        val resolver = context.contentResolver
+        var uri: Uri? = null
+        try {
+            uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+            uri?.let {
+                resolver.openOutputStream(it)?.use { outputStream ->
+                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            uri = null
+        }
+        uri
+    }
 }

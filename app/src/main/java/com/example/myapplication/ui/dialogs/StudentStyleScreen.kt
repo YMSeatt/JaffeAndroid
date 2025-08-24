@@ -11,6 +11,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -22,10 +23,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.preferences.DEFAULT_STUDENT_FONT_SIZE_SP
+import com.example.myapplication.ui.components.ColorPickerField
 import com.example.myapplication.utils.getAvailableFontFamilies
+import com.example.myapplication.utils.safeParseColor
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.StudentStyleViewModel
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
@@ -78,12 +83,15 @@ fun StudentStyleScreen(
     if (student != null) {
 
         if (showColorPicker.value) {
+            val initialColorStr = colorPickerVar.value?.value
+            val initialColor = if (initialColorStr.isNullOrBlank()) Color.White else safeParseColor(initialColorStr)
             ColorPickerDialog(
                 onColorSelected = { color ->
                     colorPickerVar.value?.value = color
                     showColorPicker.value = false
                 },
-                onDismiss = { showColorPicker.value = false }
+                onDismiss = { showColorPicker.value = false },
+                initialColor = initialColor
             )
         }
 
@@ -92,45 +100,33 @@ fun StudentStyleScreen(
             title = { Text("Customize Style") },
             text = {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    TextField(
-                        value = customBackgroundColor,
-                        onValueChange = { customBackgroundColor = it },
-                        label = { Text("Background Color") },
-                        trailingIcon = {
-                            Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customBackgroundColor)
-                                showColorPicker.value = true
-                            }) {
-                                Text("...")
-                            }
+                    ColorPickerField(
+                        label = "Background Color",
+                        color = customBackgroundColor,
+                        onColorChange = { customBackgroundColor = it },
+                        onColorPickerClick = {
+                            colorPickerVar.value = mutableStateOf(customBackgroundColor)
+                            showColorPicker.value = true
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = customOutlineColor,
-                        onValueChange = { customOutlineColor = it },
-                        label = { Text("Outline Color") },
-                        trailingIcon = {
-                            Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customOutlineColor)
-                                showColorPicker.value = true
-                            }) {
-                                Text("...")
-                            }
+                    ColorPickerField(
+                        label = "Outline Color",
+                        color = customOutlineColor,
+                        onColorChange = { customOutlineColor = it },
+                        onColorPickerClick = {
+                            colorPickerVar.value = mutableStateOf(customOutlineColor)
+                            showColorPicker.value = true
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = customTextColor,
-                        onValueChange = { customTextColor = it },
-                        label = { Text("Text Color") },
-                        trailingIcon = {
-                            Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customTextColor)
-                                showColorPicker.value = true
-                            }) {
-                                Text("...")
-                            }
+                    ColorPickerField(
+                        label = "Text Color",
+                        color = customTextColor,
+                        onColorChange = { customTextColor = it },
+                        onColorPickerClick = {
+                            colorPickerVar.value = mutableStateOf(customTextColor)
+                            showColorPicker.value = true
                         }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -163,7 +159,7 @@ fun StudentStyleScreen(
                             readOnly = true,
                             label = { Text("Font Family") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth()
+                            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth()
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
@@ -185,20 +181,16 @@ fun StudentStyleScreen(
                         value = customFontSize,
                         onValueChange = { customFontSize = it },
                         label = { Text("Font Size (sp)") },
-                        placeholder = { Text("Default: ${DEFAULT_STUDENT_FONT_SIZE_SP}") }
+                        placeholder = { Text("Default: $DEFAULT_STUDENT_FONT_SIZE_SP") }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    TextField(
-                        value = customFontColor,
-                        onValueChange = { customFontColor = it },
-                        label = { Text("Font Color") },
-                        trailingIcon = {
-                            Button(onClick = {
-                                colorPickerVar.value = mutableStateOf(customFontColor)
-                                showColorPicker.value = true
-                            }) {
-                                Text("...")
-                            }
+                    ColorPickerField(
+                        label = "Font Color",
+                        color = customFontColor,
+                        onColorChange = { customFontColor = it },
+                        onColorPickerClick = {
+                            colorPickerVar.value = mutableStateOf(customFontColor)
+                            showColorPicker.value = true
                         }
                     )
                 }
@@ -236,10 +228,11 @@ fun StudentStyleScreen(
 @Composable
 fun ColorPickerDialog(
     onColorSelected: (String) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    initialColor: Color = Color.White
 ) {
     val controller = rememberColorPickerController()
-    var hexCode by remember { mutableStateOf("") }
+    var color by remember { mutableStateOf(initialColor) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -251,14 +244,14 @@ fun ColorPickerDialog(
                     .height(300.dp),
                 controller = controller,
                 onColorChanged = { colorEnvelope: ColorEnvelope ->
-                    hexCode = colorEnvelope.hexCode
+                    color = colorEnvelope.color
                 }
             )
         },
         confirmButton = {
             Button(
                 onClick = {
-                    onColorSelected("#$hexCode")
+                    onColorSelected(String.format("#%08X", color.toArgb()))
                 }
             ) {
                 Text("OK")

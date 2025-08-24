@@ -49,4 +49,7 @@ object DatabaseModule {
 
     @Provides
     fun provideQuizMarkTypeDao(appDatabase: AppDatabase) = appDatabase.quizMarkTypeDao()
+
+    @Provides
+    fun provideGuideDao(appDatabase: AppDatabase) = appDatabase.guideDao()
 }

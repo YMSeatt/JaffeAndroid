@@ -41,6 +41,7 @@ import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.collectAsState
 
 private const val DATABASE_BACKUP_FILENAME = "student_organizer_backup.db"
 
@@ -142,6 +143,19 @@ fun DataSettingsTab(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { restoreLauncher.launch("application/octet-stream") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Restore Database")
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Decrypt data files on import")
+                val encryptDataFiles by settingsViewModel.encryptDataFiles.collectAsState()
+                Switch(
+                    checked = encryptDataFiles,
+                    onCheckedChange = { settingsViewModel.updateEncryptDataFiles(it) }
+                )
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
         }

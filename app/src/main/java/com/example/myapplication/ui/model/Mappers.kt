@@ -20,8 +20,8 @@ fun Furniture.toUiItem(): FurnitureUiItem {
         yPosition = this.yPosition,
         displayWidth = this.width.dp,
         displayHeight = this.height.dp,
-        displayBackgroundColor = safeParseColor(this.fillColor) ?: Color.LightGray,
-        displayOutlineColor = safeParseColor(this.outlineColor) ?: Color.Black,
+        displayBackgroundColor = this.fillColor?.let { safeParseColor(it) } ?: Color.LightGray,
+        displayOutlineColor = this.outlineColor?.let { safeParseColor(it) } ?: Color.Black,
         displayTextColor = Color.Black, // Assuming a default value
         displayOutlineThickness = 1.dp // Assuming a default value
     )

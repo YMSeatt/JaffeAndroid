@@ -1,5 +1,6 @@
 package com.example.myapplication
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -83,6 +84,9 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
+import com.example.myapplication.viewmodel.GuideViewModel
+import com.example.myapplication.data.GuideType
+import com.example.myapplication.utils.captureComposable
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -111,6 +115,7 @@ class MainActivity : ComponentActivity() {
         )
         SettingsViewModelFactory(application, jsonImporter)
     }
+    private val guideViewModel: GuideViewModel by viewModels()
 
     var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
 
@@ -127,6 +132,7 @@ class MainActivity : ComponentActivity() {
                     )
                     if (result.isSuccess) {
                         Toast.makeText(this@MainActivity, "Data exported successfully!", Toast.LENGTH_LONG).show()
+                        settingsViewModel.updateLastExportPath(it.toString())
                     } else {
                         Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                     }
@@ -211,6 +217,7 @@ class MainActivity : ComponentActivity() {
                             seatingChartViewModel = seatingChartViewModel,
                             settingsViewModel = settingsViewModel,
                             studentGroupsViewModel = studentGroupsViewModel,
+                            guideViewModel = guideViewModel,
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
                             },
@@ -235,6 +242,7 @@ fun SeatingChartScreen(
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     studentGroupsViewModel: StudentGroupsViewModel,
+    guideViewModel: GuideViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit
 ) {
@@ -373,6 +381,7 @@ fun SeatingChartScreen(
                     IconButton(onClick = { showFileMenu = true }) {
                         Text("File")
                     }
+                    val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
                     DropdownMenu(
                         expanded = showFileMenu,
                         onDismissRequest = { showFileMenu = false }
@@ -428,9 +437,44 @@ fun SeatingChartScreen(
                             }
                         )
                         DropdownMenuItem(
+                            text = { Text("Open Last Export Folder") },
+                            enabled = lastExportPath != null,
+                            onClick = {
+                                lastExportPath?.let { path ->
+                                    val uri = Uri.parse(path)
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setDataAndType(uri, "vnd.android.document/directory")
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
                             text = { Text("View Data") },
                             onClick = {
                                 onNavigateToDataViewer()
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Export Database") },
+                            onClick = {
+                                coroutineScope.launch {
+                                    val uri = settingsViewModel.shareDatabase()
+                                    if (uri != null) {
+                                        val intent = Intent(Intent.ACTION_SEND)
+                                        intent.type = "application/octet-stream"
+                                        intent.putExtra(Intent.EXTRA_STREAM, uri)
+                                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        context.startActivity(Intent.createChooser(intent, "Share Database"))
+                                    } else {
+                                        Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
                                 showFileMenu = false
                             }
                         )
@@ -443,6 +487,36 @@ fun SeatingChartScreen(
                         expanded = showViewMenu,
                         onDismissRequest = { showViewMenu = false }
                     ) {
+                        DropdownMenuItem(
+                            text = { Text("Add Vertical Guide") },
+                            onClick = {
+                                guideViewModel.addGuide(GuideType.VERTICAL, -offsetX / scale)
+                                showViewMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Add Horizontal Guide") },
+                            onClick = {
+                                guideViewModel.addGuide(GuideType.HORIZONTAL, -offsetY / scale)
+                                showViewMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Take Screenshot") },
+                            onClick = {
+                                coroutineScope.launch {
+                                    val view = (context as Activity).window.decorView
+                                    val bitmap = captureComposable(view, (context as Activity).window)
+                                    if (bitmap != null) {
+                                        settingsViewModel.saveScreenshot(bitmap)
+                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showViewMenu = false
+                            }
+                        )
                         AppTheme.entries.forEach { theme ->
                             DropdownMenuItem(
                                 text = {
@@ -558,8 +632,9 @@ fun SeatingChartScreen(
                         translationY = offsetY
                     )
             ) {
-                GridAndRulers(
+                                GridAndRulers(
                     settingsViewModel = settingsViewModel,
+                    guideViewModel = guideViewModel,
                     scale = scale,
                     offsetX = offsetX,
                     offsetY = offsetY

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class], version = 16, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class], version = 17, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -24,6 +24,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun quizTemplateDao(): QuizTemplateDao
     abstract fun homeworkTemplateDao(): HomeworkTemplateDao
     abstract fun quizMarkTypeDao(): QuizMarkTypeDao
+    abstract fun guideDao(): GuideDao
 
     companion object {
         const val DATABASE_NAME = "seating_chart_database"
@@ -442,6 +443,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_16_17 = object : Migration(16, 17) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `guides` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `position` REAL NOT NULL
+                    )
+                """.trimIndent())
+            }
+        }
+
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -450,7 +463,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     DATABASE_NAME
                 )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16) // Added MIGRATION_15_16
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17) // Added MIGRATION_16_17
                 .fallbackToDestructiveMigration()
                 .build()
                 INSTANCE = instance

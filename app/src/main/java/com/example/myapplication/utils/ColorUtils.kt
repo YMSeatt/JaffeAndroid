@@ -1,14 +1,15 @@
 package com.example.myapplication.utils
 
-import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
 
-fun safeParseColor(colorString: String?): Color? {
+fun safeParseColor(colorString: String): Color {
+    if (colorString.isBlank()) {
+        return Color.White
+    }
     return try {
-        colorString?.let { Color(it.toColorInt()) }
+        Color(colorString.toColorInt())
     } catch (e: IllegalArgumentException) {
-        Log.e("ColorUtils", "Failed to parse color: $colorString", e)
-        null
+        Color.White
     }
 }

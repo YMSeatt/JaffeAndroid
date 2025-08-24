@@ -8,6 +8,8 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
+import com.example.myapplication.utils.SecurityUtil
+import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
@@ -15,7 +17,11 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class Importer(private val context: Context, private val db: AppDatabase) {
+class Importer(
+    private val context: Context,
+    private val db: AppDatabase,
+    private val settingsViewModel: SettingsViewModel
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -53,9 +59,22 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         return db.studentDao().getStudentByStringId(stringId)?.id ?: 0L
     }
 
-    private fun readAssetFile(fileName: String): String? {
+    private suspend fun readAssetFile(fileName: String): String? {
         return try {
-            context.assets.open(fileName).bufferedReader().use { it.readText() }
+            val inputStream = context.assets.open(fileName)
+            val bytes = inputStream.readBytes()
+            inputStream.close()
+
+            if (settingsViewModel.encryptDataFiles.first()) {
+                try {
+                    SecurityUtil.decrypt(String(bytes))
+                } catch (e: Exception) {
+                    // If decryption fails, assume it's plaintext
+                    String(bytes)
+                }
+            } else {
+                String(bytes)
+            }
         } catch (e: IOException) {
             Log.e("Importer", "Error reading asset file: $fileName", e)
             null
@@ -65,10 +84,21 @@ class Importer(private val context: Context, private val db: AppDatabase) {
     suspend fun importData(uri: android.net.Uri) {
         withContext(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader().use { it?.readText() }
-                if (jsonString != null) {
-                    // We need to figure out which type of file this is.
-                    // For now, we assume it's a classroom_data file.
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+
+                if (bytes != null) {
+                    val jsonString = if (settingsViewModel.encryptDataFiles.first()) {
+                        try {
+                            SecurityUtil.decrypt(String(bytes))
+                        } catch (e: Exception) {
+                            // If decryption fails, assume it's plaintext
+                            String(bytes)
+                        }
+                    } else {
+                        String(bytes)
+                    }
                     importClassroomDataFromJson(jsonString)
                 }
             } catch (e: Exception) {

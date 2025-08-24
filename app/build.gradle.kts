@@ -107,6 +107,9 @@ dependencies {
     // DocumentFile
     implementation("androidx.documentfile:documentfile:1.0.1")
 
+    // Fernet
+    implementation("com.macasaet.fernet:fernet-java8:1.5.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

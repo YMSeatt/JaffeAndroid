@@ -29,12 +29,13 @@ fun Student.toStudentUiItem(
     defaultFontSize: Int,
     defaultFontColor: String
 ): StudentUiItem {
-    val backgroundColor = safeParseColor(customBackgroundColor) ?: safeParseColor(defaultBackgroundColor) ?: Color.White
-    val outlineColor = safeParseColor(customOutlineColor) ?: safeParseColor(groupColor) ?: safeParseColor(defaultOutlineColor) ?: Color.Black
-    val textColor = safeParseColor(customTextColor) ?: safeParseColor(defaultTextColor) ?: Color.Black
+    val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
+    val customTextColor = customTextColor?.let { safeParseColor(it) }
+    val outlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+    val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
     val fontFamily = customFontFamily ?: defaultFontFamily
     val fontSize = customFontSize ?: defaultFontSize
-    val fontColor = safeParseColor(customFontColor) ?: safeParseColor(defaultFontColor) ?: Color.Black
+    val fontColor = customFontColor?.let { safeParseColor(it) } ?: safeParseColor(defaultFontColor) ?: Color.Black
 
     return StudentUiItem(
         id = this.id.toInt(),
@@ -45,14 +46,14 @@ fun Student.toStudentUiItem(
         yPosition = yPosition.toDouble(),
         displayWidth = (customWidth ?: defaultWidth).dp,
         displayHeight = (customHeight ?: defaultHeight).dp,
-        displayBackgroundColor = backgroundColor,
+        displayBackgroundColor = customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor),
         displayOutlineColor = outlineColor,
         displayTextColor = textColor,
         displayOutlineThickness = (customOutlineThickness ?: defaultOutlineThickness).dp,
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
         sessionLogText = sessionLogText,
-        groupColor = safeParseColor(groupColor),
+        groupColor = groupColor?.let { safeParseColor(it) },
         groupId = groupId,
         fontFamily = fontFamily,
         fontSize = fontSize,

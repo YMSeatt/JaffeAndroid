@@ -67,6 +67,30 @@ class AppPreferencesRepository(private val context: Context) {
         val EDIT_MODE_ENABLED = booleanPreferencesKey("edit_mode_enabled")
         val AUTO_EXPAND_STUDENT_BOXES = booleanPreferencesKey("auto_expand_student_boxes")
         val STUDENT_LOGS_LAST_CLEARED = stringSetPreferencesKey("student_logs_last_cleared")
+        val LAST_EXPORT_PATH = stringPreferencesKey("last_export_path")
+        val ENCRYPT_DATA_FILES = booleanPreferencesKey("encrypt_data_files")
+    }
+
+    val lastExportPathFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_EXPORT_PATH]
+        }
+
+    suspend fun updateLastExportPath(path: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LAST_EXPORT_PATH] = path
+        }
+    }
+
+    val encryptDataFilesFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.ENCRYPT_DATA_FILES] ?: true
+        }
+
+    suspend fun updateEncryptDataFiles(encrypt: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.ENCRYPT_DATA_FILES] = encrypt
+        }
     }
 
     val studentLogsLastClearedFlow: Flow<Map<Long, Long>> = context.dataStore.data
