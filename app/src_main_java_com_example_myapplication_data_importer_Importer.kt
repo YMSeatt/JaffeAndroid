@@ -83,8 +83,6 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         // Import Students
         val studentDao = db.studentDao()
         classroomData.students.values.forEach { studentDto ->
-            val widthDouble = studentDto.width
-            val heightDouble = studentDto.height
             val student = Student(
                 stringId = studentDto.id,
                 firstName = studentDto.firstName,
@@ -93,8 +91,8 @@ class Importer(private val context: Context, private val db: AppDatabase) {
                 gender = studentDto.gender,
                 xPosition = studentDto.x.toFloat(),
                 yPosition = studentDto.y.toFloat(),
-                customWidth = widthDouble.toInt(),
-                customHeight = heightDouble.toInt()
+                customWidth = studentDto.width.toInt(),
+                customHeight = studentDto.height.toInt()
                 // groupId will be handled later if needed
             )
             studentDao.insert(student)
@@ -104,16 +102,14 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         // Import Furniture
         val furnitureDao = db.furnitureDao()
         classroomData.furniture.values.forEach { furnitureDto ->
-            val furnitureWidthDouble = furnitureDto.width
-            val furnitureHeightDouble = furnitureDto.height
             val furniture = Furniture(
                 stringId = furnitureDto.id,
                 name = furnitureDto.name,
                 type = furnitureDto.type,
                 xPosition = furnitureDto.x.toFloat(),
                 yPosition = furnitureDto.y.toFloat(),
-                width = furnitureWidthDouble.toInt(),
-                height = furnitureHeightDouble.toInt(),
+                width = furnitureDto.width.toInt(),
+                height = furnitureDto.height.toInt(),
                 fillColor = furnitureDto.fillColor,
                 outlineColor = furnitureDto.outlineColor
             )
@@ -163,7 +159,7 @@ class Importer(private val context: Context, private val db: AppDatabase) {
                  val homeworkLog = HomeworkLog(
                     studentId = getStudentDbId(hwLogEntry.studentId),
                     loggedAt = dateFormat.parse(hwLogEntry.timestamp)?.time ?: 0L,
-                    assignmentName = hwLogEntry.homeworkType ?: "Unknown",
+                    assignmentName = hwLogEntry.homeworkType,
                     status = hwLogEntry.homeworkStatus ?: hwLogEntry.behavior,
                     comment = hwLogEntry.comment
                 )

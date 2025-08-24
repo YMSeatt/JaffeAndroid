@@ -16,6 +16,9 @@ interface StudentGroupDao {
     @Query("SELECT * FROM student_groups WHERE id = :groupId")
     suspend fun getStudentGroupById(groupId: Long): StudentGroup?
 
+    @Query("SELECT * FROM student_groups WHERE name = :name") // Added this method
+    suspend fun getGroupByName(name: String): StudentGroup? // Added this method
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(studentGroup: StudentGroup): Long
 

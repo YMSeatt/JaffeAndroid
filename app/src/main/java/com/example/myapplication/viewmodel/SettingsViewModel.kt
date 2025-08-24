@@ -33,7 +33,13 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 
-class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+import com.example.myapplication.data.importer.JsonImporter
+import androidx.documentfile.provider.DocumentFile
+
+class SettingsViewModel(
+    application: Application,
+    private val jsonImporter: JsonImporter
+) : AndroidViewModel(application) {
 
     private val preferencesRepository = AppPreferencesRepository(application)
     private val db = AppDatabase.getDatabase(application)
@@ -48,9 +54,32 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     private val quizMarkTypeDao = db.quizMarkTypeDao()
     private val quizTemplateDao = db.quizTemplateDao()
     private val homeworkTemplateDao = db.homeworkTemplateDao()
+    private val behaviorEventDao = db.behaviorEventDao()
+    private val homeworkLogDao = db.homeworkLogDao()
 
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
+
+    suspend fun importFromJson(uri: Uri) {
+        val directory = DocumentFile.fromTreeUri(getApplication(), uri)
+
+        val classroomDataFile = directory?.findFile("classroom_data_v10.json")
+        val studentGroupsFile = directory?.findFile("student_groups_v10.json")
+        val customBehaviorsFile = directory?.findFile("custom_behaviors_v10.json")
+        val customHomeworkStatusesFile = directory?.findFile("custom_homework_statuses_v10.json")
+        val customHomeworkTypesFile = directory?.findFile("custom_homework_types_v10.json")
+
+        if (classroomDataFile != null && studentGroupsFile != null && customBehaviorsFile != null && customHomeworkStatusesFile != null && customHomeworkTypesFile != null) {
+            jsonImporter.importData(
+                classroomDataUri = classroomDataFile.uri,
+                studentGroupsUri = studentGroupsFile.uri,
+                customBehaviorsUri = customBehaviorsFile.uri,
+                customHomeworkStatusesUri = customHomeworkStatusesFile.uri,
+                customHomeworkTypesUri = customHomeworkTypesFile.uri
+            )
+        }
+    }
+
 
     val recentLogsLimit: StateFlow<Int> = preferencesRepository.recentLogsLimitFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for homework logs
@@ -379,6 +408,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateEditModeEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateEditModeEnabled(enabled)
+        }
+    }
+
+    val autoExpandStudentBoxes: StateFlow<Boolean> = preferencesRepository.autoExpandStudentBoxesFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
+
+    fun updateAutoExpandStudentBoxes(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateAutoExpandStudentBoxes(enabled)
         }
     }
 }

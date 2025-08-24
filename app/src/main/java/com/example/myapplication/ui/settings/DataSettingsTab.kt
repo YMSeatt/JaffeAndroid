@@ -39,7 +39,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.StudentRepository
-import com.example.myapplication.utils.ExcelImportUtil
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -78,7 +77,7 @@ fun DataSettingsTab(
         onResult = { uri: Uri? ->
             uri?.let {
                 coroutineScope.launch {
-                    ExcelImportUtil.importStudentsFromExcel(it, context, studentRepository)
+                    // TODO: Implement this with the new importer
                 }
             }
         }
@@ -106,6 +105,17 @@ fun DataSettingsTab(
         }
     )
 
+    val importJsonLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+        onResult = { uri: Uri? ->
+            uri?.let {
+                coroutineScope.launch {
+                    settingsViewModel.importFromJson(it)
+                }
+            }
+        }
+    )
+
     val restoreComplete by settingsViewModel.restoreComplete.observeAsState()
     LaunchedEffect(restoreComplete) {
         if (restoreComplete == true) {
@@ -120,6 +130,10 @@ fun DataSettingsTab(
         item {
             Button(onClick = { importStudentsLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Import Students from Excel")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { importJsonLauncher.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+                Text("Import from Python App")
             }
             Spacer(Modifier.height(8.dp))
             Button(onClick = { backupLauncher.launch(DATABASE_BACKUP_FILENAME) }, modifier = Modifier.fillMaxWidth()) {

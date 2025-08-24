@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StudentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertStudent(student: Student): Long
+    suspend fun insert(student: Student): Long
 
     @Update
     suspend fun updateStudent(student: Student)
@@ -41,8 +41,8 @@ interface StudentDao {
     @Query("SELECT BE.* FROM behavior_events BE JOIN students S ON BE.studentId = S.id WHERE S.id = :studentId ORDER BY BE.timestamp DESC LIMIT :limit")
     fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>
 
-    @Query("SELECT s.id FROM students s WHERE s.stringId = :stringId")
-    suspend fun getStudentIdByStringId(stringId: String): Long?
+    @Query("SELECT * FROM students WHERE stringId = :stringId")
+    suspend fun getStudentByStringId(stringId: String): Student?
 
     @Query("UPDATE students SET xPosition = :x, yPosition = :y WHERE id = :id")
     suspend fun updatePosition(id: Long, x: Float, y: Float)

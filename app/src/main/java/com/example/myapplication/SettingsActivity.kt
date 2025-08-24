@@ -4,19 +4,21 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.StudentRepository
+import com.example.myapplication.data.importer.JsonImporter
+import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.settings.SettingsNavHost
+import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import com.example.myapplication.preferences.AppTheme
+import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
-import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class SettingsActivity : ComponentActivity() {
 
@@ -28,14 +30,29 @@ class SettingsActivity : ComponentActivity() {
             homeworkLogDao = db.homeworkLogDao(),
             furnitureDao = db.furnitureDao(),
             quizLogDao = db.quizLogDao(),
-            studentGroupDao = db.studentGroupDao(),
             layoutTemplateDao = db.layoutTemplateDao(),
-            conditionalFormattingRuleDao = db.conditionalFormattingRuleDao(),
-            quizMarkTypeDao = db.quizMarkTypeDao()
+            quizMarkTypeDao = db.quizMarkTypeDao(),
+            context = applicationContext
         )
     }
 
-    private val settingsViewModel: SettingsViewModel by viewModels()
+    private val jsonImporter by lazy {
+        JsonImporter(
+            context = applicationContext,
+            studentDao = db.studentDao(),
+            furnitureDao = db.furnitureDao(),
+            behaviorEventDao = db.behaviorEventDao(),
+            homeworkLogDao = db.homeworkLogDao(),
+            studentGroupDao = db.studentGroupDao(),
+            customBehaviorDao = db.customBehaviorDao(),
+            customHomeworkStatusDao = db.customHomeworkStatusDao(),
+            customHomeworkTypeDao = db.customHomeworkTypeDao()
+        )
+    }
+
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModelFactory(application, jsonImporter)
+    }
 
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {
         object : ViewModelProvider.Factory {

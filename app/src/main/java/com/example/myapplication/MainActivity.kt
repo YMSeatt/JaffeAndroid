@@ -7,7 +7,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -49,16 +48,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.LifecycleCoroutineScope
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.Student
+import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
 import com.example.myapplication.ui.PasswordScreen
@@ -70,9 +70,7 @@ import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
-import com.example.myapplication.ui.dialogs.ExportFilterDialog
-import com.example.myapplication.ui.dialogs.ExportFilterOptions
-import com.example.myapplication.ui.dialogs.ExportType
+import com.example.myapplication.ui.dialogs.ExportDialog
 import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
 import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
 import com.example.myapplication.ui.dialogs.LoadLayoutDialog
@@ -81,10 +79,11 @@ import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import com.example.myapplication.utils.ExcelImportUtil
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
+import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -94,24 +93,38 @@ enum class SessionType {
     HOMEWORK
 }
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
-    private val settingsViewModel: SettingsViewModel by viewModels()
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        val db = AppDatabase.getDatabase(applicationContext)
+        val jsonImporter = JsonImporter(
+            application,
+            db.studentDao(),
+            db.furnitureDao(),
+            db.behaviorEventDao(),
+            db.homeworkLogDao(),
+            db.studentGroupDao(),
+            db.customBehaviorDao(),
+            db.customHomeworkStatusDao(),
+            db.customHomeworkTypeDao()
+        )
+        SettingsViewModelFactory(application, jsonImporter)
+    }
 
-    private var pendingExportFilterOptions by mutableStateOf<ExportFilterOptions?>(null)
+    var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
 
-    private val filteredExportLauncher = registerForActivityResult(
+    val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     ) { uri: Uri? ->
-        pendingExportFilterOptions?.let { filterOptions ->
-            uri?.let {
+        uri?.let {
+            pendingExportOptions?.let { options ->
                 lifecycleScope.launch {
-                                        val result = seatingChartViewModel.exportFilteredData(
+                    val result = seatingChartViewModel.exportData(
                         context = this@MainActivity,
                         uri = it,
-                        filterOptions = filterOptions
+                        options = options
                     )
-
                     if (result.isSuccess) {
                         Toast.makeText(this@MainActivity, "Data exported successfully!", Toast.LENGTH_LONG).show()
                     } else {
@@ -120,7 +133,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        pendingExportFilterOptions = null // Clear pending options
+        pendingExportOptions = null
     }
 
     private val studentGroupsViewModelFactory by lazy {
@@ -136,9 +149,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
+    val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
 
-    private val importJsonLauncher = registerForActivityResult(
+    val importJsonLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
@@ -149,59 +162,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            // This part needs to be handled by the specific action that requested the permission
-            // For example, if export requested it, then proceed with export.
-            // For now, just a toast.
-            Toast.makeText(this, "Permission granted!", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "Storage permission denied", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val createDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    ) { uri: Uri? ->
-        uri?.let {
-            lifecycleScope.launch {
-                val exportData = seatingChartViewModel.getExportData()
-                if (exportData.students.isEmpty()) {
-                    Toast.makeText(this@MainActivity, "No student data to export", Toast.LENGTH_SHORT).show()
-                    return@launch
-                }
-                val result = ExcelImportUtil.exportData(
-                    context = this@MainActivity,
-                    uri = it,
-                    allStudents = exportData.students,
-                    behaviorLogs = exportData.behaviorEvents,
-                    homeworkLogs = exportData.homeworkLogs,
-                    quizLogs = exportData.quizLogs,
-                    filterOptions = ExportFilterOptions(
-                        startDate = null,
-                        endDate = null,
-                        exportBehaviorLogs = true,
-                        exportHomeworkLogs = true,
-                        exportQuizLogs = true,
-                        selectedStudentIds = exportData.students.map { s -> s.id },
-                        exportType = ExportType.MASTER_LOG,
-                        includeSummary = true,
-                        separateSheets = true,
-                        includeMasterLog = true
-                    )
-                )
-                if (result.isSuccess) {
-                    Toast.makeText(this@MainActivity, "Data exported successfully", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this@MainActivity, "Failed to export data: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    private val importStudentsLauncher = registerForActivityResult(
+    val importStudentsLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
@@ -250,16 +211,10 @@ class MainActivity : ComponentActivity() {
                             seatingChartViewModel = seatingChartViewModel,
                             settingsViewModel = settingsViewModel,
                             studentGroupsViewModel = studentGroupsViewModel,
-                            createDocumentLauncher = createDocumentLauncher,
-                            importStudentsLauncher = importStudentsLauncher,
-                            importJsonLauncher = importJsonLauncher,
-                            lifecycleScope = lifecycleScope,
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
                             },
-                            onNavigateToDataViewer = { showDataViewer = true },
-                            onPendingExportFilterOptionsChanged = { options -> pendingExportFilterOptions = options },
-                            filteredExportLauncher = filteredExportLauncher
+                            onNavigateToDataViewer = { showDataViewer = true }
                         )
                     }
                 } else {
@@ -280,14 +235,8 @@ fun SeatingChartScreen(
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     studentGroupsViewModel: StudentGroupsViewModel,
-    createDocumentLauncher: ActivityResultLauncher<String>,
-    importStudentsLauncher: ActivityResultLauncher<String>,
-    importJsonLauncher: ActivityResultLauncher<String>,
-    lifecycleScope: LifecycleCoroutineScope,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDataViewer: () -> Unit,
-    onPendingExportFilterOptionsChanged: (ExportFilterOptions?) -> Unit,
-    filteredExportLauncher: ActivityResultLauncher<String>
+    onNavigateToDataViewer: () -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
@@ -302,7 +251,7 @@ fun SeatingChartScreen(
     var showStudentActionMenu by remember { mutableStateOf(false) }
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
-    var showExportFilterDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
     var showChangeBoxSizeDialog by remember { mutableStateOf(false) }
     var showStudentStyleDialog by remember { mutableStateOf(false) }
     var selectMode by remember { mutableStateOf(false) }
@@ -319,6 +268,7 @@ fun SeatingChartScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
+    var canvasSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
@@ -437,7 +387,14 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("Import from JSON") },
                             onClick = {
-                                importJsonLauncher.launch("application/json")
+                                (context as? MainActivity)?.importJsonLauncher?.launch("application/json")
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import from Python") },
+                            onClick = {
+                                seatingChartViewModel.importFromPythonAssets(context)
                                 showFileMenu = false
                             }
                         )
@@ -451,7 +408,7 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("Import Students from Excel") },
                             onClick = {
-                                importStudentsLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                                (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
                                 showFileMenu = false
                             }
                         )
@@ -459,7 +416,7 @@ fun SeatingChartScreen(
                             text = { Text("Export to Excel") },
                             onClick = {
                                 if (seatingChartViewModel.studentsForDisplay.value?.isNotEmpty() == true) {
-                                    showExportFilterDialog = true
+                                    showExportDialog = true
                                 } else {
                                     Toast.makeText(
                                         context,
@@ -590,6 +547,7 @@ fun SeatingChartScreen(
                         offsetY += pan.y
                     }
                 }
+                .onSizeChanged { canvasSize = it }
         ) {
             Box(
                 modifier = Modifier
@@ -614,6 +572,8 @@ fun SeatingChartScreen(
                         settingsViewModel = settingsViewModel,
                         showBehavior = showRecentBehavior,
                         scale = scale,
+                        canvasSize = canvasSize,
+                        canvasOffset = Offset(offsetX, offsetY),
                         isSelected = selectedStudentIds.contains(studentItem.id),
                         onClick = {
                             if (selectMode) {
@@ -645,9 +605,8 @@ fun SeatingChartScreen(
                                 }
                             }
                         },
-                        onLongClick = { position ->
+                        onLongClick = {
                             selectedStudentUiItemForAction = studentItem
-                            longPressPosition = position
                             showStudentActionMenu = true
                         },
                         onResize = { width, height ->
@@ -927,14 +886,14 @@ fun SeatingChartScreen(
             )
         }
 
-        if (showExportFilterDialog) {
-            ExportFilterDialog(
+        if (showExportDialog) {
+            ExportDialog(
                 viewModel = seatingChartViewModel,
-                onDismissRequest = { showExportFilterDialog = false },
-                onExport = { filterOptions ->
-                    onPendingExportFilterOptionsChanged(filterOptions)
-                    filteredExportLauncher.launch("seating_chart_filtered_export.xlsx")
-                    showExportFilterDialog = false
+                onDismissRequest = { showExportDialog = false },
+                onExport = { options ->
+                    (context as? MainActivity)?.pendingExportOptions = options
+                    (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
+                    showExportDialog = false
                 }
             )
         }

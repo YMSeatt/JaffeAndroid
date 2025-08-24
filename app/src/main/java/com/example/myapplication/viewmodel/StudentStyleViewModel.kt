@@ -26,6 +26,10 @@ class StudentStyleViewModel @Inject constructor(
     }
 
     fun updateStudent(seatingChartViewModel: SeatingChartViewModel, student: Student) {
-        seatingChartViewModel.updateStudentStyle(student)
+        viewModelScope.launch { // Launch a coroutine for the update and subsequent load
+            seatingChartViewModel.updateStudentStyle(student)
+            // After the update, explicitly reload the student to ensure the StateFlow is refreshed
+            _student.value = repository.getStudentById(student.id)
+        }
     }
 }

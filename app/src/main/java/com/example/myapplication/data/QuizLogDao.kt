@@ -11,7 +11,7 @@ import androidx.room.Update
 @Dao
 interface QuizLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertQuizLog(log: QuizLog)
+    suspend fun insert(log: QuizLog)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(logs: List<QuizLog>)

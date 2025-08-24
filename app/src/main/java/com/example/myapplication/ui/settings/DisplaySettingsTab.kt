@@ -314,6 +314,7 @@ fun DisplaySettingsTab(
         }
         item {
             val showGrid by settingsViewModel.showGrid.collectAsState()
+    val autoExpandStudentBoxes by settingsViewModel.autoExpandStudentBoxes.collectAsState()
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()

@@ -18,12 +18,15 @@ data class Student(
     var initials: String? = null, // Customizable, can be null
     var xPosition: Float = 0f,
     var yPosition: Float = 0f,
-    val customWidth: Int? = null,           // e.g., in dp
-    val customHeight: Int? = null,          // e.g., in dp
-    val customBackgroundColor: String? = null, // e.g., hex string like "#FFFFFF"
-    val customOutlineColor: String? = null,  // e.g., hex string
-    val customTextColor: String? = null,      // e.g., hex string
-    val customOutlineThickness: Int? = null // e.g., in dp
+        var customWidth: Int? = null,           // e.g., in dp
+    var customHeight: Int? = null,          // e.g., in dp
+    var customBackgroundColor: String? = null, // e.g., hex string like "#FFFFFF"
+    var customOutlineColor: String? = null,  // e.g., hex string
+    var customTextColor: String? = null,      // e.g., hex string
+    var customOutlineThickness: Int? = null,
+    var customFontFamily: String? = null,
+    var customFontSize: Int? = null,
+    var customFontColor: String? = null // e.g., in dp
 ) {
     // Secondary constructor or init block could be used for auto-generation
     // if a more complex logic is needed, or handle it in the ViewModel/Repository

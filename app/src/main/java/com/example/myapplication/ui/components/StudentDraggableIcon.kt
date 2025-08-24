@@ -9,8 +9,8 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -31,9 +31,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -50,9 +51,11 @@ fun StudentDraggableIcon(
     settingsViewModel: SettingsViewModel,
     showBehavior: Boolean,
     scale: Float,
+    canvasSize: androidx.compose.ui.unit.IntSize,
+    canvasOffset: androidx.compose.ui.geometry.Offset,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: (Offset) -> Unit,
+    onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean
 ) {
@@ -61,9 +64,33 @@ fun StudentDraggableIcon(
     val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState()
     val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
+    val autoExpandEnabled by settingsViewModel.autoExpandStudentBoxes.collectAsState()
     var width by remember { mutableStateOf(studentUiItem.displayWidth) }
     var height by remember { mutableStateOf(studentUiItem.displayHeight) }
+    var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
+    val density = LocalDensity.current
 
+
+    LaunchedEffect(cardSize, canvasSize, canvasOffset, scale) {
+        if (cardSize == androidx.compose.ui.unit.IntSize.Zero || canvasSize == androidx.compose.ui.unit.IntSize.Zero) return@LaunchedEffect
+
+        val scaledCardHeight = cardSize.height * scale
+        val studentBoxScreenY = (offsetY * scale) + canvasOffset.y
+        val canvasBottom = canvasSize.height
+
+        if (studentBoxScreenY + scaledCardHeight > canvasBottom) {
+            val newOffsetY = (canvasBottom - scaledCardHeight - canvasOffset.y) / scale
+            if (newOffsetY.roundToInt() != offsetY.roundToInt()) {
+                viewModel.updateStudentPosition(
+                    studentUiItem.id,
+                    studentUiItem.xPosition.toFloat(),
+                    studentUiItem.yPosition.toFloat(),
+                    offsetX,
+                    newOffsetY
+                )
+            }
+        }
+    }
 
     LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
         offsetX = studentUiItem.xPosition.toFloat()
@@ -79,12 +106,10 @@ fun StudentDraggableIcon(
         Box(
             modifier = Modifier
                 .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                .width(width)
-                .height(height)
         ) {
             Card(
                 modifier = Modifier
-                    .fillMaxSize()
+                    .onSizeChanged { cardSize = it }
                     .pointerInput(studentUiItem.id) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
@@ -116,13 +141,30 @@ fun StudentDraggableIcon(
                     }
                     .combinedClickable(
                         onClick = onClick,
-                        onLongClick = onLongClick as (() -> Unit)?
+                        onLongClick = onLongClick
                     )
                     .border(
                         BorderStroke(
                             if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
                             if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor
                         )
+                    )
+                    .then(
+                        if (!autoExpandEnabled) {
+                            Modifier.width(width).height(height)
+                        } else {
+                            val calculatedHeight = calculateStudentIconHeight(
+                                defaultHeight = studentUiItem.displayHeight,
+                                showBehavior = showBehavior,
+                                behaviorText = studentUiItem.recentBehaviorDescription.joinToString("\n"),
+                                homeworkText = studentUiItem.recentHomeworkDescription.joinToString("\n"),
+                                sessionLogText = studentUiItem.sessionLogText.joinToString("\n"),
+                                lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
+                            )
+                            Modifier
+                                .width(studentUiItem.displayWidth) // Always respect minimum width
+                                .heightIn(min = studentUiItem.displayHeight) // Respect minimum height, and expand if content is larger
+                        }
                     ),
                 colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
                 elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(
@@ -132,7 +174,6 @@ fun StudentDraggableIcon(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .fillMaxSize()
                         .padding(8.dp)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -187,8 +228,10 @@ fun StudentDraggableIcon(
                             detectDragGestures {
                                 change, dragAmount ->
                                 change.consume()
-                                width += (dragAmount.x / scale).dp
-                                height += (dragAmount.y / scale).dp
+                                with(density) {
+                                    width += (dragAmount.x / scale).toDp()
+                                    height += (dragAmount.y / scale).toDp()
+                                }
                                 onResize(width.value, height.value)
                             }
                         }

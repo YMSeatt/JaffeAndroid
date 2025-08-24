@@ -17,6 +17,9 @@ const val DEFAULT_STUDENT_BOX_BG_COLOR_HEX = "#FFFFFFFF" // White, recommend ref
 const val DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX = "#FF000000" // Black for outline, adjust as needed
 const val DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX = "#FF000000"    // Black for text
 const val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP = 1 // Default outline thickness in Dp
+const val DEFAULT_STUDENT_FONT_FAMILY = "sans-serif" // Android default
+const val DEFAULT_STUDENT_FONT_SIZE_SP = 16 // Example size in SP
+const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
 
 class AppPreferencesRepository(private val context: Context) {
@@ -36,6 +39,10 @@ class AppPreferencesRepository(private val context: Context) {
         val DEFAULT_STUDENT_BOX_OUTLINE_COLOR = stringPreferencesKey("default_student_box_outline_color")
         val DEFAULT_STUDENT_BOX_TEXT_COLOR = stringPreferencesKey("default_student_box_text_color")
         val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS = intPreferencesKey("default_student_box_outline_thickness")
+
+        val DEFAULT_STUDENT_FONT_FAMILY = stringPreferencesKey("default_student_font_family")
+        val DEFAULT_STUDENT_FONT_SIZE = intPreferencesKey("default_student_font_size")
+        val DEFAULT_STUDENT_FONT_COLOR = stringPreferencesKey("default_student_font_color")
 
         val PASSWORD_ENABLED = booleanPreferencesKey("password_enabled")
         val PASSWORD_HASH = stringPreferencesKey("password_hash")
@@ -58,6 +65,7 @@ class AppPreferencesRepository(private val context: Context) {
         val SHOW_RULERS = booleanPreferencesKey("show_rulers")
         val SHOW_GRID = booleanPreferencesKey("show_grid")
         val EDIT_MODE_ENABLED = booleanPreferencesKey("edit_mode_enabled")
+        val AUTO_EXPAND_STUDENT_BOXES = booleanPreferencesKey("auto_expand_student_boxes")
         val STUDENT_LOGS_LAST_CLEARED = stringSetPreferencesKey("student_logs_last_cleared")
     }
 
@@ -100,6 +108,17 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateEditModeEnabled(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.EDIT_MODE_ENABLED] = enabled
+        }
+    }
+
+    val autoExpandStudentBoxesFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTO_EXPAND_STUDENT_BOXES] ?: true // Default to true
+        }
+
+    suspend fun updateAutoExpandStudentBoxes(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.AUTO_EXPAND_STUDENT_BOXES] = enabled
         }
     }
 
@@ -267,6 +286,39 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] = thickness
+        }
+    }
+
+    val defaultStudentFontFamilyFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_FAMILY] ?: DEFAULT_STUDENT_FONT_FAMILY
+        }
+
+    suspend fun updateDefaultStudentFontFamily(fontFamily: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_STUDENT_FONT_FAMILY] = fontFamily
+        }
+    }
+
+    val defaultStudentFontSizeFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_SIZE] ?: DEFAULT_STUDENT_FONT_SIZE_SP
+        }
+
+    suspend fun updateDefaultStudentFontSize(fontSize: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_STUDENT_FONT_SIZE] = fontSize
+        }
+    }
+
+    val defaultStudentFontColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] ?: DEFAULT_STUDENT_FONT_COLOR_HEX
+        }
+
+    suspend fun updateDefaultStudentFontColor(colorHex: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] = colorHex
         }
     }
 

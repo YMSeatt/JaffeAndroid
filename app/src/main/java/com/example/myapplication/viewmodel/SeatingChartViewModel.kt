@@ -27,7 +27,6 @@ import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
-import com.example.myapplication.data.ExportData
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
@@ -41,10 +40,10 @@ import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppPreferencesRepository
-import com.example.myapplication.ui.dialogs.ExportFilterOptions
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
+import com.example.myapplication.ui.model.toUiItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -57,12 +56,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
 
-
-data class SeatingChartState(
-    val students: List<Student>,
-    val furniture: List<Furniture>
-)
-
 class SeatingChartViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: StudentRepository
@@ -74,8 +67,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     private val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
     private val studentGroupDao: StudentGroupDao =
         AppDatabase.getDatabase(application).studentGroupDao()
-    private val conditionalFormattingRuleDao =
-        AppDatabase.getDatabase(application).conditionalFormattingRuleDao()
     private val homeworkTemplateDao =
         AppDatabase.getDatabase(application).homeworkTemplateDao() // Assuming this exists
     private val quizTemplateDao =
@@ -101,6 +92,8 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     val allQuizTemplates: LiveData<List<QuizTemplate>>
     val quizMarkTypes: LiveData<List<QuizMarkType>>
+    val allCustomBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>>
+    val allCustomHomeworkTypes: LiveData<List<com.example.myapplication.data.CustomHomeworkType>>
 
 
     private val commandUndoStack = Stack<Command>()
@@ -124,22 +117,23 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             studentDao,
             behaviorEventDao,
             homeworkLogDao,
-            furnitureDao,
             quizLogDao,
-            studentGroupDao,
+            furnitureDao,
             layoutTemplateDao,
-            conditionalFormattingRuleDao,
-            quizMarkTypeDao
+            quizMarkTypeDao,
+            application
         )
         allStudents = repository.allStudents
-        allFurniture = repository.getAllFurniture()
-        allLayoutTemplates = repository.getAllLayoutTemplates()
+        allFurniture = repository.getAllFurniture().asLiveData()
+        allLayoutTemplates = repository.getAllLayoutTemplates().asLiveData()
         allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
         allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
         allQuizLogs = quizLogDao.getAllQuizLogs()
         allQuizTemplates = quizTemplateDao.getAllQuizTemplates().asLiveData()
-        quizMarkTypes = repository.getAllQuizMarkTypes()
+        quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
+        allCustomBehaviors = AppDatabase.getDatabase(application).customBehaviorDao().getAllCustomBehaviors()
+        allCustomHomeworkTypes = AppDatabase.getDatabase(application).customHomeworkTypeDao().getAllCustomHomeworkTypes()
 
 
         studentsForDisplay.addSource(allStudents) {
@@ -167,7 +161,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     private fun observePreferenceChanges() {
         viewModelScope.launch {
-            combine(
+            combine<Any, Unit>(
                 appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
                 appPreferencesRepository.recentLogsLimitFlow,
                 appPreferencesRepository.useInitialsForBehaviorFlow,
@@ -177,7 +171,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 appPreferencesRepository.defaultStudentBoxBackgroundColorFlow,
                 appPreferencesRepository.defaultStudentBoxOutlineColorFlow,
                 appPreferencesRepository.defaultStudentBoxTextColorFlow,
-                appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow
+                appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow,
+                appPreferencesRepository.defaultStudentFontFamilyFlow,
+                appPreferencesRepository.defaultStudentFontSizeFlow,
+                appPreferencesRepository.defaultStudentFontColorFlow
             ) { _ ->
                 updateStudentsForDisplay()
             }.collect()
@@ -206,6 +203,9 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val defaultOutlineColor = appPreferencesRepository.defaultStudentBoxOutlineColorFlow.first()
             val defaultTextColor = appPreferencesRepository.defaultStudentBoxTextColorFlow.first()
             val defaultOutlineThickness = appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow.first()
+            val defaultFontFamily = appPreferencesRepository.defaultStudentFontFamilyFlow.first()
+            val defaultFontSize = appPreferencesRepository.defaultStudentFontSizeFlow.first()
+            val defaultFontColor = appPreferencesRepository.defaultStudentFontColorFlow.first()
 
             val studentsWithBehavior = students.map { student ->
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
@@ -242,7 +242,10 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                     defaultBackgroundColor = defaultBgColor,
                     defaultOutlineColor = defaultOutlineColor,
                     defaultTextColor = defaultTextColor,
-                    defaultOutlineThickness = defaultOutlineThickness
+                    defaultOutlineThickness = defaultOutlineThickness,
+                    defaultFontFamily = defaultFontFamily,
+                    defaultFontSize = defaultFontSize,
+                    defaultFontColor = defaultFontColor
                 )
             }
             studentsForDisplay.postValue(studentsWithBehavior)
@@ -284,19 +287,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun getAllStudentsForExport(): List<Student>? {
-        return allStudents.value
-    }
-
-    suspend fun getExportData(): ExportData = withContext(Dispatchers.IO) {
-        val students = allStudents.value ?: emptyList()
-        val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-        val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-        val quizLogs = quizLogDao.getAllQuizLogsList()
-        return@withContext ExportData(students, behaviorEvents, homeworkLogs, quizLogs)
-    }
-
-    suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent> {
+    private suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent> {
         return if (studentIds.isNullOrEmpty()) {
             behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
         } else {
@@ -304,7 +295,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog> {
+    private suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog> {
         return if (studentIds.isNullOrEmpty()) {
             homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
         } else {
@@ -312,7 +303,7 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog> {
+    private suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog> {
         return if (studentIds.isNullOrEmpty()) {
             quizLogDao.getFilteredQuizLogs(startDate, endDate)
         } else {
@@ -320,45 +311,46 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    suspend fun exportFilteredData(
+    suspend fun exportData(
         context: Context,
         uri: Uri,
-        filterOptions: ExportFilterOptions
+        options: com.example.myapplication.data.exporter.ExportOptions
     ): Result<Unit> = withContext(Dispatchers.IO) {
         val allStudentsList = allStudents.value ?: emptyList()
-        val filteredBehaviorLogs = if (filterOptions.exportBehaviorLogs) {
+        val behaviorLogs = if (options.includeBehaviorLogs) {
             getFilteredBehaviorEvents(
-                filterOptions.startDate!!,
-                filterOptions.endDate!!,
-                filterOptions.selectedStudentIds
+                options.startDate ?: 0,
+                options.endDate ?: Long.MAX_VALUE,
+                options.studentIds
             )
         } else emptyList()
 
-        val filteredHomeworkLogs = if (filterOptions.exportHomeworkLogs) {
+        val homeworkLogs = if (options.includeHomeworkLogs) {
             getFilteredHomeworkLogs(
-                filterOptions.startDate!!,
-                filterOptions.endDate!!,
-                filterOptions.selectedStudentIds
+                options.startDate ?: 0,
+                options.endDate ?: Long.MAX_VALUE,
+                options.studentIds
             )
         } else emptyList()
 
-        val filteredQuizLogs = if (filterOptions.exportQuizLogs) {
+        val quizLogs = if (options.includeQuizLogs) {
             getFilteredQuizLogs(
-                filterOptions.startDate!!,
-                filterOptions.endDate!!,
-                filterOptions.selectedStudentIds
+                options.startDate ?: 0,
+                options.endDate ?: Long.MAX_VALUE,
+                options.studentIds
             )
         } else emptyList()
 
-        return@withContext com.example.myapplication.utils.ExcelImportUtil.exportData(
-            context = context,
+        val exporter = com.example.myapplication.data.exporter.Exporter(context)
+        exporter.exportToXlsx(
             uri = uri,
-            filterOptions = filterOptions,
-            allStudents = allStudentsList,
-            behaviorLogs = filteredBehaviorLogs,
-            homeworkLogs = filteredHomeworkLogs,
-            quizLogs = filteredQuizLogs
+            students = allStudentsList,
+            behaviorLogs = behaviorLogs,
+            homeworkLogs = homeworkLogs,
+            quizLogs = quizLogs,
+            options = options
         )
+        return@withContext Result.success(Unit)
     }
 
     suspend fun importStudentsFromExcel(context: Context, uri: Uri): Result<Int> {
@@ -367,7 +359,14 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
 
     fun importData(context: Context, uri: Uri) {
         viewModelScope.launch {
-            com.example.myapplication.data.importer.Importer(context).importData(uri)
+            com.example.myapplication.data.importer.Importer(context, AppDatabase.getDatabase(context)).importData(uri)
+        }
+    }
+
+    fun importFromPythonAssets(context: Context) {
+        viewModelScope.launch {
+            val importer = com.example.myapplication.data.importer.Importer(context, AppDatabase.getDatabase(context))
+            importer.importFromAssets()
         }
     }
 
@@ -425,10 +424,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
                 executeCommand(command)
             }
         }
-    }
-
-    fun deleteStudents(studentId: Int) {
-        deleteStudents(setOf(studentId))
     }
 
     fun updateStudentPosition(
@@ -522,7 +517,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
 
-            val firstStudent = selectedStudents.first()
             val newStudents = when (alignment) {
                 "top" -> {
                     val topY = selectedStudents.minOf { it.yPosition }
@@ -622,19 +616,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     suspend fun internalUpdateFurniture(furniture: Furniture) {
         withContext(Dispatchers.IO) {
             repository.updateFurniture(furniture)
-        }
-    }
-
-    fun deleteFurnitureById(furnitureId: Long) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val furniture = repository.getFurnitureById(furnitureId)
-            furniture?.let {
-                val command = DeleteFurnitureCommand(
-                    this@SeatingChartViewModel,
-                    it
-                )
-                executeCommand(command)
-            }
         }
     }
 
@@ -860,73 +841,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    private val _groupsForRandomAssignment = MutableLiveData<List<StudentGroup>>()
-    val groupsForRandomAssignment: LiveData<List<StudentGroup>> = _groupsForRandomAssignment
-
-    fun loadGroupsForRandomAssignment() {
-        viewModelScope.launch {
-            _groupsForRandomAssignment.value = studentGroupDao.getAllStudentGroups().first()
-        }
-    }
-
-    fun performRandomAssignment(
-        selectedGroupIds: List<Long>,
-        assignmentType: String, // "PAIRS" or "THREES"
-        shouldIncludeUngrouped: Boolean
-    ) {
-        viewModelScope.launch {
-            // This should also be a command
-
-            // 1. Fetch students based on selection
-            val studentsToAssign = mutableListOf<Student>()
-            val selectedStudents = studentDao.getStudentsByGroupIds(selectedGroupIds).first()
-            studentsToAssign.addAll(selectedStudents)
-
-            if (shouldIncludeUngrouped) {
-                val ungroupedStudents = studentDao.getUngroupedStudents().first()
-                studentsToAssign.addAll(ungroupedStudents)
-            }
-
-            // 2. Shuffle and create new groups
-            studentsToAssign.shuffle()
-            val newSubgroups = mutableListOf<List<Student>>()
-            val groupSize = if (assignmentType == "PAIRS") 2 else 3
-
-            for (i in studentsToAssign.indices step groupSize) {
-                val end = minOf(i + groupSize, studentsToAssign.size)
-                newSubgroups.add(studentsToAssign.subList(i, end))
-            }
-            if (newSubgroups.size > 1 && newSubgroups.last().size == 1) {
-                val lastStudent = newSubgroups.removeAt(newSubgroups.lastIndex).first()
-                newSubgroups.last().toMutableList().add(lastStudent)
-            }
-
-
-            // 3. Update student positions (simplified logic)
-            // A more complex implementation would arrange them nicely on the screen.
-            var currentX = 50f
-            val startY = 50f
-            val spacingX = 120f
-            val spacingY = 120f
-            val rowWidth = 600f // Approximate width of the screen area for seating
-
-            newSubgroups.forEach { subgroup ->
-                var currentY = startY
-                subgroup.forEach { student ->
-                    student.xPosition = currentX
-                    student.yPosition = currentY
-                    currentY += spacingY
-                }
-                currentX += spacingX
-                if (currentX > rowWidth) {
-                    currentX = 50f
-                    // You might want to increment a row Y-position here for a grid layout
-                }
-            }
-            studentDao.updateAll(studentsToAssign)
-        }
-    }
-
     private suspend fun executeCommand(command: Command) {
         viewModelScope.launch {
             command.execute()
@@ -935,20 +849,5 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
         }.join()
     }
 
-    private fun Furniture.toUiItem(): FurnitureUiItem {
-        return FurnitureUiItem(
-            id = this.id,
-            name = this.name,
-            stringId = this.stringId,
-            xPosition = this.xPosition,
-            yPosition = this.yPosition,
-            type = this.type,
-            displayBackgroundColor = this.fillColor?.let { androidx.compose.ui.graphics.Color(it.toColorInt()) } ?: androidx.compose.ui.graphics.Color.LightGray,
-            displayOutlineColor = this.outlineColor?.let { androidx.compose.ui.graphics.Color(it.toColorInt()) } ?: androidx.compose.ui.graphics.Color.Black,
-            displayTextColor = androidx.compose.ui.graphics.Color.Black,
-            displayOutlineThickness = 20.dp,
-            displayWidth = this.width.dp,
-            displayHeight = this.height.dp
-        )
-    }
+    
 }

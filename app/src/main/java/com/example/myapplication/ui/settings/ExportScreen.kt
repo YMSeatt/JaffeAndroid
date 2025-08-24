@@ -1,66 +1,63 @@
 package com.example.myapplication.ui.settings
 
-import android.content.Context
-import android.net.Uri
-import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.StudentRepository
+import com.example.myapplication.data.exporter.ExportOptions
 import kotlinx.coroutines.launch
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
-    val context = LocalContext.current
+fun ExportScreen(
+    studentRepository: StudentRepository,
+    onDismiss: () -> Unit
+) {
+    var startDate by remember { mutableStateOf<Long?>(null) }
+    var endDate by remember { mutableStateOf<Long?>(null) }
+    var includeBehaviorLogs by remember { mutableStateOf(true) }
+    var includeQuizLogs by remember { mutableStateOf(true) }
+    var includeHomeworkLogs by remember { mutableStateOf(true) }
+    var separateSheets by remember { mutableStateOf(true) }
+    var includeMasterLog by remember { mutableStateOf(true) }
+    var includeSummarySheet by remember { mutableStateOf(true) }
+    var includeIndividualStudentSheets by remember { mutableStateOf(true) }
+    var includeStudentInfoSheet by remember { mutableStateOf(true) }
+
     val coroutineScope = rememberCoroutineScope()
 
-    val students by studentRepository.allStudents.observeAsState(initial = emptyList())
-    val behaviorLogs by studentRepository.getAllBehaviorEvents().observeAsState(initial = emptyList())
-    val homeworkLogs by studentRepository.getAllHomeworkLogs().observeAsState(initial = emptyList())
-    val quizLogs by studentRepository.getAllQuizLogs().observeAsState(initial = emptyList())
-
-    var exportType by remember { mutableStateOf<ExportType?>(null) }
-
-
-    val createDocumentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
-    ) { uri: Uri? ->
-        uri?.let {
-            coroutineScope.launch {
-                try {
-                    val jsonString = when (exportType) {
-                        ExportType.STUDENTS -> Json.encodeToString(students)
-                        ExportType.BEHAVIOR_LOGS -> Json.encodeToString(behaviorLogs)
-                        ExportType.HOMEWORK_LOGS -> Json.encodeToString(homeworkLogs)
-                        ExportType.QUIZ_LOGS -> Json.encodeToString(quizLogs)
-                        else -> ""
-                    }
-
-                    if (jsonString.isNotEmpty() && jsonString != "[]") {
-                        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                            outputStream.write(jsonString.toByteArray())
-                        }
-                        Toast.makeText(context, "Data exported successfully", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, "No data to export", Toast.LENGTH_SHORT).show()
-                    }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Failed to export data: ${e.message}", Toast.LENGTH_LONG).show()
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+        onResult = { uri ->
+            uri?.let {
+                coroutineScope.launch {
+                    val options = ExportOptions(
+                        startDate = startDate,
+                        endDate = endDate,
+                        studentIds = null, // Implement student selection
+                        includeBehaviorLogs = includeBehaviorLogs,
+                        includeQuizLogs = includeQuizLogs,
+                        includeHomeworkLogs = includeHomeworkLogs,
+                        separateSheets = separateSheets,
+                        includeMasterLog = includeMasterLog,
+                        includeSummarySheet = includeSummarySheet,
+                        includeIndividualStudentSheets = includeIndividualStudentSheets,
+                        includeStudentInfoSheet = includeStudentInfoSheet
+                    )
+                    studentRepository.exportToExcel(uri, options)
                 }
             }
         }
-    }
+    )
 
     Scaffold(
         topBar = {
@@ -74,56 +71,67 @@ fun ExportScreen(studentRepository: StudentRepository, onDismiss: () -> Unit) {
             )
         }
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Button(
-                onClick = {
-                    exportType = ExportType.STUDENTS
-                    createDocumentLauncher.launch("students.json")
-                          },
-                enabled = students.isNotEmpty()
-            ) {
-                Text("Export Students to JSON")
+            item {
+                Text("Date Range", style = MaterialTheme.typography.titleMedium)
+                // Implement Date Pickers here
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    exportType = ExportType.BEHAVIOR_LOGS
-                    createDocumentLauncher.launch("behavior_logs.json")
-                          },
-                enabled = behaviorLogs.isNotEmpty()
-            ) {
-                Text("Export Behavior Logs to JSON")
+
+            item {
+                Text("Log Types", style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeBehaviorLogs, onCheckedChange = { includeBehaviorLogs = it })
+                    Text("Behavior Logs")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeQuizLogs, onCheckedChange = { includeQuizLogs = it })
+                    Text("Quiz Logs")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeHomeworkLogs, onCheckedChange = { includeHomeworkLogs = it })
+                    Text("Homework Logs")
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    exportType = ExportType.HOMEWORK_LOGS
-                    createDocumentLauncher.launch("homework_logs.json")
-                          },
-                enabled = homeworkLogs.isNotEmpty()
-            ) {
-                Text("Export Homework Logs to JSON")
+
+            item {
+                Text("Output Options", style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = separateSheets, onCheckedChange = { separateSheets = it })
+                    Text("Separate sheets for each log type")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it }, enabled = separateSheets)
+                    Text("Include Master Log")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeSummarySheet, onCheckedChange = { includeSummarySheet = it })
+                    Text("Include Summary Sheet")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
+                    Text("Include Individual Student Sheets")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeStudentInfoSheet, onCheckedChange = { includeStudentInfoSheet = it })
+                    Text("Include Student Info Sheet")
+                }
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = {
-                    exportType = ExportType.QUIZ_LOGS
-                    createDocumentLauncher.launch("quiz_logs.json")
-                          },
-                enabled = quizLogs.isNotEmpty()
-            ) {
-                Text("Export Quiz Logs to JSON")
+
+            item {
+                Button(
+                    onClick = {
+                        exportLauncher.launch("behavior_log_export.xlsx")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Export")
+                }
             }
         }
     }
-}
-enum class ExportType {
-    STUDENTS,
-    BEHAVIOR_LOGS,
-    HOMEWORK_LOGS,
-    QUIZ_LOGS
 }

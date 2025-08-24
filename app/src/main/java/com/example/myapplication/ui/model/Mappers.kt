@@ -8,6 +8,8 @@ import com.example.myapplication.data.Student
 
 
 
+import com.example.myapplication.utils.safeParseColor
+
 fun Furniture.toUiItem(): FurnitureUiItem {
     return FurnitureUiItem(
         id = this.id,
@@ -18,8 +20,8 @@ fun Furniture.toUiItem(): FurnitureUiItem {
         yPosition = this.yPosition,
         displayWidth = this.width.dp,
         displayHeight = this.height.dp,
-        displayBackgroundColor = this.fillColor?.let { Color(it.toColorInt()) } ?: Color.LightGray,
-        displayOutlineColor = this.outlineColor?.let { Color(it.toColorInt()) } ?: Color.Black,
+        displayBackgroundColor = safeParseColor(this.fillColor) ?: Color.LightGray,
+        displayOutlineColor = safeParseColor(this.outlineColor) ?: Color.Black,
         displayTextColor = Color.Black, // Assuming a default value
         displayOutlineThickness = 1.dp // Assuming a default value
     )

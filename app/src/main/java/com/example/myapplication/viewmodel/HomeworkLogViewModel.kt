@@ -18,26 +18,22 @@ class HomeworkLogViewModel(application: Application, private val studentId: Long
 
         init {
             val studentDao = AppDatabase.getDatabase(application).studentDao()
-            val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
-            val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
             val furnitureDao = AppDatabase.getDatabase(application).furnitureDao()
             val quizLogDao = AppDatabase.getDatabase(application).quizLogDao()
-            val studentGroupDao = AppDatabase.getDatabase(application).studentGroupDao()
             val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao()
-            val conditionalFormattingRuleDao =
-                AppDatabase.getDatabase(application).conditionalFormattingRuleDao()
             val quizMarkTypeDao = AppDatabase.getDatabase(application).quizMarkTypeDao()
+            val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
+            val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
 
             studentRepository = StudentRepository(
                 studentDao,
                 behaviorEventDao,
                 homeworkLogDao,
-                furnitureDao,
                 quizLogDao,
-                studentGroupDao,
+                furnitureDao,
                 layoutTemplateDao,
-                conditionalFormattingRuleDao,
-                quizMarkTypeDao
+                quizMarkTypeDao,
+                application
             )
 
             homeworkLogsForStudent = studentRepository.getHomeworkLogsForStudent(studentId)
