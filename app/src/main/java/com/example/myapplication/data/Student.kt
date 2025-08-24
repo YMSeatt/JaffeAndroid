@@ -24,6 +24,8 @@ data class Student(
     var customOutlineColor: String? = null,  // e.g., hex string
     var customTextColor: String? = null,      // e.g., hex string
     var customOutlineThickness: Int? = null,
+    var customCornerRadius: Int? = null,
+    var customPadding: Int? = null,
     var customFontFamily: String? = null,
     var customFontSize: Int? = null,
     var customFontColor: String? = null // e.g., in dp

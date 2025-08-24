@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -166,6 +167,7 @@ fun StudentDraggableIcon(
                                 .heightIn(min = studentUiItem.displayHeight) // Respect minimum height, and expand if content is larger
                         }
                     ),
+                shape = RoundedCornerShape(studentUiItem.displayCornerRadius),
                 colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
                 elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(
                     defaultElevation = 4.dp
@@ -174,7 +176,7 @@ fun StudentDraggableIcon(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .padding(8.dp)
+                        .padding(studentUiItem.displayPadding)
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
