@@ -51,7 +51,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(application, jsonImporter)
+        SettingsViewModelFactory(application)
     }
 
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {

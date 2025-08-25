@@ -37,7 +37,10 @@ class JsonImporter(
     private val customHomeworkTypeDao: CustomHomeworkTypeDao
 ) {
 
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
 
     suspend fun importData(
         classroomDataUri: Uri,

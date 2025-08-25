@@ -39,8 +39,7 @@ import com.example.myapplication.data.importer.JsonImporter
 import androidx.documentfile.provider.DocumentFile
 
 class SettingsViewModel(
-    application: Application,
-    private val jsonImporter: JsonImporter
+    application: Application
 ) : AndroidViewModel(application) {
 
     private val preferencesRepository = AppPreferencesRepository(application)
@@ -58,9 +57,26 @@ class SettingsViewModel(
     private val homeworkTemplateDao = db.homeworkTemplateDao()
     private val behaviorEventDao = db.behaviorEventDao()
     private val homeworkLogDao = db.homeworkLogDao()
+    private lateinit var jsonImporter: JsonImporter
 
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
+
+    init {
+        viewModelScope.launch(Dispatchers.IO) {
+            jsonImporter = JsonImporter(
+                application,
+                studentDao,
+                furnitureDao,
+                behaviorEventDao,
+                homeworkLogDao,
+                studentGroupDao,
+                customBehaviorDao,
+                customHomeworkStatusDao,
+                customHomeworkTypeDao
+            )
+        }
+    }
 
     suspend fun importFromJson(uri: Uri) {
         val directory = DocumentFile.fromTreeUri(getApplication(), uri)
@@ -493,5 +509,32 @@ class SettingsViewModel(
             uri = null
         }
         uri
+    }
+
+    suspend fun exportDataFolder(directoryUri: Uri) = withContext(Dispatchers.IO) {
+        val context = getApplication<Application>()
+        val contentResolver = context.contentResolver
+        val directory = DocumentFile.fromTreeUri(context, directoryUri)
+
+        val filesToExport = listOf(
+            "classroom_data_v10.json",
+            "student_groups_v10.json",
+            "custom_behaviors_v10.json",
+            "custom_homework_statuses_v10.json",
+            "custom_homework_types_v10.json",
+            "homework_templates_v10.json",
+            "quiz_templates_v10.json"
+        )
+
+        filesToExport.forEach { fileName ->
+            val file = directory?.createFile("application/json", fileName)
+            file?.uri?.let { fileUri ->
+                contentResolver.openOutputStream(fileUri)?.use { outputStream ->
+                    context.assets.open(fileName).use { inputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+        }
     }
 }

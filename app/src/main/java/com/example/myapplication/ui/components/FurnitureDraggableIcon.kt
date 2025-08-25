@@ -2,10 +2,10 @@ package com.example.myapplication.ui.components
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -28,14 +28,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import com.example.myapplication.viewmodel.SettingsViewModel
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -45,6 +46,7 @@ fun FurnitureDraggableIcon(
     viewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     scale: Float,
+    canvasOffset: androidx.compose.ui.geometry.Offset,
     onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean
@@ -73,6 +75,12 @@ fun FurnitureDraggableIcon(
                 .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
                 .width(width)
                 .height(height)
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = canvasOffset.x,
+                    translationY = canvasOffset.y
+                )
         ) {
             Card(
                 modifier = Modifier

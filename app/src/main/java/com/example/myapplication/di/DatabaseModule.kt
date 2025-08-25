@@ -52,4 +52,13 @@ object DatabaseModule {
 
     @Provides
     fun provideGuideDao(appDatabase: AppDatabase) = appDatabase.guideDao()
+
+    @Provides
+    fun provideCustomBehaviorDao(appDatabase: AppDatabase) = appDatabase.customBehaviorDao()
+
+    @Provides
+    fun provideCustomHomeworkTypeDao(appDatabase: AppDatabase) = appDatabase.customHomeworkTypeDao()
+
+    @Provides
+    fun provideCustomHomeworkStatusDao(appDatabase: AppDatabase) = appDatabase.customHomeworkStatusDao()
 }

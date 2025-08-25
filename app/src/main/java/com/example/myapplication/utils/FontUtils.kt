@@ -26,3 +26,13 @@ fun getAvailableFontFamilies(): List<String> {
         "fantasy"
     ).distinct().sorted()
 }
+
+fun getFontFamily(fontName: String): FontFamily {
+    return when (fontName) {
+        "Sans-serif" -> FontFamily.SansSerif
+        "Serif" -> FontFamily.Serif
+        "Monospace" -> FontFamily.Monospace
+        "Cursive" -> FontFamily.Cursive
+        else -> FontFamily.Default
+    }
+}

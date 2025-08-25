@@ -6,13 +6,12 @@ import androidx.lifecycle.ViewModelProvider
 import com.example.myapplication.data.importer.JsonImporter
 
 class SettingsViewModelFactory(
-    private val application: Application,
-    private val jsonImporter: JsonImporter
+    private val application: Application
 ) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(SettingsViewModel::class.java)) {
             @Suppress("UNCHECKED_CAST")
-            return SettingsViewModel(application, jsonImporter) as T
+            return SettingsViewModel(application) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

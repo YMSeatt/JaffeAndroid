@@ -58,8 +58,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
+import com.example.myapplication.data.GuideType
 import com.example.myapplication.data.Student
-import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
 import com.example.myapplication.ui.PasswordScreen
@@ -80,13 +80,12 @@ import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.utils.captureComposable
+import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
-import com.example.myapplication.viewmodel.GuideViewModel
-import com.example.myapplication.data.GuideType
-import com.example.myapplication.utils.captureComposable
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -101,19 +100,7 @@ enum class SessionType {
 class MainActivity : ComponentActivity() {
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels {
-        val db = AppDatabase.getDatabase(applicationContext)
-        val jsonImporter = JsonImporter(
-            application,
-            db.studentDao(),
-            db.furnitureDao(),
-            db.behaviorEventDao(),
-            db.homeworkLogDao(),
-            db.studentGroupDao(),
-            db.customBehaviorDao(),
-            db.customHomeworkStatusDao(),
-            db.customHomeworkTypeDao()
-        )
-        SettingsViewModelFactory(application, jsonImporter)
+        SettingsViewModelFactory(application)
     }
     private val guideViewModel: GuideViewModel by viewModels()
 
@@ -179,6 +166,17 @@ class MainActivity : ComponentActivity() {
                 }.onFailure { error ->
                     Toast.makeText(this@MainActivity, "Error importing students: ${error.message}", Toast.LENGTH_LONG).show()
                 }
+            }
+        }
+    }
+
+    val exportDataFolderLauncher = registerForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let {
+            lifecycleScope.launch {
+                settingsViewModel.exportDataFolder(it)
+                Toast.makeText(this@MainActivity, "Data exported successfully", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -443,11 +441,12 @@ fun SeatingChartScreen(
                                 lastExportPath?.let { path ->
                                     val uri = Uri.parse(path)
                                     val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, "vnd.android.document/directory")
+                                    intent.setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     if (intent.resolveActivity(context.packageManager) != null) {
                                         context.startActivity(intent)
                                     } else {
-                                        Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Could not open file", Toast.LENGTH_SHORT).show()
                                     }
                                 }
                                 showFileMenu = false
@@ -475,6 +474,13 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
                                     }
                                 }
+                                showFileMenu = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Open Data Folder") },
+                            onClick = {
+                                (context as? MainActivity)?.exportDataFolderLauncher?.launch(null)
                                 showFileMenu = false
                             }
                         )
@@ -697,6 +703,7 @@ fun SeatingChartScreen(
                         viewModel = seatingChartViewModel,
                         settingsViewModel = settingsViewModel,
                         scale = scale,
+                        canvasOffset = Offset(offsetX, offsetY),
                         onLongClick = {
                             coroutineScope.launch {
                                 editingFurniture =

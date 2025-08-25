@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Guide
@@ -39,7 +40,15 @@ fun GridAndRulers(
     var draggedGuide by remember { mutableStateOf<Guide?>(null) }
 
     if (showGrid) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offsetX,
+                translationY = offsetY
+            )
+        ) {
             val canvasWidth = size.width
             val canvasHeight = size.height
             val gridSizePx = gridSize.dp.toPx() * scale
@@ -74,7 +83,15 @@ fun GridAndRulers(
     }
 
     if (showRulers) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offsetX,
+                translationY = offsetY
+            )
+        ) {
             val canvasWidth = size.width
             val canvasHeight = size.height
             val gridSizePx = gridSize.dp.toPx()

@@ -1,6 +1,7 @@
 package com.example.myapplication.data
 
 import android.content.Context
+import androidx.room.Room
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -11,6 +12,12 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideAppPreferencesRepository(@ApplicationContext context: Context): com.example.myapplication.preferences.AppPreferencesRepository {
+        return com.example.myapplication.preferences.AppPreferencesRepository(context)
+    }
 
     @Provides
     @Singleton
@@ -35,22 +42,4 @@ object AppModule {
             context
         )
     }
-
-    // Add @Provides methods for your DAOs here if they are not already provided elsewhere
-    // For example:
-    // @Provides
-    // @Singleton
-    // fun provideStudentDao(appDatabase: AppDatabase): StudentDao {
-    //     return appDatabase.studentDao()
-    // }
-    //
-    // @Provides
-    // @Singleton
-    // fun provideAppDatabase(@ApplicationContext appContext: Context): AppDatabase {
-    //     return Room.databaseBuilder(
-    //         appContext,
-    //         AppDatabase::class.java,
-    //         "app_database"
-    //     ).build()
-    // }
 }

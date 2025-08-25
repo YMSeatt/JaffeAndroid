@@ -33,13 +33,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.model.StudentUiItem
+import com.example.myapplication.utils.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
@@ -107,6 +110,12 @@ fun StudentDraggableIcon(
         Box(
             modifier = Modifier
                 .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .graphicsLayer(
+                    scaleX = scale,
+                    scaleY = scale,
+                    translationX = canvasOffset.x,
+                    translationY = canvasOffset.y
+                )
         ) {
             Card(
                 modifier = Modifier
@@ -182,7 +191,9 @@ fun StudentDraggableIcon(
                         Text(
                             text = studentUiItem.fullName,
                             color = studentUiItem.displayTextColor,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            fontFamily = getFontFamily(studentUiItem.fontFamily),
+                            fontSize = studentUiItem.fontSize.sp
                         )
                         if (showBehavior) {
                             if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
@@ -191,7 +202,10 @@ fun StudentDraggableIcon(
                                     text = studentUiItem.recentBehaviorDescription.joinToString(
                                         "\n"
                                     ),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                        fontSize = studentUiItem.fontSize.sp
+                                    ),
                                     color = studentUiItem.displayTextColor,
                                     textAlign = TextAlign.Center
                                 )
@@ -202,7 +216,10 @@ fun StudentDraggableIcon(
                                     text = studentUiItem.recentHomeworkDescription.joinToString(
                                         "\n"
                                     ),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                        fontSize = studentUiItem.fontSize.sp
+                                    ),
                                     color = studentUiItem.displayTextColor,
                                     textAlign = TextAlign.Center
                                 )
@@ -211,7 +228,10 @@ fun StudentDraggableIcon(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = studentUiItem.sessionLogText.joinToString("\n"),
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                        fontSize = studentUiItem.fontSize.sp
+                                    ),
                                     color = studentUiItem.displayTextColor,
                                     textAlign = TextAlign.Center
                                 )

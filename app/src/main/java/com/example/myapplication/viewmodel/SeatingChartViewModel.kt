@@ -4,8 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
-import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
@@ -15,7 +13,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.myapplication.commands.AddFurnitureCommand
 import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.commands.Command
-import com.example.myapplication.commands.DeleteFurnitureCommand
 import com.example.myapplication.commands.DeleteStudentCommand
 import com.example.myapplication.commands.LoadLayoutCommand
 import com.example.myapplication.commands.LogBehaviorCommand
@@ -27,16 +24,23 @@ import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.BehaviorEventDao
 import com.example.myapplication.data.Furniture
+import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.HomeworkLogDao
 import com.example.myapplication.data.HomeworkTemplate
+import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.LayoutTemplate
+import com.example.myapplication.data.LayoutTemplateDao
 import com.example.myapplication.data.QuizLog
+import com.example.myapplication.data.QuizLogDao
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.QuizMarkTypeDao
 import com.example.myapplication.data.QuizTemplate
+import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentDao
-import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.preferences.AppPreferencesRepository
@@ -44,6 +48,7 @@ import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -55,25 +60,24 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
+import javax.inject.Inject
 
-class SeatingChartViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository: StudentRepository
-    private val studentDao: StudentDao
-    private val furnitureDao = AppDatabase.getDatabase(application).furnitureDao()
-    private val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao()
-    private val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
-    private val quizLogDao = AppDatabase.getDatabase(application).quizLogDao()
-    private val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
-    private val studentGroupDao: StudentGroupDao =
-        AppDatabase.getDatabase(application).studentGroupDao()
-    private val homeworkTemplateDao =
-        AppDatabase.getDatabase(application).homeworkTemplateDao() // Assuming this exists
-    private val quizTemplateDao =
-        AppDatabase.getDatabase(application).quizTemplateDao() // Assuming this exists
-    private val quizMarkTypeDao = AppDatabase.getDatabase(application).quizMarkTypeDao()
-    private val appPreferencesRepository = AppPreferencesRepository(application)
-
+@HiltViewModel
+class SeatingChartViewModel @Inject constructor(
+    private val repository: StudentRepository,
+    private val studentDao: StudentDao,
+    private val furnitureDao: FurnitureDao,
+    private val layoutTemplateDao: LayoutTemplateDao,
+    private val behaviorEventDao: BehaviorEventDao,
+    private val quizLogDao: QuizLogDao,
+    private val homeworkLogDao: HomeworkLogDao,
+    private val studentGroupDao: StudentGroupDao,
+    private val homeworkTemplateDao: HomeworkTemplateDao,
+    private val quizTemplateDao: QuizTemplateDao,
+    private val quizMarkTypeDao: QuizMarkTypeDao,
+    private val appPreferencesRepository: AppPreferencesRepository,
+    application: Application
+) : AndroidViewModel(application) {
 
     val allStudents: LiveData<List<Student>>
     val allFurniture: LiveData<List<Furniture>>
@@ -111,18 +115,6 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     }
 
     init {
-        val studentDb = AppDatabase.getDatabase(application)
-        studentDao = studentDb.studentDao()
-        repository = StudentRepository(
-            studentDao,
-            behaviorEventDao,
-            homeworkLogDao,
-            quizLogDao,
-            furnitureDao,
-            layoutTemplateDao,
-            quizMarkTypeDao,
-            application
-        )
         allStudents = repository.allStudents
         allFurniture = repository.getAllFurniture().asLiveData()
         allLayoutTemplates = repository.getAllLayoutTemplates().asLiveData()
@@ -802,12 +794,19 @@ class SeatingChartViewModel(application: Application) : AndroidViewModel(applica
     fun endSession() {
         if (isSessionActive.value == true) {
             viewModelScope.launch(Dispatchers.IO) {
-                // Batch insert the session logs into the database
-                sessionQuizLogs.value?.let { quizLogDao.insertAll(it) }
-                sessionHomeworkLogs.value?.let { homeworkLogDao.insertAll(it) }
+                val quizLogsToSave = sessionQuizLogs.value
+                if (!quizLogsToSave.isNullOrEmpty()) {
+                    quizLogDao.insertAll(quizLogsToSave)
+                }
+
+                val homeworkLogsToSave = sessionHomeworkLogs.value
+                if (!homeworkLogsToSave.isNullOrEmpty()) {
+                    homeworkLogDao.insertAll(homeworkLogsToSave)
+                }
+
                 Log.d(
                     "SeatingChartViewModel",
-                    "Session ended. Saved ${sessionQuizLogs.value?.size} quiz logs and ${sessionHomeworkLogs.value?.size} homework logs."
+                    "Session ended. Saved ${quizLogsToSave?.size ?: 0} quiz logs and ${homeworkLogsToSave?.size ?: 0} homework logs."
                 )
                 // Clear the session data
                 sessionQuizLogs.postValue(emptyList())
