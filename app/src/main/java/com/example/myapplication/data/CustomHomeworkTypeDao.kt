@@ -21,4 +21,7 @@ interface CustomHomeworkTypeDao {
 
     @Query("SELECT * FROM custom_homework_types ORDER BY name ASC")
     fun getAllCustomHomeworkTypes(): LiveData<List<CustomHomeworkType>>
+
+    @Query("SELECT * FROM custom_homework_types ORDER BY name ASC")
+    suspend fun getAllCustomHomeworkTypesList(): List<CustomHomeworkType>
 }
