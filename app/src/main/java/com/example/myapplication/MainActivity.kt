@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -48,7 +49,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -123,7 +123,7 @@ class MainActivity : ComponentActivity() {
                         Toast.makeText(this@MainActivity, "Data exported successfully!", Toast.LENGTH_LONG).show()
                         settingsViewModel.updateLastExportPath(it.toString())
                     } else {
-                        Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this@MainActivity, "Export failed: ${'$'}{result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -166,7 +166,7 @@ class MainActivity : ComponentActivity() {
                 result.onSuccess { count ->
                     Toast.makeText(this@MainActivity, "$count students imported successfully", Toast.LENGTH_SHORT).show()
                 }.onFailure { error ->
-                    Toast.makeText(this@MainActivity, "Error importing students: ${error.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this@MainActivity, "Error importing students: ${'$'}{error.message}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -250,7 +250,7 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedStudentIds by seatingChartViewModel.selectedStudentIds.observeAsState(initial = emptySet())
-    
+
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
     var showLiveQuizMarkDialog by remember { mutableStateOf(false) }
@@ -265,7 +265,7 @@ fun SeatingChartScreen(
     var selectMode by remember { mutableStateOf(false) }
 
     var selectedStudentUiItemForAction by remember { mutableStateOf<StudentUiItem?>(null) }
-    
+
     var showAddEditStudentDialog by remember { mutableStateOf(false) }
     var editingStudent by remember { mutableStateOf<Student?>(null) }
     var showAddEditFurnitureDialog by remember { mutableStateOf(false) }
@@ -273,9 +273,7 @@ fun SeatingChartScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var scale by remember { mutableFloatStateOf(1f) }
-    var offsetX by remember { mutableFloatStateOf(0f) }
-    var offsetY by remember { mutableFloatStateOf(0f) }
+
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
@@ -284,6 +282,11 @@ fun SeatingChartScreen(
     var longPressPosition by remember { mutableStateOf(Offset.Zero) }
 
     var currentCanvasSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
+    var scale by remember { mutableFloatStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
+    val hScrollState = rememberScrollState()
+    val vScrollState = rememberScrollState()
+
 
     Scaffold(
         topBar = {
@@ -444,12 +447,19 @@ fun SeatingChartScreen(
                                 lastExportPath?.let { path ->
                                     val uri = Uri.parse(path)
                                     val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                                    intent.setDataAndType(
+                                        uri,
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    )
                                     intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                     if (intent.resolveActivity(context.packageManager) != null) {
                                         context.startActivity(intent)
                                     } else {
-                                        Toast.makeText(context, "Could not open file", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Could not open file",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                                 showFileMenu = false
@@ -472,9 +482,18 @@ fun SeatingChartScreen(
                                         intent.type = "application/octet-stream"
                                         intent.putExtra(Intent.EXTRA_STREAM, uri)
                                         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        context.startActivity(Intent.createChooser(intent, "Share Database"))
+                                        context.startActivity(
+                                            Intent.createChooser(
+                                                intent,
+                                                "Share Database"
+                                            )
+                                        )
                                     } else {
-                                        Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Could not export database",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                                 showFileMenu = false
@@ -499,14 +518,14 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("Add Vertical Guide") },
                             onClick = {
-                                guideViewModel.addGuide(GuideType.VERTICAL, -offsetX / scale)
+                                guideViewModel.addGuide(GuideType.VERTICAL, 0f)
                                 showViewMenu = false
                             }
                         )
                         DropdownMenuItem(
                             text = { Text("Add Horizontal Guide") },
                             onClick = {
-                                guideViewModel.addGuide(GuideType.HORIZONTAL, -offsetY / scale)
+                                guideViewModel.addGuide(GuideType.HORIZONTAL, 0f)
                                 showViewMenu = false
                             }
                         )
@@ -515,12 +534,21 @@ fun SeatingChartScreen(
                             onClick = {
                                 coroutineScope.launch {
                                     val view = (context as Activity).window.decorView
-                                    val bitmap = captureComposable(view, (context as Activity).window)
+                                    val bitmap =
+                                        captureComposable(view, (context as Activity).window)
                                     if (bitmap != null) {
                                         settingsViewModel.saveScreenshot(bitmap)
-                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Screenshot saved",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     } else {
-                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(
+                                            context,
+                                            "Failed to capture screenshot",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                                 showViewMenu = false
@@ -542,11 +570,15 @@ fun SeatingChartScreen(
                     }
 
                     var showModeMenu by remember { mutableStateOf(false) }
-                                        val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+                    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(
+                        initial = false
+                    )
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) {
-                            Text(sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) })
+                            Text(
+                                sessionType.name.lowercase()
+                                    .replaceFirstChar { it.titlecase(Locale.getDefault()) })
                         }
                         DropdownMenu(
                             expanded = showModeMenu,
@@ -619,392 +651,407 @@ fun SeatingChartScreen(
             }
         }
     ) { paddingValues ->
-        Box(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectTransformGestures { _, pan, zoom, _ ->
-                        scale = (scale * zoom).coerceIn(0.5f, 3f)
-                        offsetX += pan.x
-                        offsetY += pan.y
-                    }
-                }
-        ) {
+        Box(modifier = Modifier.fillMaxSize()) {
             Box(
                 modifier = Modifier
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offsetX,
-                        translationY = offsetY
-                    )
+                    .padding(paddingValues)
+                    .fillMaxSize()
                     .onSizeChanged { intSize ->
-                        currentCanvasSize = androidx.compose.ui.geometry.Size(width = intSize.width.toFloat(), height = intSize.height.toFloat())
+                        currentCanvasSize = androidx.compose.ui.geometry.Size(
+                            width = intSize.width.toFloat(),
+                            height = intSize.height.toFloat()
+                        )
+                    }
+                    .pointerInput(Unit) {
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            val oldScale = scale
+                            scale *= zoom
+                            offset =
+                                (offset + centroid / oldScale) - (centroid / scale + pan / oldScale)
+                        }
                     }
             ) {
-                GridAndRulers(
-                    settingsViewModel = settingsViewModel,
-                    guideViewModel = guideViewModel,
-                    scale = scale,
-                    offsetX = offsetX,
-                    offsetY = offsetY,
-//                    canvasSize = currentCanvasSize
-                )
-                students.forEach { studentItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    StudentDraggableIcon(
-                        studentUiItem = studentItem,
-                        viewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        showBehavior = showRecentBehavior,
-                        scale = scale,
-                        canvasOffset = Offset(offsetX, offsetY),
-                        isSelected = selectedStudentIds.contains(studentItem.id),
-                        onClick = {
-                            if (selectMode) {
-                                val currentSelected = selectedStudentIds.toMutableSet()
-                                if (currentSelected.contains(studentItem.id)) {
-                                    currentSelected.remove(studentItem.id)
-                                } else {
-                                    currentSelected.add(studentItem.id)
-                                }
-                                seatingChartViewModel.selectedStudentIds.value = currentSelected
-                            } else {
-                                selectedStudentUiItemForAction = studentItem
-                                when (sessionType) {
-                                    SessionType.BEHAVIOR -> showBehaviorDialog = true
-                                    SessionType.QUIZ -> {
-                                        if (seatingChartViewModel.isSessionActive.value == true) {
-                                            showLiveQuizMarkDialog = true
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        GridAndRulers(
+                            settingsViewModel = settingsViewModel,
+                            guideViewModel = guideViewModel,
+                            scale = scale,
+                            offset = offset,
+                            canvasSize = currentCanvasSize
+                        )
+                        students.forEach { studentItem ->
+                            val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                            StudentDraggableIcon(
+                                studentUiItem = studentItem,
+                                viewModel = seatingChartViewModel,
+                                settingsViewModel = settingsViewModel,
+                                showBehavior = showRecentBehavior,
+                                isSelected = selectedStudentIds.contains(studentItem.id),
+                                onClick = {
+                                    if (selectMode) {
+                                        val currentSelected = selectedStudentIds.toMutableSet()
+                                        if (currentSelected.contains(studentItem.id)) {
+                                            currentSelected.remove(studentItem.id)
+                                        } else {
+                                            currentSelected.add(studentItem.id)
                                         }
-                                        else {
-                                            showLogQuizScoreDialog = true
+                                        seatingChartViewModel.selectedStudentIds.value =
+                                            currentSelected
+                                    } else {
+                                        selectedStudentUiItemForAction = studentItem
+                                        when (sessionType) {
+                                            SessionType.BEHAVIOR -> showBehaviorDialog = true
+                                            SessionType.QUIZ -> {
+                                                if (seatingChartViewModel.isSessionActive.value == true) {
+                                                    showLiveQuizMarkDialog = true
+                                                } else {
+                                                    showLogQuizScoreDialog = true
+                                                }
+                                            }
+
+                                            SessionType.HOMEWORK -> {
+                                                if (seatingChartViewModel.isSessionActive.value == true) {
+                                                    showLiveHomeworkMarkDialog = true
+                                                } else {
+                                                    showAdvancedHomeworkLogDialog = true
+                                                }
+                                            }
                                         }
                                     }
-                                    SessionType.HOMEWORK -> {
-                                        if (seatingChartViewModel.isSessionActive.value == true) {
-                                            showLiveHomeworkMarkDialog = true
-                                        }
-                                        else {
-                                            showAdvancedHomeworkLogDialog = true
-                                        }
+                                },
+                                onLongClick = {
+                                    selectedStudentUiItemForAction = studentItem
+                                    showStudentActionMenu = true
+                                },
+                                onResize = { width, height ->
+                                    seatingChartViewModel.changeBoxSize(
+                                        setOf(studentItem.id),
+                                        width.toInt(),
+                                        height.toInt()
+                                    )
+                                },
+                                noAnimations = noAnimations,
+                                canvasSize = currentCanvasSize.toIntSize(),
+                                canvasScale = scale,
+                                canvasOffset = offset
+                            )
+                        }
+                        furniture.forEach { furnitureItem ->
+                            val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                            FurnitureDraggableIcon(
+                                furnitureUiItem = furnitureItem,
+                                viewModel = seatingChartViewModel,
+                                settingsViewModel = settingsViewModel,
+                                scale = scale,
+                                canvasOffset = offset,
+                                onLongClick = {
+                                    coroutineScope.launch {
+                                        editingFurniture =
+                                            seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                                        showAddEditFurnitureDialog = true
                                     }
-                                }
-                            }
-                        },
-                        onLongClick = {
-                            selectedStudentUiItemForAction = studentItem
-                            showStudentActionMenu = true
-                        },
-                        onResize = { width, height ->
-                            seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt())
-                        },
-                        noAnimations = noAnimations,
-                        canvasSize = currentCanvasSize.toIntSize()
-                    )
+                                },
+                                onResize = { width, height ->
+                                    seatingChartViewModel.changeFurnitureSize(
+                                        furnitureItem.id,
+                                        width.toInt(),
+                                        height.toInt()
+                                    )
+                                },
+                                noAnimations = noAnimations
+                            )
+                        }
+                    }
                 }
-                furniture.forEach { furnitureItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    FurnitureDraggableIcon(
-                        furnitureUiItem = furnitureItem,
-                        viewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        scale = scale,
-                        canvasOffset = Offset(offsetX, offsetY),
-                        onLongClick = {
+            }
+
+            if (showSaveLayoutDialog) {
+                SaveLayoutDialog(
+                    onDismiss = { showSaveLayoutDialog = false },
+                    onSave = { name ->
+                        seatingChartViewModel.saveLayout(name)
+                        showSaveLayoutDialog = false
+                    }
+                )
+            }
+
+            if (showLoadLayoutDialog) {
+                LoadLayoutDialog(
+                    layouts = layouts,
+                    onDismiss = { showLoadLayoutDialog = false },
+                    onLoad = { layout ->
+                        seatingChartViewModel.loadLayout(layout)
+                        showLoadLayoutDialog = false
+                    },
+                    onDelete = { layout ->
+                        seatingChartViewModel.deleteLayoutTemplate(layout)
+                    }
+                )
+            }
+
+            if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
+                val student = selectedStudentUiItemForAction!!
+                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                var showGroupMenu by remember { mutableStateOf(false) }
+
+                DropdownMenu(
+                    expanded = showStudentActionMenu,
+                    onDismissRequest = { showStudentActionMenu = false },
+                    offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit Student") },
+                        onClick = {
                             coroutineScope.launch {
-                                editingFurniture =
-                                    seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                                showAddEditFurnitureDialog = true
+                                editingStudent =
+                                    seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                showAddEditStudentDialog = true
                             }
-                        },
-                        onResize = { width, height ->
-                            seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt())
-                        },
-                        noAnimations = noAnimations
-                    )
-                }
-            }
-        }
-
-        if (showSaveLayoutDialog) {
-            SaveLayoutDialog(
-                onDismiss = { showSaveLayoutDialog = false },
-                onSave = { name ->
-                    seatingChartViewModel.saveLayout(name)
-                    showSaveLayoutDialog = false
-                }
-            )
-        }
-
-        if (showLoadLayoutDialog) {
-            LoadLayoutDialog(
-                layouts = layouts,
-                onDismiss = { showLoadLayoutDialog = false },
-                onLoad = { layout ->
-                    seatingChartViewModel.loadLayout(layout)
-                    showLoadLayoutDialog = false
-                },
-                onDelete = { layout ->
-                    seatingChartViewModel.deleteLayoutTemplate(layout)
-                }
-            )
-        }
-
-        if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
-            val student = selectedStudentUiItemForAction!!
-            val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
-            var showGroupMenu by remember { mutableStateOf(false) }
-
-            DropdownMenu(
-                expanded = showStudentActionMenu,
-                onDismissRequest = { showStudentActionMenu = false },
-                offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Edit Student") },
-                    onClick = {
-                        coroutineScope.launch {
-                            editingStudent =
-                                seatingChartViewModel.getStudentForEditing(student.id.toLong())
-                            showAddEditStudentDialog = true
-                        }
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Delete Student") },
-                    onClick = {
-                        seatingChartViewModel.deleteStudents(setOf(student.id))
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Log Behavior") },
-                    onClick = {
-                        showBehaviorDialog = true
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Log Homework") },
-                    onClick = {
-                        showAdvancedHomeworkLogDialog = true
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Log Quiz Score") },
-                    onClick = {
-                        showLogQuizScoreDialog = true
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Change Student Box Style") },
-                    onClick = {
-                        showStudentStyleDialog = true
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Clear Recent Logs") },
-                    onClick = {
-                        seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Show Recent Logs") },
-                    onClick = {
-                        seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
-                        showStudentActionMenu = false
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text("Assign to Group") },
-                    onClick = { showGroupMenu = true }
-                )
-                if (student.groupId != null) {
-                    DropdownMenuItem(
-                        text = { Text("Remove from Group") },
-                        onClick = {
-                            seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
                             showStudentActionMenu = false
                         }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Delete Student") },
+                        onClick = {
+                            seatingChartViewModel.deleteStudents(setOf(student.id))
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Log Behavior") },
+                        onClick = {
+                            showBehaviorDialog = true
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Log Homework") },
+                        onClick = {
+                            showAdvancedHomeworkLogDialog = true
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Log Quiz Score") },
+                        onClick = {
+                            showLogQuizScoreDialog = true
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Change Student Box Style") },
+                        onClick = {
+                            showStudentStyleDialog = true
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Clear Recent Logs") },
+                        onClick = {
+                            seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Show Recent Logs") },
+                        onClick = {
+                            seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
+                            showStudentActionMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Assign to Group") },
+                        onClick = { showGroupMenu = true }
+                    )
+                    if (student.groupId != null) {
+                        DropdownMenuItem(
+                            text = { Text("Remove from Group") },
+                            onClick = {
+                                seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
+                                showStudentActionMenu = false
+                            }
+                        )
+                    }
+                }
+                DropdownMenu(
+                    expanded = showGroupMenu,
+                    onDismissRequest = { showGroupMenu = false }
+                ) {
+                    groups.forEach { group ->
+                        DropdownMenuItem(
+                            text = { Text(group.name) },
+                            onClick = {
+                                seatingChartViewModel.assignStudentToGroup(
+                                    student.id.toLong(),
+                                    group.id
+                                )
+                                showGroupMenu = false
+                                showStudentActionMenu = false
+                            }
+                        )
+                    }
                 }
             }
-            DropdownMenu(
-                expanded = showGroupMenu,
-                onDismissRequest = { showGroupMenu = false }
-            ) {
-                groups.forEach { group ->
-                    DropdownMenuItem(
-                        text = { Text(group.name) },
-                        onClick = {
-                            seatingChartViewModel.assignStudentToGroup(student.id.toLong(), group.id)
-                            showGroupMenu = false
-                            showStudentActionMenu = false
+
+            if (showBehaviorDialog) {
+                val studentIds = if (selectMode) {
+                    selectedStudentIds.map { it.toLong() }
+                } else {
+                    listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                }
+                BehaviorDialog(
+                    studentIds = studentIds,
+                    viewModel = seatingChartViewModel,
+                    behaviorTypes = behaviorTypeNames, // Pass extracted names
+                    onDismiss = {
+                        showBehaviorDialog = false
+                        selectedStudentUiItemForAction = null
+                    }
+                )
+            }
+
+            if (showLogQuizScoreDialog) {
+                val studentIds = if (selectMode) {
+                    selectedStudentIds.map { it.toLong() }
+                } else {
+                    listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                }
+                LogQuizScoreDialog(
+                    studentIds = studentIds,
+                    viewModel = seatingChartViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismissRequest = {
+                        showLogQuizScoreDialog = false
+                        selectedStudentUiItemForAction = null
+                    },
+                    onSave = { quizLogs ->
+                        if (sessionType == SessionType.QUIZ) {
+                            quizLogs.forEach { seatingChartViewModel.addQuizLogToSession(it) }
+                        } else {
+                            quizLogs.forEach { seatingChartViewModel.saveQuizLog(it) }
+                        }
+                    }
+                )
+            }
+
+            if (showAdvancedHomeworkLogDialog) {
+                val studentIds = if (selectMode) {
+                    selectedStudentIds.map { it.toLong() }
+                } else {
+                    listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                }
+                AdvancedHomeworkLogDialog(
+                    studentIds = studentIds,
+                    viewModel = seatingChartViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismissRequest = {
+                        showAdvancedHomeworkLogDialog = false
+                        selectedStudentUiItemForAction = null
+                    },
+                    onSave = { homeworkLogs ->
+                        if (sessionType == SessionType.HOMEWORK) {
+                            homeworkLogs.forEach { seatingChartViewModel.addHomeworkLogToSession(it) }
+                        } else {
+                            homeworkLogs.forEach { seatingChartViewModel.addHomeworkLog(it) }
+                        }
+                    }
+                )
+            }
+
+            if (showLiveQuizMarkDialog) {
+                selectedStudentUiItemForAction?.let { student ->
+                    LiveQuizMarkDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        onDismissRequest = {
+                            showLiveQuizMarkDialog = false
+                            selectedStudentUiItemForAction = null
+                        },
+                        onSave = { quizLog ->
+                            seatingChartViewModel.addQuizLogToSession(quizLog)
                         }
                     )
                 }
             }
-        }
 
-        if (showBehaviorDialog) {
-            val studentIds = if (selectMode) {
-                selectedStudentIds.map { it.toLong() }
-            } else {
-                listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
-            }
-            BehaviorDialog(
-                studentIds = studentIds,
-                viewModel = seatingChartViewModel,
-                behaviorTypes = behaviorTypeNames, // Pass extracted names
-                onDismiss = {
-                    showBehaviorDialog = false
-                    selectedStudentUiItemForAction = null
+            if (showLiveHomeworkMarkDialog) {
+                selectedStudentUiItemForAction?.let { student ->
+                    LiveHomeworkMarkDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        onDismissRequest = {
+                            showLiveHomeworkMarkDialog = false
+                            selectedStudentUiItemForAction = null
+                        },
+                        onSave = { homeworkLog ->
+                            seatingChartViewModel.addHomeworkLogToSession(homeworkLog)
+                        }
+                    )
                 }
-            )
-        }
-
-        if (showLogQuizScoreDialog) {
-            val studentIds = if (selectMode) {
-                selectedStudentIds.map { it.toLong() }
-            } else {
-                listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
             }
-            LogQuizScoreDialog(
-                studentIds = studentIds,
-                viewModel = seatingChartViewModel,
-                settingsViewModel = settingsViewModel,
-                onDismissRequest = {
-                    showLogQuizScoreDialog = false
-                    selectedStudentUiItemForAction = null
-                },
-                onSave = { quizLogs ->
-                    if (sessionType == SessionType.QUIZ) {
-                        quizLogs.forEach { seatingChartViewModel.addQuizLogToSession(it) }
-                    } else {
-                        quizLogs.forEach { seatingChartViewModel.saveQuizLog(it) }
-                    }
-                }
-            )
-        }
 
-        if (showAdvancedHomeworkLogDialog) {
-            val studentIds = if (selectMode) {
-                selectedStudentIds.map { it.toLong() }
-            } else {
-                listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
-            }
-            AdvancedHomeworkLogDialog(
-                studentIds = studentIds,
-                viewModel = seatingChartViewModel,
-                settingsViewModel = settingsViewModel,
-                onDismissRequest = {
-                    showAdvancedHomeworkLogDialog = false
-                    selectedStudentUiItemForAction = null
-                },
-                onSave = { homeworkLogs ->
-                    if (sessionType == SessionType.HOMEWORK) {
-                        homeworkLogs.forEach { seatingChartViewModel.addHomeworkLogToSession(it) }
-                    } else {
-                        homeworkLogs.forEach { seatingChartViewModel.addHomeworkLog(it) }
-                    }
-                }
-            )
-        }
 
-        if (showLiveQuizMarkDialog) {
-            selectedStudentUiItemForAction?.let { student ->
-                LiveQuizMarkDialog(
-                    studentId = student.id.toLong(),
+            if (showAddEditStudentDialog) {
+                AddEditStudentDialog(
+                    studentToEdit = editingStudent,
                     viewModel = seatingChartViewModel,
-                    onDismissRequest = {
-                        showLiveQuizMarkDialog = false
-                        selectedStudentUiItemForAction = null
-                    },
-                    onSave = { quizLog ->
-                        seatingChartViewModel.addQuizLogToSession(quizLog)
+                    studentGroupsViewModel = studentGroupsViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismiss = {
+                        showAddEditStudentDialog = false
+                        editingStudent = null
                     }
                 )
             }
-        }
 
-        if (showLiveHomeworkMarkDialog) {
-            selectedStudentUiItemForAction?.let { student ->
-                LiveHomeworkMarkDialog(
-                    studentId = student.id.toLong(),
+            if (showAddEditFurnitureDialog) {
+                AddEditFurnitureDialog(
+                    furnitureToEdit = editingFurniture,
                     viewModel = seatingChartViewModel,
-                    onDismissRequest = {
-                        showLiveHomeworkMarkDialog = false
-                        selectedStudentUiItemForAction = null
-                    },
-                    onSave = { homeworkLog ->
-                        seatingChartViewModel.addHomeworkLogToSession(homeworkLog)
+                    settingsViewModel = settingsViewModel,
+                    onDismiss = {
+                        showAddEditFurnitureDialog = false
+                        editingFurniture = null
                     }
                 )
             }
-        }
 
-
-        if (showAddEditStudentDialog) {
-            AddEditStudentDialog(
-                studentToEdit = editingStudent,
-                viewModel = seatingChartViewModel,
-                studentGroupsViewModel = studentGroupsViewModel,
-                settingsViewModel = settingsViewModel,
-                onDismiss = {
-                    showAddEditStudentDialog = false
-                    editingStudent = null
-                }
-            )
-        }
-
-        if (showAddEditFurnitureDialog) {
-            AddEditFurnitureDialog(
-                furnitureToEdit = editingFurniture,
-                viewModel = seatingChartViewModel,
-                settingsViewModel = settingsViewModel,
-                onDismiss = {
-                    showAddEditFurnitureDialog = false
-                    editingFurniture = null
-                }
-            )
-        }
-
-        if (showExportDialog) {
-            ExportDialog(
-                viewModel = seatingChartViewModel,
-                onDismissRequest = { showExportDialog = false },
-                onExport = { options ->
-                    (context as? MainActivity)?.pendingExportOptions = options
-                    (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
-                    showExportDialog = false
-                }
-            )
-        }
-
-        if (showChangeBoxSizeDialog) {
-            ChangeBoxSizeDialog(
-                onDismissRequest = { showChangeBoxSizeDialog = false },
-                onSave = { width, height ->
-                    seatingChartViewModel.changeBoxSize(selectedStudentIds, width, height)
-                    showChangeBoxSizeDialog = false
-                }
-            )
-        }
-
-        if (showStudentStyleDialog) {
-            selectedStudentUiItemForAction?.let { student ->
-                StudentStyleScreen(
-                    studentId = student.id.toLong(),
-                    seatingChartViewModel = seatingChartViewModel,
-                    onDismiss = { showStudentStyleDialog = false }
+            if (showExportDialog) {
+                ExportDialog(
+                    viewModel = seatingChartViewModel,
+                    onDismissRequest = { showExportDialog = false },
+                    onExport = { options ->
+                        (context as? MainActivity)?.pendingExportOptions = options
+                        (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
+                        showExportDialog = false
+                    }
                 )
+            }
+
+            if (showChangeBoxSizeDialog) {
+                ChangeBoxSizeDialog(
+                    onDismissRequest = { showChangeBoxSizeDialog = false },
+                    onSave = { width, height ->
+                        seatingChartViewModel.changeBoxSize(selectedStudentIds, width, height)
+                        showChangeBoxSizeDialog = false
+                    }
+                )
+            }
+
+            if (showStudentStyleDialog) {
+                selectedStudentUiItemForAction?.let { student ->
+                    StudentStyleScreen(
+                        studentId = student.id.toLong(),
+                        seatingChartViewModel = seatingChartViewModel,
+                        onDismiss = { showStudentStyleDialog = false }
+                    )
+                }
             }
         }
     }

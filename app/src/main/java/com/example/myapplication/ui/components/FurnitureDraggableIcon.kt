@@ -72,15 +72,14 @@ fun FurnitureDraggableIcon(
     key(furnitureUiItem) {
         Box(
             modifier = Modifier
-                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                .offset {
+                    IntOffset(
+                        x = ((offsetX * scale) + canvasOffset.x).roundToInt(),
+                        y = ((offsetY * scale) + canvasOffset.y).roundToInt()
+                    )
+                }
                 .width(width)
                 .height(height)
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = canvasOffset.x,
-                    translationY = canvasOffset.y
-                )
         ) {
             Card(
                 modifier = Modifier

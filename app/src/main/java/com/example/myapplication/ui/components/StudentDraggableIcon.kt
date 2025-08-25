@@ -33,11 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,14 +54,14 @@ fun StudentDraggableIcon(
     viewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     showBehavior: Boolean,
-    scale: Float,
     canvasSize: androidx.compose.ui.unit.IntSize,
-    canvasOffset: androidx.compose.ui.geometry.Offset,
     isSelected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
-    noAnimations: Boolean
+    noAnimations: Boolean,
+    canvasScale: Float,
+    canvasOffset: Offset
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
@@ -75,15 +75,14 @@ fun StudentDraggableIcon(
     val density = LocalDensity.current
 
 
-    LaunchedEffect(cardSize, canvasSize, canvasOffset, scale) {
+    LaunchedEffect(cardSize, canvasSize) {
         if (cardSize == androidx.compose.ui.unit.IntSize.Zero || canvasSize == androidx.compose.ui.unit.IntSize.Zero) return@LaunchedEffect
 
-        val scaledCardHeight = cardSize.height * scale
-        val studentBoxScreenY = (offsetY * scale) + canvasOffset.y
+        val studentBoxBottom = offsetY + cardSize.height
         val canvasBottom = canvasSize.height
 
-        if (studentBoxScreenY + scaledCardHeight > canvasBottom) {
-            val newOffsetY = (canvasBottom - scaledCardHeight - canvasOffset.y) / scale
+        if (studentBoxBottom > canvasBottom) {
+            val newOffsetY = (canvasBottom - cardSize.height).toFloat()
             if (newOffsetY.roundToInt() != offsetY.roundToInt()) {
                 viewModel.updateStudentPosition(
                     studentUiItem.id,
@@ -109,13 +108,12 @@ fun StudentDraggableIcon(
     key(studentUiItem) {
         Box(
             modifier = Modifier
-                .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
-                .graphicsLayer(
-                    scaleX = scale,
-                    scaleY = scale,
-                    translationX = canvasOffset.x,
-                    translationY = canvasOffset.y
-                )
+                .offset {
+                    IntOffset(
+                        x = ((offsetX * canvasScale) + canvasOffset.x).roundToInt(),
+                        y = ((offsetY * canvasScale) + canvasOffset.y).roundToInt()
+                    )
+                }
         ) {
             Card(
                 modifier = Modifier
@@ -124,8 +122,8 @@ fun StudentDraggableIcon(
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                offsetX += dragAmount.x / scale
-                                offsetY += dragAmount.y / scale
+                                offsetX += dragAmount.x / canvasScale
+                                offsetY += dragAmount.y / canvasScale
                             },
                             onDragEnd = {
                                 val finalX = if (gridSnapEnabled) {
@@ -163,14 +161,14 @@ fun StudentDraggableIcon(
                         if (!autoExpandEnabled) {
                             Modifier.width(width).height(height)
                         } else {
-                            val calculatedHeight = calculateStudentIconHeight(
-                                defaultHeight = studentUiItem.displayHeight,
-                                showBehavior = showBehavior,
-                                behaviorText = studentUiItem.recentBehaviorDescription.joinToString("\n"),
-                                homeworkText = studentUiItem.recentHomeworkDescription.joinToString("\n"),
-                                sessionLogText = studentUiItem.sessionLogText.joinToString("\n"),
-                                lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
-                            )
+//                            val calculatedHeight = calculateStudentIconHeight(
+//                                defaultHeight = studentUiItem.displayHeight,
+//                                showBehavior = showBehavior,
+//                                behaviorText = studentUiItem.recentBehaviorDescription.joinToString("\n"),
+//                                homeworkText = studentUiItem.recentHomeworkDescription.joinToString("\n"),
+//                                sessionLogText = studentUiItem.sessionLogText.joinToString("\n"),
+//                                lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
+//                            )
                             Modifier
                                 .width(studentUiItem.displayWidth) // Always respect minimum width
                                 .heightIn(min = studentUiItem.displayHeight) // Respect minimum height, and expand if content is larger
@@ -199,9 +197,7 @@ fun StudentDraggableIcon(
                             if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = studentUiItem.recentBehaviorDescription.joinToString(
-                                        "\n"
-                                    ),
+                                    text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),
                                         fontSize = studentUiItem.fontSize.sp
@@ -213,9 +209,7 @@ fun StudentDraggableIcon(
                             if (studentUiItem.recentHomeworkDescription.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = studentUiItem.recentHomeworkDescription.joinToString(
-                                        "\n"
-                                    ),
+                                    text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),
                                         fontSize = studentUiItem.fontSize.sp
@@ -251,8 +245,8 @@ fun StudentDraggableIcon(
                                 change, dragAmount ->
                                 change.consume()
                                 with(density) {
-                                    width += (dragAmount.x / scale).toDp()
-                                    height += (dragAmount.y / scale).toDp()
+                                    width += (dragAmount.x / canvasScale).toDp()
+                                    height += (dragAmount.y / canvasScale).toDp()
                                 }
                                 onResize(width.value, height.value)
                             }
