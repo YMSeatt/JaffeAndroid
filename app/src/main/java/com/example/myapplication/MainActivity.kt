@@ -639,7 +639,7 @@ fun SeatingChartScreen(
                         translationY = offsetY
                     )
             ) {
-                Box(modifier = Modifier.size(4000.dp, 4000.dp)) {
+                Box(modifier = Modifier.size(4000.dp)) {
                     GridAndRulers(
                         settingsViewModel = settingsViewModel,
                         guideViewModel = guideViewModel,
