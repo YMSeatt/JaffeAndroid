@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -638,84 +639,86 @@ fun SeatingChartScreen(
                         translationY = offsetY
                     )
             ) {
-                                GridAndRulers(
-                    settingsViewModel = settingsViewModel,
-                    guideViewModel = guideViewModel,
-                    scale = scale,
-                    offsetX = offsetX,
-                    offsetY = offsetY
-                )
-                students.forEach { studentItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    StudentDraggableIcon(
-                        studentUiItem = studentItem,
-                        viewModel = seatingChartViewModel,
+                Box(modifier = Modifier.size(4000.dp, 4000.dp)) {
+                    GridAndRulers(
                         settingsViewModel = settingsViewModel,
-                        showBehavior = showRecentBehavior,
+                        guideViewModel = guideViewModel,
                         scale = scale,
-                        canvasSize = canvasSize,
-                        canvasOffset = Offset(offsetX, offsetY),
-                        isSelected = selectedStudentIds.contains(studentItem.id),
-                        onClick = {
-                            if (selectMode) {
-                                val currentSelected = selectedStudentIds.toMutableSet()
-                                if (currentSelected.contains(studentItem.id)) {
-                                    currentSelected.remove(studentItem.id)
+                        offsetX = offsetX,
+                        offsetY = offsetY
+                    )
+                    students.forEach { studentItem ->
+                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                        StudentDraggableIcon(
+                            studentUiItem = studentItem,
+                            viewModel = seatingChartViewModel,
+                            settingsViewModel = settingsViewModel,
+                            showBehavior = showRecentBehavior,
+                            scale = scale,
+                            canvasSize = canvasSize,
+                            canvasOffset = Offset(offsetX, offsetY),
+                            isSelected = selectedStudentIds.contains(studentItem.id),
+                            onClick = {
+                                if (selectMode) {
+                                    val currentSelected = selectedStudentIds.toMutableSet()
+                                    if (currentSelected.contains(studentItem.id)) {
+                                        currentSelected.remove(studentItem.id)
+                                    } else {
+                                        currentSelected.add(studentItem.id)
+                                    }
+                                    seatingChartViewModel.selectedStudentIds.value = currentSelected
                                 } else {
-                                    currentSelected.add(studentItem.id)
+                                    selectedStudentUiItemForAction = studentItem
+                                    when (sessionType) {
+                                        SessionType.BEHAVIOR -> showBehaviorDialog = true
+                                        SessionType.QUIZ -> {
+                                            if (seatingChartViewModel.isSessionActive.value == true) {
+                                                showLiveQuizMarkDialog = true
+                                            } else {
+                                                showLogQuizScoreDialog = true
+                                            }
+                                        }
+                                        SessionType.HOMEWORK -> {
+                                            if (seatingChartViewModel.isSessionActive.value == true) {
+                                                showLiveHomeworkMarkDialog = true
+                                            } else {
+                                                showAdvancedHomeworkLogDialog = true
+                                            }
+                                        }
+                                    }
                                 }
-                                seatingChartViewModel.selectedStudentIds.value = currentSelected
-                            } else {
+                            },
+                            onLongClick = {
                                 selectedStudentUiItemForAction = studentItem
-                                when (sessionType) {
-                                    SessionType.BEHAVIOR -> showBehaviorDialog = true
-                                    SessionType.QUIZ -> {
-                                        if (seatingChartViewModel.isSessionActive.value == true) {
-                                            showLiveQuizMarkDialog = true
-                                        } else {
-                                            showLogQuizScoreDialog = true
-                                        }
-                                    }
-                                    SessionType.HOMEWORK -> {
-                                        if (seatingChartViewModel.isSessionActive.value == true) {
-                                            showLiveHomeworkMarkDialog = true
-                                        } else {
-                                            showAdvancedHomeworkLogDialog = true
-                                        }
-                                    }
+                                showStudentActionMenu = true
+                            },
+                            onResize = { width, height ->
+                                seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt())
+                            },
+                            noAnimations = noAnimations
+                        )
+                    }
+                    furniture.forEach { furnitureItem ->
+                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                        FurnitureDraggableIcon(
+                            furnitureUiItem = furnitureItem,
+                            viewModel = seatingChartViewModel,
+                            settingsViewModel = settingsViewModel,
+                            scale = scale,
+                            canvasOffset = Offset(offsetX, offsetY),
+                            onLongClick = {
+                                coroutineScope.launch {
+                                    editingFurniture =
+                                        seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                                    showAddEditFurnitureDialog = true
                                 }
-                            }
-                        },
-                        onLongClick = {
-                            selectedStudentUiItemForAction = studentItem
-                            showStudentActionMenu = true
-                        },
-                        onResize = { width, height ->
-                            seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt())
-                        },
-                        noAnimations = noAnimations
-                    )
-                }
-                furniture.forEach { furnitureItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    FurnitureDraggableIcon(
-                        furnitureUiItem = furnitureItem,
-                        viewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        scale = scale,
-                        canvasOffset = Offset(offsetX, offsetY),
-                        onLongClick = {
-                            coroutineScope.launch {
-                                editingFurniture =
-                                    seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                                showAddEditFurnitureDialog = true
-                            }
-                        },
-                        onResize = { width, height ->
-                            seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt())
-                        },
-                        noAnimations = noAnimations
-                    )
+                            },
+                            onResize = { width, height ->
+                                seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt())
+                            },
+                            noAnimations = noAnimations
+                        )
+                    }
                 }
             }
         }
