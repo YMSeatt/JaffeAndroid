@@ -665,9 +665,9 @@ fun SeatingChartScreen(
                     .pointerInput(Unit) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = scale
-                            scale *= zoom
-                            offset =
-                                (offset + centroid / oldScale) - (centroid / scale + pan / oldScale)
+                            val newScale = (scale * zoom).coerceIn(0.5f, 5f)
+                            offset = (offset - centroid) * (newScale / oldScale) + centroid + pan
+                            scale = newScale
                         }
                     }
             ) {

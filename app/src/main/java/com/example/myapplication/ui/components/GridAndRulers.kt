@@ -26,6 +26,7 @@ import com.example.myapplication.data.GuideType
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.floor
 
 @Composable
@@ -42,84 +43,103 @@ fun GridAndRulers(
     val guides by guideViewModel.guides.collectAsState()
     var draggedGuide by remember { mutableStateOf<Guide?>(null) }
 
-    Canvas(modifier = Modifier.fillMaxSize()
-    ) {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        // Grid (drawn within the transformed canvas)
         withTransform({
-            translate(left = offset.x, top = offset.y)
             scale(scale, scale)
+            translate(left = offset.x, top = offset.y)
         }) {
             if (showGrid) {
                 val gridSizePx = gridSize.dp.toPx()
 
-                val verticalLines = (canvasSize.width / (gridSizePx * scale)).toInt()
-                val horizontalLines = (canvasSize.height / (gridSizePx * scale)).toInt()
+                // Calculate visible world coordinates
+                val worldXStart = -offset.x / scale
+                val worldYStart = -offset.y / scale
+                val worldXEnd = worldXStart + canvasSize.width / scale
+                val worldYEnd = worldYStart + canvasSize.height / scale
 
-                for (i in 0..verticalLines) {
-                    val x = i * gridSizePx
+                // Determine the first and last grid lines to draw
+                val firstLineX = floor(worldXStart / gridSizePx) * gridSizePx
+                var currentX = firstLineX
+                while (currentX < worldXEnd) {
                     drawLine(
-                        start = Offset(x.toFloat(), 0f),
-                        end = Offset(x.toFloat(), canvasSize.height / scale),
+                        start = Offset(currentX, worldYStart),
+                        end = Offset(currentX, worldYEnd),
                         color = Color.LightGray,
                         strokeWidth = 1f / scale
                     )
+                    currentX += gridSizePx
                 }
 
-                for (i in 0..horizontalLines) {
-                    val y = i * gridSizePx
+                val firstLineY = floor(worldYStart / gridSizePx) * gridSizePx
+                var currentY = firstLineY
+                while (currentY < worldYEnd) {
                     drawLine(
-                        start = Offset(0f, y.toFloat()),
-                        end = Offset(canvasSize.width / scale, y.toFloat()),
+                        start = Offset(worldXStart, currentY),
+                        end = Offset(worldXEnd, currentY),
                         color = Color.LightGray,
                         strokeWidth = 1f / scale
                     )
+                    currentY += gridSizePx
                 }
             }
+        }
+
+        // Rulers (drawn outside the transform, in screen space)
         if (showRulers) {
-                val rulerThickness = 30.dp.toPx()
-                val textSize = 12.dp.toPx()
+            val gridSizePx = gridSize.dp.toPx()
+            val rulerThickness = 30.dp.toPx()
+            val textSize = 12.dp.toPx()
 
-                drawIntoCanvas { canvas ->
-                    val paint = android.graphics.Paint().apply {
-                        color = android.graphics.Color.BLACK
-                        textAlign = android.graphics.Paint.Align.CENTER
-                        this.textSize = textSize
-                    }
+            drawIntoCanvas { canvas ->
+                val paint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.BLACK
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    this.textSize = textSize
+                }
 
-                    // Horizontal Ruler
-                    val horizontalRulerY = offset.y
-                    for (i in 0..((canvasSize.width / scale).toInt() / gridSize)) {
-                        val x = i * gridSize.dp.toPx()
+                // Horizontal Ruler
+                val worldXStart = -offset.x / scale
+                val worldXEnd = (size.width - offset.x) / scale
+                val firstTickX = ceil(worldXStart / gridSizePx).toInt()
+                val lastTickX = floor(worldXEnd / gridSizePx).toInt()
+
+                for (i in firstTickX..lastTickX) {
+                    val worldX = i * gridSizePx
+                    val screenX = (worldX * scale) + offset.x
+                    if (screenX >= 0 && screenX <= size.width) {
                         drawLine(
-                            start = Offset(x, horizontalRulerY),
-                            end = Offset(x, horizontalRulerY + rulerThickness / 2),
-                            color = Color.Black,
-                            strokeWidth = 1f
+                            start = Offset(screenX, 0f),
+                            end = Offset(screenX, rulerThickness / 2),
+                            color = Color.Black, strokeWidth = 1f
                         )
                         canvas.nativeCanvas.drawText(
-                            (i * gridSize).toString(),
-                            x,
-                            horizontalRulerY + rulerThickness,
-                            paint
+                            (worldX).toLong().toString(),
+                            screenX, rulerThickness, paint
                         )
                     }
+                }
 
-                    // Vertical Ruler
-                    val verticalRulerX = offset.x
-                    for (i in 0..((canvasSize.height / scale).toInt() / gridSize)) {
-                        val y = i * gridSize.dp.toPx()
+                // Vertical Ruler
+                val worldYStart = -offset.y / scale
+                val worldYEnd = (size.height - offset.y) / scale
+                val firstTickY = ceil(worldYStart / gridSizePx).toInt()
+                val lastTickY = floor(worldYEnd / gridSizePx).toInt()
+
+                for (i in firstTickY..lastTickY) {
+                    val worldY = i * gridSizePx
+                    val screenY = (worldY * scale) + offset.y
+                    if (screenY >= 0 && screenY <= size.height) {
                         drawLine(
-                            start = Offset(verticalRulerX, y),
-                            end = Offset(verticalRulerX + rulerThickness / 2, y),
-                            color = Color.Black,
-                            strokeWidth = 1f
+                            start = Offset(0f, screenY),
+                            end = Offset(rulerThickness / 2, screenY),
+                            color = Color.Black, strokeWidth = 1f
                         )
                         canvas.nativeCanvas.save()
-                        canvas.nativeCanvas.rotate(-90f, verticalRulerX + rulerThickness, y)
+                        canvas.nativeCanvas.rotate(-90f, rulerThickness, screenY)
                         canvas.nativeCanvas.drawText(
-                            (i * gridSize).toString(),
-                            verticalRulerX + rulerThickness,
-                            y,
-                            paint
+                            (worldY).toLong().toString(),
+                            rulerThickness, screenY, paint
                         )
                         canvas.nativeCanvas.restore()
                     }
