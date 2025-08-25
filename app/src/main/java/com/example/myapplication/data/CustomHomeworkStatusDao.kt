@@ -21,4 +21,7 @@ interface CustomHomeworkStatusDao {
 
     @Query("SELECT * FROM custom_homework_statuses ORDER BY name ASC")
     fun getAllCustomHomeworkStatuses(): LiveData<List<CustomHomeworkStatus>>
+
+    @Query("SELECT * FROM custom_homework_statuses ORDER BY name ASC")
+    suspend fun getAllCustomHomeworkStatusesList(): List<CustomHomeworkStatus>
 }

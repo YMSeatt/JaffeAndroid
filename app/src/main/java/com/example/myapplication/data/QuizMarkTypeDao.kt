@@ -23,6 +23,9 @@ interface QuizMarkTypeDao {
     @Query("SELECT * FROM quiz_mark_types ORDER BY name ASC")
     fun getAllQuizMarkTypes(): Flow<List<QuizMarkType>>
 
+    @Query("SELECT * FROM quiz_mark_types ORDER BY name ASC")
+    suspend fun getAllQuizMarkTypesList(): List<QuizMarkType>
+
     @Query("SELECT * FROM quiz_mark_types WHERE id = :id")
     suspend fun getQuizMarkTypeById(id: Long): QuizMarkType?
 }

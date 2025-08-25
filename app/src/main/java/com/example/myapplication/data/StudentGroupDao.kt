@@ -13,6 +13,9 @@ interface StudentGroupDao {
     @Query("SELECT * FROM student_groups ORDER BY name ASC")
     fun getAllStudentGroups(): Flow<List<StudentGroup>>
 
+    @Query("SELECT * FROM student_groups ORDER BY name ASC")
+    suspend fun getAllStudentGroupsList(): List<StudentGroup>
+
     @Query("SELECT * FROM student_groups WHERE id = :groupId")
     suspend fun getStudentGroupById(groupId: Long): StudentGroup?
 
