@@ -147,15 +147,15 @@ fun StudentDraggableIcon(
                             }
                         )
                     }
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = onLongClick
-                    )
                     .border(
                         BorderStroke(
                             if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
                             if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
                         )
+                    )
+                    .combinedClickable(
+                        onClick = onClick,
+                        onLongClick = onLongClick
                     )
                     .then(
                         if (!autoExpandEnabled) {

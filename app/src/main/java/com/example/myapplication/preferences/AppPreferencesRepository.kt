@@ -12,7 +12,7 @@ val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "se
 
 // Default values for student box appearance
 const val DEFAULT_STUDENT_BOX_WIDTH_DP = 120
-const val DEFAULT_STUDENT_BOX_HEIGHT_DP = 100
+const val DEFAULT_STUDENT_BOX_HEIGHT_DP = 60
 const val DEFAULT_STUDENT_BOX_BG_COLOR_HEX = "#FFFFFFFF" // White, recommend referencing theme colors if possible
 const val DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX = "#FF000000" // Black for outline, adjust as needed
 const val DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX = "#FF000000"    // Black for text
@@ -29,6 +29,7 @@ class AppPreferencesRepository(private val context: Context) {
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
         val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit") // New key
+        val MAX_RECENT_LOGS_TO_DISPLAY = intPreferencesKey("max_recent_logs_to_display")
         val USE_INITIALS_FOR_BEHAVIOR = booleanPreferencesKey("use_initials_for_behavior")
         val USE_FULL_NAME_FOR_STUDENT = booleanPreferencesKey("use_full_name_for_student")
         val APP_THEME = stringPreferencesKey("app_theme")
@@ -170,6 +171,17 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateRecentBehaviorIncidentsLimit(limit: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.RECENT_BEHAVIOR_INCIDENTS_LIMIT] = limit
+        }
+    }
+
+    val maxRecentLogsToDisplayFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.MAX_RECENT_LOGS_TO_DISPLAY] ?: 1 // Default to 1
+        }
+
+    suspend fun updateMaxRecentLogsToDisplay(limit: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.MAX_RECENT_LOGS_TO_DISPLAY] = limit
         }
     }
 

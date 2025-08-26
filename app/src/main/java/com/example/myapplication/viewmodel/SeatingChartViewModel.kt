@@ -48,6 +48,7 @@ import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
+import com.example.myapplication.util.ConditionalFormattingEngine
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -80,6 +81,7 @@ class SeatingChartViewModel @Inject constructor(
 ) : AndroidViewModel(application) {
 
     val allStudents: LiveData<List<Student>>
+    val allStudentsForDisplay: LiveData<List<com.example.myapplication.data.StudentDetailsForDisplay>>
     val allFurniture: LiveData<List<Furniture>>
     val allLayoutTemplates: LiveData<List<LayoutTemplate>>
     val allBehaviorEvents: LiveData<List<BehaviorEvent>>
@@ -120,6 +122,7 @@ class SeatingChartViewModel @Inject constructor(
 
     init {
         allStudents = repository.allStudents
+        allStudentsForDisplay = studentDao.getStudentsForDisplay()
         allFurniture = repository.getAllFurniture().asLiveData()
         allLayoutTemplates = repository.getAllLayoutTemplates().asLiveData()
         allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
@@ -134,6 +137,9 @@ class SeatingChartViewModel @Inject constructor(
 
 
         studentsForDisplay.addSource(allStudents) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(allStudentsForDisplay) {
             updateStudentsForDisplay()
         }
         studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) {
@@ -161,6 +167,7 @@ class SeatingChartViewModel @Inject constructor(
             combine<Any, Unit>(
                 appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
                 appPreferencesRepository.recentLogsLimitFlow,
+                appPreferencesRepository.maxRecentLogsToDisplayFlow,
                 appPreferencesRepository.useInitialsForBehaviorFlow,
                 appPreferencesRepository.behaviorInitialsMapFlow,
                 appPreferencesRepository.defaultStudentBoxWidthFlow,
@@ -183,9 +190,12 @@ class SeatingChartViewModel @Inject constructor(
     private fun updateStudentsForDisplay() {
         viewModelScope.launch {
             val students = allStudents.value ?: return@launch
+            val studentsForDisplayData = allStudentsForDisplay.value ?: return@launch
+            val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
             val groups = studentGroupDao.getAllStudentGroups().first()
             val behaviorLimit = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.first()
             val homeworkLimit = appPreferencesRepository.recentLogsLimitFlow.first()
+            val maxLogsToDisplay = appPreferencesRepository.maxRecentLogsToDisplayFlow.first()
             val useInitials = appPreferencesRepository.useInitialsForBehaviorFlow.first()
             val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
                 .split(",")
@@ -209,6 +219,25 @@ class SeatingChartViewModel @Inject constructor(
             val defaultFontColor = appPreferencesRepository.defaultStudentFontColorFlow.first()
 
             val studentsWithBehavior = students.map { student ->
+                val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
+                    recentBehaviorDescription = emptyList(),
+                    recentHomeworkDescription = emptyList(),
+                    sessionLogText = emptyList(),
+                    groupColor = null,
+                    conditionalFormattingResult = emptyList(),
+                    defaultWidth = defaultWidth,
+                    defaultHeight = defaultHeight,
+                    defaultBackgroundColor = defaultBgColor,
+                    defaultOutlineColor = defaultOutlineColor,
+                    defaultTextColor = defaultTextColor,
+                    defaultOutlineThickness = defaultOutlineThickness,
+                    defaultCornerRadius = defaultCornerRadius,
+                    defaultPadding = defaultPadding,
+                    defaultFontFamily = defaultFontFamily,
+                    defaultFontSize = defaultFontSize,
+                    defaultFontColor = defaultFontColor
+                )
+
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                 val recentEvents =
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
@@ -223,18 +252,20 @@ class SeatingChartViewModel @Inject constructor(
                     } else {
                         it.type
                     }
-                }
+                }.take(maxLogsToDisplay)
+
+                val homeworkDescription = recentHomework.map { it.assignmentName }.take(maxLogsToDisplay)
 
                 val sessionLogs = if (isSessionActive.value == true) {
                     val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
                     val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "HW: ${it.status}" } ?: emptyList()
-                    quizLogs + homeworkLogs
+                    (quizLogs + homeworkLogs).take(maxLogsToDisplay)
                 } else {
                     emptyList()
                 }
 
                 val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormatting(
-                    student = student,
+                    student = studentDetails,
                     rules = allRules.value ?: emptyList(),
                     behaviorLog = allBehaviorEvents.value ?: emptyList(),
                     quizLog = allQuizLogs.value ?: emptyList(),
@@ -248,7 +279,7 @@ class SeatingChartViewModel @Inject constructor(
 
                 student.toStudentUiItem(
                     recentBehaviorDescription = behaviorDescription,
-                    recentHomeworkDescription = recentHomework.map { it.assignmentName },
+                    recentHomeworkDescription = homeworkDescription,
                     sessionLogText = sessionLogs,
                     groupColor = groups.find { group -> group.id == student.groupId }?.color,
                     conditionalFormattingResult = conditionalFormattingResult,

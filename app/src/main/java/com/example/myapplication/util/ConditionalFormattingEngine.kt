@@ -151,7 +151,7 @@ object ConditionalFormattingEngine {
 
                 val count = behaviorLog.count {
                     it.studentId == student.id.toLong() &&
-                    it.behaviorName.equals(behaviorName, ignoreCase = true) &&
+                    it.type.equals(behaviorName, ignoreCase = true) &&
                     it.timestamp >= cutoffTime
                 }
                 count >= countThreshold

@@ -2,18 +2,15 @@ package com.example.myapplication.ui.model
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import com.example.myapplication.data.Student
-
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
-
 import com.example.myapplication.utils.safeParseColor
 
 fun Student.toStudentUiItem(
@@ -40,14 +37,22 @@ fun Student.toStudentUiItem(
     val baseBackgroundColor = customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)
     val baseOutlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
 
-    val backgroundColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.map { safeParseColor(it.first) ?: baseBackgroundColor }
+    val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
+        conditionalFormattingResult.mapNotNull { it.first?.let { colorStr -> safeParseColor(colorStr) } }
+            .filter { it.alpha > 0 } // Filter out fully transparent colors
+    } else {
+        emptyList()
+    }
+
+    val backgroundColors = if (formattedColors.isNotEmpty()) {
+        formattedColors
     } else {
         listOf(baseBackgroundColor)
     }
 
     val outlineColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.map { safeParseColor(it.second) ?: baseOutlineColor }
+        conditionalFormattingResult.map { it.second?.let { colorString -> safeParseColor(colorString) }
+            ?: baseOutlineColor }
     } else {
         listOf(baseOutlineColor)
     }

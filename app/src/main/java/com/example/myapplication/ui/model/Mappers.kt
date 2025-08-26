@@ -2,10 +2,7 @@ package com.example.myapplication.ui.model
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.toColorInt
 import com.example.myapplication.data.Furniture
-import com.example.myapplication.data.Student
-
 
 
 import com.example.myapplication.utils.safeParseColor
