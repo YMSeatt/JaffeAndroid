@@ -38,9 +38,11 @@ fun Student.toStudentUiItem(
     val baseOutlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
 
     val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.mapNotNull { it.first?.let { colorStr -> safeParseColor(colorStr) } }
-            .filter { it.alpha > 0 } // Filter out fully transparent colors
-            .map { it.copy(alpha = 1f) }
+        conditionalFormattingResult.mapNotNull {
+            it.first?.let { colorStr -> safeParseColor(colorStr) }
+                ?.takeIf { color -> color.alpha > 0f }
+                ?.copy(alpha = 1f)
+        }
     } else {
         emptyList()
     }
