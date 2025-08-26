@@ -14,6 +14,13 @@ import kotlinx.serialization.InternalSerializationApi
 
 // Data classes to represent the JSON structure in ConditionalFormattingRule
 @Serializable
+data class ActiveTime(
+    @SerialName("start_time") val startTime: String,
+    @SerialName("end_time") val endTime: String,
+    @SerialName("days_of_week") val daysOfWeek: List<Int>
+)
+
+@Serializable
 data class Condition(
     val type: String,
     @SerialName("group_id") val groupId: Long? = null,
@@ -29,7 +36,9 @@ data class Condition(
     @SerialName("score_threshold_percent") val scoreThresholdPercent: Double? = null,
     @SerialName("mark_type_id") val markTypeId: String? = null,
     @SerialName("mark_operator") val markOperator: String? = null,
-    @SerialName("mark_count_threshold") val markCountThreshold: Int? = null
+    @SerialName("mark_count_threshold") val markCountThreshold: Int? = null,
+    @SerialName("active_modes") val activeModes: List<String>? = null,
+    @SerialName("active_times") val activeTimes: List<ActiveTime>? = null
 )
 
 @Serializable
@@ -53,9 +62,8 @@ object ConditionalFormattingEngine {
         isLiveHomeworkActive: Boolean,
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String
-    ): Pair<String?, String?> {
-        var finalFillColor: String? = null
-        var finalOutlineColor: String? = null
+    ): List<Pair<String?, String?>> {
+        val matchingFormats = mutableListOf<Pair<String?, String?>>()
 
         // Sort rules by priority
         val sortedRules = rules.sortedBy { it.priority }
@@ -66,22 +74,19 @@ object ConditionalFormattingEngine {
                 val format = json.decodeFromString<Format>(rule.formatJson)
 
                 if (checkCondition(
-                    student,
-                    condition,
-                    behaviorLog,
-                    quizLog,
-                    homeworkLog,
-                    isLiveQuizActive,
-                    liveQuizScores,
-                    isLiveHomeworkActive,
-                    liveHomeworkScores,
-                    currentMode
-                )) {
-                    // Apply the format. For now, we'll just take the first one that matches.
-                    // The Python app has a more complex system with striping, which can be added later.
-                    finalFillColor = format.color
-                    finalOutlineColor = format.outline
-                    break // Stop at first matching rule
+                        student,
+                        condition,
+                        behaviorLog,
+                        quizLog,
+                        homeworkLog,
+                        isLiveQuizActive,
+                        liveQuizScores,
+                        isLiveHomeworkActive,
+                        liveHomeworkScores,
+                        currentMode
+                    )
+                ) {
+                    matchingFormats.add(Pair(format.color, format.outline))
                 }
             } catch (e: Exception) {
                 // Log error or handle gracefully
@@ -89,7 +94,7 @@ object ConditionalFormattingEngine {
             }
         }
 
-        return Pair(finalFillColor, finalOutlineColor)
+        return matchingFormats
     }
 
     private fun checkCondition(
@@ -104,6 +109,38 @@ object ConditionalFormattingEngine {
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String
     ): Boolean {
+        // Check active_modes
+        condition.activeModes?.let { activeModes ->
+            if (activeModes.isNotEmpty() && currentMode !in activeModes) {
+                return false
+            }
+        }
+
+        // Check active_times
+        condition.activeTimes?.let { activeTimes ->
+            if (activeTimes.isNotEmpty()) {
+                val now = java.util.Calendar.getInstance()
+                val dayOfWeek = now.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1, Saturday = 7
+                val currentTime = String.format("%02d:%02d", now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE))
+
+                val isTimeValid = activeTimes.any { activeTime ->
+                    val start = activeTime.startTime
+                    val end = activeTime.endTime
+                    val days = activeTime.daysOfWeek
+
+                    // Python: Monday is 0 and Sunday is 6
+                    // Java: Sunday is 1 and Saturday is 7
+                    val javaDayOfWeek = if (dayOfWeek == 1) 6 else dayOfWeek - 2
+
+                    currentTime in start..end && javaDayOfWeek in days
+                }
+
+                if (!isTimeValid) {
+                    return false
+                }
+            }
+        }
+
         return when (condition.type) {
             "group" -> student.groupId == condition.groupId
             "behavior_count" -> {
@@ -114,8 +151,7 @@ object ConditionalFormattingEngine {
 
                 val count = behaviorLog.count {
                     it.studentId == student.id.toLong() &&
-                    it.studentId == student.id.toLong() &&
-                    it.type.equals(behaviorName, ignoreCase = true) &&
+                    it.behaviorName.equals(behaviorName, ignoreCase = true) &&
                     it.timestamp >= cutoffTime
                 }
                 count >= countThreshold

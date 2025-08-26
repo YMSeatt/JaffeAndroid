@@ -21,6 +21,7 @@ fun Student.toStudentUiItem(
     recentHomeworkDescription: List<String>,
     sessionLogText: List<String>,
     groupColor: String?,
+    conditionalFormattingResult: List<Pair<String?, String?>>,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
     defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
@@ -35,7 +36,22 @@ fun Student.toStudentUiItem(
 ): StudentUiItem {
     val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
     val customTextColor = customTextColor?.let { safeParseColor(it) }
-    val outlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+
+    val baseBackgroundColor = customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)
+    val baseOutlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+
+    val backgroundColors = if (conditionalFormattingResult.isNotEmpty()) {
+        conditionalFormattingResult.map { safeParseColor(it.first) ?: baseBackgroundColor }
+    } else {
+        listOf(baseBackgroundColor)
+    }
+
+    val outlineColors = if (conditionalFormattingResult.isNotEmpty()) {
+        conditionalFormattingResult.map { safeParseColor(it.second) ?: baseOutlineColor }
+    } else {
+        listOf(baseOutlineColor)
+    }
+
     val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
     val fontFamily = customFontFamily ?: defaultFontFamily
     val fontSize = customFontSize ?: defaultFontSize
@@ -50,8 +66,8 @@ fun Student.toStudentUiItem(
         yPosition = yPosition.toDouble(),
         displayWidth = (customWidth ?: defaultWidth).dp,
         displayHeight = (customHeight ?: defaultHeight).dp,
-        displayBackgroundColor = customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor),
-        displayOutlineColor = outlineColor,
+        displayBackgroundColor = backgroundColors,
+        displayOutlineColor = outlineColors,
         displayTextColor = textColor,
         displayOutlineThickness = (customOutlineThickness ?: defaultOutlineThickness).dp,
         displayCornerRadius = (customCornerRadius ?: defaultCornerRadius).dp,

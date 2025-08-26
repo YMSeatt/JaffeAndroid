@@ -115,7 +115,7 @@ fun StudentDraggableIcon(
                     )
                 }
         ) {
-            Card(
+            Box(
                 modifier = Modifier
                     .onSizeChanged { cardSize = it }
                     .pointerInput(studentUiItem.id) {
@@ -154,32 +154,28 @@ fun StudentDraggableIcon(
                     .border(
                         BorderStroke(
                             if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
-                            if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor
+                            if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
                         )
                     )
                     .then(
                         if (!autoExpandEnabled) {
                             Modifier.width(width).height(height)
                         } else {
-//                            val calculatedHeight = calculateStudentIconHeight(
-//                                defaultHeight = studentUiItem.displayHeight,
-//                                showBehavior = showBehavior,
-//                                behaviorText = studentUiItem.recentBehaviorDescription.joinToString("\n"),
-//                                homeworkText = studentUiItem.recentHomeworkDescription.joinToString("\n"),
-//                                sessionLogText = studentUiItem.sessionLogText.joinToString("\n"),
-//                                lineHeight = with(LocalDensity.current) { MaterialTheme.typography.bodySmall.lineHeight.toDp() }
-//                            )
                             Modifier
-                                .width(studentUiItem.displayWidth) // Always respect minimum width
-                                .heightIn(min = studentUiItem.displayHeight) // Respect minimum height, and expand if content is larger
+                                .width(studentUiItem.displayWidth)
+                                .heightIn(min = studentUiItem.displayHeight)
                         }
-                    ),
-                shape = RoundedCornerShape(studentUiItem.displayCornerRadius),
-                colors = CardDefaults.cardColors(containerColor = studentUiItem.displayBackgroundColor),
-                elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(
-                    defaultElevation = 4.dp
-                )
+                    )
             ) {
+                Column {
+                    studentUiItem.displayBackgroundColor.forEach { color ->
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .background(color)
+                        )
+                    }
+                }
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
