@@ -1,9 +1,6 @@
 package com.example.myapplication.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -15,17 +12,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.scale
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Guide
-import com.example.myapplication.data.GuideType
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -45,9 +37,10 @@ fun GridAndRulers(
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         // Grid (drawn within the transformed canvas)
+        // Grid (drawn within the transformed canvas)
         withTransform({
-            scale(scale, scale)
             translate(left = offset.x, top = offset.y)
+            scale(scale, scale)
         }) {
             if (showGrid) {
                 val gridSizePx = gridSize.dp.toPx()
@@ -148,4 +141,3 @@ fun GridAndRulers(
         }
     }
 }
-
