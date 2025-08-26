@@ -34,12 +34,15 @@ fun Student.toStudentUiItem(
     val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
     val customTextColor = customTextColor?.let { safeParseColor(it) }
 
-    val baseBackgroundColor = customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)
+    val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)).copy(alpha = 1f)
     val baseOutlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
 
     val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.mapNotNull { it.first?.let { colorStr -> safeParseColor(colorStr) } }
-            .filter { it.alpha > 0 } // Filter out fully transparent colors
+        conditionalFormattingResult.mapNotNull {
+            it.first?.let { colorStr -> safeParseColor(colorStr) }
+                ?.takeIf { color -> color.alpha > 0f }
+                ?.copy(alpha = 1f)
+        }
     } else {
         emptyList()
     }

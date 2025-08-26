@@ -163,7 +163,7 @@ fun StudentDraggableIcon(
                         } else {
                             Modifier
                                 .width(studentUiItem.displayWidth)
-                                .heightIn(min = studentUiItem.displayHeight)
+                                .heightIn(min = studentUiItem.displayHeight, max = 300.dp)
                         }
                     )
             ) {
