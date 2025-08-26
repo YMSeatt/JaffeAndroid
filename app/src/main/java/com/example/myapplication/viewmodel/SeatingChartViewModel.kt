@@ -85,6 +85,7 @@ class SeatingChartViewModel @Inject constructor(
     val allBehaviorEvents: LiveData<List<BehaviorEvent>>
     val allHomeworkLogs: LiveData<List<HomeworkLog>>
     val allQuizLogs: LiveData<List<QuizLog>>
+    val allRules: LiveData<List<com.example.myapplication.data.ConditionalFormattingRule>>
     val studentsForDisplay = MediatorLiveData<List<StudentUiItem>>()
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
@@ -107,6 +108,9 @@ class SeatingChartViewModel @Inject constructor(
     private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
     private val sessionHomeworkLogs = MutableLiveData<List<HomeworkLog>>(emptyList())
     val isSessionActive = MutableLiveData<Boolean>(false)
+    val currentMode = MutableLiveData<String>("behavior")
+    val liveQuizScores = MutableLiveData<Map<Long, Map<String, Any>>>(emptyMap())
+    val liveHomeworkScores = MutableLiveData<Map<Long, Map<String, Any>>>(emptyMap())
 
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
 
@@ -121,6 +125,7 @@ class SeatingChartViewModel @Inject constructor(
         allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
         allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
         allQuizLogs = quizLogDao.getAllQuizLogs()
+        allRules = AppDatabase.getDatabase(application).conditionalFormattingRuleDao().getAllRules()
         allQuizTemplates = quizTemplateDao.getAllQuizTemplates().asLiveData()
         quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
@@ -228,11 +233,25 @@ class SeatingChartViewModel @Inject constructor(
                     emptyList()
                 }
 
+                val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormatting(
+                    student = student,
+                    rules = allRules.value ?: emptyList(),
+                    behaviorLog = allBehaviorEvents.value ?: emptyList(),
+                    quizLog = allQuizLogs.value ?: emptyList(),
+                    homeworkLog = allHomeworkLogs.value ?: emptyList(),
+                    isLiveQuizActive = isSessionActive.value ?: false,
+                    liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                    isLiveHomeworkActive = isSessionActive.value ?: false,
+                    liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                    currentMode = currentMode.value ?: "behavior"
+                )
+
                 student.toStudentUiItem(
                     recentBehaviorDescription = behaviorDescription,
                     recentHomeworkDescription = recentHomework.map { it.assignmentName },
                     sessionLogText = sessionLogs,
                     groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                    conditionalFormattingResult = conditionalFormattingResult,
                     defaultWidth = defaultWidth,
                     defaultHeight = defaultHeight,
                     defaultBackgroundColor = defaultBgColor,
