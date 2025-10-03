@@ -13,7 +13,6 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.ConditionalFormattingRule
-import com.example.myapplication.ui.dialogs.AddEditConditionalFormattingRuleDialog
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -68,7 +67,7 @@ fun ConditionalFormattingScreen(viewModel: ConditionalFormattingRuleViewModel, o
         }
 
         if (showDialog) {
-            AddEditConditionalFormattingRuleDialog(
+            ConditionalFormattingRuleEditor(
                 rule = selectedRule,
                 viewModel = viewModel,
                 onDismiss = { showDialog = false }

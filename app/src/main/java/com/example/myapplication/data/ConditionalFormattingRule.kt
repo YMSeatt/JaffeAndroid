@@ -7,9 +7,10 @@ import androidx.room.PrimaryKey
 data class ConditionalFormattingRule(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
-    val name: String,
-    val conditionJson: String,
-    val formatJson: String,
-    val targetType: String,
-    val priority: Int
+    val name: String = "",
+    val type: String = "group",
+    val conditionJson: String = "{}",
+    val formatJson: String = "{}",
+    val targetType: String = "student",
+    val priority: Int = 0
 )
