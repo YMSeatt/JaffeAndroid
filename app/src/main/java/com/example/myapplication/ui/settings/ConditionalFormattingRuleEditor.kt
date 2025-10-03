@@ -27,7 +27,7 @@ fun ConditionalFormattingRuleEditor(
     val conditionState = remember(rule, ruleType) {
         mutableStateOf(
             rule?.conditionJson?.let {
-                Gson().fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
+                gson.fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
             } ?: emptyMap()
         )
     }
