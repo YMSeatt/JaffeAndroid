@@ -21,6 +21,10 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
 import kotlin.math.floor
 
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import com.example.myapplication.data.GuideType
+
 @Composable
 fun GridAndRulers(
     settingsViewModel: SettingsViewModel,
@@ -35,8 +39,46 @@ fun GridAndRulers(
     val guides by guideViewModel.guides.collectAsState()
     var draggedGuide by remember { mutableStateOf<Guide?>(null) }
 
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        // Grid (drawn within the transformed canvas)
+    Canvas(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(guides, scale, offset) {
+            detectDragGestures(
+                onDragStart = { startOffset ->
+                    val worldStartOffset = (startOffset - offset) / scale
+                    val touchSlop = 16.dp.toPx() / scale
+                    draggedGuide = guides.minByOrNull { guide ->
+                        if (guide.type == GuideType.HORIZONTAL) {
+                            kotlin.math.abs(guide.position - worldStartOffset.y)
+                        } else {
+                            kotlin.math.abs(guide.position - worldStartOffset.x)
+                        }
+                    }?.takeIf { guide ->
+                        if (guide.type == GuideType.HORIZONTAL) {
+                            kotlin.math.abs(guide.position - worldStartOffset.y) < touchSlop
+                        } else {
+                            kotlin.math.abs(guide.position - worldStartOffset.x) < touchSlop
+                        }
+                    }
+                },
+                onDrag = { change, dragAmount ->
+                    draggedGuide?.let { guide ->
+                        val newPosition = if (guide.type == GuideType.HORIZONTAL) {
+                            guide.position + dragAmount.y / scale
+                        } else {
+                            guide.position + dragAmount.x / scale
+                        }
+                        draggedGuide = guide.copy(position = newPosition)
+                        change.consume()
+                    }
+                },
+                onDragEnd = {
+                    draggedGuide?.let {
+                        guideViewModel.updateGuide(it)
+                    }
+                    draggedGuide = null
+                }
+            )
+        }) {
         // Grid (drawn within the transformed canvas)
         withTransform({
             translate(left = offset.x, top = offset.y)
@@ -74,6 +116,29 @@ fun GridAndRulers(
                         strokeWidth = 1f / scale
                     )
                     currentY += gridSizePx
+                }
+            }
+
+            // Draw guides
+            val worldXStart = -offset.x / scale
+            val worldYStart = -offset.y / scale
+            val worldXEnd = worldXStart + canvasSize.width / scale
+            val worldYEnd = worldYStart + canvasSize.height / scale
+            guides.forEach { guide ->
+                if (guide.type == GuideType.HORIZONTAL) {
+                    drawLine(
+                        start = Offset(worldXStart, guide.position),
+                        end = Offset(worldXEnd, guide.position),
+                        color = Color.Red,
+                        strokeWidth = 2f / scale
+                    )
+                } else { // vertical
+                    drawLine(
+                        start = Offset(guide.position, worldYStart),
+                        end = Offset(guide.position, worldYEnd),
+                        color = Color.Red,
+                        strokeWidth = 2f / scale
+                    )
                 }
             }
         }

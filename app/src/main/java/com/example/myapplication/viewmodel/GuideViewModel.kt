@@ -19,9 +19,9 @@ class GuideViewModel @Inject constructor(
     val guides = guideDao.getAllGuides()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addGuide(type: GuideType, position: Float) {
+    fun addGuide(type: GuideType) {
         viewModelScope.launch {
-            guideDao.insert(Guide(type = type, position = position))
+            guideDao.insert(Guide(type = type, position = 0f))
         }
     }
 
@@ -34,6 +34,15 @@ class GuideViewModel @Inject constructor(
     fun deleteGuide(guide: Guide) {
         viewModelScope.launch {
             guideDao.delete(guide)
+        }
+    }
+
+    fun updateGuidePosition(guideId: Long, newPosition: Float) {
+        viewModelScope.launch {
+            val guide = guides.value.find { it.id == guideId }
+            guide?.let {
+                updateGuide(it.copy(position = newPosition))
+            }
         }
     }
 }

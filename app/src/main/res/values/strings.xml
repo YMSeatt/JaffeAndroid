@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">My Application</string>
+    <string name="student_style_screen_title">Customize Style</string>
+    <string name="student_style_screen_background_color">Background Color</string>
+    <string name="student_style_screen_outline_color">Outline Color</string>
+    <string name="student_style_screen_text_color">Text Color</string>
+    <string name="student_style_screen_width">Width (dp)</string>
+    <string name="student_style_screen_height">Height (dp)</string>
+    <string name="student_style_screen_outline_thickness">Outline Thickness (dp)</string>
+    <string name="student_style_screen_font_family">Font Family</string>
+    <string name="student_style_screen_font_size">Font Size (sp)</string>
+    <string name="student_style_screen_font_color">Font Color</string>
+    <string name="student_style_screen_save">Save</string>
+    <string name="student_style_screen_cancel">Cancel</string>
+    <string name="student_style_screen_default_font_size">Default: %1$d</string>
+    <string name="color_picker_dialog_title">Choose Color</string>
+    <string name="color_picker_dialog_ok">OK</string>
+    <string name="color_picker_dialog_cancel">Cancel</string>
 </resources>

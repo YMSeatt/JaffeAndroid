@@ -10,8 +10,3 @@ data class Guide(
     val type: GuideType,
     var position: Float
 )
-
-enum class GuideType {
-    VERTICAL,
-    HORIZONTAL
-}

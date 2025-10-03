@@ -3,7 +3,6 @@ package com.example.myapplication.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
@@ -32,12 +31,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -115,7 +115,7 @@ fun StudentDraggableIcon(
                     )
                 }
         ) {
-            Box(
+            Card(
                 modifier = Modifier
                     .onSizeChanged { cardSize = it }
                     .pointerInput(studentUiItem.id) {
@@ -147,12 +147,6 @@ fun StudentDraggableIcon(
                             }
                         )
                     }
-                    .border(
-                        BorderStroke(
-                            if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
-                            if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
-                        )
-                    )
                     .combinedClickable(
                         onClick = onClick,
                         onLongClick = onLongClick
@@ -165,17 +159,16 @@ fun StudentDraggableIcon(
                                 .width(studentUiItem.displayWidth)
                                 .heightIn(min = studentUiItem.displayHeight, max = 300.dp)
                         }
-                    )
+                    ),
+                shape = RoundedCornerShape(studentUiItem.displayCornerRadius),
+                colors = CardDefaults.cardColors(
+                    containerColor = studentUiItem.displayBackgroundColor.first()
+                ),
+                border = BorderStroke(
+                    if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
+                    if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
+                )
             ) {
-                Column {
-                    studentUiItem.displayBackgroundColor.forEach { color ->
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(color)
-                        )
-                    }
-                }
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -184,10 +177,12 @@ fun StudentDraggableIcon(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = studentUiItem.fullName,
-                            color = studentUiItem.displayTextColor,
-                            textAlign = TextAlign.Center,
-                            fontFamily = getFontFamily(studentUiItem.fontFamily),
-                            fontSize = studentUiItem.fontSize.sp
+                            style = TextStyle(
+                                color = studentUiItem.fontColor,
+                                fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                fontSize = studentUiItem.fontSize.sp,
+                                textAlign = TextAlign.Center
+                            )
                         )
                         if (showBehavior) {
                             if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
@@ -195,11 +190,11 @@ fun StudentDraggableIcon(
                                 Text(
                                     text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
+                                        color = studentUiItem.fontColor,
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp
-                                    ),
-                                    color = studentUiItem.displayTextColor,
-                                    textAlign = TextAlign.Center
+                                        fontSize = studentUiItem.fontSize.sp,
+                                        textAlign = TextAlign.Center
+                                    )
                                 )
                             }
                             if (studentUiItem.recentHomeworkDescription.isNotEmpty()) {
@@ -207,11 +202,11 @@ fun StudentDraggableIcon(
                                 Text(
                                     text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
+                                        color = studentUiItem.fontColor,
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp
-                                    ),
-                                    color = studentUiItem.displayTextColor,
-                                    textAlign = TextAlign.Center
+                                        fontSize = studentUiItem.fontSize.sp,
+                                        textAlign = TextAlign.Center
+                                    )
                                 )
                             }
                             if (studentUiItem.sessionLogText.isNotEmpty()) {
@@ -219,11 +214,11 @@ fun StudentDraggableIcon(
                                 Text(
                                     text = studentUiItem.sessionLogText.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
+                                        color = studentUiItem.fontColor,
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp
-                                    ),
-                                    color = studentUiItem.displayTextColor,
-                                    textAlign = TextAlign.Center
+                                        fontSize = studentUiItem.fontSize.sp,
+                                        textAlign = TextAlign.Center
+                                    )
                                 )
                             }
                         }

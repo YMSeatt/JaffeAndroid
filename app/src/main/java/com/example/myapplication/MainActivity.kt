@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
@@ -39,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -281,7 +283,7 @@ fun SeatingChartScreen(
     var longPressPosition by remember { mutableStateOf(Offset.Zero) }
 
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var scale by remember { mutableStateOf(1f) }
+    var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
 
@@ -356,14 +358,13 @@ fun SeatingChartScreen(
                         DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath != null, onClick = {
                             lastExportPath?.let { path ->
                                 val uri = path.toUri()
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(uri, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
+                                val intent = Intent(Intent.ACTION_VIEW)
+                                intent.setDataAndType(uri, "vnd.android.document/directory")
+                                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                                 if (intent.resolveActivity(context.packageManager) != null) {
                                     context.startActivity(intent)
                                 } else {
-                                    Toast.makeText(context, "Could not open file", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
                                 }
                             }
                             showFileMenu = false
@@ -390,12 +391,16 @@ fun SeatingChartScreen(
 
                     IconButton(onClick = { showViewMenu = true }) { Text("View") }
                     DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }) {
-                        DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL, 0f); showViewMenu = false })
-                        DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL, 0f); showViewMenu = false })
+                        DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showViewMenu = false })
+                        DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showViewMenu = false })
+                        DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
+                            guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
+                            showViewMenu = false
+                        })
                         DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
                             coroutineScope.launch {
                                 val view = (context as Activity).window.decorView
-                                val bitmap = captureComposable(view, (context as Activity).window)
+                                val bitmap = captureComposable(view, context.window)
                                 if (bitmap != null) {
                                     settingsViewModel.saveScreenshot(bitmap)
                                     Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
@@ -410,7 +415,7 @@ fun SeatingChartScreen(
                         }
                     }
 
-                    var showModeMenu by remember { mutableStateOf(false) }
+                    var showModeMenu by remember { mutableStateOf<Boolean>(false) }
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
@@ -454,14 +459,7 @@ fun SeatingChartScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
                 .onSizeChanged { canvasSize = it }
-                .pointerInput(Unit) {
-                    detectTransformGestures { centroid, pan, zoom, _ ->
-                        val oldScale = scale
-                        val newScale = (scale * zoom).coerceIn(0.5f, 5f)
-                        offset = (offset - centroid) * (newScale / oldScale) + centroid + pan
-                        scale = newScale
-                    }
-                }
+
         ) {
             GridAndRulers(
                 settingsViewModel = settingsViewModel,
@@ -474,6 +472,14 @@ fun SeatingChartScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            val oldScale = scale
+                            val newScale = (scale * zoom).coerceIn(0.5f, 5f)
+                            offset = (offset - centroid) * (newScale / oldScale) + centroid + pan
+                            scale = newScale
+                        }
+                    }
                     .graphicsLayer(
                         scaleX = scale,
                         scaleY = scale,
@@ -481,60 +487,62 @@ fun SeatingChartScreen(
                         translationY = offset.y
                     )
             ) {
-                students.forEach { studentItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    StudentDraggableIcon(
-                        studentUiItem = studentItem,
-                        viewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        showBehavior = showRecentBehavior,
-                        isSelected = selectedStudentIds.contains(studentItem.id),
-                        onClick = {
-                            if (selectMode) {
-                                val currentSelected = selectedStudentIds.toMutableSet()
-                                if (currentSelected.contains(studentItem.id)) {
-                                    currentSelected.remove(studentItem.id)
+                Box(modifier = Modifier.size(4000.dp)) {
+                    students.forEach { studentItem ->
+                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                        StudentDraggableIcon(
+                            studentUiItem = studentItem,
+                            viewModel = seatingChartViewModel,
+                            settingsViewModel = settingsViewModel,
+                            showBehavior = showRecentBehavior,
+                            isSelected = selectedStudentIds.contains(studentItem.id),
+                            onClick = {
+                                if (selectMode) {
+                                    val currentSelected = selectedStudentIds.toMutableSet()
+                                    if (currentSelected.contains(studentItem.id)) {
+                                        currentSelected.remove(studentItem.id)
+                                    } else {
+                                        currentSelected.add(studentItem.id)
+                                    }
+                                    seatingChartViewModel.selectedStudentIds.value = currentSelected
                                 } else {
-                                    currentSelected.add(studentItem.id)
-                                }
-                                seatingChartViewModel.selectedStudentIds.value = currentSelected
-                            } else {
+                                    selectedStudentUiItemForAction = studentItem
+                                    when (sessionType) {
+                                        SessionType.BEHAVIOR -> showBehaviorDialog = true
+                                        SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                                        SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                                    }
+                                 }
+                            },
+                            onLongClick = {
                                 selectedStudentUiItemForAction = studentItem
-                                when (sessionType) {
-                                    SessionType.BEHAVIOR -> showBehaviorDialog = true
-                                    SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
-                                    SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                                showStudentActionMenu = true
+                            },
+                            onResize = { width, height -> seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt()) },
+                            noAnimations = noAnimations,
+                            canvasSize = canvasSize,
+                            canvasScale = scale,
+                            canvasOffset = offset
+                        )
+                    }
+                    furniture.forEach { furnitureItem ->
+                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
+                        FurnitureDraggableIcon(
+                            furnitureUiItem = furnitureItem,
+                            viewModel = seatingChartViewModel,
+                            settingsViewModel = settingsViewModel,
+                            scale = scale,
+                            canvasOffset = offset,
+                            onLongClick = {
+                                coroutineScope.launch {
+                                    editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                                    showAddEditFurnitureDialog = true
                                 }
-                            }
-                        },
-                        onLongClick = {
-                            selectedStudentUiItemForAction = studentItem
-                            showStudentActionMenu = true
-                        },
-                        onResize = { width, height -> seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt()) },
-                        noAnimations = noAnimations,
-                        canvasSize = canvasSize,
-                        canvasScale = scale,
-                        canvasOffset = offset
-                    )
-                }
-                furniture.forEach { furnitureItem ->
-                    val noAnimations by settingsViewModel.noAnimations.collectAsState()
-                    FurnitureDraggableIcon(
-                        furnitureUiItem = furnitureItem,
-                        viewModel = seatingChartViewModel,
-                        settingsViewModel = settingsViewModel,
-                        scale = scale,
-                        canvasOffset = offset,
-                        onLongClick = {
-                            coroutineScope.launch {
-                                editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                                showAddEditFurnitureDialog = true
-                            }
-                        },
-                        onResize = { width, height -> seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt()) },
-                        noAnimations = noAnimations
-                    )
+                            },
+                            onResize = { width, height -> seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt()) },
+                            noAnimations = noAnimations
+                        )
+                    }
                 }
             }
 

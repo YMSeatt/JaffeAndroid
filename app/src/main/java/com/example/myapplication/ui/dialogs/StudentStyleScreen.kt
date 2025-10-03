@@ -25,14 +25,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.R
 import com.example.myapplication.preferences.DEFAULT_STUDENT_FONT_SIZE_SP
 import com.example.myapplication.ui.components.ColorPickerField
-import com.example.myapplication.utils.getAvailableFontFamilies
-import com.example.myapplication.utils.safeParseColor
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.StudentStyleViewModel
+import com.example.myapplication.utils.getAvailableFontFamilies
+import com.example.myapplication.utils.safeParseColor
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
@@ -97,11 +99,11 @@ fun StudentStyleScreen(
 
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Customize Style") },
+            title = { Text(stringResource(R.string.student_style_screen_title)) },
             text = {
                 Column(modifier = Modifier.padding(16.dp)) {
                     ColorPickerField(
-                        label = "Background Color",
+                        label = stringResource(R.string.student_style_screen_background_color),
                         color = customBackgroundColor,
                         onColorChange = { customBackgroundColor = it },
                         onColorPickerClick = {
@@ -111,7 +113,7 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ColorPickerField(
-                        label = "Outline Color",
+                        label = stringResource(R.string.student_style_screen_outline_color),
                         color = customOutlineColor,
                         onColorChange = { customOutlineColor = it },
                         onColorPickerClick = {
@@ -121,7 +123,7 @@ fun StudentStyleScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ColorPickerField(
-                        label = "Text Color",
+                        label = stringResource(R.string.student_style_screen_text_color),
                         color = customTextColor,
                         onColorChange = { customTextColor = it },
                         onColorPickerClick = {
@@ -132,20 +134,20 @@ fun StudentStyleScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customWidth,
-                        onValueChange = { customWidth = it },
-                        label = { Text("Width (dp)") }
+                        onValueChange = { customWidth = it.filter { char -> char.isDigit() } },
+                        label = { Text(stringResource(R.string.student_style_screen_width)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customHeight,
-                        onValueChange = { customHeight = it },
-                        label = { Text("Height (dp)") }
+                        onValueChange = { customHeight = it.filter { char -> char.isDigit() } },
+                        label = { Text(stringResource(R.string.student_style_screen_height)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customOutlineThickness,
-                        onValueChange = { customOutlineThickness = it },
-                        label = { Text("Outline Thickness (dp)") }
+                        onValueChange = { customOutlineThickness = it.filter { char -> char.isDigit() } },
+                        label = { Text(stringResource(R.string.student_style_screen_outline_thickness)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
@@ -157,7 +159,7 @@ fun StudentStyleScreen(
                             value = customFontFamily,
                             onValueChange = { customFontFamily = it },
                             readOnly = true,
-                            label = { Text("Font Family") },
+                            label = { Text(stringResource(R.string.student_style_screen_font_family)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                             modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable).fillMaxWidth()
                         )
@@ -179,13 +181,13 @@ fun StudentStyleScreen(
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customFontSize,
-                        onValueChange = { customFontSize = it },
-                        label = { Text("Font Size (sp)") },
-                        placeholder = { Text("Default: $DEFAULT_STUDENT_FONT_SIZE_SP") }
+                        onValueChange = { customFontSize = it.filter { char -> char.isDigit() } },
+                        label = { Text(stringResource(R.string.student_style_screen_font_size)) },
+                        placeholder = { Text(stringResource(R.string.student_style_screen_default_font_size, DEFAULT_STUDENT_FONT_SIZE_SP)) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ColorPickerField(
-                        label = "Font Color",
+                        label = stringResource(R.string.student_style_screen_font_color),
                         color = customFontColor,
                         onColorChange = { customFontColor = it },
                         onColorPickerClick = {
@@ -213,12 +215,12 @@ fun StudentStyleScreen(
                         onDismiss()
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(R.string.student_style_screen_save))
                 }
             },
             dismissButton = {
                 Button(onClick = onDismiss) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.student_style_screen_cancel))
                 }
             }
         )
@@ -236,7 +238,7 @@ fun ColorPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose Color") },
+        title = { Text(stringResource(R.string.color_picker_dialog_title)) },
         text = {
             HsvColorPicker(
                 modifier = Modifier
@@ -254,12 +256,12 @@ fun ColorPickerDialog(
                     onColorSelected(String.format("#%08X", color.toArgb()))
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.color_picker_dialog_ok))
             }
         },
         dismissButton = {
             Button(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.color_picker_dialog_cancel))
             }
         }
     )
