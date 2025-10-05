@@ -1,9 +1,27 @@
 package com.example.myapplication.ui.settings
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.ConditionalFormattingRule
@@ -27,8 +45,8 @@ fun ConditionalFormattingRuleEditor(
     val conditionState = remember(rule, ruleType) {
         mutableStateOf(
             rule?.conditionJson?.let {
-                gson.fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
-            } ?: emptyMap()
+                Gson().fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
+            } ?: emptyMap<String, Any>()
         )
     }
 
@@ -36,7 +54,7 @@ fun ConditionalFormattingRuleEditor(
         mutableStateOf(
             rule?.formatJson?.let {
                 Gson().fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
-            } ?: emptyMap()
+            } ?: emptyMap<String, Any>()
         )
     }
 
@@ -97,7 +115,7 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["group_id"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("group_id", it) }
+                                    conditionState.value = conditionState.value + ("group_id" to it)
                                 },
                                 label = { Text("Group ID") }
                             )
@@ -106,21 +124,21 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["behavior_name"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("behavior_name", it) }
+                                    conditionState.value = conditionState.value + ("behavior_name" to it)
                                 },
                                 label = { Text("Behavior Name") }
                             )
                             OutlinedTextField(
                                 value = conditionState.value["count_threshold"]?.toString() ?: "1",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("count_threshold", it) }
+                                    conditionState.value = conditionState.value + ("count_threshold" to it)
                                 },
                                 label = { Text("Count Threshold") }
                             )
                             OutlinedTextField(
                                 value = conditionState.value["time_window_hours"]?.toString() ?: "24",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("time_window_hours", it) }
+                                    conditionState.value = conditionState.value + ("time_window_hours" to it)
                                 },
                                 label = { Text("Time Window (Hours)") }
                             )
@@ -129,21 +147,21 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["quiz_name_contains"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("quiz_name_contains", it) }
+                                    conditionState.value = conditionState.value + ("quiz_name_contains" to it)
                                 },
                                 label = { Text("Quiz Name Contains") }
                             )
                             OutlinedTextField(
                                 value = conditionState.value["operator"]?.toString() ?: "<=",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("operator", it) }
+                                    conditionState.value = conditionState.value + ("operator" to it)
                                 },
                                 label = { Text("Operator") }
                             )
                             OutlinedTextField(
                                 value = conditionState.value["score_threshold_percent"]?.toString() ?: "50.0",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("score_threshold_percent", it) }
+                                    conditionState.value = conditionState.value + ("score_threshold_percent" to it)
                                 },
                                 label = { Text("Score Threshold (%)") }
                             )
@@ -152,7 +170,7 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["mark_type_id"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("mark_type_id", it) }
+                                    conditionState.value = conditionState.value + ("mark_type_id" to it)
                                 },
                                 label = { Text("Mark Type ID") }
                             )
@@ -161,7 +179,7 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["quiz_response"]?.toString() ?: "Correct",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("quiz_response", it) }
+                                    conditionState.value = conditionState.value + ("quiz_response" to it)
                                 },
                                 label = { Text("Quiz Response") }
                             )
@@ -170,14 +188,14 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["homework_type_id"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("homework_type_id", it) }
+                                    conditionState.value = conditionState.value + ("homework_type_id" to it)
                                 },
                                 label = { Text("Homework Type ID") }
                             )
                             OutlinedTextField(
                                 value = conditionState.value["homework_response"]?.toString() ?: "yes",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("homework_response", it) }
+                                    conditionState.value = conditionState.value + ("homework_response" to it)
                                 },
                                 label = { Text("Homework Response") }
                             )
@@ -186,7 +204,7 @@ fun ConditionalFormattingRuleEditor(
                             OutlinedTextField(
                                 value = conditionState.value["homework_option_name"]?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value.toMutableMap().apply { put("homework_option_name", it) }
+                                    conditionState.value = conditionState.value + ("homework_option_name" to it)
                                 },
                                 label = { Text("Homework Option Name") }
                             )
@@ -198,21 +216,21 @@ fun ConditionalFormattingRuleEditor(
                     OutlinedTextField(
                         value = formatState.value["color"]?.toString() ?: "",
                         onValueChange = {
-                            formatState.value = formatState.value.toMutableMap().apply { put("color", it) }
+                            formatState.value = formatState.value + ("color" to it)
                         },
                         label = { Text("Fill Color") }
                     )
                     OutlinedTextField(
                         value = formatState.value["outline"]?.toString() ?: "",
                         onValueChange = {
-                            formatState.value = formatState.value.toMutableMap().apply { put("outline", it) }
+                            formatState.value = formatState.value + ("outline" to it)
                         },
                         label = { Text("Outline Color") }
                     )
                     OutlinedTextField(
                         value = formatState.value["application_style"]?.toString() ?: "stripe",
                         onValueChange = {
-                            formatState.value = formatState.value.toMutableMap().apply { put("application_style", it) }
+                            formatState.value = formatState.value + ("application_style" to it)
                         },
                         label = { Text("Application Style") }
                     )
