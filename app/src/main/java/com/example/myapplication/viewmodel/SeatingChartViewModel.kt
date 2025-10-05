@@ -252,9 +252,9 @@ class SeatingChartViewModel @Inject constructor(
                     } else {
                         it.type
                     }
-                }.take(maxLogsToDisplay)
+                }
 
-                val homeworkDescription = recentHomework.map { it.assignmentName }.take(maxLogsToDisplay)
+                val homeworkDescription = recentHomework.map { it.assignmentName }
 
                 val sessionLogs = if (isSessionActive.value == true) {
                     val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
