@@ -23,21 +23,28 @@ fun ConditionalFormattingRuleEditor(
     var ruleType by remember(rule) { mutableStateOf(rule?.type ?: "group") }
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
     var expanded by remember { mutableStateOf(false) }
+    val gson = Gson()
 
     val conditionState = remember(rule, ruleType) {
-        mutableStateOf(
-            rule?.conditionJson?.let {
-                gson.fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
-            } ?: emptyMap()
-        )
+        val initialJson = rule?.conditionJson
+        val type = object : TypeToken<Map<String, Any>>() {}.type
+        val initialMap: Map<String, Any> = if (initialJson != null) {
+            gson.fromJson(initialJson, type)
+        } else {
+            emptyMap()
+        }
+        mutableStateOf(initialMap)
     }
 
     val formatState = remember(rule) {
-        mutableStateOf(
-            rule?.formatJson?.let {
-                Gson().fromJson<Map<String, Any>>(it, object : TypeToken<Map<String, Any>>() {}.type)
-            } ?: emptyMap()
-        )
+        val initialJson = rule?.formatJson
+        val type = object : TypeToken<Map<String, Any>>() {}.type
+        val initialMap: Map<String, Any> = if (initialJson != null) {
+            gson.fromJson(initialJson, type)
+        } else {
+            emptyMap()
+        }
+        mutableStateOf(initialMap)
     }
 
     val ruleTypes = listOf(
