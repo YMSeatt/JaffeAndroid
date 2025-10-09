@@ -417,7 +417,7 @@ class SeatingChartViewModel @Inject constructor(
 
     fun importFromPythonAssets(context: Context) {
         viewModelScope.launch {
-            val importer = com.example.myapplication.data.importer.Importer(
+            val importer = Importer(
                 context,
                 AppDatabase.getDatabase(context),
                 appPreferencesRepository.encryptDataFilesFlow
