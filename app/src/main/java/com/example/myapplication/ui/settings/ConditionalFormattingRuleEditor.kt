@@ -23,9 +23,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.R
 import com.example.myapplication.data.ConditionalFormattingRule
+import com.example.myapplication.ui.components.ColorPickerField
+import com.example.myapplication.utils.safeParseColor
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
+import com.github.skydoves.colorpicker.compose.ColorEnvelope
+import com.github.skydoves.colorpicker.compose.HsvColorPicker
+import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -43,6 +52,8 @@ fun ConditionalFormattingRuleEditor(
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
     var expanded by remember { mutableStateOf(false) }
     val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    val showColorPicker = remember { mutableStateOf(false) }
+    var colorPickerTarget by remember { mutableStateOf<String?>(null) }
 
     val conditionState = remember(rule, ruleType) {
         val initialJson = rule?.conditionJson
@@ -62,6 +73,21 @@ fun ConditionalFormattingRuleEditor(
             emptyMap()
         }
         mutableStateOf(initialMap)
+    }
+
+    if (showColorPicker.value) {
+        val initialColorStr = formatState.value[colorPickerTarget] ?: ""
+        val initialColor = if (initialColorStr.isBlank()) Color.White else safeParseColor(initialColorStr)
+        ColorPickerDialog(
+            onColorSelected = { color ->
+                colorPickerTarget?.let { target ->
+                    formatState.value = formatState.value + (target to color)
+                }
+                showColorPicker.value = false
+            },
+            onDismiss = { showColorPicker.value = false },
+            initialColor = initialColor
+        )
     }
 
     val ruleTypes = listOf(
@@ -219,19 +245,23 @@ fun ConditionalFormattingRuleEditor(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text("Formatting", style = MaterialTheme.typography.titleMedium)
-                    OutlinedTextField(
-                        value = formatState.value["color"] ?: "",
-                        onValueChange = {
-                            formatState.value = formatState.value + ("color" to it)
-                        },
-                        label = { Text("Fill Color") }
+                    ColorPickerField(
+                        label = "Fill Color",
+                        color = formatState.value["color"] ?: "",
+                        onColorChange = { formatState.value = formatState.value + ("color" to it) },
+                        onColorPickerClick = {
+                            colorPickerTarget = "color"
+                            showColorPicker.value = true
+                        }
                     )
-                    OutlinedTextField(
-                        value = formatState.value["outline"] ?: "",
-                        onValueChange = {
-                            formatState.value = formatState.value + ("outline" to it)
-                        },
-                        label = { Text("Outline Color") }
+                    ColorPickerField(
+                        label = "Outline Color",
+                        color = formatState.value["outline"] ?: "",
+                        onColorChange = { formatState.value = formatState.value + ("outline" to it) },
+                        onColorPickerClick = {
+                            colorPickerTarget = "outline"
+                            showColorPicker.value = true
+                        }
                     )
                     OutlinedTextField(
                         value = formatState.value["application_style"] ?: "stripe",
@@ -297,6 +327,47 @@ fun ConditionalFormattingRuleEditor(
                 Button(onClick = onDismiss) {
                     Text("Cancel")
                 }
+            }
+        }
+    )
+}
+
+
+@Composable
+fun ColorPickerDialog(
+    onColorSelected: (String) -> Unit,
+    onDismiss: () -> Unit,
+    initialColor: Color = Color.White
+) {
+    val controller = rememberColorPickerController()
+    var color by remember { mutableStateOf(initialColor) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.color_picker_dialog_title)) },
+        text = {
+            HsvColorPicker(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(300.dp),
+                controller = controller,
+                onColorChanged = { colorEnvelope: ColorEnvelope ->
+                    color = colorEnvelope.color
+                }
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onColorSelected(String.format("#%08X", color.toArgb()))
+                }
+            ) {
+                Text(stringResource(R.string.color_picker_dialog_ok))
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text(stringResource(R.string.color_picker_dialog_cancel))
             }
         }
     )
