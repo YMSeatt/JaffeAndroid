@@ -407,7 +407,7 @@ class SeatingChartViewModel @Inject constructor(
 
     fun importData(context: Context, uri: Uri) {
         viewModelScope.launch {
-            com.example.myapplication.data.importer.Importer(
+            Importer(
                 context,
                 AppDatabase.getDatabase(context),
                 appPreferencesRepository.encryptDataFilesFlow
