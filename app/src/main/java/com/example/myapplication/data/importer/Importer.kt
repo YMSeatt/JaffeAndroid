@@ -41,7 +41,7 @@ class Importer(
             timestamp
         }
         val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault())
-        return format.parse(trimmedTimestamp)?.time ?: 0L
+        return format.parse(trimmedTimestamp)?.time ?: throw IllegalArgumentException("Invalid timestamp format: $timestamp")
     }
 
     suspend fun importFromAssets() {
