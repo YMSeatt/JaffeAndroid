@@ -67,9 +67,7 @@ class Importer(
 
     private suspend fun readAssetFile(fileName: String): String? {
         return try {
-            val inputStream = context.assets.open(fileName)
-            val bytes = inputStream.readBytes()
-            inputStream.close()
+            val bytes = context.assets.open(fileName).use { it.readBytes() }
 
             if (encryptDataFilesFlow.first()) {
                 try {
