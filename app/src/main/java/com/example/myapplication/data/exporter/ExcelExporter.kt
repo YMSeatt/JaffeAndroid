@@ -140,7 +140,7 @@ class ExcelExporter(
         sheet.createFreezePane(0, 1)
 
 
-        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "Student ID", "First Name", "Last Name")
+        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "Student Name")
         val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log"
 
         if (isMasterLog) {
@@ -213,9 +213,7 @@ class ExcelExporter(
             }
             col++
             row.createCell(col++).setCellValue(SimpleDateFormat("EEEE", Locale.getDefault()).format(date))
-            row.createCell(col++).setCellValue(student?.id?.toString() ?: "")
-            row.createCell(col++).setCellValue(student?.firstName ?: "")
-            row.createCell(col++).setCellValue(student?.lastName ?: "")
+            row.createCell(col++).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
 
             if (isMasterLog) {
                 row.createCell(col++).setCellValue(
@@ -503,20 +501,18 @@ class ExcelExporter(
     private suspend fun createStudentInfoSheet(workbook: Workbook, students: List<Student>, studentGroups: Map<Long, StudentGroup>) {
         val sheet = workbook.createSheet("Students Info")
         val headerRow = sheet.createRow(0)
-        val headers = listOf("Student ID", "First Name", "Last Name", "Nickname", "Gender", "Group Name")
+        val headers = listOf("Student Name", "Nickname", "Gender", "Group Name")
         headers.forEachIndexed { index, header ->
             headerRow.createCell(index).setCellValue(header)
         }
 
         students.forEachIndexed { index, student ->
             val row = sheet.createRow(index + 1)
-            row.createCell(0).setCellValue(student.id.toString())
-            row.createCell(1).setCellValue(student.firstName)
-            row.createCell(2).setCellValue(student.lastName)
-            row.createCell(3).setCellValue(student.nickname ?: "")
-            row.createCell(4).setCellValue(student.gender)
+            row.createCell(0).setCellValue("${student.firstName} ${student.lastName}")
+            row.createCell(1).setCellValue(student.nickname ?: "")
+            row.createCell(2).setCellValue(student.gender)
             val group = student.groupId?.let { studentGroups[it] }
-            row.createCell(5).setCellValue(group?.name ?: "")
+            row.createCell(3).setCellValue(group?.name ?: "")
         }
     }
 }
