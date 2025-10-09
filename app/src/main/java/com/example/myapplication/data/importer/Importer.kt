@@ -88,9 +88,7 @@ class Importer(
     suspend fun importData(uri: android.net.Uri) {
         withContext(Dispatchers.IO) {
             try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val bytes = inputStream?.readBytes()
-                inputStream?.close()
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
