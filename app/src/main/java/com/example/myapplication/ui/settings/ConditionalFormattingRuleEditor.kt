@@ -26,14 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionalFormattingRuleEditor(
-    rule: ConditionalFormattingRule?,
-    viewModel: ConditionalFormattingRuleViewModel,
+    rule: com.example.myapplication.data.ConditionalFormattingRule?,
+    viewModel: com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel,
     onDismiss: () -> Unit,
 ) {
     var name by remember(rule) { mutableStateOf(rule?.name ?: "") }
@@ -41,13 +42,12 @@ fun ConditionalFormattingRuleEditor(
     var ruleType by remember(rule) { mutableStateOf(rule?.type ?: "group") }
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
     var expanded by remember { mutableStateOf(false) }
-    val gson = Gson()
+    val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     val conditionState = remember(rule, ruleType) {
         val initialJson = rule?.conditionJson
-        val type = object : TypeToken<Map<String, Any>>() {}.type
-        val initialMap: Map<String, Any> = if (initialJson != null) {
-            gson.fromJson(initialJson, type)
+        val initialMap: Map<String, String> = if (!initialJson.isNullOrEmpty()) {
+            json.decodeFromString<Map<String, String>>(initialJson)
         } else {
             emptyMap()
         }
@@ -56,9 +56,8 @@ fun ConditionalFormattingRuleEditor(
 
     val formatState = remember(rule) {
         val initialJson = rule?.formatJson
-        val type = object : TypeToken<Map<String, Any>>() {}.type
-        val initialMap: Map<String, Any> = if (initialJson != null) {
-            gson.fromJson(initialJson, type)
+        val initialMap: Map<String, String> = if (!initialJson.isNullOrEmpty()) {
+            json.decodeFromString<Map<String, String>>(initialJson)
         } else {
             emptyMap()
         }
@@ -120,7 +119,7 @@ fun ConditionalFormattingRuleEditor(
                     when (ruleType) {
                         "group" -> {
                             OutlinedTextField(
-                                value = conditionState.value["group_id"]?.toString() ?: "",
+                                value = conditionState.value["group_id"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("group_id" to it)
                                 },
@@ -129,21 +128,21 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "behavior_count" -> {
                             OutlinedTextField(
-                                value = conditionState.value["behavior_name"]?.toString() ?: "",
+                                value = conditionState.value["behavior_name"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("behavior_name" to it)
                                 },
                                 label = { Text("Behavior Name") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["count_threshold"]?.toString() ?: "1",
+                                value = conditionState.value["count_threshold"] ?: "1",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("count_threshold" to it)
                                 },
                                 label = { Text("Count Threshold") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["time_window_hours"]?.toString() ?: "24",
+                                value = conditionState.value["time_window_hours"] ?: "24",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("time_window_hours" to it)
                                 },
@@ -152,21 +151,21 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "quiz_score_threshold" -> {
                             OutlinedTextField(
-                                value = conditionState.value["quiz_name_contains"]?.toString() ?: "",
+                                value = conditionState.value["quiz_name_contains"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("quiz_name_contains" to it)
                                 },
                                 label = { Text("Quiz Name Contains") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["operator"]?.toString() ?: "<=",
+                                value = conditionState.value["operator"] ?: "<=",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("operator" to it)
                                 },
                                 label = { Text("Operator") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["score_threshold_percent"]?.toString() ?: "50.0",
+                                value = conditionState.value["score_threshold_percent"] ?: "50.0",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("score_threshold_percent" to it)
                                 },
@@ -175,7 +174,7 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "quiz_mark_count" -> {
                             OutlinedTextField(
-                                value = conditionState.value["mark_type_id"]?.toString() ?: "",
+                                value = conditionState.value["mark_type_id"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("mark_type_id" to it)
                                 },
@@ -184,7 +183,7 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "live_quiz_response" -> {
                             OutlinedTextField(
-                                value = conditionState.value["quiz_response"]?.toString() ?: "Correct",
+                                value = conditionState.value["quiz_response"] ?: "Correct",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("quiz_response" to it)
                                 },
@@ -193,14 +192,14 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "live_homework_yes_no" -> {
                             OutlinedTextField(
-                                value = conditionState.value["homework_type_id"]?.toString() ?: "",
+                                value = conditionState.value["homework_type_id"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("homework_type_id" to it)
                                 },
                                 label = { Text("Homework Type ID") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["homework_response"]?.toString() ?: "yes",
+                                value = conditionState.value["homework_response"] ?: "yes",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("homework_response" to it)
                                 },
@@ -209,7 +208,7 @@ fun ConditionalFormattingRuleEditor(
                         }
                         "live_homework_select" -> {
                             OutlinedTextField(
-                                value = conditionState.value["homework_option_name"]?.toString() ?: "",
+                                value = conditionState.value["homework_option_name"] ?: "",
                                 onValueChange = {
                                     conditionState.value = conditionState.value + ("homework_option_name" to it)
                                 },
@@ -221,21 +220,21 @@ fun ConditionalFormattingRuleEditor(
 
                     Text("Formatting", style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
-                        value = formatState.value["color"]?.toString() ?: "",
+                        value = formatState.value["color"] ?: "",
                         onValueChange = {
                             formatState.value = formatState.value + ("color" to it)
                         },
                         label = { Text("Fill Color") }
                     )
                     OutlinedTextField(
-                        value = formatState.value["outline"]?.toString() ?: "",
+                        value = formatState.value["outline"] ?: "",
                         onValueChange = {
                             formatState.value = formatState.value + ("outline" to it)
                         },
                         label = { Text("Outline Color") }
                     )
                     OutlinedTextField(
-                        value = formatState.value["application_style"]?.toString() ?: "stripe",
+                        value = formatState.value["application_style"] ?: "stripe",
                         onValueChange = {
                             formatState.value = formatState.value + ("application_style" to it)
                         },
@@ -267,8 +266,8 @@ fun ConditionalFormattingRuleEditor(
                         priority = priority.toIntOrNull() ?: 0,
                         type = ruleType,
                         targetType = targetType,
-                        conditionJson = Gson().toJson(conditionState.value),
-                        formatJson = Gson().toJson(formatState.value)
+                        conditionJson = json.encodeToString(conditionState.value),
+                        formatJson = json.encodeToString(formatState.value)
                     )
                     if (rule != null) {
                         viewModel.updateRule(newRule)

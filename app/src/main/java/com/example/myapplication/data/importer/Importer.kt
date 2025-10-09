@@ -8,14 +8,21 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
+import com.example.myapplication.utils.SecurityUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-class Importer(private val context: Context, private val db: AppDatabase) {
+class Importer(
+    private val context: Context,
+    private val db: AppDatabase,
+    private val encryptDataFilesFlow: Flow<Boolean>
+) {
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -23,21 +30,25 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         coerceInputValues = true
     }
 
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault())
+    private fun parseTimestamp(timestamp: String): Long {
+        // Handle different fractional second formats
+        val trimmedTimestamp = if (timestamp.contains(".")) {
+            val parts = timestamp.split(".")
+            val wholePart = parts[0]
+            val fractionalPart = parts[1].take(6).padEnd(6, '0')
+            "$wholePart.$fractionalPart"
+        } else {
+            timestamp
+        }
+        val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault())
+        return format.parse(trimmedTimestamp)?.time ?: 0L
+    }
 
     suspend fun importFromAssets() {
         withContext(Dispatchers.IO) {
             try {
-                // Order of import matters to handle relationships
-                // These will be implemented later
-                // importStudentGroups("student_groups_v10.json")
-                // importCustomBehaviors("custom_behaviors_v10.json")
-                // importCustomHomeworkTypes("custom_homework_types_v10.json")
-                // importCustomHomeworkStatuses("custom_homework_statuses_v10.json")
                 importClassroomData("classroom_data_v10.json")
-
                 Log.d("Importer", "All data imported successfully.")
-
             } catch (e: Exception) {
                 Log.e("Importer", "Error during import process", e)
             }
@@ -50,12 +61,26 @@ class Importer(private val context: Context, private val db: AppDatabase) {
     }
 
     private suspend fun getStudentDbId(stringId: String): Long {
-        return db.studentDao().getStudentByStringId(stringId)?.id ?: 0L
+        return db.studentDao().getStudentByStringId(stringId)?.id
+            ?: throw IllegalArgumentException("Student with stringId $stringId not found")
     }
 
-    private fun readAssetFile(fileName: String): String? {
+    private suspend fun readAssetFile(fileName: String): String? {
         return try {
-            context.assets.open(fileName).bufferedReader().use { it.readText() }
+            val inputStream = context.assets.open(fileName)
+            val bytes = inputStream.readBytes()
+            inputStream.close()
+
+            if (encryptDataFilesFlow.first()) {
+                try {
+                    SecurityUtil.decrypt(String(bytes))
+                } catch (e: Exception) {
+                    // If decryption fails, assume it's plaintext
+                    String(bytes)
+                }
+            } else {
+                String(bytes)
+            }
         } catch (e: IOException) {
             Log.e("Importer", "Error reading asset file: $fileName", e)
             null
@@ -65,10 +90,21 @@ class Importer(private val context: Context, private val db: AppDatabase) {
     suspend fun importData(uri: android.net.Uri) {
         withContext(Dispatchers.IO) {
             try {
-                val jsonString = context.contentResolver.openInputStream(uri)?.bufferedReader().use { it?.readText() }
-                if (jsonString != null) {
-                    // We need to figure out which type of file this is.
-                    // For now, we assume it's a classroom_data file.
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+
+                if (bytes != null) {
+                    val jsonString = if (encryptDataFilesFlow.first()) {
+                        try {
+                            SecurityUtil.decrypt(String(bytes))
+                        } catch (e: Exception) {
+                            // If decryption fails, assume it's plaintext
+                            String(bytes)
+                        }
+                    } else {
+                        String(bytes)
+                    }
                     importClassroomDataFromJson(jsonString)
                 }
             } catch (e: Exception) {
@@ -83,8 +119,6 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         // Import Students
         val studentDao = db.studentDao()
         classroomData.students.values.forEach { studentDto ->
-            val widthDouble = studentDto.width
-            val heightDouble = studentDto.height
             val student = Student(
                 stringId = studentDto.id,
                 firstName = studentDto.firstName,
@@ -93,8 +127,8 @@ class Importer(private val context: Context, private val db: AppDatabase) {
                 gender = studentDto.gender,
                 xPosition = studentDto.x.toFloat(),
                 yPosition = studentDto.y.toFloat(),
-                customWidth = widthDouble.toInt(),
-                customHeight = heightDouble.toInt()
+                customWidth = studentDto.width.toInt(),
+                customHeight = studentDto.height.toInt()
                 // groupId will be handled later if needed
             )
             studentDao.insert(student)
@@ -104,16 +138,14 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         // Import Furniture
         val furnitureDao = db.furnitureDao()
         classroomData.furniture.values.forEach { furnitureDto ->
-            val furnitureWidthDouble = furnitureDto.width
-            val furnitureHeightDouble = furnitureDto.height
             val furniture = Furniture(
                 stringId = furnitureDto.id,
                 name = furnitureDto.name,
                 type = furnitureDto.type,
                 xPosition = furnitureDto.x.toFloat(),
                 yPosition = furnitureDto.y.toFloat(),
-                width = furnitureWidthDouble.toInt(),
-                height = furnitureHeightDouble.toInt(),
+                width = furnitureDto.width.toInt(),
+                height = furnitureDto.height.toInt(),
                 fillColor = furnitureDto.fillColor,
                 outlineColor = furnitureDto.outlineColor
             )
@@ -129,25 +161,24 @@ class Importer(private val context: Context, private val db: AppDatabase) {
                     "behavior" -> {
                         val behaviorEvent = BehaviorEvent(
                             studentId = getStudentDbId(logEntry.studentId),
-                            timestamp = dateFormat.parse(logEntry.timestamp)?.time ?: 0L,
+                            timestamp = parseTimestamp(logEntry.timestamp),
                             type = logEntry.behavior,
                             comment = logEntry.comment
                         )
                         behaviorEventDao.insert(behaviorEvent)
                     }
                     "quiz" -> {
-                        // Handle quiz log import
                         val quizLogDao = db.quizLogDao()
                         val quizLog = QuizLog(
-                             studentId = getStudentDbId(logEntry.studentId),
-                             loggedAt = dateFormat.parse(logEntry.timestamp)?.time ?: 0L,
-                             quizName = logEntry.behavior, // Assuming behavior is quiz name
-                             comment = logEntry.comment,
-                             markValue = logEntry.scoreDetails?.correct?.toDouble(),
-                             maxMarkValue = logEntry.scoreDetails?.totalAsked?.toDouble(),
-                             markType = null,
-                             marksData = "{}",
-                             numQuestions = logEntry.scoreDetails?.totalAsked ?: 0
+                            studentId = getStudentDbId(logEntry.studentId),
+                            loggedAt = parseTimestamp(logEntry.timestamp),
+                            quizName = logEntry.behavior,
+                            comment = logEntry.comment,
+                            markValue = logEntry.scoreDetails?.correct?.toDouble(),
+                            maxMarkValue = logEntry.scoreDetails?.totalAsked?.toDouble(),
+                            markType = null,
+                            marksData = "{}",
+                            numQuestions = logEntry.scoreDetails?.totalAsked ?: 0
                         )
                         quizLogDao.insert(quizLog)
                     }
@@ -160,10 +191,10 @@ class Importer(private val context: Context, private val db: AppDatabase) {
         withContext(Dispatchers.IO) {
             val homeworkLogDao = db.homeworkLogDao()
             classroomData.homeworkLog.forEach { hwLogEntry ->
-                 val homeworkLog = HomeworkLog(
+                val homeworkLog = HomeworkLog(
                     studentId = getStudentDbId(hwLogEntry.studentId),
-                    loggedAt = dateFormat.parse(hwLogEntry.timestamp)?.time ?: 0L,
-                    assignmentName = hwLogEntry.homeworkType ?: "Unknown",
+                    loggedAt = parseTimestamp(hwLogEntry.timestamp),
+                    assignmentName = hwLogEntry.homeworkType ?: "",
                     status = hwLogEntry.homeworkStatus ?: hwLogEntry.behavior,
                     comment = hwLogEntry.comment
                 )
