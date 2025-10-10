@@ -1,11 +1,8 @@
 package com.example.myapplication.data
 
 import android.content.Context
-import android.net.Uri
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
-import com.example.myapplication.data.exporter.ExportOptions
-import com.example.myapplication.data.exporter.Exporter
 import kotlinx.coroutines.flow.Flow
 
 class StudentRepository(
@@ -19,23 +16,6 @@ class StudentRepository(
     private val context: Context
 ) {
     val allStudents: LiveData<List<Student>> = studentDao.getAllStudents()
-
-    suspend fun exportToExcel(uri: Uri, options: ExportOptions) {
-        val students = studentDao.getAllStudentsNonLiveData()
-        val behaviorLogs = behaviorEventDao.getAllBehaviorEventsList()
-        val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-        val quizLogs = quizLogDao.getAllQuizLogsList()
-
-        val exporter = Exporter(context)
-        exporter.exportToXlsx(
-            uri = uri,
-            students = students,
-            behaviorLogs = behaviorLogs,
-            homeworkLogs = homeworkLogs,
-            quizLogs = quizLogs,
-            options = options
-        )
-    }
 
     fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getHomeworkLogsForStudent(studentId)
