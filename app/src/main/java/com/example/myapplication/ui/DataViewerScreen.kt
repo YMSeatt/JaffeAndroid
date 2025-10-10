@@ -1,19 +1,19 @@
 package com.example.myapplication.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.StatsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -36,13 +37,15 @@ enum class ViewerTab {
     STUDENTS,
     BEHAVIOR_LOGS,
     HOMEWORK_LOGS,
-    QUIZ_LOGS
+    QUIZ_LOGS,
+    STATS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataViewerScreen(
     seatingChartViewModel: SeatingChartViewModel,
+    statsViewModel: StatsViewModel,
     onDismiss: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(ViewerTab.STUDENTS) }
@@ -75,6 +78,7 @@ fun DataViewerScreen(
                     ViewerTab.BEHAVIOR_LOGS -> BehaviorLogsTab(seatingChartViewModel)
                     ViewerTab.HOMEWORK_LOGS -> HomeworkLogsTab(seatingChartViewModel)
                     ViewerTab.QUIZ_LOGS -> QuizLogsTab(seatingChartViewModel)
+                    ViewerTab.STATS -> StatsScreen(statsViewModel)
                 }
             }
             Row(
