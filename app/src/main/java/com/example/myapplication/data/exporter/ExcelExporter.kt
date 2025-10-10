@@ -508,7 +508,7 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
 
         students.forEachIndexed { index, student ->
             val row = sheet.createRow(index + 1)
-            row.createCell(0).setCellValue("${student.firstName} ${student.lastName}")
+row.createCell(0).setCellValue(listOf(student.firstName, student.lastName).filter(String::isNotBlank).joinToString(" "))
             row.createCell(1).setCellValue(student.nickname ?: "")
             row.createCell(2).setCellValue(student.gender)
             val group = student.groupId?.let { studentGroups[it] }
