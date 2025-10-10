@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.example.myapplication.data.DefaultStudentStyle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -538,6 +539,23 @@ class AppPreferencesRepository(private val context: Context) {
             settings[PreferencesKeys.SHOW_GRID] = show
         }
     }
+
+    val defaultStudentStyleFlow: Flow<DefaultStudentStyle> = context.dataStore.data
+        .map { preferences ->
+            DefaultStudentStyle(
+                width = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_WIDTH] ?: DEFAULT_STUDENT_BOX_WIDTH_DP,
+                height = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_HEIGHT] ?: DEFAULT_STUDENT_BOX_HEIGHT_DP,
+                backgroundColor = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_BG_COLOR] ?: DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
+                outlineColor = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_COLOR] ?: DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX,
+                textColor = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_TEXT_COLOR] ?: DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
+                outlineThickness = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] ?: DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP,
+                cornerRadius = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_CORNER_RADIUS] ?: DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
+                padding = preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_PADDING] ?: DEFAULT_STUDENT_BOX_PADDING_DP,
+                fontFamily = preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_FAMILY] ?: DEFAULT_STUDENT_FONT_FAMILY,
+                fontSize = preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_SIZE] ?: DEFAULT_STUDENT_FONT_SIZE_SP,
+                fontColor = preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] ?: DEFAULT_STUDENT_FONT_COLOR_HEX
+            )
+        }
 }
 
 enum class AppTheme {

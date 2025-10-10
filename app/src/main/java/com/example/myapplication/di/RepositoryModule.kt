@@ -1,7 +1,7 @@
-package com.example.myapplication.data
+package com.example.myapplication.di
 
 import android.content.Context
-import androidx.room.Room
+import com.example.myapplication.data.StudentRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -11,24 +11,18 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-object AppModule {
-
-    @Provides
-    @Singleton
-    fun provideAppPreferencesRepository(@ApplicationContext context: Context): com.example.myapplication.preferences.AppPreferencesRepository {
-        return com.example.myapplication.preferences.AppPreferencesRepository(context)
-    }
+object RepositoryModule {
 
     @Provides
     @Singleton
     fun provideStudentRepository(
-        studentDao: StudentDao,
-        behaviorEventDao: BehaviorEventDao,
-        homeworkLogDao: HomeworkLogDao,
-        quizLogDao: QuizLogDao,
-        furnitureDao: FurnitureDao,
-        layoutTemplateDao: LayoutTemplateDao,
-        quizMarkTypeDao: QuizMarkTypeDao,
+        studentDao: com.example.myapplication.data.StudentDao,
+        behaviorEventDao: com.example.myapplication.data.BehaviorEventDao,
+        homeworkLogDao: com.example.myapplication.data.HomeworkLogDao,
+        quizLogDao: com.example.myapplication.data.QuizLogDao,
+        furnitureDao: com.example.myapplication.data.FurnitureDao,
+        layoutTemplateDao: com.example.myapplication.data.LayoutTemplateDao,
+        quizMarkTypeDao: com.example.myapplication.data.QuizMarkTypeDao,
         @ApplicationContext context: Context
     ): StudentRepository {
         return StudentRepository(

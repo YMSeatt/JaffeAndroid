@@ -24,7 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -365,11 +365,12 @@ fun SeatingChartScreen(
 
                     IconButton(onClick = { seatingChartViewModel.undo() }) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo") }
                     IconButton(onClick = { seatingChartViewModel.redo() }) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
-                    IconButton(onClick = { showFileMenu = true }) { Text("File") }
-                    val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
-                    DropdownMenu(expanded = showFileMenu, onDismissRequest = { showFileMenu = false }) {
-                        DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showFileMenu = false })
-                        DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showFileMenu = false })
+                    Box {
+                        IconButton(onClick = { showFileMenu = true }) { Text("File") }
+                        val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
+                        DropdownMenu(expanded = showFileMenu, onDismissRequest = { showFileMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
+                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showFileMenu = false })
+                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showFileMenu = false })
                         DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showFileMenu = false })
                         DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showFileMenu = false })
                         DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showFileMenu = false })
@@ -413,12 +414,12 @@ fun SeatingChartScreen(
                             showFileMenu = false
                         })
                         DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showFileMenu = false })
-                    }
-
-                    IconButton(onClick = { showViewMenu = true }) { Text("View") }
-                    DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }) {
-                        DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showViewMenu = false })
-                        DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showViewMenu = false })
+                    }}
+                    Box {
+                        IconButton(onClick = { showViewMenu = true }) { Text("View") }
+                        DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
+                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showViewMenu = false })
+                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showViewMenu = false })
                         DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
                             guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
                             showViewMenu = false
@@ -439,14 +440,14 @@ fun SeatingChartScreen(
                         AppTheme.entries.forEach { theme ->
                             DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
                         }
-                    }
+                    }}
 
                     var showModeMenu by remember { mutableStateOf(false) }
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }
-                        DropdownMenu(expanded = showModeMenu, onDismissRequest = { showModeMenu = false }) {
+                        DropdownMenu(expanded = showModeMenu, onDismissRequest = { showModeMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
                             SessionType.entries.forEach { mode ->
                                 DropdownMenuItem(text = { Text(mode.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = {
                                     if (isSessionActive) {

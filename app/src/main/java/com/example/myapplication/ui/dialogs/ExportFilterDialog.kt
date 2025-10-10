@@ -105,7 +105,7 @@ fun ExportFilterDialog(
                             readOnly = true,
                             label = { Text("Students") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = studentDropdownExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = studentDropdownExpanded,
@@ -126,7 +126,7 @@ fun ExportFilterDialog(
                                     studentDropdownExpanded = false
                                 }
                             )
-                            Divider()
+                            HorizontalDivider()
                             allStudents.forEach { student ->
                                 val isSelected = selectedStudentIds.contains(student.id)
                                 DropdownMenuItem(

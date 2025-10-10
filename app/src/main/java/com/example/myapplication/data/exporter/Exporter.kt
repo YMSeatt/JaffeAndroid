@@ -242,7 +242,7 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
                     }
 
                     val marksData = try {
-                        Json.decodeFromString<Map<String, Int>>(item.marksData)
+                        Json.decodeFromString<Map<String, String>>(item.marksData)
                     } catch (e: Exception) {
                         emptyMap()
                     }
@@ -251,7 +251,7 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
                     var totalPossible = 0.0
 
                     quizMarkTypes.forEach { markType ->
-                        val markCount = marksData[markType.id.toString()] ?: 0
+                        val markCount = marksData[markType.name]?.toIntOrNull() ?: 0
                         val markIndex = headers.indexOf(markType.name)
                         if (markIndex != -1) row.createCell(markIndex).apply {
                             setCellValue(markCount.toDouble())
@@ -401,11 +401,11 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
                 val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
                 val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
                 // Simplified score calculation
-                val marksData = try { Json.decodeFromString<Map<String, Int>>(log.marksData) } catch (e: Exception) { emptyMap() }
+                val marksData = try { Json.decodeFromString<Map<String, String>>(log.marksData) } catch (e: Exception) { emptyMap() }
                 var totalScore = 0.0
                 var totalPossible = 0.0
                 quizMarkTypes.forEach { markType ->
-                    val markCount = marksData[markType.id.toString()] ?: 0
+                    val markCount = marksData[markType.name]?.toIntOrNull() ?: 0
                     if (markType.contributesToTotal) {
                         totalPossible += log.numQuestions * markType.defaultPoints
                     }
