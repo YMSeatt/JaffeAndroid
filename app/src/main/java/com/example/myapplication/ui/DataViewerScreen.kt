@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StatsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -46,7 +47,8 @@ enum class ViewerTab {
 fun DataViewerScreen(
     seatingChartViewModel: SeatingChartViewModel,
     statsViewModel: StatsViewModel,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    settingsViewModel: SettingsViewModel
 ) {
     var selectedTab by remember { mutableStateOf(ViewerTab.STUDENTS) }
 

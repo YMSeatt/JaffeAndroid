@@ -89,7 +89,6 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StatsViewModel
-import com.example.myapplication.viewmodel.StatsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch

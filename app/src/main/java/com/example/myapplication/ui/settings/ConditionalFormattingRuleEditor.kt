@@ -35,15 +35,14 @@ import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionalFormattingRuleEditor(
-    rule: com.example.myapplication.data.ConditionalFormattingRule?,
-    viewModel: com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel,
+    rule: ConditionalFormattingRule?,
+    viewModel: ConditionalFormattingRuleViewModel,
     onDismiss: () -> Unit,
 ) {
     var name by remember(rule) { mutableStateOf(rule?.name ?: "") }
@@ -247,8 +246,8 @@ fun ConditionalFormattingRuleEditor(
                     Text("Formatting", style = MaterialTheme.typography.titleMedium)
                     ColorPickerField(
                         label = "Fill Color",
-                        color = formatState["color"] ?: "",
-                        onColorChange = { formatState["color"] = it },
+                        color = formatState.value["color"] ?: "",
+                        onColorChange = { formatState.value = formatState.value + ("color" to it) },
                         onColorPickerClick = {
                             colorPickerTarget = "color"
                             showColorPicker.value = true
