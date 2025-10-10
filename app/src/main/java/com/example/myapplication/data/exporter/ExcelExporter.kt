@@ -213,7 +213,7 @@ class ExcelExporter(
             }
             col++
             row.createCell(col++).setCellValue(SimpleDateFormat("EEEE", Locale.getDefault()).format(date))
-            row.createCell(col++).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
+row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") } ?: "Unknown")
 
             if (isMasterLog) {
                 row.createCell(col++).setCellValue(
