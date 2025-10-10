@@ -247,8 +247,8 @@ fun ConditionalFormattingRuleEditor(
                     Text("Formatting", style = MaterialTheme.typography.titleMedium)
                     ColorPickerField(
                         label = "Fill Color",
-                        color = formatState.value["color"] ?: "",
-                        onColorChange = { formatState.value = formatState.value + ("color" to it) },
+                        color = formatState["color"] ?: "",
+                        onColorChange = { formatState["color"] = it },
                         onColorPickerClick = {
                             colorPickerTarget = "color"
                             showColorPicker.value = true
