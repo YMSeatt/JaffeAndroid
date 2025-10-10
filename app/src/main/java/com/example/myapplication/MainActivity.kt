@@ -88,6 +88,8 @@ import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
+import com.example.myapplication.viewmodel.StatsViewModel
+import com.example.myapplication.viewmodel.StatsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -146,6 +148,29 @@ class MainActivity : ComponentActivity() {
     }
 
     val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
+
+    private val statsViewModelFactory by lazy {
+        object : ViewModelProvider.Factory {
+            override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
+                    val db = AppDatabase.getDatabase(applicationContext)
+                    @Suppress("UNCHECKED_CAST")
+                    return StatsViewModel(
+                        studentDao = db.studentDao(),
+                        behaviorEventDao = db.behaviorEventDao(),
+                        homeworkLogDao = db.homeworkLogDao(),
+                        quizLogDao = db.quizLogDao(),
+                        quizMarkTypeDao = db.quizMarkTypeDao(),
+                        customBehaviorDao = db.customBehaviorDao(),
+                        customHomeworkTypeDao = db.customHomeworkTypeDao()
+                    ) as T
+                }
+                throw IllegalArgumentException("Unknown ViewModel class")
+            }
+        }
+    }
+
+    val statsViewModel: StatsViewModel by viewModels { statsViewModelFactory }
 
     val importJsonLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
@@ -208,6 +233,8 @@ class MainActivity : ComponentActivity() {
                     if (showDataViewer) {
                         DataViewerScreen(
                             seatingChartViewModel = seatingChartViewModel,
+                            statsViewModel = statsViewModel,
+                            settingsViewModel = settingsViewModel,
                             onDismiss = { showDataViewer = false }
                         )
                         BackHandler {
