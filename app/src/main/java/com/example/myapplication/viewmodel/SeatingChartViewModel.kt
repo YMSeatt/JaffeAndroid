@@ -47,7 +47,6 @@ import com.example.myapplication.data.importer.Importer
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
-import com.example.myapplication.data.importer.Importer
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
 import com.example.myapplication.util.ConditionalFormattingEngine
@@ -366,39 +365,27 @@ class SeatingChartViewModel @Inject constructor(
         uri: Uri,
         options: com.example.myapplication.data.exporter.ExportOptions
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        val allStudentsList = allStudents.value ?: emptyList()
-        val behaviorLogs = if (options.includeBehaviorLogs) {
-            getFilteredBehaviorEvents(
-                options.startDate ?: 0,
-                options.endDate ?: Long.MAX_VALUE,
-                options.studentIds
-            )
-        } else emptyList()
-
-        val homeworkLogs = if (options.includeHomeworkLogs) {
-            getFilteredHomeworkLogs(
-                options.startDate ?: 0,
-                options.endDate ?: Long.MAX_VALUE,
-                options.studentIds
-            )
-        } else emptyList()
-
-        val quizLogs = if (options.includeQuizLogs) {
-            getFilteredQuizLogs(
-                options.startDate ?: 0,
-                options.endDate ?: Long.MAX_VALUE,
-                options.studentIds
-            )
-        } else emptyList()
+        val allStudentsList = studentDao.getAllStudentsNonLiveData()
+        val behaviorLogs = behaviorEventDao.getAllBehaviorEventsList()
+        val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+        val quizLogs = quizLogDao.getAllQuizLogsList()
+        val studentGroups = studentGroupDao.getAllStudentGroupsList()
+        val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+        val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
+        val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
 
         val exporter = com.example.myapplication.data.exporter.Exporter(context)
-        exporter.exportToXlsx(
+        exporter.export(
             uri = uri,
+            options = options,
             students = allStudentsList,
-            behaviorLogs = behaviorLogs,
+            behaviorEvents = behaviorLogs,
             homeworkLogs = homeworkLogs,
             quizLogs = quizLogs,
-            options = options
+            studentGroups = studentGroups,
+            quizMarkTypes = quizMarkTypes,
+            customHomeworkTypes = customHomeworkTypes,
+            customHomeworkStatuses = customHomeworkStatuses
         )
         return@withContext Result.success(Unit)
     }

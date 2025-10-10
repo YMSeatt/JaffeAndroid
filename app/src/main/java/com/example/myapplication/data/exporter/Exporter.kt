@@ -2,159 +2,509 @@ package com.example.myapplication.data.exporter
 
 import android.content.Context
 import android.net.Uri
-import com.example.myapplication.data.BehaviorEvent
-import com.example.myapplication.data.HomeworkLog
-import com.example.myapplication.data.QuizLog
-import com.example.myapplication.data.Student
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.example.myapplication.data.*
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
+import org.apache.poi.ss.usermodel.HorizontalAlignment
+import org.apache.poi.ss.usermodel.VerticalAlignment
+import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import java.io.OutputStream
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.*
 
-class Exporter(private val context: Context) {
+class Exporter(
+    private val context: Context
+) {
 
-    suspend fun exportToXlsx(
+    suspend fun export(
         uri: Uri,
+        options: ExportOptions,
         students: List<Student>,
-        behaviorLogs: List<BehaviorEvent>,
+        behaviorEvents: List<BehaviorEvent>,
         homeworkLogs: List<HomeworkLog>,
         quizLogs: List<QuizLog>,
-        options: ExportOptions
+        studentGroups: List<StudentGroup>,
+        quizMarkTypes: List<QuizMarkType>,
+        customHomeworkTypes: List<CustomHomeworkType>,
+        customHomeworkStatuses: List<CustomHomeworkStatus>
     ) {
-        withContext(Dispatchers.IO) {
-            try {
-                val workbook = XSSFWorkbook()
+        val workbook = XSSFWorkbook()
 
-                val filteredStudents = students.filter { options.studentIds?.contains(it.id) ?: true }
-                val filteredBehaviorLogs = behaviorLogs.filter { options.studentIds?.contains(it.studentId) ?: true }
-                val filteredHomeworkLogs = homeworkLogs.filter { options.studentIds?.contains(it.studentId) ?: true }
-                val filteredQuizLogs = quizLogs.filter { options.studentIds?.contains(it.studentId) ?: true }
+        // Filter data
+        val filteredBehaviorEvents = behaviorEvents.filter { event ->
+            (options.startDate == null || event.timestamp >= options.startDate) &&
+                    (options.endDate == null || event.timestamp <= options.endDate) &&
+                    (options.studentIds == null || options.studentIds.contains(event.studentId)) &&
+                    (options.behaviorTypes == null || options.behaviorTypes.contains(event.type))
+        }
 
+        val filteredHomeworkLogs = homeworkLogs.filter { log ->
+            (options.startDate == null || log.loggedAt >= options.startDate) &&
+                    (options.endDate == null || log.loggedAt <= options.endDate) &&
+                    (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
+                    (options.homeworkTypes == null || options.homeworkTypes.contains(log.assignmentName))
+        }
 
-                if (options.separateSheets) {
-                    if (options.includeBehaviorLogs) {
-                        createSheet(workbook, "Behavior Logs", filteredBehaviorLogs)
-                    }
-                    if (options.includeHomeworkLogs) {
-                        createSheet(workbook, "Homework Logs", filteredHomeworkLogs)
-                    }
-                    if (options.includeQuizLogs) {
-                        createSheet(workbook, "Quiz Logs", filteredQuizLogs)
-                    }
-                }
+        val filteredQuizLogs = quizLogs.filter { log ->
+            (options.startDate == null || log.loggedAt >= options.startDate) &&
+                    (options.endDate == null || log.loggedAt <= options.endDate) &&
+                    (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
+                    (options.behaviorTypes == null || options.behaviorTypes.contains(log.quizName))
+        }
 
-                if (options.includeMasterLog || !options.separateSheets) {
-                    val allLogs = mutableListOf<Any>()
-                    if (options.includeBehaviorLogs) allLogs.addAll(filteredBehaviorLogs)
-                    if (options.includeHomeworkLogs) allLogs.addAll(filteredHomeworkLogs)
-                    if (options.includeQuizLogs) allLogs.addAll(filteredQuizLogs)
-                    createSheet(workbook, "Master Log", allLogs)
-                }
-
-                if (options.includeSummarySheet) {
-                    createSummarySheet(workbook, filteredStudents, filteredBehaviorLogs, filteredHomeworkLogs, filteredQuizLogs)
-                }
-
-
-                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                    workbook.write(outputStream)
-                }
-                workbook.close()
-            } catch (e: Exception) {
-                // Handle exceptions
-                e.printStackTrace()
+        val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
+            when (it) {
+                is BehaviorEvent -> it.timestamp
+                is HomeworkLog -> it.loggedAt
+                is QuizLog -> it.loggedAt
+                else -> 0
             }
         }
+        val studentMap = students.associateBy { it.id }
+        val studentGroupMap = studentGroups.associateBy { it.id }
+
+
+        // Create sheets
+        if (options.separateSheets) {
+            if (options.includeBehaviorLogs) {
+                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            }
+            if (options.includeQuizLogs) {
+                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            }
+            if (options.includeHomeworkLogs) {
+                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            }
+            if (options.includeMasterLog) {
+                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            }
+        } else {
+            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+        }
+
+        if (options.includeSummarySheet) {
+            createSummarySheet(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+        }
+
+        if (options.includeIndividualStudentSheets) {
+            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+        }
+
+        if (options.includeStudentInfoSheet) {
+            createStudentInfoSheet(workbook, students, studentGroupMap)
+        }
+
+
+        // Write to file
+        context.contentResolver.openFileDescriptor(uri, "w")?.use {
+            FileOutputStream(it.fileDescriptor).use { outputStream ->
+                workbook.write(outputStream)
+            }
+        }
+        workbook.close()
     }
 
-    private fun createSummarySheet(
-        workbook: XSSFWorkbook,
-        students: List<Student>,
-        behaviorLogs: List<BehaviorEvent>,
-        homeworkLogs: List<HomeworkLog>,
-        quizLogs: List<QuizLog>
+    private suspend fun createSheet(
+        workbook: Workbook,
+        sheetName: String,
+        data: List<Any>,
+        students: Map<Long, Student>,
+        quizMarkTypes: List<QuizMarkType>,
+        customHomeworkTypes: List<CustomHomeworkType>,
+        customHomeworkStatuses: List<CustomHomeworkStatus>
     ) {
-        val sheet = workbook.createSheet("Summary")
-        var rowNum = 0
-
-        // Behavior Summary
-        val behaviorHeader = sheet.createRow(rowNum++)
-        behaviorHeader.createCell(0).setCellValue("Behavior Summary")
-        val behaviorCounts = behaviorLogs.groupingBy { it.type }.eachCount()
-        behaviorCounts.forEach { (behavior, count) ->
-            val row = sheet.createRow(rowNum++)
-            row.createCell(0).setCellValue(behavior)
-            row.createCell(1).setCellValue(count.toDouble())
-        }
-
-        rowNum++ // Add a blank row
-
-        // Homework Summary
-        val homeworkHeader = sheet.createRow(rowNum++)
-        homeworkHeader.createCell(0).setCellValue("Homework Summary")
-        val homeworkCounts = homeworkLogs.groupingBy { it.status }.eachCount()
-        homeworkCounts.forEach { (status, count) ->
-            val row = sheet.createRow(rowNum++)
-            row.createCell(0).setCellValue(status)
-            row.createCell(1).setCellValue(count.toDouble())
-        }
-    }
-
-    private fun createSheet(workbook: XSSFWorkbook, sheetName: String, data: List<Any>) {
         val sheet = workbook.createSheet(sheetName)
-        var rowNum = 0
-        val headerRow = sheet.createRow(rowNum++)
-        // Create header based on data type
-        when (data.firstOrNull()) {
-            is BehaviorEvent -> {
-                headerRow.createCell(0).setCellValue("Student ID")
-                headerRow.createCell(1).setCellValue("Timestamp")
-                headerRow.createCell(2).setCellValue("Behavior")
-                headerRow.createCell(3).setCellValue("Comment")
-            }
-            is HomeworkLog -> {
-                headerRow.createCell(0).setCellValue("Student ID")
-                headerRow.createCell(1).setCellValue("Timestamp")
-                headerRow.createCell(2).setCellValue("Type")
-                headerRow.createCell(3).setCellValue("Status")
-                headerRow.createCell(4).setCellValue("Comment")
-            }
-            is QuizLog -> {
-                headerRow.createCell(0).setCellValue("Student ID")
-                headerRow.createCell(1).setCellValue("Timestamp")
-                headerRow.createCell(2).setCellValue("Quiz Name")
-                headerRow.createCell(3).setCellValue("Score")
-                headerRow.createCell(4).setCellValue("Comment")
-            }
+        val boldFont = workbook.createFont().apply { bold = true }
+        val headerStyle = workbook.createCellStyle().apply {
+            setFont(boldFont)
+            alignment = HorizontalAlignment.CENTER
+            verticalAlignment = VerticalAlignment.CENTER
+        }
+        val rightAlignmentStyle = workbook.createCellStyle().apply {
+            alignment = HorizontalAlignment.RIGHT
+        }
+        val leftAlignmentStyle = workbook.createCellStyle().apply {
+            alignment = HorizontalAlignment.LEFT
         }
 
-        data.forEach { item ->
-            val row = sheet.createRow(rowNum++)
+        sheet.createFreezePane(0, 1)
+
+
+        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "Student Name")
+        val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log"
+
+        if (isMasterLog) {
+            headers.add("Log Type")
+        }
+
+        when (sheetName) {
+            "Behavior Log" -> headers.add("Behavior")
+            "Quiz Log" -> {
+                headers.add("Quiz Name")
+                headers.add("Num Questions")
+                quizMarkTypes.forEach { headers.add(it.name) }
+                headers.add("Quiz Score (%)")
+            }
+            "Homework Log" -> {
+                headers.add("Homework Type/Session Name")
+                headers.add("Num Items")
+                customHomeworkTypes.forEach { headers.add(it.name) }
+                customHomeworkStatuses.forEach { headers.add(it.name) }
+                headers.add("Homework Score (Total Pts)")
+                headers.add("Homework Effort")
+            }
+            else -> { // Master Log or Combined Log
+                headers.add("Item Name")
+                quizMarkTypes.forEach { headers.add(it.name) }
+                headers.add("Quiz Score (%)")
+                customHomeworkTypes.forEach { headers.add(it.name) }
+                customHomeworkStatuses.forEach { headers.add(it.name) }
+                headers.add("Homework Score (Total Pts)")
+                headers.add("Homework Effort")
+            }
+        }
+        headers.add("Comment")
+
+        val headerRow = sheet.createRow(0)
+        headers.forEachIndexed { index, header ->
+            val cell = headerRow.createCell(index)
+            cell.setCellValue(header)
+            cell.cellStyle = headerStyle
+        }
+
+        data.forEachIndexed { index, item ->
+            val row = sheet.createRow(index + 1)
+            val studentId = when (item) {
+                is BehaviorEvent -> item.studentId
+                is HomeworkLog -> item.studentId
+                is QuizLog -> item.studentId
+                else -> 0L
+            }
+            val student = students[studentId]
+
+            val timestamp = when (item) {
+                is BehaviorEvent -> item.timestamp
+                is HomeworkLog -> item.loggedAt
+                is QuizLog -> item.loggedAt
+                else -> 0
+            }
+
+            val date = Date(timestamp)
+            var col = 0
+            row.createCell(col++).setCellValue(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(date))
+            row.createCell(col).apply {
+                setCellValue(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date))
+                cellStyle = rightAlignmentStyle
+            }
+            col++
+            row.createCell(col).apply {
+                setCellValue(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(date))
+                cellStyle = rightAlignmentStyle
+            }
+            col++
+            row.createCell(col++).setCellValue(SimpleDateFormat("EEEE", Locale.getDefault()).format(date))
+row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") } ?: "Unknown")
+
+            if (isMasterLog) {
+                row.createCell(col++).setCellValue(
+                    when (item) {
+                        is BehaviorEvent -> "Behavior"
+                        is HomeworkLog -> "Homework"
+                        is QuizLog -> "Quiz"
+                        else -> ""
+                    }
+                )
+            }
+
             when (item) {
                 is BehaviorEvent -> {
-                    row.createCell(0).setCellValue(item.studentId.toDouble())
-                    row.createCell(1).setCellValue(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(item.timestamp)))
-                    row.createCell(2).setCellValue(item.type)
-                    row.createCell(3).setCellValue(item.comment ?: "")
-                }
-                is HomeworkLog -> {
-                    row.createCell(0).setCellValue(item.studentId.toDouble())
-                    row.createCell(1).setCellValue(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(item.loggedAt)))
-                    row.createCell(2).setCellValue(item.assignmentName)
-                    row.createCell(3).setCellValue(item.status)
-                    row.createCell(4).setCellValue(item.comment ?: "")
+                    row.createCell(headers.indexOf("Behavior")).setCellValue(item.type)
+                    row.createCell(headers.indexOf("Comment")).apply {
+                        setCellValue(item.comment ?: "")
+                        cellStyle = leftAlignmentStyle
+                    }
                 }
                 is QuizLog -> {
-                    row.createCell(0).setCellValue(item.studentId.toDouble())
-                    row.createCell(1).setCellValue(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(item.loggedAt)))
-                    row.createCell(2).setCellValue(item.quizName)
-                    row.createCell(3).setCellValue("${item.markValue}/${item.maxMarkValue}")
-                    row.createCell(4).setCellValue(item.comment ?: "")
+                    row.createCell(headers.indexOf("Quiz Name")).setCellValue(item.quizName)
+                    row.createCell(headers.indexOf("Num Questions")).apply {
+                        setCellValue(item.numQuestions.toDouble())
+                        cellStyle = rightAlignmentStyle
+                    }
+
+                    val marksData = try {
+                        Json.decodeFromString<Map<String, Int>>(item.marksData)
+                    } catch (e: Exception) {
+                        emptyMap()
+                    }
+
+                    var totalScore = 0.0
+                    var totalPossible = 0.0
+
+                    quizMarkTypes.forEach { markType ->
+                        val markCount = marksData[markType.id.toString()] ?: 0
+                        val markIndex = headers.indexOf(markType.name)
+                        if (markIndex != -1) row.createCell(markIndex).apply {
+                            setCellValue(markCount.toDouble())
+                            cellStyle = rightAlignmentStyle
+                        }
+
+                        if (markType.contributesToTotal) {
+                            totalPossible += item.numQuestions.toDouble() * markType.defaultPoints
+                        }
+                        totalScore += markCount.toDouble() * markType.defaultPoints
+                    }
+
+                    val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                    row.createCell(headers.indexOf("Quiz Score (%)")).apply {
+                        setCellValue(scorePercent)
+                        cellStyle = rightAlignmentStyle
+                    }
+                    row.createCell(headers.indexOf("Comment")).apply {
+                        setCellValue(item.comment ?: "")
+                        cellStyle = leftAlignmentStyle
+                    }
+                }
+                is HomeworkLog -> {
+                    row.createCell(headers.indexOf("Homework Type/Session Name")).setCellValue(item.assignmentName)
+                    val marksData = try {
+                        item.marksData?.let { Json.decodeFromString<Map<String, String>>(it) }
+                    } catch (e: Exception) {
+                        null
+                    }
+
+                    if (marksData != null) {
+                        var totalPoints = 0.0
+                        var effort = ""
+                        customHomeworkTypes.forEach { type ->
+                            val value = marksData[type.name]
+                            val index = headers.indexOf(type.name)
+                            if (index != -1) row.createCell(index).apply {
+                                setCellValue(value ?: "")
+                                cellStyle = rightAlignmentStyle
+                            }
+                            if (value != null && value.toDoubleOrNull() != null) {
+                                totalPoints += value.toDouble()
+                            }
+                        }
+                        customHomeworkStatuses.forEach { status ->
+                            val value = marksData[status.name]
+                            val index = headers.indexOf(status.name)
+                            if (index != -1) row.createCell(index).apply {
+                                setCellValue(value ?: "")
+                                cellStyle = rightAlignmentStyle
+                            }
+                            if (status.name.lowercase(Locale.getDefault()).contains("effort")) {
+                                effort = value ?: ""
+                            }
+                        }
+                        row.createCell(headers.indexOf("Homework Score (Total Pts)")).apply {
+                            setCellValue(totalPoints)
+                            cellStyle = rightAlignmentStyle
+                        }
+                        row.createCell(headers.indexOf("Homework Effort")).apply {
+                            setCellValue(effort)
+                            cellStyle = rightAlignmentStyle
+                        }
+                    }
+                    row.createCell(headers.indexOf("Comment")).apply {
+                        setCellValue(item.comment ?: "")
+                        cellStyle = leftAlignmentStyle
+                    }
                 }
             }
+        }
+
+        // Autosize columns
+        for (i in headers.indices) {
+            sheet.autoSizeColumn(i)
+        }
+    }
+
+    private suspend fun createSummarySheet(
+        workbook: Workbook,
+        data: List<Any>,
+        students: Map<Long, Student>,
+        quizMarkTypes: List<QuizMarkType>,
+        customHomeworkTypes: List<CustomHomeworkType>,
+        customHomeworkStatuses: List<CustomHomeworkStatus>
+    ) {
+        val sheet = workbook.createSheet("Summary")
+        val boldFont = workbook.createFont().apply { bold = true }
+        var currentRow = 0
+
+        // Behavior Summary
+        val behaviorLogs = data.filterIsInstance<BehaviorEvent>()
+        if (behaviorLogs.isNotEmpty()) {
+            val cell = sheet.createRow(currentRow++).createCell(0)
+            cell.setCellValue("Behavior Summary by Student")
+            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+
+            val behaviorHeaders = listOf("Student", "Behavior", "Count")
+            val headerRow = sheet.createRow(currentRow++)
+            behaviorHeaders.forEachIndexed { index, header ->
+                headerRow.createCell(index).setCellValue(header)
+            }
+
+            val behaviorCounts = behaviorLogs.groupBy { it.studentId }
+                .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
+
+            behaviorCounts.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+                val studentBehaviors = behaviorCounts[studentId]
+                studentBehaviors?.keys?.sorted()?.forEach { behavior ->
+                    val row = sheet.createRow(currentRow++)
+                    val student = students[studentId]
+                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
+                    row.createCell(1).setCellValue(behavior)
+                    row.createCell(2).setCellValue(studentBehaviors[behavior]?.toDouble() ?: 0.0)
+                }
+            }
+            currentRow++
+        }
+
+        // Quiz Summary
+        val quizLogs = data.filterIsInstance<QuizLog>()
+        if (quizLogs.isNotEmpty()) {
+            val cell = sheet.createRow(currentRow++).createCell(0)
+            cell.setCellValue("Quiz Averages by Student")
+            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+
+            val quizHeaders = listOf("Student", "Quiz Name", "Avg Score (%)", "Times Taken")
+            val headerRow = sheet.createRow(currentRow++)
+            quizHeaders.forEachIndexed { index, header ->
+                headerRow.createCell(index).setCellValue(header)
+            }
+
+            val quizScores = mutableMapOf<Long, MutableMap<String, MutableList<Double>>>()
+            quizLogs.forEach { log ->
+                val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
+                val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
+                // Simplified score calculation
+                val marksData = try { Json.decodeFromString<Map<String, Int>>(log.marksData) } catch (e: Exception) { emptyMap() }
+                var totalScore = 0.0
+                var totalPossible = 0.0
+                quizMarkTypes.forEach { markType ->
+                    val markCount = marksData[markType.id.toString()] ?: 0
+                    if (markType.contributesToTotal) {
+                        totalPossible += log.numQuestions * markType.defaultPoints
+                    }
+                    totalScore += markCount * markType.defaultPoints
+                }
+                val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                quizScoresList.add(scorePercent)
+            }
+
+            quizScores.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+                val studentQuizzes = quizScores[studentId]
+                studentQuizzes?.keys?.sorted()?.forEach { quizName ->
+                    val scores = studentQuizzes[quizName]!!
+                    val row = sheet.createRow(currentRow++)
+                    val student = students[studentId]
+                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
+                    row.createCell(1).setCellValue(quizName)
+                    row.createCell(2).setCellValue(scores.average())
+                    row.createCell(3).setCellValue(scores.size.toDouble())
+                }
+            }
+            currentRow++
+        }
+
+        // Homework Summary
+        val homeworkLogs = data.filterIsInstance<HomeworkLog>()
+        if (homeworkLogs.isNotEmpty()) {
+            val cell = sheet.createRow(currentRow++).createCell(0)
+            cell.setCellValue("Homework Completion by Student")
+            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+
+            val homeworkHeaders = listOf("Student", "Homework Type/Session", "Count", "Total Points (if applicable)")
+            val headerRow = sheet.createRow(currentRow++)
+            homeworkHeaders.forEachIndexed { index, header ->
+                headerRow.createCell(index).setCellValue(header)
+            }
+
+            val homeworkSummary = mutableMapOf<Long, MutableMap<String, Pair<Int, Double>>>()
+            homeworkLogs.forEach { log ->
+                val studentSummary = homeworkSummary.getOrPut(log.studentId) { mutableMapOf() }
+                val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
+                var points = 0.0
+                log.marksData?.let {
+                    val marks = try { Json.decodeFromString<Map<String, String>>(it) } catch (e: Exception) { emptyMap() }
+                    marks.values.forEach { value ->
+                        value.toDoubleOrNull()?.let { points += it }
+                    }
+                }
+                studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)
+            }
+
+            homeworkSummary.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+                val studentHomeworks = homeworkSummary[studentId]
+                studentHomeworks?.keys?.sorted()?.forEach { assignmentName ->
+                    val summary = studentHomeworks[assignmentName]!!
+                    val row = sheet.createRow(currentRow++)
+                    val student = students[studentId]
+                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
+                    row.createCell(1).setCellValue(assignmentName)
+                    row.createCell(2).setCellValue(summary.first.toDouble())
+                    row.createCell(3).setCellValue(summary.second)
+                }
+            }
+        }
+
+        for (i in 0..3) {
+            sheet.autoSizeColumn(i)
+        }
+    }
+
+    private suspend fun createIndividualStudentSheets(
+        workbook: Workbook,
+        data: List<Any>,
+        students: Map<Long, Student>,
+        quizMarkTypes: List<QuizMarkType>,
+        customHomeworkTypes: List<CustomHomeworkType>,
+        customHomeworkStatuses: List<CustomHomeworkStatus>
+    ) {
+        val studentsWithLogs = data.map {
+            when (it) {
+                is BehaviorEvent -> it.studentId
+                is HomeworkLog -> it.studentId
+                is QuizLog -> it.studentId
+                else -> 0
+            }
+        }.distinct()
+
+        studentsWithLogs.forEach { studentId ->
+            val student = students[studentId]
+            if (student != null) {
+                val studentSheetName = "${student.firstName}_${student.lastName}".replace(Regex("[^a-zA-Z0-9_]"), "_").take(31)
+                val studentLogs = data.filter {
+                    when (it) {
+                        is BehaviorEvent -> it.studentId == studentId
+                        is HomeworkLog -> it.studentId == studentId
+                        is QuizLog -> it.studentId == studentId
+                        else -> false
+                    }
+                }
+                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            }
+        }
+    }
+
+    private suspend fun createStudentInfoSheet(workbook: Workbook, students: List<Student>, studentGroups: Map<Long, StudentGroup>) {
+        val sheet = workbook.createSheet("Students Info")
+        val headerRow = sheet.createRow(0)
+        val headers = listOf("Student Name", "Nickname", "Gender", "Group Name")
+        headers.forEachIndexed { index, header ->
+            headerRow.createCell(index).setCellValue(header)
+        }
+
+        students.forEachIndexed { index, student ->
+            val row = sheet.createRow(index + 1)
+row.createCell(0).setCellValue(listOf(student.firstName, student.lastName).filter(String::isNotBlank).joinToString(" "))
+            row.createCell(1).setCellValue(student.nickname ?: "")
+            row.createCell(2).setCellValue(student.gender)
+            val group = student.groupId?.let { studentGroups[it] }
+            row.createCell(3).setCellValue(group?.name ?: "")
         }
     }
 }
