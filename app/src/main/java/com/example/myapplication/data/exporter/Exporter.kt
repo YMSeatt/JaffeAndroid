@@ -220,17 +220,25 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
 
             when (item) {
                 is BehaviorEvent -> {
-                    row.createCell(headers.indexOf("Behavior")).setCellValue(item.type)
-                    row.createCell(headers.indexOf("Comment")).apply {
-                        setCellValue(item.comment ?: "")
-                        cellStyle = leftAlignmentStyle
+                    headers.indexOf("Behavior").takeIf { it != -1 }?.let {
+                        row.createCell(it).setCellValue(item.type)
+                    }
+                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
+                        row.createCell(it).apply {
+                            setCellValue(item.comment ?: "")
+                            cellStyle = leftAlignmentStyle
+                        }
                     }
                 }
                 is QuizLog -> {
-                    row.createCell(headers.indexOf("Quiz Name")).setCellValue(item.quizName)
-                    row.createCell(headers.indexOf("Num Questions")).apply {
-                        setCellValue(item.numQuestions.toDouble())
-                        cellStyle = rightAlignmentStyle
+                    headers.indexOf("Quiz Name").takeIf { it != -1 }?.let {
+                        row.createCell(it).setCellValue(item.quizName)
+                    }
+                    headers.indexOf("Num Questions").takeIf { it != -1 }?.let {
+                        row.createCell(it).apply {
+                            setCellValue(item.numQuestions.toDouble())
+                            cellStyle = rightAlignmentStyle
+                        }
                     }
 
                     val marksData = try {
@@ -257,17 +265,23 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
                     }
 
                     val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
-                    row.createCell(headers.indexOf("Quiz Score (%)")).apply {
-                        setCellValue(scorePercent)
-                        cellStyle = rightAlignmentStyle
+                    headers.indexOf("Quiz Score (%)").takeIf { it != -1 }?.let {
+                        row.createCell(it).apply {
+                            setCellValue(scorePercent)
+                            cellStyle = rightAlignmentStyle
+                        }
                     }
-                    row.createCell(headers.indexOf("Comment")).apply {
-                        setCellValue(item.comment ?: "")
-                        cellStyle = leftAlignmentStyle
+                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
+                        row.createCell(it).apply {
+                            setCellValue(item.comment ?: "")
+                            cellStyle = leftAlignmentStyle
+                        }
                     }
                 }
                 is HomeworkLog -> {
-                    row.createCell(headers.indexOf("Homework Type/Session Name")).setCellValue(item.assignmentName)
+                    headers.indexOf("Homework Type/Session Name").takeIf { it != -1 }?.let {
+                        row.createCell(it).setCellValue(item.assignmentName)
+                    }
                     val marksData = try {
                         item.marksData?.let { Json.decodeFromString<Map<String, String>>(it) }
                     } catch (e: Exception) {
@@ -299,27 +313,33 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
                                 effort = value ?: ""
                             }
                         }
-                        row.createCell(headers.indexOf("Homework Score (Total Pts)")).apply {
-                            setCellValue(totalPoints)
-                            cellStyle = rightAlignmentStyle
+                        headers.indexOf("Homework Score (Total Pts)").takeIf { it != -1 }?.let {
+                            row.createCell(it).apply {
+                                setCellValue(totalPoints)
+                                cellStyle = rightAlignmentStyle
+                            }
                         }
-                        row.createCell(headers.indexOf("Homework Effort")).apply {
-                            setCellValue(effort)
-                            cellStyle = rightAlignmentStyle
+                        headers.indexOf("Homework Effort").takeIf { it != -1 }?.let {
+                            row.createCell(it).apply {
+                                setCellValue(effort)
+                                cellStyle = rightAlignmentStyle
+                            }
                         }
                     }
-                    row.createCell(headers.indexOf("Comment")).apply {
-                        setCellValue(item.comment ?: "")
-                        cellStyle = leftAlignmentStyle
+                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
+                        row.createCell(it).apply {
+                            setCellValue(item.comment ?: "")
+                            cellStyle = leftAlignmentStyle
+                        }
                     }
                 }
             }
         }
 
         // Autosize columns
-        for (i in headers.indices) {
-            sheet.autoSizeColumn(i)
-        }
+        // for (i in headers.indices) {
+        //     sheet.autoSizeColumn(i)
+        // }
     }
 
     private suspend fun createSummarySheet(
@@ -451,9 +471,9 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
             }
         }
 
-        for (i in 0..3) {
-            sheet.autoSizeColumn(i)
-        }
+        // for (i in 0..3) {
+        //     sheet.autoSizeColumn(i)
+        // }
     }
 
     private suspend fun createIndividualStudentSheets(

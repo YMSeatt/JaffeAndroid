@@ -233,6 +233,7 @@ class MainActivity : ComponentActivity() {
                         DataViewerScreen(
                             seatingChartViewModel = seatingChartViewModel,
                             statsViewModel = statsViewModel,
+                            settingsViewModel = settingsViewModel,
                             onDismiss = { showDataViewer = false }
                         )
                         BackHandler {
@@ -440,7 +441,7 @@ fun SeatingChartScreen(
                         }
                     }
 
-                    var showModeMenu by remember { mutableStateOf<Boolean>(false) }
+                    var showModeMenu by remember { mutableStateOf(false) }
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
@@ -584,7 +585,7 @@ fun SeatingChartScreen(
                 val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
                 var showGroupMenu by remember { mutableStateOf(false) }
 
-                DropdownMenu(expanded = showStudentActionMenu, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
+                DropdownMenu(expanded = true, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
                     DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                         coroutineScope.launch { editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong()); showAddEditStudentDialog = true }
                         showStudentActionMenu = false
