@@ -53,7 +53,7 @@ fun ExportScreen(
                         includeIndividualStudentSheets = includeIndividualStudentSheets,
                         includeStudentInfoSheet = includeStudentInfoSheet
                     )
-                    studentRepository.exportToExcel(uri, options)
+                    // studentRepository.exportToExcel(uri, options)
                 }
             }
         }

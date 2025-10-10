@@ -234,7 +234,6 @@ class MainActivity : ComponentActivity() {
                         DataViewerScreen(
                             seatingChartViewModel = seatingChartViewModel,
                             statsViewModel = statsViewModel,
-                            settingsViewModel = settingsViewModel,
                             onDismiss = { showDataViewer = false }
                         )
                         BackHandler {
