@@ -111,7 +111,7 @@ fun AdvancedHomeworkLogDialog(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = homeworkTypeExpanded) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = homeworkTypeExpanded,
@@ -142,7 +142,7 @@ fun AdvancedHomeworkLogDialog(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = homeworkStatusExpanded) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = homeworkStatusExpanded,
@@ -173,7 +173,7 @@ fun AdvancedHomeworkLogDialog(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = templateExpanded) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = templateExpanded,

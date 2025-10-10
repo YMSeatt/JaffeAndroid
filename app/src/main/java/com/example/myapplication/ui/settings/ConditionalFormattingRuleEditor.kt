@@ -120,7 +120,7 @@ fun ConditionalFormattingRuleEditor(
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
                             modifier = Modifier
-                                .menuAnchor()
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                                 .fillMaxWidth()
                         )
                         ExposedDropdownMenu(

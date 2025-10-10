@@ -48,6 +48,7 @@ fun StudentStyleScreen(
     onDismiss: () -> Unit
 ) {
     val student by viewModel.student.collectAsState()
+    val defaultStyle by viewModel.defaultStudentStyle.collectAsState()
 
     // Declare state variables
     var customBackgroundColor by remember { mutableStateOf("") }
@@ -135,19 +136,22 @@ fun StudentStyleScreen(
                     TextField(
                         value = customWidth,
                         onValueChange = { customWidth = it.filter { char -> char.isDigit() } },
-                        label = { Text(stringResource(R.string.student_style_screen_width)) }
+                        label = { Text(stringResource(R.string.student_style_screen_width)) },
+                        placeholder = { Text(defaultStyle.width.toString()) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customHeight,
                         onValueChange = { customHeight = it.filter { char -> char.isDigit() } },
-                        label = { Text(stringResource(R.string.student_style_screen_height)) }
+                        label = { Text(stringResource(R.string.student_style_screen_height)) },
+                        placeholder = { Text(defaultStyle.height.toString()) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     TextField(
                         value = customOutlineThickness,
                         onValueChange = { customOutlineThickness = it.filter { char -> char.isDigit() } },
-                        label = { Text(stringResource(R.string.student_style_screen_outline_thickness)) }
+                        label = { Text(stringResource(R.string.student_style_screen_outline_thickness)) },
+                        placeholder = { Text(defaultStyle.outlineThickness.toString()) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ExposedDropdownMenuBox(
@@ -156,8 +160,8 @@ fun StudentStyleScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         TextField(
-                            value = customFontFamily,
-                            onValueChange = { customFontFamily = it },
+                            value = if (customFontFamily.isBlank()) "Default (${defaultStyle.fontFamily})" else customFontFamily,
+                            onValueChange = { },
                             readOnly = true,
                             label = { Text(stringResource(R.string.student_style_screen_font_family)) },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -167,6 +171,13 @@ fun StudentStyleScreen(
                             expanded = expanded,
                             onDismissRequest = { expanded = false }
                         ) {
+                            DropdownMenuItem(
+                                text = { Text("Default (${defaultStyle.fontFamily})") },
+                                onClick = {
+                                    customFontFamily = ""
+                                    expanded = false
+                                }
+                            )
                             getAvailableFontFamilies().forEach { font ->
                                 DropdownMenuItem(
                                     text = { Text(font) },
@@ -183,7 +194,7 @@ fun StudentStyleScreen(
                         value = customFontSize,
                         onValueChange = { customFontSize = it.filter { char -> char.isDigit() } },
                         label = { Text(stringResource(R.string.student_style_screen_font_size)) },
-                        placeholder = { Text(stringResource(R.string.student_style_screen_default_font_size, DEFAULT_STUDENT_FONT_SIZE_SP)) }
+                        placeholder = { Text(defaultStyle.fontSize.toString()) }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     ColorPickerField(

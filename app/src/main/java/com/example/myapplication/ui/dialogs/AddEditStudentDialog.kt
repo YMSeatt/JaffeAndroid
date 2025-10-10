@@ -125,7 +125,8 @@ fun AddEditStudentDialog(
                             }
                         }
                     }
-                }
+                },
+                enabled = !showError
             ) {
                 Text(if (studentToEdit == null) "Add" else "Save")
             }

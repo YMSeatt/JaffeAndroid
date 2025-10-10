@@ -55,6 +55,7 @@ fun LogQuizScoreDialog(
 
     LaunchedEffect(selectedTemplate) {
         selectedTemplate?.let { template ->
+            numQuestions = template.numQuestions?.toString() ?: ""
             if (template.marksData.isNotBlank()) {
                 try {
                     val deserializedMarks = Json.decodeFromString<Map<String, String>>(template.marksData)
@@ -97,7 +98,7 @@ fun LogQuizScoreDialog(
                             readOnly = true,
                             label = { Text("Template") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                            modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
