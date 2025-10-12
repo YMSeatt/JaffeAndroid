@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
@@ -26,6 +27,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +44,6 @@ import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.dialogs.ArchiveViewerDialog
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
-import androidx.compose.runtime.collectAsState
 
 private const val DATABASE_BACKUP_FILENAME = "student_organizer_backup.db"
 
@@ -137,25 +138,6 @@ fun DataSettingsTab(
             }
         )
     }
-}
-
-@Composable
-private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Start New School Year?") },
-        text = { Text("This will archive all current data and cannot be undone. Are you sure you want to continue?") },
-        confirmButton = {
-            Button(onClick = onConfirm) {
-                Text("Archive")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
-    )
 
     if (showArchiveViewerDialog) {
         ArchiveViewerDialog(
@@ -363,7 +345,9 @@ private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Un
             Text("Manage Quiz Mark Types", style = MaterialTheme.typography.titleMedium)
         }
         items(quizMarkTypesList) { markType ->
-            Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Card(modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(markType.name, style = MaterialTheme.typography.bodyLarge)
@@ -450,4 +434,23 @@ private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Un
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
     }
+}
+
+@Composable
+private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Start New School Year?") },
+        text = { Text("This will archive all current data and cannot be undone. Are you sure you want to continue?") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Archive")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
