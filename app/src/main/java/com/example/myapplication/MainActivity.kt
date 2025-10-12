@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity() {
                         }
                     } else if (showReminders) {
                         RemindersScreen(
-                            viewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                            viewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : ViewModelProvider.Factory {
                                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                                     return ReminderViewModel(application) as T
                                 }

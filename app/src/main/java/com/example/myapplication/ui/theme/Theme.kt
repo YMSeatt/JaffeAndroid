@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -40,9 +41,6 @@ private val LightColorScheme = lightColorScheme(
 val LocalAnimationSpec = staticCompositionLocalOf<AnimationSpec<Float>> {
     tween() // Default animation spec
 }
-
-
-import androidx.compose.ui.text.font.FontWeight
 
 @Composable
 fun MyApplicationTheme(

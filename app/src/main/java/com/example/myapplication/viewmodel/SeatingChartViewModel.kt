@@ -169,10 +169,15 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
+                appPreferencesRepository.recentHomeworkLogsLimitFlow,
                 appPreferencesRepository.recentLogsLimitFlow,
                 appPreferencesRepository.maxRecentLogsToDisplayFlow,
                 appPreferencesRepository.useInitialsForBehaviorFlow,
+                appPreferencesRepository.useInitialsForHomeworkFlow,
+                appPreferencesRepository.useInitialsForQuizFlow,
                 appPreferencesRepository.behaviorInitialsMapFlow,
+                appPreferencesRepository.homeworkInitialsMapFlow,
+                appPreferencesRepository.quizInitialsMapFlow,
                 appPreferencesRepository.defaultStudentBoxWidthFlow,
                 appPreferencesRepository.defaultStudentBoxHeightFlow,
                 appPreferencesRepository.defaultStudentBoxBackgroundColorFlow,
@@ -197,10 +202,27 @@ class SeatingChartViewModel @Inject constructor(
             val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
             val groups = studentGroupDao.getAllStudentGroups().first()
             val behaviorLimit = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.first()
-            val homeworkLimit = appPreferencesRepository.recentLogsLimitFlow.first()
+            val homeworkLimit = appPreferencesRepository.recentHomeworkLogsLimitFlow.first()
+            val quizLimit = appPreferencesRepository.recentLogsLimitFlow.first()
             val maxLogsToDisplay = appPreferencesRepository.maxRecentLogsToDisplayFlow.first()
-            val useInitials = appPreferencesRepository.useInitialsForBehaviorFlow.first()
+            val useInitialsForBehavior = appPreferencesRepository.useInitialsForBehaviorFlow.first()
+            val useInitialsForHomework = appPreferencesRepository.useInitialsForHomeworkFlow.first()
+            val useInitialsForQuiz = appPreferencesRepository.useInitialsForQuizFlow.first()
             val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
+                .split(",")
+                .mapNotNull {
+                    val parts = it.split(":", limit = 2)
+                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+                }
+                .toMap()
+            val homeworkInitialsMap = appPreferencesRepository.homeworkInitialsMapFlow.first()
+                .split(",")
+                .mapNotNull {
+                    val parts = it.split(":", limit = 2)
+                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+                }
+                .toMap()
+            val quizInitialsMap = appPreferencesRepository.quizInitialsMapFlow.first()
                 .split(",")
                 .mapNotNull {
                     val parts = it.split(":", limit = 2)
@@ -225,6 +247,7 @@ class SeatingChartViewModel @Inject constructor(
                 val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
                     recentBehaviorDescription = emptyList(),
                     recentHomeworkDescription = emptyList(),
+                    recentQuizDescription = emptyList(),
                     sessionLogText = emptyList(),
                     groupColor = null,
                     conditionalFormattingResult = emptyList(),
@@ -249,19 +272,31 @@ class SeatingChartViewModel @Inject constructor(
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
                         .filter { it.loggedAt > lastCleared }
                 val recentQuizzes =
-                    quizLogDao.getRecentQuizLogsForStudentList(student.id, homeworkLimit)
+                    quizLogDao.getRecentQuizLogsForStudentList(student.id, quizLimit)
                         .filter { it.loggedAt > lastCleared }
 
                 val behaviorDescription = recentEvents.map {
-                    if (useInitials) {
+                    if (useInitialsForBehavior) {
                         behaviorInitialsMap[it.type] ?: it.type.first().toString()
                     } else {
                         it.type
                     }
                 }
 
-                val homeworkDescription = recentHomework.map { it.assignmentName }
-                val quizDescription = recentQuizzes.map { it.quizName }
+                val homeworkDescription = recentHomework.map {
+                    if (useInitialsForHomework) {
+                        homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()
+                    } else {
+                        it.assignmentName
+                    }
+                }
+                val quizDescription = recentQuizzes.map {
+                    if (useInitialsForQuiz) {
+                        quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
+                    } else {
+                        it.quizName
+                    }
+                }
 
                 val sessionLogs = if (isSessionActive.value == true) {
                     val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()

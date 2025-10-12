@@ -152,8 +152,7 @@ fun ReminderItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = reminder.title)
                 Text(text = reminder.description)
-                Text(text = "Date: ${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(reminder.date))}")
-                Text(text = "Time: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(reminder.time))}")
+                Text(text = "Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(reminder.timestamp))}")
             }
             IconButton(onClick = { onEdit(reminder) }) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Reminder")
@@ -173,8 +172,48 @@ fun AddEditReminderDialog(
 ) {
     var title by remember { mutableStateOf(reminder?.title ?: "") }
     var description by remember { mutableStateOf(reminder?.description ?: "") }
-    var date by remember { mutableStateOf(reminder?.date ?: System.currentTimeMillis()) }
-    var time by remember { mutableStateOf(reminder?.time ?: System.currentTimeMillis()) }
+    var timestamp by remember { mutableStateOf(reminder?.timestamp ?: System.currentTimeMillis()) }
+
+    var showDatePicker by remember { mutableStateOf(false) }
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            onDateSelected = { newDate ->
+                val calendar = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+                val newCalendar = java.util.Calendar.getInstance().apply { timeInMillis = newDate }
+                calendar.set(
+                    newCalendar.get(java.util.Calendar.YEAR),
+                    newCalendar.get(java.util.Calendar.MONTH),
+                    newCalendar.get(java.util.Calendar.DAY_OF_MONTH)
+                )
+                timestamp = calendar.timeInMillis
+                showDatePicker = false
+                showTimePicker = true
+            }
+        )
+    }
+
+    if (showTimePicker) {
+        TimePickerDialog(
+            onDismissRequest = { showTimePicker = false },
+            onTimeSelected = { newTime ->
+                val calendar = java.util.Calendar.getInstance().apply { timeInMillis = timestamp }
+                val newCalendar = java.util.Calendar.getInstance().apply { timeInMillis = newTime }
+                calendar.set(
+                    java.util.Calendar.HOUR_OF_DAY,
+                    newCalendar.get(java.util.Calendar.HOUR_OF_DAY)
+                )
+                calendar.set(
+                    java.util.Calendar.MINUTE,
+                    newCalendar.get(java.util.Calendar.MINUTE)
+                )
+                timestamp = calendar.timeInMillis
+                showTimePicker = false
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -193,36 +232,8 @@ fun AddEditReminderDialog(
                     label = { Text("Description") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                var showDatePicker by remember { mutableStateOf(false) }
-                var showTimePicker by remember { mutableStateOf(false) }
-
                 Button(onClick = { showDatePicker = true }) {
-                    Text("Select Date: ${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(date))}")
-                }
-                if (showDatePicker) {
-                    DatePickerDialog(
-                        onDismissRequest = { showDatePicker = false },
-                        onDateSelected = { newDate ->
-                            date = newDate
-                            showDatePicker = false
-                        }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Button(onClick = { showTimePicker = true }) {
-                    Text("Select Time: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time))}")
-                }
-
-                if (showTimePicker) {
-                    TimePickerDialog(
-                        onDismissRequest = { showTimePicker = false },
-                        onTimeSelected = { newTime ->
-                            time = newTime
-                            showTimePicker = false
-                        }
-                    )
+                    Text("Select Date and Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(timestamp))}")
                 }
             }
         },
@@ -232,13 +243,11 @@ fun AddEditReminderDialog(
                     val newReminder = reminder?.copy(
                         title = title,
                         description = description,
-                        date = date,
-                        time = time
+                        timestamp = timestamp
                     ) ?: Reminder(
                         title = title,
                         description = description,
-                        date = date,
-                        time = time
+                        timestamp = timestamp
                     )
                     onSave(newReminder)
                 },

@@ -24,16 +24,7 @@ class ReminderManager(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val timeCalendar = Calendar.getInstance().apply { timeInMillis = reminder.time }
-        val calendar = Calendar.getInstance().apply {
-            timeInMillis = reminder.date
-            set(Calendar.HOUR_OF_DAY, timeCalendar.get(Calendar.HOUR_OF_DAY))
-            set(Calendar.MINUTE, timeCalendar.get(Calendar.MINUTE))
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-
-        alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, reminder.timestamp, pendingIntent)
     }
 
     fun cancelReminder(reminderId: Long) {

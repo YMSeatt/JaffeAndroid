@@ -29,9 +29,14 @@ class AppPreferencesRepository(private val context: Context) {
 
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
+        val RECENT_HOMEWORK_LOGS_LIMIT = intPreferencesKey("recent_homework_logs_limit")
         val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit") // New key
         val MAX_RECENT_LOGS_TO_DISPLAY = intPreferencesKey("max_recent_logs_to_display")
         val USE_INITIALS_FOR_BEHAVIOR = booleanPreferencesKey("use_initials_for_behavior")
+        val USE_INITIALS_FOR_HOMEWORK = booleanPreferencesKey("use_initials_for_homework")
+        val USE_INITIALS_FOR_QUIZ = booleanPreferencesKey("use_initials_for_quiz")
+        val HOMEWORK_INITIALS_MAP = stringPreferencesKey("homework_initials_map")
+        val QUIZ_INITIALS_MAP = stringPreferencesKey("quiz_initials_map")
         val USE_FULL_NAME_FOR_STUDENT = booleanPreferencesKey("use_full_name_for_student")
         val APP_THEME = stringPreferencesKey("app_theme")
         val SHOW_RECENT_BEHAVIOR = booleanPreferencesKey("show_recent_behavior")
@@ -175,6 +180,17 @@ class AppPreferencesRepository(private val context: Context) {
         }
     }
 
+    val recentHomeworkLogsLimitFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.RECENT_HOMEWORK_LOGS_LIMIT] ?: 3 // Default to 3
+        }
+
+    suspend fun updateRecentHomeworkLogsLimit(limit: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.RECENT_HOMEWORK_LOGS_LIMIT] = limit
+        }
+    }
+
     // New flow and update function for recent behavior incidents limit
     val recentBehaviorIncidentsLimitFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
@@ -206,6 +222,50 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateUseInitialsForBehavior(useInitials: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_INITIALS_FOR_BEHAVIOR] = useInitials
+        }
+    }
+
+    val useInitialsForHomeworkFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.USE_INITIALS_FOR_HOMEWORK] ?: false
+        }
+
+    suspend fun updateUseInitialsForHomework(useInitials: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.USE_INITIALS_FOR_HOMEWORK] = useInitials
+        }
+    }
+
+    val useInitialsForQuizFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.USE_INITIALS_FOR_QUIZ] ?: false
+        }
+
+    suspend fun updateUseInitialsForQuiz(useInitials: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.USE_INITIALS_FOR_QUIZ] = useInitials
+        }
+    }
+
+    val homeworkInitialsMapFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.HOMEWORK_INITIALS_MAP] ?: ""
+        }
+
+    suspend fun updateHomeworkInitialsMap(map: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.HOMEWORK_INITIALS_MAP] = map
+        }
+    }
+
+    val quizInitialsMapFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.QUIZ_INITIALS_MAP] ?: ""
+        }
+
+    suspend fun updateQuizInitialsMap(map: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.QUIZ_INITIALS_MAP] = map
         }
     }
 

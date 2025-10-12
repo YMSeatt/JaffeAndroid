@@ -85,7 +85,7 @@ class SettingsViewModel(
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
             val archiveFile = java.io.File(context.filesDir, "archive_$timestamp.db")
-            dbFile.renameTo(archiveFile)
+            dbFile.copyTo(archiveFile, overwrite = true)
             // The database will be re-created on next access
             _restoreComplete.postValue(true)
         }
@@ -143,6 +143,15 @@ class SettingsViewModel(
         }
     }
 
+    val recentHomeworkLogsLimit: StateFlow<Int> = preferencesRepository.recentHomeworkLogsLimitFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 3)
+
+    fun updateRecentHomeworkLogsLimit(limit: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateRecentHomeworkLogsLimit(limit)
+        }
+    }
+
     // New setting for recent behavior incidents
     val recentBehaviorIncidentsLimit: StateFlow<Int> = preferencesRepository.recentBehaviorIncidentsLimitFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for behavior incidents
@@ -159,6 +168,42 @@ class SettingsViewModel(
     fun updateUseInitialsForBehavior(useInitials: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateUseInitialsForBehavior(useInitials)
+        }
+    }
+
+    val useInitialsForHomework: StateFlow<Boolean> = preferencesRepository.useInitialsForHomeworkFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateUseInitialsForHomework(useInitials: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateUseInitialsForHomework(useInitials)
+        }
+    }
+
+    val useInitialsForQuiz: StateFlow<Boolean> = preferencesRepository.useInitialsForQuizFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateUseInitialsForQuiz(useInitials: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateUseInitialsForQuiz(useInitials)
+        }
+    }
+
+    val homeworkInitialsMap: StateFlow<String> = preferencesRepository.homeworkInitialsMapFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateHomeworkInitialsMap(map: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateHomeworkInitialsMap(map)
+        }
+    }
+
+    val quizInitialsMap: StateFlow<String> = preferencesRepository.quizInitialsMapFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateQuizInitialsMap(map: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateQuizInitialsMap(map)
         }
     }
 
