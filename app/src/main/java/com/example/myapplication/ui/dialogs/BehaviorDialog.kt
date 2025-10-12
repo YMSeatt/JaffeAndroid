@@ -49,6 +49,8 @@ fun BehaviorDialog(
         title = {
             val titleText = if (student != null) {
                 "Log Behavior for ${student!!.firstName} ${student!!.lastName}"
+            } else if (studentIds.size == 1) {
+                "Log Behavior" // Fallback while student is loading
             } else {
                 "Log Behavior for ${studentIds.size} students"
             }
@@ -57,11 +59,13 @@ fun BehaviorDialog(
         text = {
             Column {
                 student?.temporaryTask?.let { task ->
-                    Button(onClick = {
-                        viewModel.assignTaskToStudent(student!!.id, "")
-                        onDismiss()
-                    }) {
-                        Text("Complete Task: $task")
+                    if (task.isNotBlank()) {
+                        Button(onClick = {
+                            viewModel.assignTaskToStudent(student!!.id, null)
+                            onDismiss()
+                        }) {
+                            Text("Complete Task: $task")
+                        }
                     }
                 }
                 OutlinedTextField(

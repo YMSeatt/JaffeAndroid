@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <queries>
         <intent>
@@ -40,7 +41,10 @@
             android:name=".HelpActivity"
             android:label="Help"
             android:theme="@style/Theme.MyApplication" />
-    <provider
+        <receiver
+            android:name=".util.ReminderReceiver"
+            android:exported="false" />
+        <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.example.myapplication.fileprovider"
             android:exported="false"

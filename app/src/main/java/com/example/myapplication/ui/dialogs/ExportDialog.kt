@@ -95,31 +95,24 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (studentFilter == "specific") {
-                    Box(modifier = Modifier.height(150.dp)) {
-                        val listState = rememberLazyListState()
-                        LazyColumn(state = listState) {
-                            items(students) { student ->
-                                var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = {
-                                            isChecked = it
-                                            selectedStudentIds = if (isChecked) {
-                                                selectedStudentIds + student.id
-                                            } else {
-                                                selectedStudentIds - student.id
-                                            }
+                    LazyColumn(modifier = Modifier.height(150.dp)) {
+                        items(students) { student ->
+                            var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = {
+                                        isChecked = it
+                                        selectedStudentIds = if (isChecked) {
+                                            selectedStudentIds + student.id
+                                        } else {
+                                            selectedStudentIds - student.id
                                         }
-                                    )
-                                    Text("${student.firstName} ${student.lastName}")
-                                }
+                                    }
+                                )
+                                Text("${student.firstName} ${student.lastName}")
                             }
                         }
-                        VerticalScrollbar(
-                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                            adapter = rememberScrollbarAdapter(scrollState = listState)
-                        )
                     }
                 }
 
@@ -133,31 +126,24 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (behaviorFilter == "specific") {
-                    Box(modifier = Modifier.height(150.dp)) {
-                        val listState = rememberLazyListState()
-                        LazyColumn(state = listState) {
-                            items(customBehaviors) { behavior ->
-                                var isChecked by remember { mutableStateOf(selectedBehaviorTypes.contains(behavior.name)) }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = {
-                                            isChecked = it
-                                            selectedBehaviorTypes = if (isChecked) {
-                                                selectedBehaviorTypes + behavior.name
-                                            } else {
-                                                selectedBehaviorTypes - behavior.name
-                                            }
+                    LazyColumn(modifier = Modifier.height(150.dp)) {
+                        items(customBehaviors) { behavior ->
+                            var isChecked by remember { mutableStateOf(selectedBehaviorTypes.contains(behavior.name)) }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = {
+                                        isChecked = it
+                                        selectedBehaviorTypes = if (isChecked) {
+                                            selectedBehaviorTypes + behavior.name
+                                        } else {
+                                            selectedBehaviorTypes - behavior.name
                                         }
-                                    )
-                                    Text(behavior.name)
-                                }
+                                    }
+                                )
+                                Text(behavior.name)
                             }
                         }
-                        VerticalScrollbar(
-                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                            adapter = rememberScrollbarAdapter(scrollState = listState)
-                        )
                     }
                 }
 
@@ -171,31 +157,24 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (homeworkFilter == "specific") {
-                    Box(modifier = Modifier.height(150.dp)) {
-                        val listState = rememberLazyListState()
-                        LazyColumn(state = listState) {
-                            items(customHomeworkTypes) { homework ->
-                                var isChecked by remember { mutableStateOf(selectedHomeworkTypes.contains(homework.name)) }
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(
-                                        checked = isChecked,
-                                        onCheckedChange = {
-                                            isChecked = it
-                                            selectedHomeworkTypes = if (isChecked) {
-                                                selectedHomeworkTypes + homework.name
-                                            } else {
-                                                selectedHomeworkTypes - homework.name
-                                            }
+                    LazyColumn(modifier = Modifier.height(150.dp)) {
+                        items(customHomeworkTypes) { homework ->
+                            var isChecked by remember { mutableStateOf(selectedHomeworkTypes.contains(homework.name)) }
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = {
+                                        isChecked = it
+                                        selectedHomeworkTypes = if (isChecked) {
+                                            selectedHomeworkTypes + homework.name
+                                        } else {
+                                            selectedHomeworkTypes - homework.name
                                         }
-                                    )
-                                    Text(homework.name)
-                                }
+                                    }
+                                )
+                                Text(homework.name)
                             }
                         }
-                        VerticalScrollbar(
-                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                            adapter = rememberScrollbarAdapter(scrollState = listState)
-                        )
                     }
                 }
 
