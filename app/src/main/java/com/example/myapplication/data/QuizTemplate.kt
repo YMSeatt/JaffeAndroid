@@ -8,5 +8,6 @@ data class QuizTemplate(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val name: String,
+    val numQuestions: Int?,
     val marksData: String // JSON string for marks data
 )
