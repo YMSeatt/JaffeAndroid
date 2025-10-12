@@ -3,9 +3,15 @@ package com.example.myapplication.ui.dialogs
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.VerticalScrollbar
-import androidx.compose.foundation.rememberScrollbarAdapter
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -53,7 +59,8 @@ fun ExportDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("Export Options") },
         text = {
-            Column {
+            val scrollState = rememberScrollState()
+            Column(modifier = Modifier.verticalScroll(scrollState)) {
                 // Date Range
                 Row {
                     Button(onClick = { showStartDatePicker = true }) { Text("Start Date") }
@@ -211,51 +218,53 @@ fun ExportDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val options = ExportOptions(
-                        startDate = startDateState.selectedDateMillis,
-                        endDate = endDateState.selectedDateMillis,
-                        studentIds = if (studentFilter == "all") null else selectedStudentIds,
-                        behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
-                        homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
-                        includeBehaviorLogs = includeBehaviorLogs,
-                        includeQuizLogs = includeQuizLogs,
-                        includeHomeworkLogs = includeHomeworkLogs,
-                        includeSummarySheet = includeSummarySheet,
-                        separateSheets = separateSheets,
-                        includeMasterLog = includeMasterLog
-                    )
-                    onExport(options, false)
+            Row {
+                Button(
+                    onClick = {
+                        val options = ExportOptions(
+                            startDate = startDateState.selectedDateMillis,
+                            endDate = endDateState.selectedDateMillis,
+                            studentIds = if (studentFilter == "all") null else selectedStudentIds,
+                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
+                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
+                            includeBehaviorLogs = includeBehaviorLogs,
+                            includeQuizLogs = includeQuizLogs,
+                            includeHomeworkLogs = includeHomeworkLogs,
+                            includeSummarySheet = includeSummarySheet,
+                            separateSheets = separateSheets,
+                            includeMasterLog = includeMasterLog
+                        )
+                        onExport(options, false)
+                    }
+                ) {
+                    Text("Export")
                 }
-            ) {
-                Text("Export")
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        val options = ExportOptions(
+                            startDate = startDateState.selectedDateMillis,
+                            endDate = endDateState.selectedDateMillis,
+                            studentIds = if (studentFilter == "all") null else selectedStudentIds,
+                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
+                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
+                            includeBehaviorLogs = includeBehaviorLogs,
+                            includeQuizLogs = includeQuizLogs,
+                            includeHomeworkLogs = includeHomeworkLogs,
+                            includeSummarySheet = includeSummarySheet,
+                            separateSheets = separateSheets,
+                            includeMasterLog = includeMasterLog
+                        )
+                        onExport(options, true)
+                    }
+                ) {
+                    Text("Share via Email")
+                }
             }
         },
         dismissButton = {
-            Row {
-                Button(onClick = {
-                    val options = ExportOptions(
-                        startDate = startDateState.selectedDateMillis,
-                        endDate = endDateState.selectedDateMillis,
-                        studentIds = if (studentFilter == "all") null else selectedStudentIds,
-                        behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
-                        homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
-                        includeBehaviorLogs = includeBehaviorLogs,
-                        includeQuizLogs = includeQuizLogs,
-                        includeHomeworkLogs = includeHomeworkLogs,
-                        includeSummarySheet = includeSummarySheet,
-                        separateSheets = separateSheets,
-                        includeMasterLog = includeMasterLog
-                    )
-                    onExport(options, true)
-                }) {
-                    Text("Share via Email")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = onDismissRequest) {
-                    Text("Cancel")
-                }
+            Button(onClick = onDismissRequest) {
+                Text("Cancel")
             }
         }
     )

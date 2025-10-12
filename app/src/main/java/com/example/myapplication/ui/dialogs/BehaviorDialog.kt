@@ -49,10 +49,8 @@ fun BehaviorDialog(
         title = {
             val titleText = if (student != null) {
                 "Log Behavior for ${student!!.firstName} ${student!!.lastName}"
-            } else if (studentIds.size == 1) {
-                "Log Behavior" // Fallback while student is loading
             } else {
-                "Log Behavior for ${studentIds.size} students"
+                "Log Behavior for ${studentIds.size} ${if (studentIds.size == 1) "student" else "students"}"
             }
             Text(titleText)
         },
@@ -61,7 +59,7 @@ fun BehaviorDialog(
                 student?.temporaryTask?.let { task ->
                     if (task.isNotBlank()) {
                         Button(onClick = {
-                            viewModel.assignTaskToStudent(student!!.id, null)
+                            viewModel.assignTaskToStudent(student!!.id, "")
                             onDismiss()
                         }) {
                             Text("Complete Task: $task")

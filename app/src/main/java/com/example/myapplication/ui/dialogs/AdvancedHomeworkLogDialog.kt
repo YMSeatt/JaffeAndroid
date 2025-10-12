@@ -100,10 +100,8 @@ fun AdvancedHomeworkLogDialog(
         title = {
             val titleText = if (student != null) {
                 "Log Homework for ${student!!.firstName} ${student!!.lastName}"
-            } else if (studentIds.size == 1) {
-                "Log Homework"
             } else {
-                "Log Homework for ${studentIds.size} students"
+                "Log Homework for ${studentIds.size} ${if (studentIds.size == 1) "student" else "students"}"
             }
             Text(titleText)
         },

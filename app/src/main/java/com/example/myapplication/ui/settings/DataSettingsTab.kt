@@ -129,25 +129,33 @@ fun DataSettingsTab(
     var showArchiveViewerDialog by remember { mutableStateOf(false) }
 
     if (showArchiveDialog) {
-        AlertDialog(
-            onDismissRequest = { showArchiveDialog = false },
-            title = { Text("Start New School Year?") },
-            text = { Text("This will archive all current data and cannot be undone. Are you sure you want to continue?") },
-            confirmButton = {
-                Button(onClick = {
-                    settingsViewModel.archiveCurrentYear()
-                    showArchiveDialog = false
-                }) {
-                    Text("Archive")
-                }
-            },
-            dismissButton = {
-                Button(onClick = { showArchiveDialog = false }) {
-                    Text("Cancel")
-                }
+        ArchiveConfirmationDialog(
+            onDismiss = { showArchiveDialog = false },
+            onConfirm = {
+                settingsViewModel.archiveCurrentYear()
+                showArchiveDialog = false
             }
         )
     }
+}
+
+@Composable
+private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Start New School Year?") },
+        text = { Text("This will archive all current data and cannot be undone. Are you sure you want to continue?") },
+        confirmButton = {
+            Button(onClick = onConfirm) {
+                Text("Archive")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 
     if (showArchiveViewerDialog) {
         ArchiveViewerDialog(
