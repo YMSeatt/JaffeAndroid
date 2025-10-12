@@ -167,7 +167,7 @@ class SeatingChartViewModel @Inject constructor(
 
     private fun observePreferenceChanges() {
         viewModelScope.launch {
-            combine<Any, Unit>(
+            combine(
                 appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
                 appPreferencesRepository.recentLogsLimitFlow,
                 appPreferencesRepository.maxRecentLogsToDisplayFlow,

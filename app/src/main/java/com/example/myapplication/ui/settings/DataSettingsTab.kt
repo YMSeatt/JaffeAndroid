@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.StudentRepository
+import com.example.myapplication.ui.dialogs.ArchiveViewerDialog
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.collectAsState
@@ -125,6 +126,7 @@ fun DataSettingsTab(
     }
 
     var showArchiveDialog by remember { mutableStateOf(false) }
+    var showArchiveViewerDialog by remember { mutableStateOf(false) }
 
     if (showArchiveDialog) {
         AlertDialog(
@@ -144,6 +146,13 @@ fun DataSettingsTab(
                     Text("Cancel")
                 }
             }
+        )
+    }
+
+    if (showArchiveViewerDialog) {
+        ArchiveViewerDialog(
+            viewModel = settingsViewModel,
+            onDismiss = { showArchiveViewerDialog = false }
         )
     }
 
@@ -170,6 +179,10 @@ fun DataSettingsTab(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { showArchiveDialog = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("Start New School Year")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { showArchiveViewerDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("View Archived Data")
             }
             Spacer(Modifier.height(8.dp))
             Row(
@@ -227,6 +240,31 @@ fun DataSettingsTab(
                 Text("Add Behavior Type")
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
+        }
+
+        item {
+            Text("Manage Behavior Initials", style = MaterialTheme.typography.titleMedium)
+        }
+        items(behaviorTypesList) { type ->
+            var initial by remember {
+                mutableStateOf(
+                    settingsViewModel.behaviorInitialsMap.value.split(",").find { it.startsWith(type.name + ":") }?.substringAfter(":") ?: ""
+                )
+            }
+            OutlinedTextField(
+                value = initial,
+                onValueChange = {
+                    initial = it
+                    val currentMap = settingsViewModel.behaviorInitialsMap.value.split(",").toMutableList()
+                    currentMap.removeAll { it.startsWith(type.name + ":") }
+                    if (it.isNotBlank()) {
+                        currentMap.add("${type.name}:$it")
+                    }
+                    settingsViewModel.updateBehaviorInitialsMap(currentMap.joinToString(","))
+                },
+                label = { Text("Initial for ${type.name}") },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
 
         item {

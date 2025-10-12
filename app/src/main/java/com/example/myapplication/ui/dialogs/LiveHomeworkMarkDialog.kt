@@ -8,9 +8,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.Student
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 
 @Composable
@@ -20,12 +26,18 @@ fun LiveHomeworkMarkDialog(
     onDismissRequest: () -> Unit,
     onSave: (HomeworkLog) -> Unit
 ) {
+    var student by remember { mutableStateOf<Student?>(null) }
+
+    LaunchedEffect(studentId) {
+        student = viewModel.getStudentForEditing(studentId)
+    }
+
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Mark Homework") },
+        title = { Text(student?.let { "Mark Homework for ${it.firstName} ${it.lastName}" } ?: "Mark Homework") },
         text = {
             Column {
-                Text("Mark this student's homework:")
+                Text(student?.let { "Mark ${it.firstName}'s homework:" } ?: "Mark this student's homework:")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = {
                     val log = HomeworkLog(

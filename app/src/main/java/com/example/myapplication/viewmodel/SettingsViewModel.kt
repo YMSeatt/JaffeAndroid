@@ -81,13 +81,35 @@ class SettingsViewModel(
     fun archiveCurrentYear() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>()
+            AppDatabase.getDatabase(context).close()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-            val backupFile = java.io.File(context.filesDir, "archive_$timestamp.db")
-            dbFile.copyTo(backupFile, overwrite = true)
+            val archiveFile = java.io.File(context.filesDir, "archive_$timestamp.db")
+            dbFile.renameTo(archiveFile)
+            // The database will be re-created on next access
+            _restoreComplete.postValue(true)
+        }
+    }
 
-            // Clear all data
-            db.clearAllTables()
+    fun listArchivedDatabases(): List<String> {
+        val context = getApplication<Application>()
+        return context.filesDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }
+            ?.map { it.name } ?: emptyList()
+    }
+
+    fun loadArchivedDatabase(fileName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            AppDatabase.switchToArchive(context, fileName)
+            _restoreComplete.postValue(true)
+        }
+    }
+
+    fun restoreLiveDatabase() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            AppDatabase.switchToLive(context)
+            _restoreComplete.postValue(true)
         }
     }
 

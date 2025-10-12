@@ -29,14 +29,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Reminder
+import com.example.myapplication.ui.dialogs.DatePickerDialog
+import com.example.myapplication.ui.dialogs.TimePickerDialog
 import com.example.myapplication.viewmodel.ReminderViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +53,32 @@ fun RemindersScreen(
     viewModel: ReminderViewModel,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val requestPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission is granted. Continue the action or workflow in your
+            // app.
+        } else {
+            // Explain to the user that the feature is unavailable because the
+            // feature requires a permission that the user has denied. At the
+            // same time, respect the user's decision. Don't link to system
+            // settings in an effort to convince the user to change their
+            // decision.
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
     var showAddEditDialog by remember { mutableStateOf(false) }
     var editingReminder by remember { mutableStateOf<Reminder?>(null) }
     val reminders by viewModel.allReminders.observeAsState(initial = emptyList())
@@ -158,19 +193,37 @@ fun AddEditReminderDialog(
                     label = { Text("Description") }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                // Date and time pickers would go here
-                // For simplicity, we'll just use text fields for now
-                TextField(
-                    value = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(date)),
-                    onValueChange = { /* TODO */ },
-                    label = { Text("Date") }
-                )
+                var showDatePicker by remember { mutableStateOf(false) }
+                var showTimePicker by remember { mutableStateOf(false) }
+
+                Button(onClick = { showDatePicker = true }) {
+                    Text("Select Date: ${SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(date))}")
+                }
+                if (showDatePicker) {
+                    DatePickerDialog(
+                        onDismissRequest = { showDatePicker = false },
+                        onDateSelected = { newDate ->
+                            date = newDate
+                            showDatePicker = false
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time)),
-                    onValueChange = { /* TODO */ },
-                    label = { Text("Time") }
-                )
+
+                Button(onClick = { showTimePicker = true }) {
+                    Text("Select Time: ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(time))}")
+                }
+
+                if (showTimePicker) {
+                    TimePickerDialog(
+                        onDismissRequest = { showTimePicker = false },
+                        onTimeSelected = { newTime ->
+                            time = newTime
+                            showTimePicker = false
+                        }
+                    )
+                }
             }
         },
         confirmButton = {
