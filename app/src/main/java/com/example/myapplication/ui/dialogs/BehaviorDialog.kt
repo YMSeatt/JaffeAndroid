@@ -50,7 +50,7 @@ fun BehaviorDialog(
             val titleText = if (student != null) {
                 "Log Behavior for ${student!!.firstName} ${student!!.lastName}"
             } else {
-                "Log Behavior for ${studentIds.size} students"
+                "Log Behavior for ${studentIds.size} ${if (studentIds.size == 1) "student" else "students"}"
             }
             Text(titleText)
         },
