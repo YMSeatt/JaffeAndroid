@@ -45,4 +45,7 @@ interface QuizLogDao {
 
     @Query("DELETE FROM quiz_logs WHERE studentId = :studentId")
     suspend fun deleteByStudentId(studentId: Long)
+
+    @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
+    suspend fun getRecentQuizLogsForStudentList(studentId: Long, limit: Int): List<QuizLog>
 }

@@ -146,6 +146,19 @@ fun DisplaySettingsTab(
             }
         }
         item {
+            val useBoldFont by settingsViewModel.useBoldFont.collectAsState()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Use Bold Font", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = useBoldFont,
+                    onCheckedChange = { settingsViewModel.updateUseBoldFont(it) }
+                )
+            }
+        }
+        item {
             HorizontalDivider()
         }
 

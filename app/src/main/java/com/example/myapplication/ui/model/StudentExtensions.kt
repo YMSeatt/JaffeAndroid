@@ -16,6 +16,7 @@ import com.example.myapplication.utils.safeParseColor
 fun Student.toStudentUiItem(
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
+    recentQuizDescription: List<String>,
     sessionLogText: List<String>,
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
@@ -82,11 +83,13 @@ fun Student.toStudentUiItem(
         displayPadding = (customPadding ?: defaultPadding).dp,
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
+        recentQuizDescription = recentQuizDescription,
         sessionLogText = sessionLogText,
         groupColor = groupColor?.let { safeParseColor(it) },
         groupId = groupId,
         fontFamily = fontFamily,
         fontSize = fontSize,
-        fontColor = fontColor
+        fontColor = fontColor,
+        temporaryTask = temporaryTask
     )
 }

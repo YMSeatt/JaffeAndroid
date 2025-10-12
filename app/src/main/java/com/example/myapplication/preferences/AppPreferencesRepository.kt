@@ -75,6 +75,18 @@ class AppPreferencesRepository(private val context: Context) {
         val STUDENT_LOGS_LAST_CLEARED = stringSetPreferencesKey("student_logs_last_cleared")
         val LAST_EXPORT_PATH = stringPreferencesKey("last_export_path")
         val ENCRYPT_DATA_FILES = booleanPreferencesKey("encrypt_data_files")
+        val USE_BOLD_FONT = booleanPreferencesKey("use_bold_font")
+    }
+
+    val useBoldFontFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.USE_BOLD_FONT] ?: false
+        }
+
+    suspend fun updateUseBoldFont(useBoldFont: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.USE_BOLD_FONT] = useBoldFont
+        }
     }
 
     val lastExportPathFlow: Flow<String?> = context.dataStore.data

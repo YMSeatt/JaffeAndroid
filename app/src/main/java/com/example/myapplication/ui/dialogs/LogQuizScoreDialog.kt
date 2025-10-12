@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizTemplate
+import com.example.myapplication.data.Student
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.serialization.encodeToString
@@ -67,6 +68,13 @@ fun LogQuizScoreDialog(
     var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
 
     val marksData = remember { mutableStateMapOf<String, String>() }
+    var student by remember { mutableStateOf<Student?>(null) }
+
+    LaunchedEffect(studentIds) {
+        if (studentIds.size == 1) {
+            student = viewModel.getStudentForEditing(studentIds.first())
+        }
+    }
 
     LaunchedEffect(selectedTemplate) {
         selectedTemplate?.let { template ->
@@ -85,7 +93,14 @@ fun LogQuizScoreDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Log Quiz Score") },
+        title = {
+            val titleText = if (student != null) {
+                "Log Quiz Score for ${student!!.firstName} ${student!!.lastName}"
+            } else {
+                "Log Quiz Score for ${studentIds.size} students"
+            }
+            Text(titleText)
+        },
         text = {
             LazyColumn {
                 item {

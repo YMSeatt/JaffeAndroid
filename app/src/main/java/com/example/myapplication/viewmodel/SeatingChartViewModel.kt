@@ -102,6 +102,7 @@ class SeatingChartViewModel @Inject constructor(
     val quizMarkTypes: LiveData<List<QuizMarkType>>
     val allCustomBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>>
     val allCustomHomeworkTypes: LiveData<List<com.example.myapplication.data.CustomHomeworkType>>
+    val allSystemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>>
 
 
     private val commandUndoStack = Stack<Command>()
@@ -135,6 +136,7 @@ class SeatingChartViewModel @Inject constructor(
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
         allCustomBehaviors = AppDatabase.getDatabase(application).customBehaviorDao().getAllCustomBehaviors()
         allCustomHomeworkTypes = AppDatabase.getDatabase(application).customHomeworkTypeDao().getAllCustomHomeworkTypes()
+        allSystemBehaviors = AppDatabase.getDatabase(application).systemBehaviorDao().getAllSystemBehaviors().asLiveData()
 
 
         studentsForDisplay.addSource(allStudents) {
@@ -201,7 +203,7 @@ class SeatingChartViewModel @Inject constructor(
             val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
                 .split(",")
                 .mapNotNull {
-                    val parts = it.trim().split(":")
+                    val parts = it.split(":", limit = 2)
                     if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
                 }
                 .toMap()
@@ -246,6 +248,9 @@ class SeatingChartViewModel @Inject constructor(
                 val recentHomework =
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
                         .filter { it.loggedAt > lastCleared }
+                val recentQuizzes =
+                    quizLogDao.getRecentQuizLogsForStudentList(student.id, homeworkLimit)
+                        .filter { it.loggedAt > lastCleared }
 
                 val behaviorDescription = recentEvents.map {
                     if (useInitials) {
@@ -256,6 +261,7 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 val homeworkDescription = recentHomework.map { it.assignmentName }
+                val quizDescription = recentQuizzes.map { it.quizName }
 
                 val sessionLogs = if (isSessionActive.value == true) {
                     val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
@@ -281,6 +287,7 @@ class SeatingChartViewModel @Inject constructor(
                 student.toStudentUiItem(
                     recentBehaviorDescription = behaviorDescription,
                     recentHomeworkDescription = homeworkDescription,
+                    recentQuizDescription = quizDescription,
                     sessionLogText = sessionLogs,
                     groupColor = groups.find { group -> group.id == student.groupId }?.color,
                     conditionalFormattingResult = conditionalFormattingResult,
@@ -901,5 +908,12 @@ class SeatingChartViewModel @Inject constructor(
         }.join()
     }
 
-    
+    fun assignTaskToStudent(studentId: Long, task: String) {
+        viewModelScope.launch {
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(temporaryTask = task)
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
+            executeCommand(command)
+        }
+    }
 }

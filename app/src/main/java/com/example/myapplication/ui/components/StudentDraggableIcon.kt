@@ -46,6 +46,9 @@ import com.example.myapplication.utils.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material3.Icon
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -174,9 +177,28 @@ fun StudentDraggableIcon(
                     modifier = Modifier
                         .padding(studentUiItem.displayPadding)
                 ) {
+                    if (studentUiItem.temporaryTask != null) {
+                        Icon(
+                            imageVector = Icons.Default.Assignment,
+                            contentDescription = "Assigned Task",
+                            modifier = Modifier.align(Alignment.TopEnd).size(16.dp)
+                        )
+                    }
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        val nameParts = studentUiItem.fullName.split(" ")
+                        val firstName = nameParts.firstOrNull() ?: ""
+                        val lastName = if (nameParts.size > 1) nameParts.last() else ""
                         Text(
-                            text = studentUiItem.fullName,
+                            text = firstName,
+                            style = TextStyle(
+                                color = studentUiItem.fontColor,
+                                fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                fontSize = studentUiItem.fontSize.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        )
+                        Text(
+                            text = lastName,
                             style = TextStyle(
                                 color = studentUiItem.fontColor,
                                 fontFamily = getFontFamily(studentUiItem.fontFamily),
@@ -201,6 +223,18 @@ fun StudentDraggableIcon(
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = studentUiItem.fontColor,
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
+                                        fontSize = studentUiItem.fontSize.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
+                            if (studentUiItem.recentQuizDescription.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = studentUiItem.recentQuizDescription.joinToString("\n"),
                                     style = MaterialTheme.typography.bodySmall.copy(
                                         color = studentUiItem.fontColor,
                                         fontFamily = getFontFamily(studentUiItem.fontFamily),

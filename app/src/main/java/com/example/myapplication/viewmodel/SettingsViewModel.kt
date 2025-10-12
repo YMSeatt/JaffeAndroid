@@ -78,6 +78,19 @@ class SettingsViewModel(
         }
     }
 
+    fun archiveCurrentYear() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = getApplication<Application>()
+            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
+            val backupFile = java.io.File(context.filesDir, "archive_$timestamp.db")
+            dbFile.copyTo(backupFile, overwrite = true)
+
+            // Clear all data
+            db.clearAllTables()
+        }
+    }
+
     suspend fun importFromJson(uri: Uri) {
         val directory = DocumentFile.fromTreeUri(getApplication(), uri)
 
@@ -133,6 +146,15 @@ class SettingsViewModel(
     fun updateUseFullNameForStudent(useFullName: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateUseFullNameForStudent(useFullName)
+        }
+    }
+
+    val useBoldFont: StateFlow<Boolean> = preferencesRepository.useBoldFontFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateUseBoldFont(useBoldFont: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateUseBoldFont(useBoldFont)
         }
     }
 
