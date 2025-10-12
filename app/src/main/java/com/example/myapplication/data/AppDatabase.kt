@@ -536,6 +536,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun switchToArchive(context: Context, archiveName: String) {
             INSTANCE?.close()
+            INSTANCE = null
             INSTANCE = getDatabase(context, archiveName)
         }
 
