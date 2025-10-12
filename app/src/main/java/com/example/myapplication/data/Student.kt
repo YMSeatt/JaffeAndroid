@@ -28,7 +28,8 @@ data class Student(
     var customPadding: Int? = null,
     var customFontFamily: String? = null,
     var customFontSize: Int? = null,
-    var customFontColor: String? = null // e.g., in dp
+    var customFontColor: String? = null, // e.g., in dp
+    var temporaryTask: String? = null
 ) {
     // Secondary constructor or init block could be used for auto-generation
     // if a more complex logic is needed, or handle it in the ViewModel/Repository

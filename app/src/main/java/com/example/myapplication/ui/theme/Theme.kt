@@ -42,12 +42,15 @@ val LocalAnimationSpec = staticCompositionLocalOf<AnimationSpec<Float>> {
 }
 
 
+import androidx.compose.ui.text.font.FontWeight
+
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     disableAnimations: Boolean = false, // Add this parameter
+    useBoldFont: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -66,10 +69,32 @@ fun MyApplicationTheme(
         tween()
     }
 
+    val typography = if (useBoldFont) {
+        Typography.copy(
+            displayLarge = Typography.displayLarge.copy(fontWeight = FontWeight.Bold),
+            displayMedium = Typography.displayMedium.copy(fontWeight = FontWeight.Bold),
+            displaySmall = Typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+            headlineLarge = Typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
+            headlineMedium = Typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+            headlineSmall = Typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+            titleLarge = Typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+            titleMedium = Typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+            titleSmall = Typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+            bodyLarge = Typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+            bodyMedium = Typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+            bodySmall = Typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+            labelLarge = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            labelMedium = Typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            labelSmall = Typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+        )
+    } else {
+        Typography
+    }
+
     CompositionLocalProvider(LocalAnimationSpec provides animationSpec) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = typography,
             content = content
         )
     }

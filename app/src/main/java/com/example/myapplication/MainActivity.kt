@@ -81,12 +81,15 @@ import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
 import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
 import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
+import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
+import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.utils.captureComposable
 import com.example.myapplication.viewmodel.GuideViewModel
+import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
@@ -126,6 +129,33 @@ class MainActivity : ComponentActivity() {
                     if (result.isSuccess) {
                         Toast.makeText(this@MainActivity, "Data exported successfully!", Toast.LENGTH_LONG).show()
                         settingsViewModel.updateLastExportPath(it.toString())
+                    } else {
+                        Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+        pendingExportOptions = null
+    }
+
+    val shareDocumentLauncher = registerForActivityResult(
+        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    ) { uri: Uri? ->
+        uri?.let {
+            pendingExportOptions?.let { options ->
+                lifecycleScope.launch {
+                    val result = seatingChartViewModel.exportData(
+                        context = this@MainActivity,
+                        uri = it,
+                        options = options
+                    )
+                    if (result.isSuccess) {
+                        val shareIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_STREAM, it)
+                            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        }
+                        startActivity(Intent.createChooser(shareIntent, null))
                     } else {
                         Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                     }
@@ -217,8 +247,10 @@ class MainActivity : ComponentActivity() {
             val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
             var unlocked by remember { mutableStateOf(!passwordEnabled) }
             var showDataViewer by remember { mutableStateOf(false) }
+            var showReminders by remember { mutableStateOf(false) }
 
             val noAnimations by settingsViewModel.noAnimations.collectAsState()
+            val useBoldFont by settingsViewModel.useBoldFont.collectAsState()
 
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
@@ -228,7 +260,8 @@ class MainActivity : ComponentActivity() {
                     AppTheme.DYNAMIC -> isSystemInDarkTheme()
                 },
                 dynamicColor = currentAppThemeState == AppTheme.DYNAMIC,
-                disableAnimations = noAnimations
+                disableAnimations = noAnimations,
+                useBoldFont = useBoldFont
             ) {
                 if (unlocked) {
                     if (showDataViewer) {
@@ -241,6 +274,18 @@ class MainActivity : ComponentActivity() {
                         BackHandler {
                             showDataViewer = false
                         }
+                    } else if (showReminders) {
+                        RemindersScreen(
+                            viewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                                override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                                    return ReminderViewModel(application) as T
+                                }
+                            }),
+                            onDismiss = { showReminders = false }
+                        )
+                        BackHandler {
+                            showReminders = false
+                        }
                     } else {
                         SeatingChartScreen(
                             seatingChartViewModel = seatingChartViewModel,
@@ -251,6 +296,7 @@ class MainActivity : ComponentActivity() {
                                 startActivity(Intent(this, SettingsActivity::class.java))
                             },
                             onNavigateToDataViewer = { showDataViewer = true },
+                            onNavigateToReminders = { showReminders = true },
                             onHelpClick = {
                                 startActivity(Intent(this, HelpActivity::class.java))
                             }
@@ -277,6 +323,7 @@ fun SeatingChartScreen(
     guideViewModel: GuideViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit,
+    onNavigateToReminders: () -> Unit,
     onHelpClick: () -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
@@ -295,6 +342,7 @@ fun SeatingChartScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showChangeBoxSizeDialog by remember { mutableStateOf(false) }
     var showStudentStyleDialog by remember { mutableStateOf(false) }
+    var showAssignTaskDialog by remember { mutableStateOf(false) }
     var selectMode by remember { mutableStateOf(false) }
 
     var selectedStudentUiItemForAction by remember { mutableStateOf<StudentUiItem?>(null) }
@@ -403,6 +451,7 @@ fun SeatingChartScreen(
                             showFileMenu = false
                         })
                         DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showFileMenu = false })
+                        DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showFileMenu = false })
                         DropdownMenuItem(text = { Text("Export Database") }, onClick = {
                             coroutineScope.launch {
                                 val uri = settingsViewModel.shareDatabase()
@@ -602,6 +651,7 @@ fun SeatingChartScreen(
                     DropdownMenuItem(text = { Text("Log Behavior") }, onClick = { showBehaviorDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Log Homework") }, onClick = { showAdvancedHomeworkLogDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = { showLogQuizScoreDialog = true; showStudentActionMenu = false })
+                    DropdownMenuItem(text = { Text("Assign Task") }, onClick = { showAssignTaskDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Change Student Box Style") }, onClick = { showStudentStyleDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Clear Recent Logs") }, onClick = { seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Show Recent Logs") }, onClick = { seatingChartViewModel.showRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
@@ -657,9 +707,13 @@ fun SeatingChartScreen(
             }
 
             if (showExportDialog) {
-                ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options ->
+                ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options, share ->
                     (context as? MainActivity)?.pendingExportOptions = options
-                    (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
+                    if (share) {
+                        (context as? MainActivity)?.shareDocumentLauncher?.launch("seating_chart_export.xlsx")
+                    } else {
+                        (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
+                    }
                     showExportDialog = false
                 })
             }
@@ -671,6 +725,18 @@ fun SeatingChartScreen(
             if (showStudentStyleDialog) {
                 selectedStudentUiItemForAction?.let { student ->
                     StudentStyleScreen(studentId = student.id.toLong(), seatingChartViewModel = seatingChartViewModel, onDismiss = { showStudentStyleDialog = false })
+                }
+            }
+
+            if (showAssignTaskDialog) {
+                selectedStudentUiItemForAction?.let { student ->
+                    val systemBehaviors by seatingChartViewModel.allSystemBehaviors.observeAsState(initial = emptyList())
+                    AssignTaskDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        systemBehaviors = systemBehaviors,
+                        onDismissRequest = { showAssignTaskDialog = false }
+                    )
                 }
             }
         }

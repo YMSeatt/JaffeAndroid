@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkTemplate
+import com.example.myapplication.data.Student
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.serialization.encodeToString
@@ -72,6 +73,13 @@ fun AdvancedHomeworkLogDialog(
 
 
     val marksData = remember { mutableStateMapOf<String, String>() }
+    var student by remember { mutableStateOf<Student?>(null) }
+
+    LaunchedEffect(studentIds) {
+        if (studentIds.size == 1) {
+            student = viewModel.getStudentForEditing(studentIds.first())
+        }
+    }
 
     LaunchedEffect(selectedTemplate) {
         selectedTemplate?.let { template ->
@@ -89,7 +97,14 @@ fun AdvancedHomeworkLogDialog(
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Log Homework") },
+        title = {
+            val titleText = if (student != null) {
+                "Log Homework for ${student!!.firstName} ${student!!.lastName}"
+            } else {
+                "Log Homework for ${studentIds.size} students"
+            }
+            Text(titleText)
+        },
         text = {
             LazyColumn {
                 item {

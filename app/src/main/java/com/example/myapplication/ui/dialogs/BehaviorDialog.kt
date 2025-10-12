@@ -36,12 +36,34 @@ fun BehaviorDialog(
 ) {
     var notes by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    var student by remember { mutableStateOf<Student?>(null) }
+
+    LaunchedEffect(studentIds) {
+        if (studentIds.size == 1) {
+            student = viewModel.getStudentForEditing(studentIds.first())
+        }
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log Behavior for ${studentIds.size} students") },
+        title = {
+            val titleText = if (student != null) {
+                "Log Behavior for ${student!!.firstName} ${student!!.lastName}"
+            } else {
+                "Log Behavior for ${studentIds.size} students"
+            }
+            Text(titleText)
+        },
         text = {
             Column {
+                student?.temporaryTask?.let { task ->
+                    Button(onClick = {
+                        viewModel.assignTaskToStudent(student!!.id, "")
+                        onDismiss()
+                    }) {
+                        Text("Complete Task: $task")
+                    }
+                }
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },

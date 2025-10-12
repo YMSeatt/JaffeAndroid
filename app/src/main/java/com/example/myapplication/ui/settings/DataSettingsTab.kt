@@ -124,6 +124,29 @@ fun DataSettingsTab(
         }
     }
 
+    var showArchiveDialog by remember { mutableStateOf(false) }
+
+    if (showArchiveDialog) {
+        AlertDialog(
+            onDismissRequest = { showArchiveDialog = false },
+            title = { Text("Start New School Year?") },
+            text = { Text("This will archive all current data and cannot be undone. Are you sure you want to continue?") },
+            confirmButton = {
+                Button(onClick = {
+                    settingsViewModel.archiveCurrentYear()
+                    showArchiveDialog = false
+                }) {
+                    Text("Archive")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showArchiveDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -143,6 +166,10 @@ fun DataSettingsTab(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { restoreLauncher.launch("application/octet-stream") }, modifier = Modifier.fillMaxWidth()) {
                 Text("Restore Database")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(onClick = { showArchiveDialog = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Start New School Year")
             }
             Spacer(Modifier.height(8.dp))
             Row(

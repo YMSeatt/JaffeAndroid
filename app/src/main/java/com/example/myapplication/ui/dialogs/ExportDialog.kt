@@ -3,6 +3,9 @@ package com.example.myapplication.ui.dialogs
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.livedata.observeAsState
@@ -21,7 +24,7 @@ import java.util.Locale
 fun ExportDialog(
     viewModel: SeatingChartViewModel,
     onDismissRequest: () -> Unit,
-    onExport: (ExportOptions) -> Unit
+    onExport: (ExportOptions, Boolean) -> Unit
 ) {
     var showStartDatePicker by remember { mutableStateOf(false) }
     var showEndDatePicker by remember { mutableStateOf(false) }
@@ -92,24 +95,31 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (studentFilter == "specific") {
-                    LazyColumn(modifier = Modifier.height(150.dp)) {
-                        items(students) { student ->
-                            var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedStudentIds = if (isChecked) {
-                                            selectedStudentIds + student.id
-                                        } else {
-                                            selectedStudentIds - student.id
+                    Box(modifier = Modifier.height(150.dp)) {
+                        val listState = rememberLazyListState()
+                        LazyColumn(state = listState) {
+                            items(students) { student ->
+                                var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            isChecked = it
+                                            selectedStudentIds = if (isChecked) {
+                                                selectedStudentIds + student.id
+                                            } else {
+                                                selectedStudentIds - student.id
+                                            }
                                         }
-                                    }
-                                )
-                                Text("${student.firstName} ${student.lastName}")
+                                    )
+                                    Text("${student.firstName} ${student.lastName}")
+                                }
                             }
                         }
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                            adapter = rememberScrollbarAdapter(scrollState = listState)
+                        )
                     }
                 }
 
@@ -123,24 +133,31 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (behaviorFilter == "specific") {
-                    LazyColumn(modifier = Modifier.height(150.dp)) {
-                        items(customBehaviors) { behavior ->
-                            var isChecked by remember { mutableStateOf(selectedBehaviorTypes.contains(behavior.name)) }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedBehaviorTypes = if (isChecked) {
-                                            selectedBehaviorTypes + behavior.name
-                                        } else {
-                                            selectedBehaviorTypes - behavior.name
+                    Box(modifier = Modifier.height(150.dp)) {
+                        val listState = rememberLazyListState()
+                        LazyColumn(state = listState) {
+                            items(customBehaviors) { behavior ->
+                                var isChecked by remember { mutableStateOf(selectedBehaviorTypes.contains(behavior.name)) }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            isChecked = it
+                                            selectedBehaviorTypes = if (isChecked) {
+                                                selectedBehaviorTypes + behavior.name
+                                            } else {
+                                                selectedBehaviorTypes - behavior.name
+                                            }
                                         }
-                                    }
-                                )
-                                Text(behavior.name)
+                                    )
+                                    Text(behavior.name)
+                                }
                             }
                         }
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                            adapter = rememberScrollbarAdapter(scrollState = listState)
+                        )
                     }
                 }
 
@@ -154,24 +171,31 @@ fun ExportDialog(
                     Text("Specific")
                 }
                 if (homeworkFilter == "specific") {
-                    LazyColumn(modifier = Modifier.height(150.dp)) {
-                        items(customHomeworkTypes) { homework ->
-                            var isChecked by remember { mutableStateOf(selectedHomeworkTypes.contains(homework.name)) }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedHomeworkTypes = if (isChecked) {
-                                            selectedHomeworkTypes + homework.name
-                                        } else {
-                                            selectedHomeworkTypes - homework.name
+                    Box(modifier = Modifier.height(150.dp)) {
+                        val listState = rememberLazyListState()
+                        LazyColumn(state = listState) {
+                            items(customHomeworkTypes) { homework ->
+                                var isChecked by remember { mutableStateOf(selectedHomeworkTypes.contains(homework.name)) }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            isChecked = it
+                                            selectedHomeworkTypes = if (isChecked) {
+                                                selectedHomeworkTypes + homework.name
+                                            } else {
+                                                selectedHomeworkTypes - homework.name
+                                            }
                                         }
-                                    }
-                                )
-                                Text(homework.name)
+                                    )
+                                    Text(homework.name)
+                                }
                             }
                         }
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                            adapter = rememberScrollbarAdapter(scrollState = listState)
+                        )
                     }
                 }
 
@@ -223,15 +247,36 @@ fun ExportDialog(
                         separateSheets = separateSheets,
                         includeMasterLog = includeMasterLog
                     )
-                    onExport(options)
+                    onExport(options, false)
                 }
             ) {
                 Text("Export")
             }
         },
         dismissButton = {
-            Button(onClick = onDismissRequest) {
-                Text("Cancel")
+            Row {
+                Button(onClick = {
+                    val options = ExportOptions(
+                        startDate = startDateState.selectedDateMillis,
+                        endDate = endDateState.selectedDateMillis,
+                        studentIds = if (studentFilter == "all") null else selectedStudentIds,
+                        behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
+                        homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
+                        includeBehaviorLogs = includeBehaviorLogs,
+                        includeQuizLogs = includeQuizLogs,
+                        includeHomeworkLogs = includeHomeworkLogs,
+                        includeSummarySheet = includeSummarySheet,
+                        separateSheets = separateSheets,
+                        includeMasterLog = includeMasterLog
+                    )
+                    onExport(options, true)
+                }) {
+                    Text("Share via Email")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = onDismissRequest) {
+                    Text("Cancel")
+                }
             }
         }
     )
