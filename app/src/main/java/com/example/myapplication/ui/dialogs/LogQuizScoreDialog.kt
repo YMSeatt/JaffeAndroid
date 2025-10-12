@@ -97,7 +97,7 @@ fun LogQuizScoreDialog(
             val titleText = if (student != null) {
                 "Log Quiz Score for ${student!!.firstName} ${student!!.lastName}"
             } else {
-                "Log Quiz Score for ${studentIds.size} students"
+                "Log Quiz Score for ${studentIds.size} ${if (studentIds.size == 1) "student" else "students"}"
             }
             Text(titleText)
         },
