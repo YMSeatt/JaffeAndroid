@@ -137,7 +137,7 @@ fun AddEditReminderDialog(
     onSave: (Reminder) -> Unit
 ) {
     var title by remember { mutableStateOf(reminder?.title ?: "") }
-    var description by remember { mutableState of(reminder?.description ?: "") }
+    var description by remember { mutableStateOf(reminder?.description ?: "") }
     var date by remember { mutableStateOf(reminder?.date ?: System.currentTimeMillis()) }
     var time by remember { mutableStateOf(reminder?.time ?: System.currentTimeMillis()) }
 
