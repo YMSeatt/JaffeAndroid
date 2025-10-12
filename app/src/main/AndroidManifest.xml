@@ -36,6 +36,10 @@
             android:name=".SettingsActivity"
             android:label="Settings"
             android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".HelpActivity"
+            android:label="Help"
+            android:theme="@style/Theme.MyApplication" />
     <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.example.myapplication.fileprovider"

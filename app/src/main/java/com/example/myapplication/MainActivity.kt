@@ -25,6 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -248,7 +249,10 @@ class MainActivity : ComponentActivity() {
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
                             },
-                            onNavigateToDataViewer = { showDataViewer = true }
+                            onNavigateToDataViewer = { showDataViewer = true },
+                            onHelpClick = {
+                                startActivity(Intent(this, HelpActivity::class.java))
+                            }
                         )
                     }
                 } else {
@@ -271,7 +275,8 @@ fun SeatingChartScreen(
     studentGroupsViewModel: StudentGroupsViewModel,
     guideViewModel: GuideViewModel,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDataViewer: () -> Unit
+    onNavigateToDataViewer: () -> Unit,
+    onHelpClick: () -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
@@ -469,6 +474,7 @@ fun SeatingChartScreen(
                     }
 
                     IconButton(onClick = onNavigateToSettings) { Icon(Icons.Filled.Settings, contentDescription = "Settings") }
+                    IconButton(onClick = onHelpClick) { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help") }
                 }
             )
         },
