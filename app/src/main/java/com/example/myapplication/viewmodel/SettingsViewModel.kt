@@ -384,12 +384,23 @@ class SettingsViewModel(
 
     suspend fun checkPassword(password: String): Boolean {
         val hash = preferencesRepository.passwordHashFlow.first()
+        if (hash.isNullOrEmpty()) {
+            return true
+        }
         return hash == SecurityUtil.hashPassword(password)
     }
 
     fun setPassword(password: String) {
-        viewModelScope.launch {
-            preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+        if (password.isNotBlank()) {
+            viewModelScope.launch {
+                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                updatePasswordEnabled(true)
+            }
+        } else {
+            viewModelScope.launch {
+                preferencesRepository.updatePasswordHash("")
+                updatePasswordEnabled(false)
+            }
         }
     }
 
