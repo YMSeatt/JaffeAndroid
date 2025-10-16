@@ -44,8 +44,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import androidx.core.content.ContextCompat
+import com.example.myapplication.util.ReminderManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,6 +59,9 @@ fun RemindersScreen(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val reminderManager = remember { ReminderManager(context) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
+
     val requestPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -83,6 +91,30 @@ fun RemindersScreen(
     var editingReminder by remember { mutableStateOf<Reminder?>(null) }
     val reminders by viewModel.allReminders.observeAsState(initial = emptyList())
 
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Permission Required") },
+            text = { Text("To schedule reminders, please grant the 'Alarms & reminders' permission in the app settings.") },
+            confirmButton = {
+                Button(onClick = {
+                    val intent = Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
+                        data = Uri.fromParts("package", context.packageName, null)
+                    }
+                    context.startActivity(intent)
+                    showPermissionDialog = false
+                }) {
+                    Text("Open Settings")
+                }
+            },
+            dismissButton = {
+                Button(onClick = { showPermissionDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,8 +123,12 @@ fun RemindersScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                editingReminder = null
-                showAddEditDialog = true
+                if (reminderManager.canScheduleExactAlarms()) {
+                    editingReminder = null
+                    showAddEditDialog = true
+                } else {
+                    showPermissionDialog = true
+                }
             }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Reminder")
             }
