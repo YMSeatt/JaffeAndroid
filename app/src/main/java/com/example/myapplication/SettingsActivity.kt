@@ -71,7 +71,11 @@ class SettingsActivity : ComponentActivity() {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 if (modelClass.isAssignableFrom(ConditionalFormattingRuleViewModel::class.java)) {
                     @Suppress("UNCHECKED_CAST")
-                    return ConditionalFormattingRuleViewModel(db.conditionalFormattingRuleDao()) as T
+                    return ConditionalFormattingRuleViewModel(
+                        db.conditionalFormattingRuleDao(),
+                        db.customBehaviorDao(),
+                        db.systemBehaviorDao()
+                    ) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
             }

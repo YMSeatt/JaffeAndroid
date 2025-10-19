@@ -24,7 +24,7 @@ data class ActiveTime(
 data class Condition(
     val type: String,
     @SerialName("group_id") val groupId: Long? = null,
-    @SerialName("behavior_name") val behaviorName: String? = null,
+    @SerialName("behavior_names") val behaviorNames: String? = null,
     @SerialName("count_threshold") val countThreshold: Int? = null,
     @SerialName("time_window_hours") val timeWindowHours: Int? = null,
     @SerialName("quiz_response") val quizResponse: String? = null,
@@ -154,14 +154,14 @@ object ConditionalFormattingEngine {
         return when (condition.type) {
             "group" -> student.groupId == condition.groupId
             "behavior_count" -> {
-                val behaviorName = condition.behaviorName ?: return false
+                val behaviorNames = condition.behaviorNames?.split(',') ?: return false
                 val countThreshold = condition.countThreshold ?: return false
                 val timeWindowHours = condition.timeWindowHours ?: 24
                 val cutoffTime = System.currentTimeMillis() - timeWindowHours * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
                     it.studentId == student.id.toLong() &&
-                    it.type.equals(behaviorName, ignoreCase = true) &&
+                    behaviorNames.any { name -> it.type.equals(name.trim(), ignoreCase = true) } &&
                     it.timestamp >= cutoffTime
                 }
                 count >= countThreshold
