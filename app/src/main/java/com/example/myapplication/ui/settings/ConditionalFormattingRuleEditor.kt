@@ -20,9 +20,9 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import com.example.myapplication.ui.components.MultiSelectDropdown
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.R
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.ui.components.ColorPickerField
+import com.example.myapplication.ui.components.MultiSelectDropdown
 import com.example.myapplication.utils.safeParseColor
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.github.skydoves.colorpicker.compose.ColorEnvelope

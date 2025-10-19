@@ -2,6 +2,7 @@ package com.example.myapplication.viewmodel
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.ConditionalFormattingRuleDao
@@ -16,7 +17,8 @@ class ConditionalFormattingRuleViewModel(
 ) : ViewModel() {
     val rules: LiveData<List<ConditionalFormattingRule>> = conditionalFormattingRuleDao.getAllRules()
     val customBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>> = customBehaviorDao.getAllCustomBehaviors()
-    val systemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>> = systemBehaviorDao.getAllSystemBehaviors()
+    val systemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>> =
+        systemBehaviorDao.getAllSystemBehaviors().asLiveData()
 
     fun addRule(rule: ConditionalFormattingRule) {
         viewModelScope.launch {
