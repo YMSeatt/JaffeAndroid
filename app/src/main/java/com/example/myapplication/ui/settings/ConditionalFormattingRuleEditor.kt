@@ -22,6 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import com.example.myapplication.ui.components.MultiSelectDropdown
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +55,8 @@ fun ConditionalFormattingRuleEditor(
     val json = Json { ignoreUnknownKeys = true; isLenient = true }
     val showColorPicker = remember { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf<String?>(null) }
+    val customBehaviors by viewModel.customBehaviors.observeAsState(initial = emptyList())
+    val systemBehaviors by viewModel.systemBehaviors.observeAsState(initial = emptyList())
 
     val conditionState = remember(rule, ruleType) {
         val initialJson = rule?.conditionJson
@@ -153,12 +156,17 @@ fun ConditionalFormattingRuleEditor(
                             )
                         }
                         "behavior_count" -> {
-                            OutlinedTextField(
-                                value = conditionState.value["behavior_name"] ?: "",
-                                onValueChange = {
-                                    conditionState.value = conditionState.value + ("behavior_name" to it)
+                            val allBehaviors =
+                                customBehaviors.map { it.name } + systemBehaviors.map { it.name }
+                            MultiSelectDropdown(
+                                options = allBehaviors,
+                                selectedOptions = conditionState.value["behavior_names"]?.split(",")
+                                    ?: emptyList(),
+                                onSelectionChanged = {
+                                    conditionState.value =
+                                        conditionState.value + ("behavior_names" to it.joinToString(","))
                                 },
-                                label = { Text("Behavior Name") }
+                                label = "Behaviors"
                             )
                             OutlinedTextField(
                                 value = conditionState.value["count_threshold"] ?: "1",
