@@ -61,4 +61,7 @@ object DatabaseModule {
 
     @Provides
     fun provideCustomHomeworkStatusDao(appDatabase: AppDatabase) = appDatabase.customHomeworkStatusDao()
+
+    @Provides
+    fun provideEmailScheduleDao(appDatabase: AppDatabase) = appDatabase.emailScheduleDao()
 }

@@ -7,7 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class], version = 23, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class], version = 24, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -27,6 +27,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun guideDao(): GuideDao
     abstract fun systemBehaviorDao(): SystemBehaviorDao
     abstract fun reminderDao(): ReminderDao
+    abstract fun emailScheduleDao(): EmailScheduleDao
 
     companion object {
         const val DATABASE_NAME = "seating_chart_database"
@@ -509,6 +510,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_23_24 = object : Migration(23, 24) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `email_schedules` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `hour` INTEGER NOT NULL,
+                        `minute` INTEGER NOT NULL,
+                        `daysOfWeek` INTEGER NOT NULL,
+                        `recipientEmail` TEXT NOT NULL,
+                        `subject` TEXT NOT NULL,
+                        `body` TEXT NOT NULL,
+                        `enabled` INTEGER NOT NULL DEFAULT 1
+                    )
+                """.trimIndent())
+            }
+        }
+
 
         fun getDatabase(context: Context, dbName: String = DATABASE_NAME): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -526,7 +544,7 @@ abstract class AppDatabase : RoomDatabase() {
                     ).createFromFile(context.getDatabasePath(dbName))
                 }
 
-                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23)
+                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

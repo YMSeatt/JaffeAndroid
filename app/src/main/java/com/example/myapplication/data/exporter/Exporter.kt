@@ -2,9 +2,14 @@ package com.example.myapplication.data.exporter
 
 import android.content.Context
 import android.net.Uri
-import com.example.myapplication.data.*
-import kotlinx.coroutines.flow.first
-import kotlinx.serialization.decodeFromString
+import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.CustomHomeworkStatus
+import com.example.myapplication.data.CustomHomeworkType
+import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.QuizLog
+import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.Student
+import com.example.myapplication.data.StudentGroup
 import kotlinx.serialization.json.Json
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.VerticalAlignment
@@ -12,7 +17,8 @@ import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class Exporter(
     private val context: Context
@@ -132,7 +138,7 @@ class Exporter(
         sheet.createFreezePane(0, 1)
 
 
-        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "Student Name")
+        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
         val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log"
 
         if (isMasterLog) {
@@ -205,7 +211,8 @@ class Exporter(
             }
             col++
             row.createCell(col++).setCellValue(SimpleDateFormat("EEEE", Locale.getDefault()).format(date))
-row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastName).filter(String::isNotBlank).joinToString(" ") } ?: "Unknown")
+            row.createCell(col++).setCellValue(student?.firstName ?: "Unknown")
+            row.createCell(col++).setCellValue(student?.lastName ?: "")
 
             if (isMasterLog) {
                 row.createCell(col++).setCellValue(
@@ -513,18 +520,19 @@ row.createCell(col++).setCellValue(student?.let { listOf(it.firstName, it.lastNa
     private suspend fun createStudentInfoSheet(workbook: Workbook, students: List<Student>, studentGroups: Map<Long, StudentGroup>) {
         val sheet = workbook.createSheet("Students Info")
         val headerRow = sheet.createRow(0)
-        val headers = listOf("Student Name", "Nickname", "Gender", "Group Name")
+        val headers = listOf("First Name", "Last Name", "Nickname", "Gender", "Group Name")
         headers.forEachIndexed { index, header ->
             headerRow.createCell(index).setCellValue(header)
         }
 
         students.forEachIndexed { index, student ->
             val row = sheet.createRow(index + 1)
-row.createCell(0).setCellValue(listOf(student.firstName, student.lastName).filter(String::isNotBlank).joinToString(" "))
-            row.createCell(1).setCellValue(student.nickname ?: "")
-            row.createCell(2).setCellValue(student.gender)
+            row.createCell(0).setCellValue(student.firstName)
+            row.createCell(1).setCellValue(student.lastName)
+            row.createCell(2).setCellValue(student.nickname ?: "")
+            row.createCell(3).setCellValue(student.gender)
             val group = student.groupId?.let { studentGroups[it] }
-            row.createCell(3).setCellValue(group?.name ?: "")
+            row.createCell(4).setCellValue(group?.name ?: "")
         }
     }
 }

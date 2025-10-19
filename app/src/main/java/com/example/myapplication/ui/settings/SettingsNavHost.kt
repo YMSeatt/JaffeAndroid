@@ -39,6 +39,7 @@ fun SettingsNavHost(
                 onNavigateToStudentGroups = { navController.navigate("student_groups") },
                 onNavigateToConditionalFormatting = { navController.navigate("conditional_formatting") },
                 onNavigateToExport = { navController.navigate("export") },
+                onNavigateToEmailSchedules = { navController.navigate("email_schedules") },
                 onDismiss = onDismiss
             )
         }
@@ -57,6 +58,11 @@ fun SettingsNavHost(
         composable("export") {
             ExportScreen(
                 studentRepository = studentRepository,
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable("email_schedules") {
+            EmailSchedulesScreen(
                 onDismiss = { navController.popBackStack() }
             )
         }

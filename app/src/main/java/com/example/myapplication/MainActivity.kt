@@ -22,12 +22,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.automirrored.filled.Help
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -37,6 +38,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,6 +64,9 @@ import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.GuideType
@@ -75,6 +80,7 @@ import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
 import com.example.myapplication.ui.dialogs.ExportDialog
@@ -82,13 +88,14 @@ import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
 import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
 import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
-import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
+import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.utils.captureComposable
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
@@ -98,6 +105,7 @@ import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StatsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -291,15 +299,32 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onStop() {
+        super.onStop()
+        lifecycleScope.launch {
+            val autoSendOnClose = settingsViewModel.autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email = settingsViewModel.defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(workDataOf("email_address" to email))
+                        .build()
+                    WorkManager.getInstance(applicationContext).enqueue(workRequest)
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun EmailDialog(
     onDismissRequest: () -> Unit,
-    onSend: (String, String, String, String, String) -> Unit
+    onSend: (String, String, String, String) -> Unit,
+    settingsViewModel: SettingsViewModel
 ) {
-    var from by remember { mutableStateOf("behaviorlogger@gmail.com") }
-    var password by remember { mutableStateOf("BehaviorJaffe123!") }
+    val from by settingsViewModel.defaultEmailAddress.collectAsState()
+    var password by remember { mutableStateOf("") }
     var to by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
@@ -311,7 +336,7 @@ fun EmailDialog(
             Column {
                 TextField(
                     value = from,
-                    onValueChange = { from = it },
+                    onValueChange = { settingsViewModel.updateDefaultEmailAddress(it) },
                     label = { Text("From") }
                 )
                 TextField(
@@ -340,7 +365,8 @@ fun EmailDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSend(from, password, to, subject, body)
+                    onSend(password, to, subject, body)
+                    onDismissRequest()
                 }
             ) {
                 Text("Send")
@@ -764,9 +790,10 @@ fun SeatingChartScreen(
 
             if (showEmailDialog) {
                 val activity = (context as? MainActivity)
+                val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 EmailDialog(
                     onDismissRequest = { onShowEmailDialogChange(false) },
-                    onSend = { from, password, to, subject, body ->
+                    onSend = { password, to, subject, body ->
                         activity?.lifecycleScope?.launch {
                             val emailUtil = EmailUtil(activity)
                             // Create a temporary file for the attachment
@@ -779,22 +806,27 @@ fun SeatingChartScreen(
                                     options = options
                                 )
                                 if (result.isSuccess) {
-                                    emailUtil.sendEmail(
-                                        from = from,
-                                        password = password,
-                                        to = to,
-                                        subject = subject,
-                                        body = body,
-                                        attachmentPath = file.absolutePath
-                                    )
-                                    Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                    try {
+                                        emailUtil.sendEmailWithRetry(
+                                            from = from,
+                                            password = password,
+                                            to = to,
+                                            subject = subject,
+                                            body = body,
+                                            attachmentPath = file.absolutePath
+                                        )
+                                        Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                    } catch (e: EmailException) {
+                                        Toast.makeText(activity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
                                 } else {
                                     Toast.makeText(activity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                 }
                             }
                             onShowEmailDialogChange(false)
                         }
-                    }
+                    },
+                    settingsViewModel = settingsViewModel
                 )
             }
 

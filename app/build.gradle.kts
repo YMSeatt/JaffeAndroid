@@ -117,6 +117,9 @@ dependencies {
     implementation("com.sun.mail:android-mail:1.6.2")
     implementation("com.sun.mail:android-activation:1.6.2")
 
+    // WorkManager
+    implementation("androidx.work:work-runtime-ktx:2.9.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

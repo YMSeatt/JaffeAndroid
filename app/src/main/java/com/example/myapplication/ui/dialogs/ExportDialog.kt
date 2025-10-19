@@ -50,6 +50,7 @@ fun ExportDialog(
     var includeSummarySheet by remember { mutableStateOf(true) }
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
+    var includeIndividualStudentSheets by remember { mutableStateOf(false) }
 
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
@@ -215,6 +216,10 @@ fun ExportDialog(
                     Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it })
                     Text("Master Log")
                 }
+                Row {
+                    Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
+                    Text("Individual Student Sheets")
+                }
             }
         },
         confirmButton = {
@@ -232,7 +237,8 @@ fun ExportDialog(
                             includeHomeworkLogs = includeHomeworkLogs,
                             includeSummarySheet = includeSummarySheet,
                             separateSheets = separateSheets,
-                            includeMasterLog = includeMasterLog
+                            includeMasterLog = includeMasterLog,
+                            includeIndividualStudentSheets = includeIndividualStudentSheets
                         )
                         onExport(options, false)
                     }
@@ -253,7 +259,8 @@ fun ExportDialog(
                             includeHomeworkLogs = includeHomeworkLogs,
                             includeSummarySheet = includeSummarySheet,
                             separateSheets = separateSheets,
-                            includeMasterLog = includeMasterLog
+                            includeMasterLog = includeMasterLog,
+                            includeIndividualStudentSheets = includeIndividualStudentSheets
                         )
                         onExport(options, true)
                     }

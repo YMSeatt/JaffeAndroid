@@ -5,6 +5,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
@@ -20,6 +23,8 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
+
+import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.utils.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +36,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.util.Calendar
+import java.util.concurrent.TimeUnit
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
@@ -635,6 +642,24 @@ class SettingsViewModel(
                     }
                 }
             }
+        }
+    }
+
+    val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateDefaultEmailAddress(email: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateDefaultEmailAddress(email)
+        }
+    }
+
+    val autoSendEmailOnClose: StateFlow<Boolean> = preferencesRepository.autoSendEmailOnCloseFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updateAutoSendEmailOnClose(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateAutoSendEmailOnClose(enabled)
         }
     }
 }

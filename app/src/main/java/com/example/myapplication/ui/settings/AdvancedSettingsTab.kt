@@ -16,7 +16,8 @@ import androidx.compose.ui.unit.dp
 fun AdvancedSettingsTab(
     onNavigateToStudentGroups: () -> Unit,
     onNavigateToConditionalFormatting: () -> Unit,
-    onNavigateToExport: () -> Unit
+    onNavigateToExport: () -> Unit,
+    onNavigateToEmailSchedules: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -44,6 +45,14 @@ fun AdvancedSettingsTab(
         item {
             Button(onClick = onNavigateToExport, modifier = Modifier.fillMaxWidth()) {
                 Text("Export Data")
+            }
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            Button(onClick = onNavigateToEmailSchedules, modifier = Modifier.fillMaxWidth()) {
+                Text("Email Schedules")
             }
         }
     }

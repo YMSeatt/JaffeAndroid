@@ -2,9 +2,16 @@ package com.example.myapplication.preferences
 
 import android.content.Context
 import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.*
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.myapplication.data.DefaultStudentStyle
+import com.example.myapplication.data.EmailSchedule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -81,6 +88,38 @@ class AppPreferencesRepository(private val context: Context) {
         val LAST_EXPORT_PATH = stringPreferencesKey("last_export_path")
         val ENCRYPT_DATA_FILES = booleanPreferencesKey("encrypt_data_files")
         val USE_BOLD_FONT = booleanPreferencesKey("use_bold_font")
+
+        val DEFAULT_EMAIL_ADDRESS = stringPreferencesKey("default_email_address")
+        val AUTO_SEND_EMAIL_ON_CLOSE = booleanPreferencesKey("auto_send_email_on_close")
+        val EMAIL_SCHEDULES = stringSetPreferencesKey("email_schedules")
+    }
+
+    val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
+        .map { preferences ->
+            (preferences[PreferencesKeys.EMAIL_SCHEDULES] ?: emptySet()).mapNotNull {
+                val parts = it.split(";")
+                if (parts.size != 2) return@mapNotNull null
+                val timeParts = parts[0].split(":")
+                if (timeParts.size != 2) return@mapNotNull null
+                val hour = timeParts[0].toIntOrNull() ?: return@mapNotNull null
+                val minute = timeParts[1].toIntOrNull() ?: return@mapNotNull null
+                val days = parts[1].split(",").toSet()
+                EmailSchedule(
+                    hour = hour, minute = minute, days = days,
+                    id = TODO(),
+                    daysOfWeek = TODO(),
+                    recipientEmail = TODO(),
+                    subject = TODO(),
+                    body = TODO(),
+                    enabled = TODO()
+                )
+            }
+        }
+
+    suspend fun updateEmailSchedules(schedules: List<EmailSchedule>) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map { "${it.hour}:${it.minute};${it.days.joinToString(",")}" }.toSet()
+        }
     }
 
     val useBoldFontFlow: Flow<Boolean> = context.dataStore.data
@@ -628,6 +667,28 @@ class AppPreferencesRepository(private val context: Context) {
                 fontColor = preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] ?: DEFAULT_STUDENT_FONT_COLOR_HEX
             )
         }
+
+    val defaultEmailAddressFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: ""
+        }
+
+    suspend fun updateDefaultEmailAddress(email: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] = email
+        }
+    }
+
+    val autoSendEmailOnCloseFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTO_SEND_EMAIL_ON_CLOSE] ?: false
+        }
+
+    suspend fun updateAutoSendEmailOnClose(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.AUTO_SEND_EMAIL_ON_CLOSE] = enabled
+        }
+    }
 }
 
 enum class AppTheme {
