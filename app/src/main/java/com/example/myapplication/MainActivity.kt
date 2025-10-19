@@ -54,6 +54,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -87,6 +88,7 @@ import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.utils.captureComposable
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
@@ -138,32 +140,8 @@ class MainActivity : ComponentActivity() {
         pendingExportOptions = null
     }
 
-    val shareDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    ) { uri: Uri? ->
-        uri?.let {
-            pendingExportOptions?.let { options ->
-                lifecycleScope.launch {
-                    val result = seatingChartViewModel.exportData(
-                        context = this@MainActivity,
-                        uri = it,
-                        options = options
-                    )
-                    if (result.isSuccess) {
-                        val shareIntent: Intent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_STREAM, it)
-                            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        }
-                        startActivity(Intent.createChooser(shareIntent, null))
-                    } else {
-                        Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }
-        pendingExportOptions = null
-    }
+    var showEmailDialog by mutableStateOf(false)
+    var emailUri by mutableStateOf<Uri?>(null)
 
     private val studentGroupsViewModelFactory by lazy {
         object : ViewModelProvider.Factory {
@@ -287,6 +265,7 @@ class MainActivity : ComponentActivity() {
                             showReminders = false
                         }
                     } else {
+                        var showEmailDialogState by remember { mutableStateOf(false) }
                         SeatingChartScreen(
                             seatingChartViewModel = seatingChartViewModel,
                             settingsViewModel = settingsViewModel,
@@ -299,7 +278,9 @@ class MainActivity : ComponentActivity() {
                             onNavigateToReminders = { showReminders = true },
                             onHelpClick = {
                                 startActivity(Intent(this, HelpActivity::class.java))
-                            }
+                            },
+                            showEmailDialog = showEmailDialogState,
+                            onShowEmailDialogChange = { showEmailDialogState = it }
                         )
                     }
                 } else {
@@ -310,6 +291,67 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+@Composable
+fun EmailDialog(
+    onDismissRequest: () -> Unit,
+    onSend: (String, String, String, String, String) -> Unit
+) {
+    var from by remember { mutableStateOf("behaviorlogger@gmail.com") }
+    var password by remember { mutableStateOf("BehaviorJaffe123!") }
+    var to by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Send Email") },
+        text = {
+            Column {
+                TextField(
+                    value = from,
+                    onValueChange = { from = it },
+                    label = { Text("From") }
+                )
+                TextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                TextField(
+                    value = to,
+                    onValueChange = { to = it },
+                    label = { Text("To") }
+                )
+                TextField(
+                    value = subject,
+                    onValueChange = { subject = it },
+                    label = { Text("Subject") }
+                )
+                TextField(
+                    value = body,
+                    onValueChange = { body = it },
+                    label = { Text("Body") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSend(from, password, to, subject, body)
+                }
+            ) {
+                Text("Send")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 
@@ -324,7 +366,9 @@ fun SeatingChartScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit,
     onNavigateToReminders: () -> Unit,
-    onHelpClick: () -> Unit
+    onHelpClick: () -> Unit,
+    showEmailDialog: Boolean,
+    onShowEmailDialogChange: (Boolean) -> Unit
 ) {
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
@@ -710,12 +754,48 @@ fun SeatingChartScreen(
                 ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options, share ->
                     (context as? MainActivity)?.pendingExportOptions = options
                     if (share) {
-                        (context as? MainActivity)?.shareDocumentLauncher?.launch("seating_chart_export.xlsx")
+                        onShowEmailDialogChange(true)
                     } else {
                         (context as? MainActivity)?.createDocumentLauncher?.launch("seating_chart_export.xlsx")
                     }
                     showExportDialog = false
                 })
+            }
+
+            if (showEmailDialog) {
+                val activity = (context as? MainActivity)
+                EmailDialog(
+                    onDismissRequest = { onShowEmailDialogChange(false) },
+                    onSend = { from, password, to, subject, body ->
+                        activity?.lifecycleScope?.launch {
+                            val emailUtil = EmailUtil(activity)
+                            // Create a temporary file for the attachment
+                            val file = kotlin.io.path.createTempFile("export", ".xlsx").toFile()
+                            val uri = Uri.fromFile(file)
+                            activity.pendingExportOptions?.let { options ->
+                                val result = seatingChartViewModel.exportData(
+                                    context = activity,
+                                    uri = uri,
+                                    options = options
+                                )
+                                if (result.isSuccess) {
+                                    emailUtil.sendEmail(
+                                        from = from,
+                                        password = password,
+                                        to = to,
+                                        subject = subject,
+                                        body = body,
+                                        attachmentPath = file.absolutePath
+                                    )
+                                    Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(activity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            onShowEmailDialogChange(false)
+                        }
+                    }
+                )
             }
 
             if (showChangeBoxSizeDialog) {

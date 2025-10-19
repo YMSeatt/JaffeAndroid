@@ -45,6 +45,9 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
+    packagingOptions {
+        pickFirst("META-INF/LICENSE.txt")
+    }
 }
 
 dependencies {
@@ -109,6 +112,10 @@ dependencies {
 
     // Fernet
     implementation("com.macasaet.fernet:fernet-java8:1.5.0")
+
+    // JavaMail
+    implementation("com.sun.mail:android-mail:1.6.2")
+    implementation("com.sun.mail:android-activation:1.6.2")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -49,6 +51,9 @@ import kotlin.math.roundToInt
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -177,6 +182,39 @@ fun StudentDraggableIcon(
                     modifier = Modifier
                         .padding(studentUiItem.displayPadding)
                 ) {
+                    val backgroundColors = studentUiItem.displayBackgroundColor
+                    if (backgroundColors.size > 1) {
+                        Box(modifier = Modifier.matchParentSize()) {
+                            backgroundColors.forEachIndexed { index, color ->
+                                Box(
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .padding( (index * 4).dp)
+                                        .background(color, shape = RoundedCornerShape(studentUiItem.displayCornerRadius - (index * 4).dp))
+                                )
+                            }
+                        }
+                    }
+
+                    val outlineColors = studentUiItem.displayOutlineColor
+                    if (outlineColors.size > 1) {
+                        Canvas(modifier = Modifier.matchParentSize()) {
+                            val strokeWidth = (if (isSelected) 4.dp else studentUiItem.displayOutlineThickness).toPx()
+                            val segmentLength = 10.dp.toPx()
+                            outlineColors.forEachIndexed { index, color ->
+                                drawRoundRect(
+                                    color = color,
+                                    style = Stroke(
+                                        width = strokeWidth,
+                                        pathEffect = PathEffect.dashPathEffect(
+                                            intervals = floatArrayOf(segmentLength, segmentLength),
+                                            phase = segmentLength / outlineColors.size * index
+                                        )
+                                    )
+                                )
+                            }
+                        }
+                    }
                     if (studentUiItem.temporaryTask != null) {
                         Icon(
                             imageVector = Icons.Default.Assignment,
