@@ -43,6 +43,7 @@ fun SettingsScreen(
     onNavigateToConditionalFormatting: () -> Unit,
     onNavigateToExport: () -> Unit,
     onNavigateToEmailSchedules: () -> Unit,
+    onNavigateToReminders: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -145,7 +146,8 @@ fun SettingsScreen(
                         onNavigateToStudentGroups = onNavigateToStudentGroups,
                         onNavigateToConditionalFormatting = onNavigateToConditionalFormatting,
                         onNavigateToExport = onNavigateToExport,
-                        onNavigateToEmailSchedules = onNavigateToEmailSchedules
+                        onNavigateToEmailSchedules = onNavigateToEmailSchedules,
+                        onNavigateToReminders = onNavigateToReminders
                     )
                 }
             }

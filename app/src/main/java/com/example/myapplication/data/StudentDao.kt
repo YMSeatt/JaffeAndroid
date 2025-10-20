@@ -56,6 +56,6 @@ interface StudentDao {
     @Query("SELECT * FROM students WHERE groupId IS NULL")
     fun getUngroupedStudents(): Flow<List<Student>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM students WHERE firstName = :firstName AND lastName = :lastName LIMIT 1)")
+    @Query("SELECT EXISTS(SELECT 1 FROM students WHERE LOWER(firstName) = LOWER(:firstName) AND LOWER(lastName) = LOWER(:lastName) LIMIT 1)")
     suspend fun studentExists(firstName: String, lastName: String): Boolean
 }

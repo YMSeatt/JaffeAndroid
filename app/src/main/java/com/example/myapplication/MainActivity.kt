@@ -307,8 +307,12 @@ class MainActivity : ComponentActivity() {
             if (autoSendOnClose) {
                 val email = settingsViewModel.defaultEmailAddress.first()
                 if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
                     val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
-                        .setInputData(workDataOf("email_address" to email))
+                        .setInputData(workDataOf(
+                            "email_address" to email,
+                            "export_options" to exportOptions.toString()
+                        ))
                         .build()
                     WorkManager.getInstance(applicationContext).enqueue(workRequest)
                 }
@@ -320,11 +324,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun EmailDialog(
     onDismissRequest: () -> Unit,
-    onSend: (String, String, String, String) -> Unit,
+    onSend: (String, String, String) -> Unit,
     settingsViewModel: SettingsViewModel
 ) {
     val from by settingsViewModel.defaultEmailAddress.collectAsState()
-    var password by remember { mutableStateOf("") }
     var to by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
@@ -338,12 +341,6 @@ fun EmailDialog(
                     value = from,
                     onValueChange = { settingsViewModel.updateDefaultEmailAddress(it) },
                     label = { Text("From") }
-                )
-                TextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation()
                 )
                 TextField(
                     value = to,
@@ -365,7 +362,7 @@ fun EmailDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    onSend(password, to, subject, body)
+                    onSend(to, subject, body)
                     onDismissRequest()
                 }
             ) {
@@ -712,6 +709,8 @@ fun SeatingChartScreen(
                 val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
                 var showGroupMenu by remember { mutableStateOf(false) }
 
+                var showBehaviorLogViewer by remember { mutableStateOf(false) }
+
                 DropdownMenu(expanded = true, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
                     DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                         coroutineScope.launch { editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong()); showAddEditStudentDialog = true }
@@ -719,6 +718,7 @@ fun SeatingChartScreen(
                     })
                     DropdownMenuItem(text = { Text("Delete Student") }, onClick = { seatingChartViewModel.deleteStudents(setOf(student.id)); showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Log Behavior") }, onClick = { showBehaviorDialog = true; showStudentActionMenu = false })
+                    DropdownMenuItem(text = { Text("View Behavior Log") }, onClick = { showBehaviorLogViewer = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Log Homework") }, onClick = { showAdvancedHomeworkLogDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = { showLogQuizScoreDialog = true; showStudentActionMenu = false })
                     DropdownMenuItem(text = { Text("Assign Task") }, onClick = { showAssignTaskDialog = true; showStudentActionMenu = false })
@@ -729,6 +729,13 @@ fun SeatingChartScreen(
                     if (student.groupId != null) {
                         DropdownMenuItem(text = { Text("Remove from Group") }, onClick = { seatingChartViewModel.removeStudentFromGroup(student.id.toLong()); showStudentActionMenu = false })
                     }
+                }
+                if (showBehaviorLogViewer) {
+                    BehaviorLogViewerDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        onDismiss = { showBehaviorLogViewer = false }
+                    )
                 }
                 DropdownMenu(expanded = showGroupMenu, onDismissRequest = { showGroupMenu = false }) {
                     groups.forEach { group ->
@@ -793,7 +800,7 @@ fun SeatingChartScreen(
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 EmailDialog(
                     onDismissRequest = { onShowEmailDialogChange(false) },
-                    onSend = { password, to, subject, body ->
+                    onSend = { to, subject, body ->
                         activity?.lifecycleScope?.launch {
                             val emailUtil = EmailUtil(activity)
                             // Create a temporary file for the attachment
@@ -807,6 +814,7 @@ fun SeatingChartScreen(
                                 )
                                 if (result.isSuccess) {
                                     try {
+                                        val password = settingsViewModel.emailPassword.first() ?: ""
                                         emailUtil.sendEmailWithRetry(
                                             from = from,
                                             password = password,

@@ -35,7 +35,6 @@ fun BehaviorDialog(
     onDismiss: () -> Unit
 ) {
     var notes by remember { mutableStateOf("") }
-    val focusRequester = remember { FocusRequester() }
     var student by remember { mutableStateOf<Student?>(null) }
 
     LaunchedEffect(studentIds) {
@@ -73,7 +72,6 @@ fun BehaviorDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 8.dp)
-                        .focusRequester(focusRequester)
                 )
                 Text("Select Behavior:")
                 LazyVerticalGrid(
@@ -111,8 +109,4 @@ fun BehaviorDialog(
             }
         }
     )
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
 }

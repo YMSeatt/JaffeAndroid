@@ -30,5 +30,6 @@ data class QuizLog(
     val loggedAt: Long,
     val comment: String?,
     val marksData: String, // JSON string for marks data
-    val numQuestions: Int
+    val numQuestions: Int,
+    val isComplete: Boolean = false
 )

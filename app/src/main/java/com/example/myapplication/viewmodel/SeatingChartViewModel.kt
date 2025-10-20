@@ -230,6 +230,7 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 .toMap()
             val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
+            val logDisplayTimeout = appPreferencesRepository.logDisplayTimeoutFlow.first()
 
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
@@ -265,21 +266,35 @@ class SeatingChartViewModel @Inject constructor(
                 )
 
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
-                val recentEvents =
+                val recentEvents = if (student.showLogs) {
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
-                        .filter { it.timestamp > lastCleared }
-                val recentHomework =
+                        .filter { it.timestamp > lastCleared && (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + logDisplayTimeout) }
+                } else {
+                    emptyList()
+                }
+                val recentHomework = if (student.showLogs) {
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
-                        .filter { it.loggedAt > lastCleared }
-                val recentQuizzes =
+                        .filter { it.loggedAt > lastCleared && !it.isComplete && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + logDisplayTimeout) }
+                } else {
+                    emptyList()
+                }
+                val recentQuizzes = if (student.showLogs) {
                     quizLogDao.getRecentQuizLogsForStudentList(student.id, quizLimit)
-                        .filter { it.loggedAt > lastCleared }
+                        .filter { it.loggedAt > lastCleared && !it.isComplete && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + logDisplayTimeout) }
+                } else {
+                    emptyList()
+                }
 
                 val behaviorDescription = recentEvents.map {
-                    if (useInitialsForBehavior) {
+                    val description = if (useInitialsForBehavior) {
                         behaviorInitialsMap[it.type] ?: it.type.first().toString()
                     } else {
                         it.type
+                    }
+                    if (it.comment.isNullOrBlank()) {
+                        description
+                    } else {
+                        "$description: ${it.comment}"
                     }
                 }
 
@@ -345,15 +360,17 @@ class SeatingChartViewModel @Inject constructor(
 
     fun clearRecentLogsForStudent(studentId: Long) {
         viewModelScope.launch {
-            appPreferencesRepository.updateStudentLogsLastCleared(studentId, System.currentTimeMillis())
-            updateStudentsForDisplay()
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(showLogs = false)
+            updateStudent(student, updatedStudent)
         }
     }
 
     fun showRecentLogsForStudent(studentId: Long) {
         viewModelScope.launch {
-            appPreferencesRepository.removeStudentLogsLastCleared(studentId)
-            updateStudentsForDisplay()
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(showLogs = true)
+            updateStudent(student, updatedStudent)
         }
     }
 
@@ -836,6 +853,15 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    fun updateBehaviorEvent(event: BehaviorEvent) {
+        viewModelScope.launch(Dispatchers.IO) {
+            behaviorEventDao.updateBehaviorEvent(event)
+            withContext(Dispatchers.Main) {
+                updateStudentsForDisplay()
+            }
+        }
+    }
+
     // QuizLog operations
     fun saveQuizLog(log: QuizLog) {
         viewModelScope.launch {
@@ -947,6 +973,15 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             val student = getStudentForEditing(studentId) ?: return@launch
             val updatedStudent = student.copy(temporaryTask = task)
+            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
+            executeCommand(command)
+        }
+    }
+
+    fun completeTaskForStudent(studentId: Long) {
+        viewModelScope.launch {
+            val student = getStudentForEditing(studentId) ?: return@launch
+            val updatedStudent = student.copy(temporaryTask = null)
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
         }

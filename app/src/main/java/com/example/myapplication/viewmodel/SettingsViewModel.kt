@@ -386,25 +386,26 @@ class SettingsViewModel(
     fun updatePasswordEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updatePasswordEnabled(enabled)
+            if (!enabled) {
+                preferencesRepository.updatePasswordHash("")
+            }
         }
     }
 
     suspend fun checkPassword(password: String): Boolean {
         val hash = preferencesRepository.passwordHashFlow.first()
         if (hash.isNullOrEmpty()) {
-            return true
+            return password.isBlank()
         }
         return hash == SecurityUtil.hashPassword(password)
     }
 
     fun setPassword(password: String) {
-        if (password.isNotBlank()) {
-            viewModelScope.launch {
+        viewModelScope.launch {
+            if (password.isNotBlank()) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
                 updatePasswordEnabled(true)
-            }
-        } else {
-            viewModelScope.launch {
+            } else {
                 preferencesRepository.updatePasswordHash("")
                 updatePasswordEnabled(false)
             }
@@ -660,6 +661,24 @@ class SettingsViewModel(
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateAutoSendEmailOnClose(enabled)
+        }
+    }
+
+    val emailPassword: StateFlow<String?> = preferencesRepository.emailPasswordFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, null)
+
+    fun updateEmailPassword(password: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateEmailPassword(password)
+        }
+    }
+
+    val logDisplayTimeout: StateFlow<Int> = preferencesRepository.logDisplayTimeoutFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    fun updateLogDisplayTimeout(timeout: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateLogDisplayTimeout(timeout)
         }
     }
 }

@@ -40,6 +40,7 @@ fun SettingsNavHost(
                 onNavigateToConditionalFormatting = { navController.navigate("conditional_formatting") },
                 onNavigateToExport = { navController.navigate("export") },
                 onNavigateToEmailSchedules = { navController.navigate("email_schedules") },
+                onNavigateToReminders = { navController.navigate("reminders") },
                 onDismiss = onDismiss
             )
         }
@@ -63,6 +64,11 @@ fun SettingsNavHost(
         }
         composable("email_schedules") {
             EmailSchedulesScreen(
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable("reminders") {
+            RemindersScreen(
                 onDismiss = { navController.popBackStack() }
             )
         }

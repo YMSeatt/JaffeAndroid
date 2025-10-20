@@ -90,6 +90,27 @@ fun DisplaySettingsTab(
         }
 
         item {
+            Text("Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            val logDisplayTimeout by settingsViewModel.logDisplayTimeout.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = logDisplayTimeout.toFloat(),
+                    onValueChange = { settingsViewModel.updateLogDisplayTimeout(it.toInt()) },
+                    valueRange = 0f..300f,
+                    steps = 29,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(logDisplayTimeout.toString())
+            }
+        }
+        item {
+            HorizontalDivider()
+        }
+
+        item {
             Text("Number of recent behavior incidents to display:", style = MaterialTheme.typography.titleMedium)
         }
         item {
