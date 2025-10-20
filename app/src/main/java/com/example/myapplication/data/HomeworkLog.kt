@@ -27,5 +27,6 @@ data class HomeworkLog(
     val status: String,
     val loggedAt: Long = System.currentTimeMillis(),
     val comment: String? = null,
-    val marksData: String? = null // New field to store marks as a JSON string
+    val marksData: String? = null, // New field to store marks as a JSON string
+    val isComplete: Boolean = false
 )

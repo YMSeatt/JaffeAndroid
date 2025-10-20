@@ -92,6 +92,8 @@ class AppPreferencesRepository(private val context: Context) {
         val DEFAULT_EMAIL_ADDRESS = stringPreferencesKey("default_email_address")
         val AUTO_SEND_EMAIL_ON_CLOSE = booleanPreferencesKey("auto_send_email_on_close")
         val EMAIL_SCHEDULES = stringSetPreferencesKey("email_schedules")
+        val LOG_DISPLAY_TIMEOUT = intPreferencesKey("log_display_timeout")
+        val EMAIL_PASSWORD = stringPreferencesKey("email_password")
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -687,6 +689,28 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateAutoSendEmailOnClose(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.AUTO_SEND_EMAIL_ON_CLOSE] = enabled
+        }
+    }
+
+    val logDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LOG_DISPLAY_TIMEOUT] ?: 0
+        }
+
+    suspend fun updateLogDisplayTimeout(timeout: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LOG_DISPLAY_TIMEOUT] = timeout
+        }
+    }
+
+    val emailPasswordFlow: Flow<String?> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.EMAIL_PASSWORD]
+        }
+
+    suspend fun updateEmailPassword(password: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.EMAIL_PASSWORD] = password
         }
     }
 }

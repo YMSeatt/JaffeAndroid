@@ -81,21 +81,32 @@ fun AssignTaskDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    val task = if (selectedOption == "system") {
-                        selectedSystemBehavior?.name
-                    } else {
-                        customTask
+            Row {
+                Button(
+                    onClick = {
+                        val task = if (selectedOption == "system") {
+                            selectedSystemBehavior?.name
+                        } else {
+                            customTask
+                        }
+                        task?.let {
+                            viewModel.assignTaskToStudent(studentId, it)
+                        }
+                        onDismissRequest()
+                    },
+                enabled = (selectedOption == "system" && selectedSystemBehavior != null) || (selectedOption == "custom" && customTask.isNotBlank()) || (selectedOption == "system" && systemBehaviors.isEmpty())
+                ) {
+                    Text("Assign")
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(
+                    onClick = {
+                        viewModel.completeTaskForStudent(studentId)
+                        onDismissRequest()
                     }
-                    task?.let {
-                        viewModel.assignTaskToStudent(studentId, it)
-                    }
-                    onDismissRequest()
-                },
-                enabled = (selectedOption == "system" && selectedSystemBehavior != null) || (selectedOption == "custom" && customTask.isNotBlank())
-            ) {
-                Text("Assign")
+                ) {
+                    Text("Complete Task")
+                }
             }
         },
         dismissButton = {

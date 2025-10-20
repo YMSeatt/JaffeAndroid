@@ -17,7 +17,8 @@ fun AdvancedSettingsTab(
     onNavigateToStudentGroups: () -> Unit,
     onNavigateToConditionalFormatting: () -> Unit,
     onNavigateToExport: () -> Unit,
-    onNavigateToEmailSchedules: () -> Unit
+    onNavigateToEmailSchedules: () -> Unit,
+    onNavigateToReminders: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -53,6 +54,14 @@ fun AdvancedSettingsTab(
         item {
             Button(onClick = onNavigateToEmailSchedules, modifier = Modifier.fillMaxWidth()) {
                 Text("Email Schedules")
+            }
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            Button(onClick = onNavigateToReminders, modifier = Modifier.fillMaxWidth()) {
+                Text("Reminders")
             }
         }
     }

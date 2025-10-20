@@ -28,8 +28,6 @@ fun AddEditFurnitureDialog(
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(furnitureToEdit?.name ?: "") }
-    var xPosition by remember { mutableStateOf(furnitureToEdit?.xPosition.toString()) }
-    var yPosition by remember { mutableStateOf(furnitureToEdit?.yPosition.toString()) }
     var width by remember { mutableStateOf(furnitureToEdit?.width.toString()) }
     var height by remember { mutableStateOf(furnitureToEdit?.height.toString()) }
 
@@ -42,18 +40,6 @@ fun AddEditFurnitureDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Furniture Name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = xPosition,
-                    onValueChange = { xPosition = it },
-                    label = { Text("X Position") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                OutlinedTextField(
-                    value = yPosition,
-                    onValueChange = { yPosition = it },
-                    label = { Text("Y Position") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
@@ -73,17 +59,13 @@ fun AddEditFurnitureDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val parsedX = xPosition.toFloatOrNull()
-                    val parsedY = yPosition.toFloatOrNull()
                     val parsedWidth: Float? = width.toFloatOrNull()
                     val parsedHeight = height.toFloatOrNull()
 
-                    if (name.isNotBlank() && parsedX != null && parsedY != null && parsedWidth != null && parsedHeight != null) {
+                    if (name.isNotBlank() && parsedWidth != null && parsedHeight != null) {
                         if (furnitureToEdit != null) {
                             val updatedFurniture = furnitureToEdit.copy(
                                 name = name,
-                                xPosition = parsedX,
-                                yPosition = parsedY,
                                 width = parsedWidth.toInt(),
                                 height = parsedHeight.toInt()
                             )
@@ -92,8 +74,6 @@ fun AddEditFurnitureDialog(
                             val newFurniture = Furniture(
                                 name = name,
                                 type = "desk", // Default or user-selectable type
-                                xPosition = parsedX,
-                                yPosition = parsedY,
                                 width = parsedWidth.toInt(),
                                 height = parsedHeight.toInt()
                             )

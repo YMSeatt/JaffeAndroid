@@ -45,9 +45,10 @@ class EmailWorker(
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val subject = "Daily Report - ${dateFormat.format(Date())}"
 
-        val options = ExportOptions(
-            // Set your desired export options here
-        )
+        val options = inputData.getString("export_options")?.let {
+            // This is a placeholder for a proper deserialization
+            ExportOptions()
+        } ?: ExportOptions()
 
         val file = File(applicationContext.cacheDir, "daily_report.xlsx")
         val uri = FileProvider.getUriForFile(
@@ -70,11 +71,11 @@ class EmailWorker(
         )
 
         val preferencesRepository = AppPreferencesRepository(applicationContext)
-        val from = "behaviorlogger@gmail.com" // This should be a secure preference
-        val password = "betp kgas eouc nhtq" // This should be a secure preference
+        val from = preferencesRepository.defaultEmailAddressFlow.first()
+        val password = preferencesRepository.emailPasswordFlow.first()
         val to = inputData.getString("email_address") ?: preferencesRepository.defaultEmailAddressFlow.first()
 
-        if (to.isBlank()) {
+        if (to.isBlank() || password.isNullOrBlank()) {
             return@withContext Result.failure()
         }
 

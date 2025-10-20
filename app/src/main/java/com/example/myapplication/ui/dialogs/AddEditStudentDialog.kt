@@ -43,6 +43,10 @@ fun AddEditStudentDialog(
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
 
+    LaunchedEffect(firstName, lastName) {
+        showError = false
+    }
+
     if (showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmation = false },
@@ -125,8 +129,7 @@ fun AddEditStudentDialog(
                             }
                         }
                     }
-                },
-                enabled = !showError
+                }
             ) {
                 Text(if (studentToEdit == null) "Add" else "Save")
             }
