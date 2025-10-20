@@ -21,7 +21,7 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         alarmScheduler = AlarmScheduler(application)
     }
 
-    val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders()
+    val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders() as LiveData<List<Reminder>>
 
     fun addReminder(reminder: Reminder) {
         viewModelScope.launch {
@@ -33,7 +33,7 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch {
-            reminderDao.delete(reminder)
+            reminderDao.delete(reminder.id)
             alarmScheduler.cancel(reminder)
         }
     }

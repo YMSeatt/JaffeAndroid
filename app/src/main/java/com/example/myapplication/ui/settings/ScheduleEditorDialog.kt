@@ -112,6 +112,7 @@ fun ScheduleEditorDialog(
                                 subject = subject,
                                 body = body,
                                 enabled = schedule?.enabled ?: true,
+                                days = TODO(),
                             )
                         )
                     }) {

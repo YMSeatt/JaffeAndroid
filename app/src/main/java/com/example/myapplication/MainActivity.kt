@@ -82,6 +82,7 @@ import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
 import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
+import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
 import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
 import com.example.myapplication.ui.dialogs.ExportDialog
 import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog

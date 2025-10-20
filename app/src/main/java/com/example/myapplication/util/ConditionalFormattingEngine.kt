@@ -1,6 +1,7 @@
 @file:OptIn(ExperimentalSerializationApi::class, InternalSerializationApi::class)
 package com.example.myapplication.util
 
+import android.util.Log
 import com.example.myapplication.data.StudentDetailsForDisplay
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.BehaviorEvent
