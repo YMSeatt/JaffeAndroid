@@ -672,7 +672,7 @@ class AppPreferencesRepository(private val context: Context) {
 
     val defaultEmailAddressFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: ""
+            preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: "behaviorlogger@gmail.com"
         }
 
     suspend fun updateDefaultEmailAddress(email: String) {

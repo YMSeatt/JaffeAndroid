@@ -2,7 +2,11 @@ package com.example.myapplication.util
 
 import android.content.Context
 import android.util.Log
-import kotlinx.coroutines.delay
+import androidx.work.Constraints
+import androidx.work.Data
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Properties
@@ -23,6 +27,7 @@ import javax.mail.internet.MimeMultipart
 class EmailUtil(private val context: Context) {
 
     private val TAG = "EmailUtil"
+    private val workManager = WorkManager.getInstance(context)
 
     suspend fun sendEmailWithRetry(
         from: String,
@@ -30,27 +35,28 @@ class EmailUtil(private val context: Context) {
         to: String,
         subject: String,
         body: String,
-        attachmentPath: String? = null,
-        retries: Int = 3
+        attachmentPath: String? = null
     ) {
-        var currentRetry = 0
-        while (currentRetry < retries) {
-            try {
-                sendEmail(from, password, to, subject, body, attachmentPath)
-                Log.i(TAG, "Email sent successfully to $to")
-                return // Success
-            } catch (e: EmailException) {
-                Log.e(TAG, "Error sending email to $to: ${e.message}", e)
-                currentRetry++
-                if (currentRetry < retries) {
-                    Log.d(TAG, "Retrying to send email to $to in 5 seconds... ($currentRetry/$retries)")
-                    delay(5000)
-                } else {
-                    Log.e(TAG, "Failed to send email to $to after $retries retries.")
-                    throw e // Re-throw after final retry
-                }
-            }
-        }
+        val data = Data.Builder()
+            .putString("request_type", "send_email")
+            .putString("from", from)
+            .putString("password", password)
+            .putString("to", to)
+            .putString("subject", subject)
+            .putString("body", body)
+            .putString("attachment_path", attachmentPath)
+            .build()
+
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+            .setInputData(data)
+            .setConstraints(constraints)
+            .build()
+
+        workManager.enqueue(workRequest)
     }
 
     @Throws(EmailException::class)

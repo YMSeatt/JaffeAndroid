@@ -10,6 +10,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -434,6 +437,8 @@ fun SeatingChartScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
+    var isFabMenuOpen by remember { mutableStateOf(false) }
+
 
     Scaffold(
         topBar = {
@@ -599,8 +604,19 @@ fun SeatingChartScreen(
         floatingActionButton = {
             if (editModeEnabled) {
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FloatingActionButton(onClick = { editingStudent = null; showAddEditStudentDialog = true }) { Icon(Icons.Filled.Add, contentDescription = "Add Student") }
-                    FloatingActionButton(onClick = { editingFurniture = null; showAddEditFurnitureDialog = true }) { Icon(Icons.Filled.Add, contentDescription = "Add Furniture") }
+                    AnimatedVisibility(visible = isFabMenuOpen) {
+                        FloatingActionButton(onClick = { editingStudent = null; showAddEditStudentDialog = true; isFabMenuOpen = false }) {
+                            Icon(Icons.Default.Person, contentDescription = "Add Student")
+                        }
+                    }
+                    AnimatedVisibility(visible = isFabMenuOpen) {
+                        FloatingActionButton(onClick = { editingFurniture = null; showAddEditFurnitureDialog = true; isFabMenuOpen = false }) {
+                            Icon(Icons.Default.Chair, contentDescription = "Add Furniture")
+                        }
+                    }
+                    FloatingActionButton(onClick = { isFabMenuOpen = !isFabMenuOpen }) {
+                        Icon(Icons.Filled.Add, contentDescription = "Add")
+                    }
                 }
             }
         }

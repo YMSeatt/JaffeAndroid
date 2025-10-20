@@ -102,6 +102,10 @@ fun ScheduleEditorDialog(
                     }
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = {
+                        val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                        val selectedDays = days.filterIndexed { index, _ ->
+                            (daysOfWeek and (1 shl index)) != 0
+                        }.toSet()
                         onSave(
                             EmailSchedule(
                                 id = schedule?.id ?: 0,
@@ -112,7 +116,7 @@ fun ScheduleEditorDialog(
                                 subject = subject,
                                 body = body,
                                 enabled = schedule?.enabled ?: true,
-                                days = TODO(),
+                                days = selectedDays
                             )
                         )
                     }) {

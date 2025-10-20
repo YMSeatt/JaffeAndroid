@@ -12,6 +12,9 @@ interface EmailScheduleDao {
     @Query("SELECT * FROM email_schedules ORDER BY hour, minute ASC")
     fun getAllSchedules(): Flow<List<EmailSchedule>>
 
+    @Query("SELECT * FROM email_schedules ORDER BY hour, minute ASC")
+    suspend fun getAllSchedulesList(): List<EmailSchedule>
+
     @Insert
     suspend fun insert(schedule: EmailSchedule)
 

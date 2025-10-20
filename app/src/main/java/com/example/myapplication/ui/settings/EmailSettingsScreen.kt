@@ -31,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.data.EmailSchedule
@@ -45,6 +46,7 @@ fun EmailSettingsScreen(
     onDismiss: () -> Unit
 ) {
     val defaultEmail by settingsViewModel.defaultEmailAddress.collectAsState()
+    val emailPassword by settingsViewModel.emailPassword.collectAsState()
     val autoSendOnClose by settingsViewModel.autoSendEmailOnClose.collectAsState()
     val schedules by emailSchedulesViewModel.schedules.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
@@ -80,6 +82,13 @@ fun EmailSettingsScreen(
                 value = defaultEmail,
                 onValueChange = { settingsViewModel.updateDefaultEmailAddress(it) },
                 label = { Text("Default Email Address") }
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            TextField(
+                value = emailPassword,
+                onValueChange = { settingsViewModel.updateEmailPassword(it) },
+                label = { Text("Email Password") },
+                visualTransformation = PasswordVisualTransformation()
             )
             Spacer(modifier = Modifier.width(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {

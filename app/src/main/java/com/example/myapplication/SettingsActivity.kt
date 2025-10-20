@@ -19,7 +19,9 @@ import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SettingsActivity : ComponentActivity() {
 
     private val db by lazy { AppDatabase.getDatabase(applicationContext) }

@@ -3,28 +3,28 @@ package com.example.myapplication.viewmodel
 import android.app.Application
 import android.content.Intent
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.PeriodicWorkRequestBuilder
-import androidx.work.WorkManager
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_BG_COLOR_HEX
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
-import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_HEIGHT_DP
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
-
-import com.example.myapplication.util.EmailWorker
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
+import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.utils.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,14 +36,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
-import java.util.Calendar
-import java.util.concurrent.TimeUnit
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
-
-import com.example.myapplication.data.importer.JsonImporter
-import androidx.documentfile.provider.DocumentFile
 
 class SettingsViewModel(
     application: Application
@@ -652,6 +644,12 @@ class SettingsViewModel(
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultEmailAddress(email)
+        }
+    }
+    
+    fun updateEmailPassword(password: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateEmailPassword(password)
         }
     }
 

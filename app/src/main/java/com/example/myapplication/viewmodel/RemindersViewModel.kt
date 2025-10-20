@@ -3,6 +3,7 @@ package com.example.myapplication.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.alarm.AlarmScheduler
 import com.example.myapplication.data.AppDatabase
@@ -21,7 +22,7 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         alarmScheduler = AlarmScheduler(application)
     }
 
-    val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders() as LiveData<List<Reminder>>
+    val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders().asLiveData()
 
     fun addReminder(reminder: Reminder) {
         viewModelScope.launch {
@@ -35,6 +36,13 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             reminderDao.delete(reminder.id)
             alarmScheduler.cancel(reminder)
+        }
+    }
+
+    fun updateReminder(reminder: Reminder) {
+        viewModelScope.launch {
+            reminderDao.update(reminder)
+            alarmScheduler.schedule(reminder)
         }
     }
 }
