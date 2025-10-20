@@ -179,7 +179,7 @@ object ConditionalFormattingEngine {
                     val score = log.markValue
                     val maxScore = log.maxMarkValue
                     if (score != null && maxScore != null && maxScore > 0) {
-                        val percentage = (score / maxScore) * 100
+                        val percentage = (score.toDouble() / maxScore.toDouble()) * 100 // Ensure floating-point division
                         when (operator) {
                             "<=" -> percentage <= scoreThresholdPercent
                             ">=" -> percentage >= scoreThresholdPercent
@@ -202,7 +202,7 @@ object ConditionalFormattingEngine {
             "live_homework_yes_no" -> {
                 if (!isLiveHomeworkActive) return false
                 val studentScores = liveHomeworkScores[student.id.toLong()] ?: return false
-                val homeworkTypeId = condition.homeworkTypeId ?: return false
+                val homeworkTypeId = condition.homeworkTypeId ?: return false // This assumes homeworkTypeId in Condition matches assignmentName in HomeworkLog
                 val homeworkResponse = condition.homeworkResponse ?: return false
                 val studentResponse = studentScores[homeworkTypeId] as? String ?: return false
                 studentResponse.equals(homeworkResponse, ignoreCase = true)

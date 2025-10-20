@@ -157,6 +157,16 @@ class SeatingChartViewModel @Inject constructor(
         studentsForDisplay.addSource(isSessionActive) {
             updateStudentsForDisplay()
         }
+        studentsForDisplay.addSource(allBehaviorEvents) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(allHomeworkLogs) {
+            updateStudentsForDisplay()
+        }
+        studentsForDisplay.addSource(allQuizLogs) {
+            updateStudentsForDisplay()
+        }
+
 
         observePreferenceChanges()
 
@@ -188,7 +198,10 @@ class SeatingChartViewModel @Inject constructor(
                 appPreferencesRepository.defaultStudentBoxPaddingFlow,
                 appPreferencesRepository.defaultStudentFontFamilyFlow,
                 appPreferencesRepository.defaultStudentFontSizeFlow,
-                appPreferencesRepository.defaultStudentFontColorFlow
+                appPreferencesRepository.defaultStudentFontColorFlow,
+                appPreferencesRepository.behaviorDisplayTimeoutFlow, // Added new timeout flow
+                appPreferencesRepository.homeworkDisplayTimeoutFlow, // Added new timeout flow
+                appPreferencesRepository.quizDisplayTimeoutFlow // Added new timeout flow
             ) { _ ->
                 updateStudentsForDisplay()
             }.collect()
@@ -230,7 +243,11 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 .toMap()
             val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
-            val logDisplayTimeout = appPreferencesRepository.logDisplayTimeoutFlow.first()
+
+            // Retrieve specific display timeouts
+            val behaviorDisplayTimeout = appPreferencesRepository.behaviorDisplayTimeoutFlow.first()
+            val homeworkDisplayTimeout = appPreferencesRepository.homeworkDisplayTimeoutFlow.first()
+            val quizDisplayTimeout = appPreferencesRepository.quizDisplayTimeoutFlow.first()
 
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
@@ -268,19 +285,19 @@ class SeatingChartViewModel @Inject constructor(
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                 val recentEvents = if (student.showLogs) {
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
-                        .filter { it.timestamp > lastCleared && (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + logDisplayTimeout) }
+                        .filter { it.timestamp > lastCleared && (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) && (behaviorDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + behaviorDisplayTimeout) }
                 } else {
                     emptyList()
                 }
                 val recentHomework = if (student.showLogs) {
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
-                        .filter { it.loggedAt > lastCleared && !it.isComplete && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + logDisplayTimeout) }
+                        .filter { it.loggedAt > lastCleared && !it.isComplete && (homeworkDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + homeworkDisplayTimeout) }
                 } else {
                     emptyList()
                 }
                 val recentQuizzes = if (student.showLogs) {
                     quizLogDao.getRecentQuizLogsForStudentList(student.id, quizLimit)
-                        .filter { it.loggedAt > lastCleared && !it.isComplete && (logDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + logDisplayTimeout) }
+                        .filter { it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + quizDisplayTimeout) }
                 } else {
                     emptyList()
                 }
@@ -315,7 +332,7 @@ class SeatingChartViewModel @Inject constructor(
 
                 val sessionLogs = if (isSessionActive.value == true) {
                     val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                    val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "HW: ${it.status}" } ?: emptyList()
+                    val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
                     (quizLogs + homeworkLogs).take(maxLogsToDisplay)
                 } else {
                     emptyList()
@@ -934,11 +951,32 @@ class SeatingChartViewModel @Inject constructor(
 
     fun addQuizLogToSession(quizLog: QuizLog) {
         if (isSessionActive.value == true) {
-            val updatedList = sessionQuizLogs.value.orEmpty() + quizLog
-            sessionQuizLogs.postValue(updatedList)
+            val currentLogs = sessionQuizLogs.value.orEmpty().toMutableList()
+            val existingLogIndex = currentLogs.indexOfFirst {
+                it.studentId == quizLog.studentId && it.quizName == quizLog.quizName
+            }
+
+            if (existingLogIndex != -1) {
+                currentLogs[existingLogIndex] = quizLog
+            } else {
+                currentLogs.add(quizLog)
+            }
+            sessionQuizLogs.postValue(currentLogs)
+
+            // Update live scores for immediate UI feedback
+            val studentScores = liveQuizScores.value?.get(quizLog.studentId)?.toMutableMap() ?: mutableMapOf()
+            studentScores["last_response"] = quizLog.comment ?: ""
+            studentScores["mark_value"] = quizLog.markValue ?: 0
+            studentScores["max_mark_value"] = quizLog.maxMarkValue ?: 0
+            studentScores["marks_data"] = quizLog.marksData
+
+            val allScores = liveQuizScores.value?.toMutableMap() ?: mutableMapOf()
+            allScores[quizLog.studentId] = studentScores
+            liveQuizScores.postValue(allScores)
+
             Log.d(
                 "SeatingChartViewModel",
-                "Quiz log added to session for student ${quizLog.studentId}."
+                "Quiz log added/updated in session for student ${quizLog.studentId}."
             )
         } else {
             // If not in a session, save directly to the database
@@ -946,15 +984,31 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-// In SeatingChartViewModel.kt, add a similar method for homework logs
-
     fun addHomeworkLogToSession(homeworkLog: HomeworkLog) {
         if (isSessionActive.value == true) {
-            val updatedList = sessionHomeworkLogs.value.orEmpty() + homeworkLog
-            sessionHomeworkLogs.postValue(updatedList)
+            val currentLogs = sessionHomeworkLogs.value.orEmpty().toMutableList()
+            val existingLogIndex = currentLogs.indexOfFirst {
+                it.studentId == homeworkLog.studentId && it.assignmentName == homeworkLog.assignmentName
+            }
+
+            if (existingLogIndex != -1) {
+                currentLogs[existingLogIndex] = homeworkLog
+            } else {
+                currentLogs.add(homeworkLog)
+            }
+            sessionHomeworkLogs.postValue(currentLogs)
+
+            // Update live scores for immediate UI feedback
+            val studentScores = liveHomeworkScores.value?.get(homeworkLog.studentId)?.toMutableMap() ?: mutableMapOf()
+            studentScores[homeworkLog.assignmentName] = homeworkLog.status
+            val allScores = liveHomeworkScores.value?.toMutableMap() ?: mutableMapOf()
+            allScores[homeworkLog.studentId] = studentScores
+            liveHomeworkScores.postValue(allScores)
+
+
             Log.d(
                 "SeatingChartViewModel",
-                "Homework log added to session for student ${homeworkLog.studentId}."
+                "Homework log added/updated in session for student ${homeworkLog.studentId}."
             )
         } else {
             addHomeworkLog(homeworkLog)

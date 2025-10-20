@@ -89,21 +89,66 @@ fun DisplaySettingsTab(
             HorizontalDivider()
         }
 
+        // Behavior Log Display Timeout
         item {
-            Text("Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
+            Text("Behavior Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
         }
         item {
-            val logDisplayTimeout by settingsViewModel.logDisplayTimeout.collectAsState()
+            val behaviorDisplayTimeout by settingsViewModel.behaviorDisplayTimeout.collectAsState()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
-                    value = logDisplayTimeout.toFloat(),
-                    onValueChange = { settingsViewModel.updateLogDisplayTimeout(it.toInt()) },
+                    value = behaviorDisplayTimeout.toFloat(),
+                    onValueChange = { settingsViewModel.updateBehaviorDisplayTimeout(it.toInt()) },
                     valueRange = 0f..300f,
                     steps = 29,
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))
-                Text(logDisplayTimeout.toString())
+                Text(behaviorDisplayTimeout.toString())
+            }
+        }
+        item {
+            HorizontalDivider()
+        }
+
+        // Homework Log Display Timeout
+        item {
+            Text("Homework Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            val homeworkDisplayTimeout by settingsViewModel.homeworkDisplayTimeout.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = homeworkDisplayTimeout.toFloat(),
+                    onValueChange = { settingsViewModel.updateHomeworkDisplayTimeout(it.toInt()) },
+                    valueRange = 0f..300f,
+                    steps = 29,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(homeworkDisplayTimeout.toString())
+            }
+        }
+        item {
+            HorizontalDivider()
+        }
+
+        // Quiz Log Display Timeout
+        item {
+            Text("Quiz Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            val quizDisplayTimeout by settingsViewModel.quizDisplayTimeout.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = quizDisplayTimeout.toFloat(),
+                    onValueChange = { settingsViewModel.updateQuizDisplayTimeout(it.toInt()) },
+                    valueRange = 0f..300f,
+                    steps = 29,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(quizDisplayTimeout.toString())
             }
         }
         item {
@@ -231,7 +276,7 @@ fun DisplaySettingsTab(
                             android.graphics.Color.parseColor(it)
                             settingsViewModel.updateDefaultStudentBoxBackgroundColor(it)
                         } catch (e: IllegalArgumentException) {
-                            // Optionally handle invalid color input, e.g., show an error
+                            // Optionally handle invalid color input, e.e., show an error
                         }
                     },
                     label = { Text("Default Background Color") },

@@ -666,12 +666,30 @@ class SettingsViewModel(
         .map { it ?: "betp kgas eouc nhtq" }
         .stateIn(viewModelScope, SharingStarted.Lazily, "betp kgas eouc nhtq")
 
-    val logDisplayTimeout: StateFlow<Int> = preferencesRepository.logDisplayTimeoutFlow
+    val behaviorDisplayTimeout: StateFlow<Int> = preferencesRepository.behaviorDisplayTimeoutFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    fun updateLogDisplayTimeout(timeout: Int) {
+    fun updateBehaviorDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
-            preferencesRepository.updateLogDisplayTimeout(timeout)
+            preferencesRepository.updateBehaviorDisplayTimeout(timeout)
+        }
+    }
+
+    val homeworkDisplayTimeout: StateFlow<Int> = preferencesRepository.homeworkDisplayTimeoutFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    fun updateHomeworkDisplayTimeout(timeout: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateHomeworkDisplayTimeout(timeout)
+        }
+    }
+
+    val quizDisplayTimeout: StateFlow<Int> = preferencesRepository.quizDisplayTimeoutFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    fun updateQuizDisplayTimeout(timeout: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateQuizDisplayTimeout(timeout)
         }
     }
 }

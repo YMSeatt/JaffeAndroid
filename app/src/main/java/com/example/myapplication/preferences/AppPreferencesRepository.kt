@@ -31,13 +31,14 @@ const val DEFAULT_STUDENT_FONT_FAMILY = "sans-serif" // Android default
 const val DEFAULT_STUDENT_FONT_SIZE_SP = 16 // Example size in SP
 const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
+const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0 // 0 means no timeout
 
 class AppPreferencesRepository(private val context: Context) {
 
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
         val RECENT_HOMEWORK_LOGS_LIMIT = intPreferencesKey("recent_homework_logs_limit")
-        val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit") // New key
+        val RECENT_BEHAVIOR_INCIDENTS_LIMIT = intPreferencesKey("recent_behavior_incidents_limit")
         val MAX_RECENT_LOGS_TO_DISPLAY = intPreferencesKey("max_recent_logs_to_display")
         val USE_INITIALS_FOR_BEHAVIOR = booleanPreferencesKey("use_initials_for_behavior")
         val USE_INITIALS_FOR_HOMEWORK = booleanPreferencesKey("use_initials_for_homework")
@@ -92,8 +93,12 @@ class AppPreferencesRepository(private val context: Context) {
         val DEFAULT_EMAIL_ADDRESS = stringPreferencesKey("default_email_address")
         val AUTO_SEND_EMAIL_ON_CLOSE = booleanPreferencesKey("auto_send_email_on_close")
         val EMAIL_SCHEDULES = stringSetPreferencesKey("email_schedules")
-        val LOG_DISPLAY_TIMEOUT = intPreferencesKey("log_display_timeout")
         val EMAIL_PASSWORD = stringPreferencesKey("email_password")
+
+        // New timeout preferences for specific log types
+        val BEHAVIOR_DISPLAY_TIMEOUT = intPreferencesKey("behavior_display_timeout")
+        val HOMEWORK_DISPLAY_TIMEOUT = intPreferencesKey("homework_display_timeout")
+        val QUIZ_DISPLAY_TIMEOUT = intPreferencesKey("quiz_display_timeout")
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -134,7 +139,6 @@ class AppPreferencesRepository(private val context: Context) {
             settings[PreferencesKeys.USE_BOLD_FONT] = useBoldFont
         }
     }
-
     val lastExportPathFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_EXPORT_PATH]
@@ -159,14 +163,16 @@ class AppPreferencesRepository(private val context: Context) {
 
     val studentLogsLastClearedFlow: Flow<Map<Long, Long>> = context.dataStore.data
         .map { preferences ->
-            (preferences[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()).associate {
-                val parts = it.split(":")
-                if (parts.size == 2) {
-                    parts[0].toLongOrNull() to parts[1].toLongOrNull()
-                } else {
-                    null to null
-                }
-            }.filter { it.key != null && it.value != null } as Map<Long, Long>
+            (preferences[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet())
+                .mapNotNull { it.split(":").let { parts ->
+                    if (parts.size == 2) {
+                        val studentId = parts[0].toLongOrNull()
+                        val timestamp = parts[1].toLongOrNull()
+                        if (studentId != null && timestamp != null) {
+                            studentId to timestamp
+                        } else null
+                    } else null
+                } }.toMap()
         }
 
     suspend fun updateStudentLogsLastCleared(studentId: Long, timestamp: Long) {
@@ -535,7 +541,6 @@ class AppPreferencesRepository(private val context: Context) {
         .map { preferences ->
             preferences[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] ?: 0
         }
-
     suspend fun updateStickyHomeworkNameDurationSeconds(duration: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] = duration
@@ -692,14 +697,36 @@ class AppPreferencesRepository(private val context: Context) {
         }
     }
 
-    val logDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
+    val behaviorDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.LOG_DISPLAY_TIMEOUT] ?: 0
+            preferences[PreferencesKeys.BEHAVIOR_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
         }
 
-    suspend fun updateLogDisplayTimeout(timeout: Int) {
+    suspend fun updateBehaviorDisplayTimeout(timeout: Int) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.LOG_DISPLAY_TIMEOUT] = timeout
+            settings[PreferencesKeys.BEHAVIOR_DISPLAY_TIMEOUT] = timeout
+        }
+    }
+
+    val homeworkDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.HOMEWORK_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
+        }
+
+    suspend fun updateHomeworkDisplayTimeout(timeout: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.HOMEWORK_DISPLAY_TIMEOUT] = timeout
+        }
+    }
+
+    val quizDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.QUIZ_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
+        }
+
+    suspend fun updateQuizDisplayTimeout(timeout: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.QUIZ_DISPLAY_TIMEOUT] = timeout
         }
     }
 
