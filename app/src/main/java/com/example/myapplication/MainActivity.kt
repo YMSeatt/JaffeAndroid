@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -328,7 +327,7 @@ fun EmailDialog(
     onSend: (String, String, String) -> Unit,
     settingsViewModel: SettingsViewModel
 ) {
-    val from by settingsViewModel.defaultEmailAddress.collectAsState()
+    var from by remember { mutableStateOf("behaviorlogger@gmail.com") }
     var to by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
@@ -340,8 +339,9 @@ fun EmailDialog(
             Column {
                 TextField(
                     value = from,
-                    onValueChange = { settingsViewModel.updateDefaultEmailAddress(it) },
-                    label = { Text("From") }
+                    onValueChange = { from = it },
+                    label = { Text("From") },
+                    readOnly = true
                 )
                 TextField(
                     value = to,
@@ -799,6 +799,7 @@ fun SeatingChartScreen(
             if (showEmailDialog) {
                 val activity = (context as? MainActivity)
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
+                val emailPassword by settingsViewModel.emailPassword.collectAsState()
                 EmailDialog(
                     onDismissRequest = { onShowEmailDialogChange(false) },
                     onSend = { to, subject, body ->
@@ -815,10 +816,9 @@ fun SeatingChartScreen(
                                 )
                                 if (result.isSuccess) {
                                     try {
-                                        val password = settingsViewModel.emailPassword.first() ?: ""
                                         emailUtil.sendEmailWithRetry(
                                             from = from,
-                                            password = password,
+                                            password = emailPassword,
                                             to = to,
                                             subject = subject,
                                             body = body,

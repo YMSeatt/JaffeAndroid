@@ -647,7 +647,7 @@ class SettingsViewModel(
     }
 
     val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+        .stateIn(viewModelScope, SharingStarted.Lazily, "behaviorlogger@gmail.com")
 
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
@@ -664,14 +664,9 @@ class SettingsViewModel(
         }
     }
 
-    val emailPassword: StateFlow<String?> = preferencesRepository.emailPasswordFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, null)
-
-    fun updateEmailPassword(password: String) {
-        viewModelScope.launch {
-            preferencesRepository.updateEmailPassword(password)
-        }
-    }
+    val emailPassword: StateFlow<String> = preferencesRepository.emailPasswordFlow
+        .map { it ?: "betp kgas eouc nhtq" }
+        .stateIn(viewModelScope, SharingStarted.Lazily, "betp kgas eouc nhtq")
 
     val logDisplayTimeout: StateFlow<Int> = preferencesRepository.logDisplayTimeoutFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 0)

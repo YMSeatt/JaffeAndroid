@@ -445,6 +445,8 @@ fun DataSettingsTab(
     }
 }
 
+private fun SettingsViewModel.updateEmailPassword(it: String) {}
+
 @Composable
 private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(

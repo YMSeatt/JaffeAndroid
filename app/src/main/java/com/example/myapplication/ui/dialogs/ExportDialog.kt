@@ -50,7 +50,7 @@ fun ExportDialog(
     var includeSummarySheet by remember { mutableStateOf(true) }
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
-    var includeIndividualStudentSheets by remember { mutableStateOf(false) }
+    var includeIndividualStudentSheets by remember { mutableStateOf(true) }
 
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
