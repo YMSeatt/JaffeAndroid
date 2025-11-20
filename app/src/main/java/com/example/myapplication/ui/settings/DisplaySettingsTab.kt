@@ -138,7 +138,8 @@ fun DisplaySettingsTab(
             Text("Quiz Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
         }
         item {
-            val quizDisplayTimeout by settingsViewModel.quizDisplayTimeout.collectAsState()
+            val quizDisplayTimeout by
+            settingsViewModel.quizDisplayTimeout.collectAsState()
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Slider(
                     value = quizDisplayTimeout.toFloat(),
