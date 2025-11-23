@@ -15,6 +15,9 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.decodeFromString
 
 class EmailWorker(
     appContext: Context,
@@ -56,11 +59,28 @@ class EmailWorker(
                 val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
                 val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
-                val subject = "Daily Report - ${dateFormat.format(Date())}"
+                val subject = inputData.getString("subject") ?: "Daily Report - ${dateFormat.format(Date())}"
+                val body = inputData.getString("body") ?: "Please find the daily report attached."
                 val options = inputData.getString("export_options")?.let {
-                    // This is a placeholder for a proper deserialization
-                    ExportOptions()
+                    try {
+                        Json.decodeFromString<ExportOptions>(it)
+                    } catch (e: Exception) {
+                        ExportOptions()
+                    }
                 } ?: ExportOptions()
+
+                val finalOptions = options.relativeDateRange?.let { range ->
+                    val calendar = Calendar.getInstance()
+                    val endDate = calendar.timeInMillis
+                    when (range) {
+                        "Past 24 hours" -> calendar.add(Calendar.HOUR, -24)
+                        "Past 7 days" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
+                        "Past 30 days" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
+                        else -> null
+                    }?.let {
+                        options.copy(startDate = calendar.timeInMillis, endDate = endDate)
+                    }
+                } ?: options
 
                 val file = File(applicationContext.cacheDir, "daily_report.xlsx")
                 val uri = FileProvider.getUriForFile(
