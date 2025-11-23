@@ -586,7 +586,7 @@ class SeatingChartViewModel @Inject constructor(
             val student = getStudentForEditing(studentId.toLong())
             if (student != null) {
                 val (resolvedX, resolvedY) = CollisionDetector.resolveCollisions(
-                    student.copy(xPosition = newX.roundToInt(), yPosition = newY.roundToInt()),
+                    student.copy(xPosition = newX, yPosition = newY),
                     studentsForDisplay.value ?: emptyList(),
                     canvasHeight
                 )
