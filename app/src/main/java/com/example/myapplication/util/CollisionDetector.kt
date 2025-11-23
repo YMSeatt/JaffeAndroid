@@ -13,7 +13,7 @@ object CollisionDetector {
         movedStudent: Student,
         students: List<StudentUiItem>,
         canvasHeight: Int
-    ): Pair<Float, Float> {
+    ): Pair<Float, Any> {
         if (students.isEmpty()) {
             return Pair(0f, 0f)
         }
@@ -49,7 +49,7 @@ object CollisionDetector {
         for (i in 0 until columns.size) {
             val column = columns[i]
             column.sortBy { it.yPosition }
-            var currentY = 0f
+            var currentY: Double = 0.0
             for (student in column) {
                 if (currentY + (movedStudent.customHeight
                         ?: DEFAULT_HEIGHT) < student.yPosition

@@ -521,7 +521,7 @@ class SeatingChartViewModel @Inject constructor(
             )
             val positionedStudent = student.copy(
                 xPosition = resolvedX,
-                yPosition = resolvedY
+                yPosition = resolvedY as Float
             )
             val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
             executeCommand(command)
@@ -596,7 +596,7 @@ class SeatingChartViewModel @Inject constructor(
                     oldX,
                     oldY,
                     resolvedX,
-                    resolvedY
+                    resolvedY as Float
                 )
                 executeCommand(command)
             }
