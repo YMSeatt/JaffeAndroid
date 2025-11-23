@@ -64,6 +64,8 @@ import org.json.JSONObject
 import java.util.Stack
 import javax.inject.Inject
 
+private const val MILLIS_IN_HOUR = 3_600_000L
+
 @HiltViewModel
 class SeatingChartViewModel @Inject constructor(
     private val repository: StudentRepository,
@@ -285,19 +287,29 @@ class SeatingChartViewModel @Inject constructor(
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                 val recentEvents = if (student.showLogs) {
                     behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
-                        .filter { it.timestamp > lastCleared && (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) && (behaviorDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + behaviorDisplayTimeout) }
+                    .filter {
+                        it.timestamp > lastCleared &&
+                                (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) &&
+                                (behaviorDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + (behaviorDisplayTimeout * MILLIS_IN_HOUR))
+                    }
                 } else {
                     emptyList()
                 }
                 val recentHomework = if (student.showLogs) {
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
-                        .filter { it.loggedAt > lastCleared && !it.isComplete && (homeworkDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + homeworkDisplayTimeout) }
+                    .filter {
+                        it.loggedAt > lastCleared && !it.isComplete &&
+                                (homeworkDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + (homeworkDisplayTimeout * MILLIS_IN_HOUR))
+                    }
                 } else {
                     emptyList()
                 }
                 val recentQuizzes = if (student.showLogs) {
                     quizLogDao.getRecentQuizLogsForStudentList(student.id, quizLimit)
-                        .filter { it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + quizDisplayTimeout) }
+                    .filter {
+                        it.loggedAt > lastCleared && !it.isComplete &&
+                                (quizDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + (quizDisplayTimeout * MILLIS_IN_HOUR))
+                    }
                 } else {
                     emptyList()
                 }
