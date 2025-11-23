@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -24,8 +28,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.myapplication.data.EmailSchedule
+import com.example.myapplication.data.exporter.ExportOptions
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.util.Calendar
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleEditorDialog(
     schedule: EmailSchedule?,
@@ -39,6 +47,24 @@ fun ScheduleEditorDialog(
     var recipientEmail by remember { mutableStateOf(schedule?.recipientEmail ?: "") }
     var subject by remember { mutableStateOf(schedule?.subject ?: "") }
     var body by remember { mutableStateOf(schedule?.body ?: "") }
+
+    val initialExportOptions = schedule?.exportOptionsJson?.let {
+        try {
+            Json.decodeFromString<ExportOptions>(it)
+        } catch (e: Exception) {
+            ExportOptions()
+        }
+    } ?: ExportOptions()
+
+    var relativeDateRange by remember { mutableStateOf(initialExportOptions.relativeDateRange ?: "None") }
+    var includeBehaviorLogs by remember { mutableStateOf(initialExportOptions.includeBehaviorLogs) }
+    var includeHomeworkLogs by remember { mutableStateOf(initialExportOptions.includeHomeworkLogs) }
+    var includeQuizLogs by remember { mutableStateOf(initialExportOptions.includeQuizLogs) }
+    var separateSheets by remember { mutableStateOf(initialExportOptions.separateSheets) }
+    var includeMasterLog by remember { mutableStateOf(initialExportOptions.includeMasterLog) }
+    var includeSummarySheet by remember { mutableStateOf(initialExportOptions.includeSummarySheet) }
+    var includeIndividualStudentSheets by remember { mutableStateOf(initialExportOptions.includeIndividualStudentSheets) }
+    var includeStudentInfoSheet by remember { mutableStateOf(initialExportOptions.includeStudentInfoSheet) }
 
     val timePickerDialog = TimePickerDialog(
         context,
@@ -96,6 +122,76 @@ fun ScheduleEditorDialog(
                     label = { Text("Body") }
                 )
                 Spacer(modifier = Modifier.height(16.dp))
+
+                // Export Options
+                Text("Export Options")
+                Spacer(modifier = Modifier.height(8.dp))
+
+                var expanded by remember { mutableStateOf(false) }
+                val dateRanges = listOf("None", "Past 24 hours", "Past 7 days", "Past 30 days")
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    TextField(
+                        value = relativeDateRange,
+                        onValueChange = {},
+                        label = { Text("Date Range") },
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                        modifier = Modifier.menuAnchor()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false }
+                    ) {
+                        dateRanges.forEach { range ->
+                            DropdownMenuItem(
+                                text = { Text(range) },
+                                onClick = {
+                                    relativeDateRange = range
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeBehaviorLogs, onCheckedChange = { includeBehaviorLogs = it })
+                    Text("Behavior Logs")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeHomeworkLogs, onCheckedChange = { includeHomeworkLogs = it })
+                    Text("Homework Logs")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeQuizLogs, onCheckedChange = { includeQuizLogs = it })
+                    Text("Quiz Logs")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = separateSheets, onCheckedChange = { separateSheets = it })
+                    Text("Separate Sheets")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it })
+                    Text("Master Log")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeSummarySheet, onCheckedChange = { includeSummarySheet = it })
+                    Text("Summary Sheet")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
+                    Text("Individual Student Sheets")
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = includeStudentInfoSheet, onCheckedChange = { includeStudentInfoSheet = it })
+                    Text("Student Info Sheet")
+                }
+
+
+                Spacer(modifier = Modifier.height(16.dp))
                 Row {
                     Button(onClick = onDismiss) {
                         Text("Cancel")
@@ -106,6 +202,19 @@ fun ScheduleEditorDialog(
                         val selectedDays = days.filterIndexed { index, _ ->
                             (daysOfWeek and (1 shl index)) != 0
                         }.toSet()
+
+                        val exportOptions = ExportOptions(
+                            relativeDateRange = relativeDateRange,
+                            includeBehaviorLogs = includeBehaviorLogs,
+                            includeHomeworkLogs = includeHomeworkLogs,
+                            includeQuizLogs = includeQuizLogs,
+                            separateSheets = separateSheets,
+                            includeMasterLog = includeMasterLog,
+                            includeSummarySheet = includeSummarySheet,
+                            includeIndividualStudentSheets = includeIndividualStudentSheets,
+                            includeStudentInfoSheet = includeStudentInfoSheet
+                        )
+
                         onSave(
                             EmailSchedule(
                                 id = schedule?.id ?: 0,
@@ -116,7 +225,8 @@ fun ScheduleEditorDialog(
                                 subject = subject,
                                 body = body,
                                 enabled = schedule?.enabled ?: true,
-                                days = selectedDays
+                                days = selectedDays,
+                                exportOptionsJson = Json.encodeToString(exportOptions)
                             )
                         )
                     }) {
