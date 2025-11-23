@@ -76,7 +76,8 @@ class SettingsActivity : ComponentActivity() {
                     return ConditionalFormattingRuleViewModel(
                         db.conditionalFormattingRuleDao(),
                         db.customBehaviorDao(),
-                        db.systemBehaviorDao()
+                        db.systemBehaviorDao(),
+                        db.studentGroupDao()
                     ) as T
                 }
                 throw IllegalArgumentException("Unknown ViewModel class")
