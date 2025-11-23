@@ -305,7 +305,7 @@ class SeatingChartViewModel @Inject constructor(
                 val recentHomework = if (student.showLogs) {
                     homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
                     .filter {
-                        it.loggedAt > lastCleared && !it.isComplete &&
+                        it.loggedAt > lastCleared &&
                                 (homeworkDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + (homeworkDisplayTimeout * MILLIS_IN_HOUR))
                     }
                 } else {
@@ -335,10 +335,11 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 val homeworkDescription = recentHomework.map {
+                    val status = if (it.isComplete) "Done" else "Not Done"
                     if (useInitialsForHomework) {
-                        homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()
+                        (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
                     } else {
-                        it.assignmentName
+                        "${it.assignmentName}: $status"
                     }
                 }
                 val quizDescription = recentQuizzes.map {
@@ -747,7 +748,6 @@ class SeatingChartViewModel @Inject constructor(
             }
         }
     }
-
     // Furniture operations
     fun addFurniture(furniture: Furniture) {
         viewModelScope.launch {
