@@ -39,6 +39,22 @@ interface BehaviorEventDao {
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentBehaviorEventsForStudentList(studentId: Long, limit: Int): List<BehaviorEvent>
 
+    @Query("""
+        SELECT * FROM behavior_events 
+        WHERE studentId = :studentId 
+        AND timestamp > :lastCleared 
+        AND (:behaviorDisplayTimeout = 0 OR :currentTime < timestamp + (:behaviorDisplayTimeout * 3600000)) 
+        ORDER BY timestamp DESC 
+        LIMIT :limit
+    """)
+    suspend fun getRecentBehaviorEventsForStudentListFiltered(
+        studentId: Long,
+        limit: Int,
+        lastCleared: Long,
+        behaviorDisplayTimeout: Int,
+        currentTime: Long
+    ): List<BehaviorEvent>
+
     @Query("SELECT * FROM behavior_events WHERE id = :id")
     suspend fun getBehaviorEventById(id: Long): BehaviorEvent?
 

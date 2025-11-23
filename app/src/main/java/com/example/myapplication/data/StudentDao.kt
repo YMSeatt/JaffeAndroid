@@ -35,7 +35,7 @@ interface StudentDao {
     @Query("SELECT * FROM students WHERE id = :studentId")
     suspend fun getStudentByIdNonLiveData(studentId: Long): Student?
 
-    @Query("SELECT s.id, s.firstName, s.lastName, s.initials, s.xPosition, s.yPosition, s.customWidth, s.customHeight, s.customBackgroundColor, s.customOutlineColor, s.customTextColor FROM students s")
+    @Query("SELECT s.id, s.firstName, s.lastName, s.initials, s.xPosition, s.yPosition, s.customWidth, s.customHeight, s.customBackgroundColor, s.customOutlineColor, s.customTextColor, s.groupId FROM students s")
     fun getStudentsForDisplay(): LiveData<List<StudentDetailsForDisplay>>
 
     @Query("SELECT BE.* FROM behavior_events BE JOIN students S ON BE.studentId = S.id WHERE S.id = :studentId ORDER BY BE.timestamp DESC LIMIT :limit")

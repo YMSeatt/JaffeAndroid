@@ -68,6 +68,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
 import javax.inject.Inject
+import kotlinx.coroutines.delay
 
 private const val MILLIS_IN_HOUR = 3_600_000L
 
@@ -144,7 +145,7 @@ class SeatingChartViewModel @Inject constructor(
         quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
         allCustomBehaviors = AppDatabase.getDatabase(application).customBehaviorDao().getAllCustomBehaviors()
-        allCustomHomeworkTypes = AppDatabase.getDatabase(application).customHomeworkTypeDao().getAllCustomHomeworkTypes()
+    allCustomHomeworkTypes = AppDatabase.getDatabase(application).customHomeworkTypeDao().getAllCustomHomeworkTypes()
         allSystemBehaviors = AppDatabase.getDatabase(application).systemBehaviorDao().getAllSystemBehaviors().asLiveData()
 
 
@@ -175,12 +176,22 @@ class SeatingChartViewModel @Inject constructor(
         studentsForDisplay.addSource(allQuizLogs) {
             updateStudentsForDisplay()
         }
+        studentsForDisplay.addSource(allRules) {
+            updateStudentsForDisplay()
+        }
 
 
         observePreferenceChanges()
 
         furnitureForDisplay.addSource(allFurniture) { furnitureList ->
             furnitureForDisplay.value = furnitureList.map { it.toUiItem() }
+        }
+
+        viewModelScope.launch {
+            while (true) {
+                delay(60000) // 1 minute
+                updateStudentsForDisplay()
+            }
         }
     }
 
@@ -257,6 +268,7 @@ class SeatingChartViewModel @Inject constructor(
             val behaviorDisplayTimeout = appPreferencesRepository.behaviorDisplayTimeoutFlow.first()
             val homeworkDisplayTimeout = appPreferencesRepository.homeworkDisplayTimeoutFlow.first()
             val quizDisplayTimeout = appPreferencesRepository.quizDisplayTimeoutFlow.first()
+            val currentTime = System.currentTimeMillis()
 
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
@@ -293,30 +305,23 @@ class SeatingChartViewModel @Inject constructor(
 
                 val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                 val recentEvents = if (student.showLogs) {
-                    behaviorEventDao.getRecentBehaviorEventsForStudentList(student.id, behaviorLimit)
-                    .filter {
-                        it.timestamp > lastCleared &&
-                                (it.timeout == 0L || System.currentTimeMillis() < it.timestamp + it.timeout) &&
-                                (behaviorDisplayTimeout == 0 || System.currentTimeMillis() < it.timestamp + (behaviorDisplayTimeout * MILLIS_IN_HOUR))
-                    }
+                    behaviorEventDao.getRecentBehaviorEventsForStudentListFiltered(
+                        student.id, behaviorLimit, lastCleared, behaviorDisplayTimeout, currentTime
+                    )
                 } else {
                     emptyList()
                 }
                 val recentHomework = if (student.showLogs) {
-                    homeworkLogDao.getRecentHomeworkLogsForStudentList(student.id, homeworkLimit)
-                    .filter {
-                        it.loggedAt > lastCleared &&
-                                (homeworkDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + (homeworkDisplayTimeout * MILLIS_IN_HOUR))
-                    }
+                    homeworkLogDao.getRecentHomeworkLogsForStudentListFiltered(
+                        student.id, homeworkLimit, lastCleared, homeworkDisplayTimeout, currentTime
+                    )
                 } else {
                     emptyList()
                 }
                 val recentQuizzes = if (student.showLogs) {
-                    quizLogDao.getRecentQuizLogsForStudentList(student.id, quizLimit)
-                    .filter {
-                        it.loggedAt > lastCleared && !it.isComplete &&
-                                (quizDisplayTimeout == 0 || System.currentTimeMillis() < it.loggedAt + (quizDisplayTimeout * MILLIS_IN_HOUR))
-                    }
+                    quizLogDao.getRecentQuizLogsForStudentListFiltered(
+                        student.id, quizLimit, lastCleared, quizDisplayTimeout, currentTime
+                    )
                 } else {
                     emptyList()
                 }

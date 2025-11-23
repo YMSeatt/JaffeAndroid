@@ -58,7 +58,7 @@ object CollisionDetector {
                     return Pair(x, currentY)
                 }
                 currentY =
-                    (student.yPosition.toFloat() + student.displayHeight.value + PADDING)
+                    (student.yPosition.toFloat() + student.displayHeight.value + PADDING).toFloat()
             }
             if (canvasHeight == 0 || currentY + (movedStudent.customHeight
                     ?: DEFAULT_HEIGHT) < canvasHeight

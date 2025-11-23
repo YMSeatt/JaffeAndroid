@@ -48,4 +48,21 @@ interface QuizLogDao {
 
     @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentQuizLogsForStudentList(studentId: Long, limit: Int): List<QuizLog>
+
+    @Query("""
+        SELECT * FROM quiz_logs 
+        WHERE studentId = :studentId 
+        AND loggedAt > :lastCleared 
+        AND isComplete = 0 
+        AND (:quizDisplayTimeout = 0 OR :currentTime < loggedAt + (:quizDisplayTimeout * 3600000)) 
+        ORDER BY loggedAt DESC 
+        LIMIT :limit
+    """)
+    suspend fun getRecentQuizLogsForStudentListFiltered(
+        studentId: Long,
+        limit: Int,
+        lastCleared: Long,
+        quizDisplayTimeout: Int,
+        currentTime: Long
+    ): List<QuizLog>
 }

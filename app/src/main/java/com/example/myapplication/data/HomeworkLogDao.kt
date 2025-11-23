@@ -46,6 +46,22 @@ interface HomeworkLogDao {
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentHomeworkLogsForStudentList(studentId: Long, limit: Int): List<HomeworkLog>
 
+    @Query("""
+        SELECT * FROM homework_logs 
+        WHERE studentId = :studentId 
+        AND loggedAt > :lastCleared 
+        AND (:homeworkDisplayTimeout = 0 OR :currentTime < loggedAt + (:homeworkDisplayTimeout * 3600000)) 
+        ORDER BY loggedAt DESC 
+        LIMIT :limit
+    """)
+    suspend fun getRecentHomeworkLogsForStudentListFiltered(
+        studentId: Long,
+        limit: Int,
+        lastCleared: Long,
+        homeworkDisplayTimeout: Int,
+        currentTime: Long
+    ): List<HomeworkLog>
+
     @Query("SELECT * FROM homework_logs WHERE id = :id")
     suspend fun getHomeworkLogById(id: Long): HomeworkLog?
 

@@ -129,10 +129,7 @@ object ConditionalFormattingEngine {
                     val end = activeTime.endTime
                     val days = activeTime.daysOfWeek
 
-                    // Python: Monday is 0 and Sunday is 6
-                    // Java: Sunday is 1, Monday is 2, ..., Saturday is 7
-                    // We need to map Java's Day of week to Python's
-                    val pythonDayOfWeek = when (now.get(java.util.Calendar.DAY_OF_WEEK)) {
+                    val calendarDayOfWeek = when (dayOfWeek) {
                         java.util.Calendar.MONDAY -> 0
                         java.util.Calendar.TUESDAY -> 1
                         java.util.Calendar.WEDNESDAY -> 2
@@ -143,7 +140,7 @@ object ConditionalFormattingEngine {
                         else -> -1 // Should not happen
                     }
 
-                    currentTime in start..end && pythonDayOfWeek in days
+                    currentTime in start..end && calendarDayOfWeek in days
                 }
 
                 if (!isTimeValid) {
