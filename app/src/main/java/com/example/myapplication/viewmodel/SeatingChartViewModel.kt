@@ -520,8 +520,8 @@ class SeatingChartViewModel @Inject constructor(
                 canvasHeight
             )
             val positionedStudent = student.copy(
-                xPosition = resolvedX.roundToInt(),
-                yPosition = resolvedY.roundToInt()
+                xPosition = resolvedX,
+                yPosition = resolvedY
             )
             val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
             executeCommand(command)
