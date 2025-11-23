@@ -747,7 +747,7 @@ class SeatingChartViewModel @Inject constructor(
                 executeCommand(command)
             }
         }
-.
+    }
     // Furniture operations
     fun addFurniture(furniture: Furniture) {
         viewModelScope.launch {
