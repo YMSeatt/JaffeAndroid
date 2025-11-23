@@ -16,5 +16,6 @@ data class EmailSchedule(
     val subject: String,
     val body: String,
     val enabled: Boolean = true,
-    val days: Set<String>
+    val days: Set<String>,
+    val exportOptionsJson: String? = null
 )

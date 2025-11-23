@@ -2,9 +2,11 @@ package com.example.myapplication.worker
 
 import android.content.Context
 import androidx.work.CoroutineWorker
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
-import com.example.myapplication.data.PendingEmail
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -17,7 +19,6 @@ class EmailSchedulerWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(applicationContext)
         val emailScheduleDao = db.emailScheduleDao()
-        val pendingEmailDao = db.pendingEmailDao()
 
         val schedules = emailScheduleDao.getAllSchedulesList()
         val calendar = Calendar.getInstance()
@@ -30,14 +31,18 @@ class EmailSchedulerWorker(
                 val dayMatches = schedule.days.contains(getDayString(dayOfWeek))
                 val timeMatches = schedule.hour == hour && schedule.minute == minute
                 if (dayMatches && timeMatches) {
-                    pendingEmailDao.insert(
-                        PendingEmail(
-                            recipientAddress = schedule.recipientEmail,
-                            subject = schedule.subject,
-                            body = schedule.body,
-                            timestamp = System.currentTimeMillis()
+                    val workRequest = OneTimeWorkRequestBuilder<com.example.myapplication.util.EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "request_type" to "daily_report",
+                                "email_address" to schedule.recipientEmail,
+                                "subject" to schedule.subject,
+                                "body" to schedule.body,
+                                "export_options" to schedule.exportOptionsJson
+                            )
                         )
-                    )
+                        .build()
+                    WorkManager.getInstance(applicationContext).enqueue(workRequest)
                 }
             }
         }

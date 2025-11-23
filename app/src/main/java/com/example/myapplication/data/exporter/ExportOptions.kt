@@ -1,6 +1,7 @@
 package com.example.myapplication.data.exporter
 
 data class ExportOptions(
+    val relativeDateRange: String? = null,
     val startDate: Long? = null,
     val endDate: Long? = null,
     val studentIds: List<Long>? = null,
