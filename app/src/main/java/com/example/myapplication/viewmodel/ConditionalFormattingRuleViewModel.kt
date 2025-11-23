@@ -8,17 +8,21 @@ import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.ConditionalFormattingRuleDao
 import com.example.myapplication.data.CustomBehaviorDao
 import com.example.myapplication.data.SystemBehaviorDao
+import com.example.myapplication.data.StudentGroupDao
 import kotlinx.coroutines.launch
 
 class ConditionalFormattingRuleViewModel(
     private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao,
     private val customBehaviorDao: CustomBehaviorDao,
-    private val systemBehaviorDao: SystemBehaviorDao
+    private val systemBehaviorDao: SystemBehaviorDao,
+    private val studentGroupDao: StudentGroupDao
 ) : ViewModel() {
     val rules: LiveData<List<ConditionalFormattingRule>> = conditionalFormattingRuleDao.getAllRules()
     val customBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>> = customBehaviorDao.getAllCustomBehaviors()
     val systemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>> =
         systemBehaviorDao.getAllSystemBehaviors().asLiveData()
+    val studentGroups: LiveData<List<com.example.myapplication.data.StudentGroup>> = studentGroupDao.getAllStudentGroups().asLiveData()
+
 
     fun addRule(rule: ConditionalFormattingRule) {
         viewModelScope.launch {

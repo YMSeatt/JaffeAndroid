@@ -53,11 +53,13 @@ fun ConditionalFormattingRuleEditor(
     var ruleType by remember(rule) { mutableStateOf(rule?.type ?: "group") }
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
     var expanded by remember { mutableStateOf(false) }
+    var groupDropdownExpanded by remember { mutableStateOf(false) }
     val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     val showColorPicker = remember { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf<String?>(null) }
     val customBehaviors by viewModel.customBehaviors.observeAsState(initial = emptyList())
     val systemBehaviors by viewModel.systemBehaviors.observeAsState(initial = emptyList())
+    val studentGroups by viewModel.studentGroups.observeAsState(initial = emptyList())
 
     var condition by remember(rule) {
         mutableStateOf(
@@ -178,13 +180,37 @@ fun ConditionalFormattingRuleEditor(
                     // Dynamic Condition Fields
                     when (ruleType) {
                         "group" -> {
-                            OutlinedTextField(
-                                value = condition.groupId?.toString() ?: "",
-                                onValueChange = {
-                                    condition = condition.copy(groupId = it.toLongOrNull())
-                                },
-                                label = { Text("Group ID") }
-                            )
+                            ExposedDropdownMenuBox(
+                                expanded = groupDropdownExpanded,
+                                onExpandedChange = { groupDropdownExpanded = !groupDropdownExpanded }
+                            ) {
+                                val selectedGroupName =
+                                    studentGroups.find { it.id == condition.groupId }?.name ?: ""
+                                OutlinedTextField(
+                                    value = selectedGroupName,
+                                    onValueChange = {},
+                                    label = { Text("Group") },
+                                    readOnly = true,
+                                    trailingIcon = {
+                                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupDropdownExpanded)
+                                    },
+                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = groupDropdownExpanded,
+                                    onDismissRequest = { groupDropdownExpanded = false }
+                                ) {
+                                    studentGroups.forEach { group ->
+                                        DropdownMenuItem(
+                                            text = { Text(group.name) },
+                                            onClick = {
+                                                condition = condition.copy(groupId = group.id)
+                                                groupDropdownExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
                         }
                         "behavior_count" -> {
                             val allBehaviors =
