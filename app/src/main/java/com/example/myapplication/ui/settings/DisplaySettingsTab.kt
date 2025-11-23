@@ -90,68 +90,29 @@ fun DisplaySettingsTab(
             HorizontalDivider()
         }
 
-        // Behavior Log Display Timeout
         item {
-            Text("Behavior Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
+            Text("Log Display Timeouts", style = MaterialTheme.typography.titleMedium)
         }
         item {
-            val behaviorDisplayTimeout by settingsViewModel.behaviorDisplayTimeout.collectAsState()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = behaviorDisplayTimeout.toFloat(),
-                    onValueChange = { settingsViewModel.updateBehaviorDisplayTimeout(it.toInt()) },
-                    valueRange = 0f..300f,
-                    steps = 29,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(behaviorDisplayTimeout.toString())
-            }
+            SettingsTextField(
+                label = "Behavior Log Display Timeout (hours)",
+                stateFlow = settingsViewModel.behaviorDisplayTimeout,
+                onValueChange = { settingsViewModel.updateBehaviorDisplayTimeout(it) }
+            )
         }
         item {
-            HorizontalDivider()
-        }
-
-        // Homework Log Display Timeout
-        item {
-            Text("Homework Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
-        }
-        item {
-            val homeworkDisplayTimeout by settingsViewModel.homeworkDisplayTimeout.collectAsState()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = homeworkDisplayTimeout.toFloat(),
-                    onValueChange = { settingsViewModel.updateHomeworkDisplayTimeout(it.toInt()) },
-                    valueRange = 0f..300f,
-                    steps = 29,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(homeworkDisplayTimeout.toString())
-            }
+            SettingsTextField(
+                label = "Homework Log Display Timeout (hours)",
+                stateFlow = settingsViewModel.homeworkDisplayTimeout,
+                onValueChange = { settingsViewModel.updateHomeworkDisplayTimeout(it) }
+            )
         }
         item {
-            HorizontalDivider()
-        }
-
-        // Quiz Log Display Timeout
-        item {
-            Text("Quiz Log Display Timeout (seconds):", style = MaterialTheme.typography.titleMedium)
-        }
-        item {
-            val quizDisplayTimeout by
-            settingsViewModel.quizDisplayTimeout.collectAsState()
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Slider(
-                    value = quizDisplayTimeout.toFloat(),
-                    onValueChange = { settingsViewModel.updateQuizDisplayTimeout(it.toInt()) },
-                    valueRange = 0f..300f,
-                    steps = 29,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(quizDisplayTimeout.toString())
-            }
+            SettingsTextField(
+                label = "Quiz Log Display Timeout (hours)",
+                stateFlow = settingsViewModel.quizDisplayTimeout,
+                onValueChange = { settingsViewModel.updateQuizDisplayTimeout(it) }
+            )
         }
         item {
             HorizontalDivider()
