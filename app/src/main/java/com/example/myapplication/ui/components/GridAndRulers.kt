@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -14,16 +15,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Guide
+import com.example.myapplication.data.GuideType
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
 import kotlin.math.floor
-
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import com.example.myapplication.data.GuideType
 
 @Composable
 fun GridAndRulers(
@@ -36,8 +35,11 @@ fun GridAndRulers(
     val showGrid by settingsViewModel.showGrid.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
     val showRulers by settingsViewModel.showRulers.collectAsState()
-    val guides by guideViewModel.guides.collectAsState()
+    val guides by guideViewModel.guides.collectAsState(initial = emptyList())
     var draggedGuide by remember { mutableStateOf<Guide?>(null) }
+
+    val canvasBackgroundColor by settingsViewModel.canvasBackgroundColor.collectAsState()
+    val guidesStayWhenRulersHidden by settingsViewModel.guidesStayWhenRulersHidden.collectAsState()
 
     Canvas(modifier = Modifier
         .fillMaxSize()
@@ -79,12 +81,15 @@ fun GridAndRulers(
                 }
             )
         }) {
+        // Draw Background
+        drawRect(color = try { Color(android.graphics.Color.parseColor(canvasBackgroundColor)) } catch (e: Exception) { Color.White })
+
         // Grid (drawn within the transformed canvas)
         withTransform({
             translate(left = offset.x, top = offset.y)
             scale(scale, scale)
         }) {
-            if (showGrid) {
+            if (showGrid && gridSize > 0) {
                 val gridSizePx = gridSize.dp.toPx()
 
                 // Calculate visible world coordinates
@@ -120,31 +125,33 @@ fun GridAndRulers(
             }
 
             // Draw guides
-            val worldXStart = -offset.x / scale
-            val worldYStart = -offset.y / scale
-            val worldXEnd = worldXStart + canvasSize.width / scale
-            val worldYEnd = worldYStart + canvasSize.height / scale
-            guides.forEach { guide ->
-                if (guide.type == GuideType.HORIZONTAL) {
-                    drawLine(
-                        start = Offset(worldXStart, guide.position),
-                        end = Offset(worldXEnd, guide.position),
-                        color = Color.Red,
-                        strokeWidth = 2f / scale
-                    )
-                } else { // vertical
-                    drawLine(
-                        start = Offset(guide.position, worldYStart),
-                        end = Offset(guide.position, worldYEnd),
-                        color = Color.Red,
-                        strokeWidth = 2f / scale
-                    )
+            if (showRulers || guidesStayWhenRulersHidden) {
+                val worldXStart = -offset.x / scale
+                val worldYStart = -offset.y / scale
+                val worldXEnd = worldXStart + canvasSize.width / scale
+                val worldYEnd = worldYStart + canvasSize.height / scale
+                guides.forEach { guide ->
+                    if (guide.type == GuideType.HORIZONTAL) {
+                        drawLine(
+                            start = Offset(worldXStart, guide.position),
+                            end = Offset(worldXEnd, guide.position),
+                            color = Color.Red,
+                            strokeWidth = 2f / scale
+                        )
+                    } else { // vertical
+                        drawLine(
+                            start = Offset(guide.position, worldYStart),
+                            end = Offset(guide.position, worldYEnd),
+                            color = Color.Red,
+                            strokeWidth = 2f / scale
+                        )
+                    }
                 }
             }
         }
 
         // Rulers (drawn outside the transform, in screen space)
-        if (showRulers) {
+        if (showRulers && gridSize > 0) {
             val gridSizePx = gridSize.dp.toPx()
             val rulerThickness = 30.dp.toPx()
             val textSize = 12.dp.toPx()

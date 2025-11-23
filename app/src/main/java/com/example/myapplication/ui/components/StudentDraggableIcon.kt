@@ -1,5 +1,8 @@
 package com.example.myapplication.ui.components
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -111,6 +115,15 @@ fun StudentDraggableIcon(
         height = studentUiItem.displayHeight
     }
 
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scale"
+    )
+
     key(studentUiItem) {
         Box(
             modifier = Modifier
@@ -120,6 +133,7 @@ fun StudentDraggableIcon(
                         y = ((offsetY * canvasScale) + canvasOffset.y).roundToInt()
                     )
                 }
+                .scale(scale)
         ) {
             Card(
                 modifier = Modifier
@@ -171,8 +185,11 @@ fun StudentDraggableIcon(
                     containerColor = studentUiItem.displayBackgroundColor.first()
                 ),
                 border = BorderStroke(
-                    if (isSelected) 4.dp else studentUiItem.displayOutlineThickness,
+                    if (isSelected) 6.dp else studentUiItem.displayOutlineThickness,
                     if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
+                ),
+                elevation = CardDefaults.cardElevation(
+                    defaultElevation = if (isSelected) 8.dp else 2.dp
                 )
             ) {
                 Box(

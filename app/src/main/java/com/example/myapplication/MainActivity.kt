@@ -306,9 +306,9 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
         lifecycleScope.launch {
-            val autoSendOnClose = settingsViewModel.autoSendEmailOnClose.first()
+            val autoSendOnClose: Boolean = settingsViewModel.autoSendEmailOnClose.first()
             if (autoSendOnClose) {
-                val email = settingsViewModel.defaultEmailAddress.first()
+                val email: String = settingsViewModel.defaultEmailAddress.first()
                 if (email.isNotBlank()) {
                     val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
                     val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
@@ -439,8 +439,10 @@ fun SeatingChartScreen(
 
     var isFabMenuOpen by remember { mutableStateOf(false) }
 
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Seating Chart") },
@@ -763,7 +765,24 @@ fun SeatingChartScreen(
 
             if (showBehaviorDialog) {
                 val studentIds = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
-                BehaviorDialog(studentIds = studentIds, viewModel = seatingChartViewModel, behaviorTypes = behaviorTypeNames, onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null })
+                BehaviorDialog(
+                    studentIds = studentIds,
+                    viewModel = seatingChartViewModel,
+                    behaviorTypes = behaviorTypeNames,
+                    onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null },
+                    onBehaviorLogged = { count ->
+                        coroutineScope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Logged behavior for $count student(s)",
+                                actionLabel = "Undo",
+                                duration = androidx.compose.material3.SnackbarDuration.Short
+                            )
+                            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                                repeat(count) { seatingChartViewModel.undo() }
+                            }
+                        }
+                    }
+                )
             }
 
             if (showLogQuizScoreDialog) {
@@ -793,7 +812,17 @@ fun SeatingChartScreen(
             }
 
             if (showAddEditStudentDialog) {
-                AddEditStudentDialog(studentToEdit = editingStudent, viewModel = seatingChartViewModel, studentGroupsViewModel = studentGroupsViewModel, settingsViewModel = settingsViewModel, onDismiss = { showAddEditStudentDialog = false; editingStudent = null })
+                AddEditStudentDialog(
+                    studentToEdit = editingStudent,
+                    viewModel = seatingChartViewModel,
+                    studentGroupsViewModel = studentGroupsViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismiss = { showAddEditStudentDialog = false; editingStudent = null },
+                    onEditStyle = {
+                        showAddEditStudentDialog = false
+                        showStudentStyleDialog = true
+                    }
+                )
             }
 
             if (showAddEditFurnitureDialog) {
@@ -860,8 +889,9 @@ fun SeatingChartScreen(
             }
 
             if (showStudentStyleDialog) {
-                selectedStudentUiItemForAction?.let { student ->
-                    StudentStyleScreen(studentId = student.id.toLong(), seatingChartViewModel = seatingChartViewModel, onDismiss = { showStudentStyleDialog = false })
+                val studentId = selectedStudentUiItemForAction?.id?.toLong() ?: editingStudent?.id
+                if (studentId != null) {
+                    StudentStyleScreen(studentId = studentId, seatingChartViewModel = seatingChartViewModel, onDismiss = { showStudentStyleDialog = false; if (editingStudent != null) editingStudent = null })
                 }
             }
 

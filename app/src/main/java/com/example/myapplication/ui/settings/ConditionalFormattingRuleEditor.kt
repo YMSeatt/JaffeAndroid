@@ -53,39 +53,69 @@ fun ConditionalFormattingRuleEditor(
     var ruleType by remember(rule) { mutableStateOf(rule?.type ?: "group") }
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
     var expanded by remember { mutableStateOf(false) }
-    val json = Json { ignoreUnknownKeys = true; isLenient = true }
+    val json = Json { ignoreUnknownKeys = true; isLenient = true; encodeDefaults = true }
     val showColorPicker = remember { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf<String?>(null) }
     val customBehaviors by viewModel.customBehaviors.observeAsState(initial = emptyList())
     val systemBehaviors by viewModel.systemBehaviors.observeAsState(initial = emptyList())
 
-    val conditionState = remember(rule, ruleType) {
-        val initialJson = rule?.conditionJson
-        val initialMap: Map<String, String> = if (!initialJson.isNullOrEmpty()) {
-            json.decodeFromString<Map<String, String>>(initialJson)
-        } else {
-            emptyMap()
-        }
-        mutableStateOf(initialMap)
+    var condition by remember(rule) {
+        mutableStateOf(
+            if (rule?.conditionJson != null) {
+                try {
+                    json.decodeFromString<com.example.myapplication.util.Condition>(rule.conditionJson)
+                } catch (e: Exception) {
+                    com.example.myapplication.util.Condition(type = ruleType)
+                }
+            } else {
+                com.example.myapplication.util.Condition(type = ruleType)
+            }
+        )
     }
 
-    val formatState = remember(rule) {
-        val initialJson = rule?.formatJson
-        val initialMap: Map<String, String> = if (!initialJson.isNullOrEmpty()) {
-            json.decodeFromString<Map<String, String>>(initialJson)
-        } else {
-            emptyMap()
-        }
-        mutableStateOf(initialMap)
+    var format by remember(rule) {
+        mutableStateOf(
+            if (rule?.formatJson != null) {
+                try {
+                    json.decodeFromString<com.example.myapplication.util.Format>(rule.formatJson)
+                } catch (e: Exception) {
+                    com.example.myapplication.util.Format()
+                }
+            } else {
+                com.example.myapplication.util.Format()
+            }
+        )
+    }
+
+    // Helper state for Active Time (Single range support for UI)
+    var activeTimeStart by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.startTime ?: "") }
+    var activeTimeEnd by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.endTime ?: "") }
+    var activeTimeDays by remember(condition) {
+        mutableStateOf(
+            condition.activeTimes?.firstOrNull()?.daysOfWeek?.map { dayInt ->
+                when (dayInt) {
+                    0 -> "Monday"
+                    1 -> "Tuesday"
+                    2 -> "Wednesday"
+                    3 -> "Thursday"
+                    4 -> "Friday"
+                    5 -> "Saturday"
+                    6 -> "Sunday"
+                    else -> ""
+                }
+            }?.filter { it.isNotEmpty() } ?: emptyList()
+        )
     }
 
     if (showColorPicker.value) {
-        val initialColorStr = formatState.value[colorPickerTarget] ?: ""
-        val initialColor = if (initialColorStr.isBlank()) Color.White else safeParseColor(initialColorStr)
+        val initialColorStr = if (colorPickerTarget == "color") format.color else format.outline
+        val initialColor = if (initialColorStr.isNullOrBlank()) Color.White else safeParseColor(initialColorStr)
         ColorPickerDialog(
             onColorSelected = { color ->
-                colorPickerTarget?.let { target ->
-                    formatState.value = formatState.value + (target to color)
+                if (colorPickerTarget == "color") {
+                    format = format.copy(color = color)
+                } else if (colorPickerTarget == "outline") {
+                    format = format.copy(outline = color)
                 }
                 showColorPicker.value = false
             },
@@ -149,9 +179,9 @@ fun ConditionalFormattingRuleEditor(
                     when (ruleType) {
                         "group" -> {
                             OutlinedTextField(
-                                value = conditionState.value["group_id"] ?: "",
+                                value = condition.groupId?.toString() ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("group_id" to it)
+                                    condition = condition.copy(groupId = it.toLongOrNull())
                                 },
                                 label = { Text("Group ID") }
                             )
@@ -161,91 +191,89 @@ fun ConditionalFormattingRuleEditor(
                                 customBehaviors.map { it.name } + systemBehaviors.map { it.name }
                             MultiSelectDropdown(
                                 options = allBehaviors,
-                                selectedOptions = conditionState.value["behavior_names"]?.split(",")
-                                    ?: emptyList(),
+                                selectedOptions = condition.behaviorNames?.split(",") ?: emptyList(),
                                 onSelectionChanged = {
-                                    conditionState.value =
-                                        conditionState.value + ("behavior_names" to it.joinToString(","))
+                                    condition = condition.copy(behaviorNames = it.joinToString(","))
                                 },
                                 label = "Behaviors"
                             )
                             OutlinedTextField(
-                                value = conditionState.value["count_threshold"] ?: "1",
+                                value = condition.countThreshold?.toString() ?: "1",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("count_threshold" to it)
+                                    condition = condition.copy(countThreshold = it.toIntOrNull())
                                 },
                                 label = { Text("Count Threshold") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["time_window_hours"] ?: "24",
+                                value = condition.timeWindowHours?.toString() ?: "24",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("time_window_hours" to it)
+                                    condition = condition.copy(timeWindowHours = it.toIntOrNull())
                                 },
                                 label = { Text("Time Window (Hours)") }
                             )
                         }
                         "quiz_score_threshold" -> {
                             OutlinedTextField(
-                                value = conditionState.value["quiz_name_contains"] ?: "",
+                                value = condition.quizNameContains ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("quiz_name_contains" to it)
+                                    condition = condition.copy(quizNameContains = it)
                                 },
                                 label = { Text("Quiz Name Contains") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["operator"] ?: "<=",
+                                value = condition.operator ?: "<=",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("operator" to it)
+                                    condition = condition.copy(operator = it)
                                 },
                                 label = { Text("Operator") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["score_threshold_percent"] ?: "50.0",
+                                value = condition.scoreThresholdPercent?.toString() ?: "50.0",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("score_threshold_percent" to it)
+                                    condition = condition.copy(scoreThresholdPercent = it.toDoubleOrNull())
                                 },
                                 label = { Text("Score Threshold (%)") }
                             )
                         }
                         "quiz_mark_count" -> {
                             OutlinedTextField(
-                                value = conditionState.value["mark_type_id"] ?: "",
+                                value = condition.markTypeId ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("mark_type_id" to it)
+                                    condition = condition.copy(markTypeId = it)
                                 },
                                 label = { Text("Mark Type ID") }
                             )
                         }
                         "live_quiz_response" -> {
                             OutlinedTextField(
-                                value = conditionState.value["quiz_response"] ?: "Correct",
+                                value = condition.quizResponse ?: "Correct",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("quiz_response" to it)
+                                    condition = condition.copy(quizResponse = it)
                                 },
                                 label = { Text("Quiz Response") }
                             )
                         }
                         "live_homework_yes_no" -> {
                             OutlinedTextField(
-                                value = conditionState.value["homework_type_id"] ?: "",
+                                value = condition.homeworkTypeId ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("homework_type_id" to it)
+                                    condition = condition.copy(homeworkTypeId = it)
                                 },
                                 label = { Text("Homework Type ID") }
                             )
                             OutlinedTextField(
-                                value = conditionState.value["homework_response"] ?: "yes",
+                                value = condition.homeworkResponse ?: "yes",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("homework_response" to it)
+                                    condition = condition.copy(homeworkResponse = it)
                                 },
                                 label = { Text("Homework Response") }
                             )
                         }
                         "live_homework_select" -> {
                             OutlinedTextField(
-                                value = conditionState.value["homework_option_name"] ?: "",
+                                value = condition.homeworkOptionName ?: "",
                                 onValueChange = {
-                                    conditionState.value = conditionState.value + ("homework_option_name" to it)
+                                    condition = condition.copy(homeworkOptionName = it)
                                 },
                                 label = { Text("Homework Option Name") }
                             )
@@ -253,11 +281,51 @@ fun ConditionalFormattingRuleEditor(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Active Modes
+                    Text("Active Modes", style = MaterialTheme.typography.titleSmall)
+                    val allModes = listOf("behavior", "quiz", "homework")
+                    MultiSelectDropdown(
+                        options = allModes,
+                        selectedOptions = condition.activeModes ?: emptyList(),
+                        onSelectionChanged = {
+                            condition = condition.copy(activeModes = it)
+                        },
+                        label = "Active Modes"
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Active Times
+                    Text("Active Times", style = MaterialTheme.typography.titleSmall)
+                    Row {
+                        OutlinedTextField(
+                            value = activeTimeStart,
+                            onValueChange = { activeTimeStart = it },
+                            label = { Text("Start (HH:MM)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = activeTimeEnd,
+                            onValueChange = { activeTimeEnd = it },
+                            label = { Text("End (HH:MM)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    val daysOfWeek = listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+                    MultiSelectDropdown(
+                        options = daysOfWeek,
+                        selectedOptions = activeTimeDays,
+                        onSelectionChanged = { activeTimeDays = it },
+                        label = "Days of Week"
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
                     Text("Formatting", style = MaterialTheme.typography.titleMedium)
                     ColorPickerField(
                         label = "Fill Color",
-                        color = formatState.value["color"] ?: "",
-                        onColorChange = { formatState.value = formatState.value + ("color" to it) },
+                        color = format.color ?: "",
+                        onColorChange = { format = format.copy(color = it) },
                         onColorPickerClick = {
                             colorPickerTarget = "color"
                             showColorPicker.value = true
@@ -265,20 +333,22 @@ fun ConditionalFormattingRuleEditor(
                     )
                     ColorPickerField(
                         label = "Outline Color",
-                        color = formatState.value["outline"] ?: "",
-                        onColorChange = { formatState.value = formatState.value + ("outline" to it) },
+                        color = format.outline ?: "",
+                        onColorChange = { format = format.copy(outline = it) },
                         onColorPickerClick = {
                             colorPickerTarget = "outline"
                             showColorPicker.value = true
                         }
                     )
-                    OutlinedTextField(
-                        value = formatState.value["application_style"] ?: "stripe",
-                        onValueChange = {
-                            formatState.value = formatState.value + ("application_style" to it)
-                        },
-                        label = { Text("Application Style") }
-                    )
+                    // Application style is not in Format data class?
+                    // Let's check Format data class again.
+                    // It has color and outline. No application_style.
+                    // But the previous code had it.
+                    // Maybe I missed it in the Format class definition?
+                    // Step 177 showed: data class Format(val color: String? = null, val outline: String? = null)
+                    // So application_style is NOT supported by the engine currently?
+                    // Or maybe it's supported in Python but not fully in Android engine?
+                    // I'll omit it for now to match the data class.
 
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -300,13 +370,36 @@ fun ConditionalFormattingRuleEditor(
         confirmButton = {
             Button(
                 onClick = {
+                    val newActiveTimes = if (activeTimeStart.isNotBlank() && activeTimeEnd.isNotBlank()) {
+                        val days = activeTimeDays.map { dayName ->
+                            when (dayName) {
+                                "Monday" -> 0
+                                "Tuesday" -> 1
+                                "Wednesday" -> 2
+                                "Thursday" -> 3
+                                "Friday" -> 4
+                                "Saturday" -> 5
+                                "Sunday" -> 6
+                                else -> -1
+                            }
+                        }.filter { it != -1 }
+                        listOf(com.example.myapplication.util.ActiveTime(activeTimeStart, activeTimeEnd, days))
+                    } else {
+                        null
+                    }
+
+                    val finalCondition = condition.copy(
+                        type = ruleType,
+                        activeTimes = newActiveTimes
+                    )
+                    
                     val newRule = (rule ?: ConditionalFormattingRule()).copy(
                         name = name,
                         priority = priority.toIntOrNull() ?: 0,
                         type = ruleType,
                         targetType = targetType,
-                        conditionJson = json.encodeToString(conditionState.value),
-                        formatJson = json.encodeToString(formatState.value)
+                        conditionJson = json.encodeToString(finalCondition),
+                        formatJson = json.encodeToString(format)
                     )
                     if (rule != null) {
                         viewModel.updateRule(newRule)

@@ -99,6 +99,9 @@ class AppPreferencesRepository(private val context: Context) {
         val BEHAVIOR_DISPLAY_TIMEOUT = intPreferencesKey("behavior_display_timeout")
         val HOMEWORK_DISPLAY_TIMEOUT = intPreferencesKey("homework_display_timeout")
         val QUIZ_DISPLAY_TIMEOUT = intPreferencesKey("quiz_display_timeout")
+
+        val CANVAS_BACKGROUND_COLOR = stringPreferencesKey("canvas_background_color")
+        val GUIDES_STAY_WHEN_RULERS_HIDDEN = booleanPreferencesKey("guides_stay_when_rulers_hidden")
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -738,6 +741,28 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateEmailPassword(password: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.EMAIL_PASSWORD] = password
+        }
+    }
+
+    val canvasBackgroundColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.CANVAS_BACKGROUND_COLOR] ?: "#FFFFFFFF"
+        }
+
+    suspend fun updateCanvasBackgroundColor(color: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.CANVAS_BACKGROUND_COLOR] = color
+        }
+    }
+
+    val guidesStayWhenRulersHiddenFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.GUIDES_STAY_WHEN_RULERS_HIDDEN] ?: false
+        }
+
+    suspend fun updateGuidesStayWhenRulersHidden(stay: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.GUIDES_STAY_WHEN_RULERS_HIDDEN] = stay
         }
     }
 }

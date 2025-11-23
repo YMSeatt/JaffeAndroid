@@ -46,6 +46,7 @@ fun DisplaySettingsTab(
     val useInitialsForBehavior by settingsViewModel.useInitialsForBehavior.collectAsState()
     val useFullNameForStudent by settingsViewModel.useFullNameForStudent.collectAsState()
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState()
+    val showRulers by settingsViewModel.showRulers.collectAsState()
 
     val defaultWidth by settingsViewModel.defaultStudentBoxWidth.collectAsState()
     val defaultHeight by settingsViewModel.defaultStudentBoxHeight.collectAsState()
@@ -367,6 +368,9 @@ fun DisplaySettingsTab(
                                 defaultTextColorInput = hexColor
                                 settingsViewModel.updateDefaultStudentBoxTextColor(hexColor)
                             }
+                            "canvas_bg" -> {
+                                settingsViewModel.updateCanvasBackgroundColor(hexColor)
+                            }
                         }
                         showColorPicker = false
                     }
@@ -462,7 +466,6 @@ fun DisplaySettingsTab(
             }
         }
         item {
-            val showRulers by settingsViewModel.showRulers.collectAsState()
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -472,6 +475,47 @@ fun DisplaySettingsTab(
                     checked = showRulers,
                     onCheckedChange = { settingsViewModel.updateShowRulers(it) }
                 )
+            }
+        }
+        item {
+            val guidesStayWhenRulersHidden by settingsViewModel.guidesStayWhenRulersHidden.collectAsState()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Guides stay when rulers hidden", modifier = Modifier.weight(1f))
+                Switch(
+                    checked = guidesStayWhenRulersHidden,
+                    onCheckedChange = { settingsViewModel.updateGuidesStayWhenRulersHidden(it) },
+                    enabled = !showRulers
+                )
+            }
+        }
+        item {
+            val canvasBackgroundColor by settingsViewModel.canvasBackgroundColor.collectAsState()
+            var canvasBackgroundColorInput by remember(canvasBackgroundColor) { mutableStateOf(canvasBackgroundColor) }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = canvasBackgroundColorInput,
+                    onValueChange = {
+                        canvasBackgroundColorInput = it
+                        try {
+                            android.graphics.Color.parseColor(it)
+                            settingsViewModel.updateCanvasBackgroundColor(it)
+                        } catch (e: IllegalArgumentException) {
+                            // Ignore
+                        }
+                    },
+                    label = { Text("Canvas Background Color") },
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = {
+                    colorPickerTarget = "canvas_bg"
+                    showColorPicker = true
+                }) {
+                    Icon(Icons.Filled.ArrowDropDown, contentDescription = "Choose Color")
+                }
             }
         }
     }

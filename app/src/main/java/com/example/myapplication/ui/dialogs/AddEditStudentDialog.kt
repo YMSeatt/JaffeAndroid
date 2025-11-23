@@ -30,9 +30,10 @@ import kotlinx.coroutines.launch
 fun AddEditStudentDialog(
     studentToEdit: Student?,
     viewModel: SeatingChartViewModel,
-    studentGroupsViewModel: StudentGroupsViewModel, // Unused in this snippet but kept for consistency.
-    settingsViewModel: SettingsViewModel, // Unused in this snippet but kept for consistency.
-    onDismiss: () -> Unit
+    studentGroupsViewModel: StudentGroupsViewModel,
+    settingsViewModel: SettingsViewModel,
+    onDismiss: () -> Unit,
+    onEditStyle: () -> Unit = {}
 ) {
     var firstName by remember { mutableStateOf(studentToEdit?.firstName ?: "") }
     var lastName by remember { mutableStateOf(studentToEdit?.lastName ?: "") }
@@ -96,6 +97,14 @@ fun AddEditStudentDialog(
                 )
                 if (showError) {
                     Text("A student with this name already exists.", color = MaterialTheme.colorScheme.error)
+                }
+                if (studentToEdit != null) {
+                    Button(
+                        onClick = onEditStyle,
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                    ) {
+                        Text("Edit Student Style")
+                    }
                 }
             }
         },
