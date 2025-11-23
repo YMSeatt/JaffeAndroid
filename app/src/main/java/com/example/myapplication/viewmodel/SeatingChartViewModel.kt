@@ -49,9 +49,14 @@ import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.example.myapplication.util.ConditionalFormattingEngine
+import com.example.myapplication.util.CollisionDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
@@ -119,6 +124,8 @@ class SeatingChartViewModel @Inject constructor(
     val liveHomeworkScores = MutableLiveData<Map<Long, Map<String, Any>>>(emptyMap())
 
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
+    var canvasHeight by mutableStateOf(0)
+
 
     fun clearSelection() {
         selectedStudentIds.value = emptySet()
@@ -507,7 +514,16 @@ class SeatingChartViewModel @Inject constructor(
     // Student operations
     fun addStudent(student: Student) {
         viewModelScope.launch {
-            val command = AddStudentCommand(this@SeatingChartViewModel, student)
+            val (resolvedX, resolvedY) = CollisionDetector.resolveCollisions(
+                student,
+                studentsForDisplay.value ?: emptyList(),
+                canvasHeight
+            )
+            val positionedStudent = student.copy(
+                xPosition = resolvedX.roundToInt(),
+                yPosition = resolvedY.roundToInt()
+            )
+            val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
             executeCommand(command)
         }
     }
@@ -567,15 +583,23 @@ class SeatingChartViewModel @Inject constructor(
         newY: Float
     ) {
         viewModelScope.launch {
-            val command = MoveStudentCommand(
-                this@SeatingChartViewModel,
-                studentId,
-                oldX,
-                oldY,
-                newX,
-                newY
-            )
-            executeCommand(command)
+            val student = getStudentForEditing(studentId.toLong())
+            if (student != null) {
+                val (resolvedX, resolvedY) = CollisionDetector.resolveCollisions(
+                    student.copy(xPosition = newX.roundToInt(), yPosition = newY.roundToInt()),
+                    studentsForDisplay.value ?: emptyList(),
+                    canvasHeight
+                )
+                val command = MoveStudentCommand(
+                    this@SeatingChartViewModel,
+                    studentId,
+                    oldX,
+                    oldY,
+                    resolvedX,
+                    resolvedY
+                )
+                executeCommand(command)
+            }
         }
     }
 
