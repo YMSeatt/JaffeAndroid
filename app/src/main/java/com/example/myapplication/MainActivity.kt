@@ -437,6 +437,10 @@ fun SeatingChartScreen(
     var scale by remember { mutableFloatStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
+    LaunchedEffect(canvasSize.height) {
+        seatingChartViewModel.canvasHeight = canvasSize.height
+    }
+
     var isFabMenuOpen by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
