@@ -61,20 +61,6 @@ fun BehaviorDialog(
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                student?.temporaryTask?.let { task ->
-                    if (task.isNotBlank()) {
-                        Button(
-                            onClick = {
-                                viewModel.assignTaskToStudent(student!!.id, "")
-                                onDismiss()
-                            },
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer)
-                        ) {
-                            Text("Complete Task: $task")
-                        }
-                    }
-                }
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
@@ -101,6 +87,13 @@ fun BehaviorDialog(
                     behaviorTypes.forEach { behaviorType ->
                         OutlinedButton(
                             onClick = {
+                                if (studentIds.size == 1) {
+                                    student?.let {
+                                        if (it.temporaryTask?.isNotBlank() == true) {
+                                            viewModel.completeTaskForStudent(it.id)
+                                        }
+                                    }
+                                }
                                 studentIds.forEach { studentId ->
                                     val behaviorEvent = BehaviorEvent(
                                         studentId = studentId,
