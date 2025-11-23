@@ -99,15 +99,6 @@ fun AssignTaskDialog(
                 ) {
                     Text("Assign")
                 }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(
-                    onClick = {
-                        viewModel.completeTaskForStudent(studentId)
-                        onDismissRequest()
-                    }
-                ) {
-                    Text("Complete Task")
-                }
             }
         },
         dismissButton = {
