@@ -12,13 +12,14 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -39,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -73,14 +75,14 @@ fun StudentDraggableIcon(
     canvasScale: Float,
     canvasOffset: Offset
 ) {
-    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.toFloat()) }
-    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.toFloat()) }
+    var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
+    var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
     val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState()
     val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
     val autoExpandEnabled by settingsViewModel.autoExpandStudentBoxes.collectAsState()
-    var width by remember { mutableStateOf(studentUiItem.displayWidth) }
-    var height by remember { mutableStateOf(studentUiItem.displayHeight) }
+    var width by remember { mutableStateOf(studentUiItem.displayWidth.value) }
+    var height by remember { mutableStateOf(studentUiItem.displayHeight.value) }
     var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val density = LocalDensity.current
 
@@ -96,8 +98,8 @@ fun StudentDraggableIcon(
             if (newOffsetY.roundToInt() != offsetY.roundToInt()) {
                 viewModel.updateStudentPosition(
                     studentUiItem.id,
-                    studentUiItem.xPosition.toFloat(),
-                    studentUiItem.yPosition.toFloat(),
+                    studentUiItem.xPosition.value,
+                    studentUiItem.yPosition.value,
                     offsetX,
                     newOffsetY
                 )
@@ -105,14 +107,14 @@ fun StudentDraggableIcon(
         }
     }
 
-    LaunchedEffect(studentUiItem.xPosition, studentUiItem.yPosition) {
-        offsetX = studentUiItem.xPosition.toFloat()
-        offsetY = studentUiItem.yPosition.toFloat()
+    LaunchedEffect(studentUiItem.xPosition.value, studentUiItem.yPosition.value) {
+        offsetX = studentUiItem.xPosition.value
+        offsetY = studentUiItem.yPosition.value
     }
 
-    LaunchedEffect(studentUiItem.displayWidth, studentUiItem.displayHeight) {
-        width = studentUiItem.displayWidth
-        height = studentUiItem.displayHeight
+    LaunchedEffect(studentUiItem.displayWidth.value, studentUiItem.displayHeight.value) {
+        width = studentUiItem.displayWidth.value
+        height = studentUiItem.displayHeight.value
     }
 
     val scale by animateFloatAsState(
@@ -144,6 +146,10 @@ fun StudentDraggableIcon(
                                 change.consume()
                                 offsetX += dragAmount.x / canvasScale
                                 offsetY += dragAmount.y / canvasScale
+                                
+                                // Update MutableState for instant UI feedback to observers
+                                studentUiItem.xPosition.value = offsetX
+                                studentUiItem.yPosition.value = offsetY
                             },
                             onDragEnd = {
                                 val finalX = if (gridSnapEnabled) {
@@ -159,8 +165,8 @@ fun StudentDraggableIcon(
 
                                 viewModel.updateStudentPosition(
                                     studentUiItem.id,
-                                    studentUiItem.xPosition.toFloat(),
-                                    studentUiItem.yPosition.toFloat(),
+                                    studentUiItem.xPosition.value,
+                                    studentUiItem.yPosition.value,
                                     finalX.toFloat(),
                                     finalY.toFloat()
                                 )
@@ -176,17 +182,17 @@ fun StudentDraggableIcon(
                             Modifier.width(width).height(height)
                         } else {
                             Modifier
-                                .width(studentUiItem.displayWidth)
-                                .heightIn(min = studentUiItem.displayHeight, max = 300.dp)
+                                .width(studentUiItem.displayWidth.value)
+                                .heightIn(min = studentUiItem.displayHeight.value, max = 300.dp)
                         }
                     ),
-                shape = RoundedCornerShape(studentUiItem.displayCornerRadius),
+                shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value),
                 colors = CardDefaults.cardColors(
-                    containerColor = studentUiItem.displayBackgroundColor.first()
+                    containerColor = studentUiItem.displayBackgroundColor.value.first()
                 ),
                 border = BorderStroke(
-                    if (isSelected) 6.dp else studentUiItem.displayOutlineThickness,
-                    if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.first()
+                    if (isSelected) 6.dp else studentUiItem.displayOutlineThickness.value,
+                    if (isSelected) MaterialTheme.colorScheme.primary else studentUiItem.displayOutlineColor.value.first()
                 ),
                 elevation = CardDefaults.cardElevation(
                     defaultElevation = if (isSelected) 8.dp else 2.dp
@@ -195,9 +201,10 @@ fun StudentDraggableIcon(
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .padding(studentUiItem.displayPadding)
+                        .fillMaxSize()
+                        .padding(studentUiItem.displayPadding.value)
                 ) {
-                    val backgroundColors = studentUiItem.displayBackgroundColor
+                    val backgroundColors = studentUiItem.displayBackgroundColor.value
                     if (backgroundColors.size > 1) {
                         Box(modifier = Modifier.matchParentSize()) {
                             backgroundColors.forEachIndexed { index, color ->
@@ -205,16 +212,16 @@ fun StudentDraggableIcon(
                                     modifier = Modifier
                                         .matchParentSize()
                                         .padding( (index * 4).dp)
-                                        .background(color, shape = RoundedCornerShape(studentUiItem.displayCornerRadius - (index * 4).dp))
+                                        .background(color, shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value - (index * 4).dp))
                                 )
                             }
                         }
                     }
 
-                    val outlineColors = studentUiItem.displayOutlineColor
+                    val outlineColors = studentUiItem.displayOutlineColor.value
                     if (outlineColors.size > 1) {
                         Canvas(modifier = Modifier.matchParentSize()) {
-                            val strokeWidth = (if (isSelected) 4.dp else studentUiItem.displayOutlineThickness).toPx()
+                            val strokeWidth = (if (isSelected) 4.dp else studentUiItem.displayOutlineThickness.value).toPx()
                             val segmentLength = 10.dp.toPx()
                             outlineColors.forEachIndexed { index, color ->
                                 drawRoundRect(
@@ -237,76 +244,108 @@ fun StudentDraggableIcon(
                             modifier = Modifier.align(Alignment.TopEnd).size(16.dp)
                         )
                     }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         val nameParts = studentUiItem.fullName.split(" ")
                         val firstName = nameParts.firstOrNull() ?: ""
                         val lastName = if (nameParts.size > 1) nameParts.last() else ""
                         Text(
                             text = firstName,
                             style = TextStyle(
-                                color = studentUiItem.fontColor,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                fontSize = studentUiItem.fontSize.sp,
+                                color = studentUiItem.fontColor.value,
+                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                fontSize = studentUiItem.fontSize.value.sp,
                                 textAlign = TextAlign.Center
                             )
                         )
                         Text(
                             text = lastName,
                             style = TextStyle(
-                                color = studentUiItem.fontColor,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                fontSize = studentUiItem.fontSize.sp,
+                                color = studentUiItem.fontColor.value,
+                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                fontSize = studentUiItem.fontSize.value.sp,
                                 textAlign = TextAlign.Center
                             )
                         )
                         if (showBehavior) {
-                            if (studentUiItem.recentBehaviorDescription.isNotEmpty()) {
+                            val behaviorLogs = studentUiItem.recentBehaviorDescription
+                            val quizLogs = studentUiItem.recentQuizDescription
+                            val homeworkLogs = studentUiItem.recentHomeworkDescription
+                            val sessionLogs = studentUiItem.sessionLogText
+
+                            if (behaviorLogs.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
+                                behaviorLogs.forEach { text ->
+                                    Text(
+                                        text = text,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = studentUiItem.fontColor.value,
+                                            fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                            fontSize = studentUiItem.fontSize.value.sp,
+                                            textAlign = TextAlign.Center
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (quizLogs.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                quizLogs.forEach { text ->
+                                    Text(
+                                        text = text,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF006400), // Dark Green
+                                            fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                            fontSize = studentUiItem.fontSize.value.sp,
+                                            textAlign = TextAlign.Center,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
+                                    )
+                                }
+                            }
+
+                            if ((behaviorLogs.isNotEmpty() || quizLogs.isNotEmpty()) && homeworkLogs.isNotEmpty()) {
                                 Text(
-                                    text = studentUiItem.recentBehaviorDescription.joinToString("\n"),
+                                    text = "--- Homework ---",
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = studentUiItem.fontColor,
-                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp,
+                                        color = Color.Gray,
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                        fontSize = (studentUiItem.fontSize.value - 2).sp,
                                         textAlign = TextAlign.Center
                                     )
                                 )
                             }
-                            if (studentUiItem.recentHomeworkDescription.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = studentUiItem.recentHomeworkDescription.joinToString("\n"),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = studentUiItem.fontColor,
-                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp,
-                                        textAlign = TextAlign.Center
+
+                            if (homeworkLogs.isNotEmpty()) {
+                                homeworkLogs.forEach { text ->
+                                    Text(
+                                        text = text,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = Color(0xFF800080), // Purple
+                                            fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                            fontSize = studentUiItem.fontSize.value.sp,
+                                            textAlign = TextAlign.Center,
+                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                        )
                                     )
-                                )
+                                }
                             }
-                            if (studentUiItem.recentQuizDescription.isNotEmpty()) {
+
+                            if (sessionLogs.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = studentUiItem.recentQuizDescription.joinToString("\n"),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = studentUiItem.fontColor,
-                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp,
-                                        textAlign = TextAlign.Center
+                                sessionLogs.forEach { text ->
+                                    Text(
+                                        text = text,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = studentUiItem.fontColor.value,
+                                            fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                            fontSize = studentUiItem.fontSize.value.sp,
+                                            textAlign = TextAlign.Center
+                                        )
                                     )
-                                )
-                            }
-                            if (studentUiItem.sessionLogText.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = studentUiItem.sessionLogText.joinToString("\n"),
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = studentUiItem.fontColor,
-                                        fontFamily = getFontFamily(studentUiItem.fontFamily),
-                                        fontSize = studentUiItem.fontSize.sp,
-                                        textAlign = TextAlign.Center
-                                    )
-                                )
+                                }
                             }
                         }
                     }

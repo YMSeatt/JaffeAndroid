@@ -26,6 +26,5 @@ data class BehaviorEvent(
     val type: String, // e.g., "Talking", "Out of Seat"
     val timestamp: Long,
     val comment: String?,
-    val initials: String? = null,
     val timeout: Long = 0
 )

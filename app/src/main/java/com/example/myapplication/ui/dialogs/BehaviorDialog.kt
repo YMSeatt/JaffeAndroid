@@ -40,7 +40,6 @@ fun BehaviorDialog(
     onBehaviorLogged: (Int) -> Unit
 ) {
     var notes by remember { mutableStateOf("") }
-    var initials by remember { mutableStateOf("") }
     var student by remember { mutableStateOf<Student?>(null) }
 
     LaunchedEffect(studentIds) {
@@ -70,14 +69,6 @@ fun BehaviorDialog(
                         .padding(bottom = 16.dp),
                     minLines = 2
                 )
-                OutlinedTextField(
-                    value = initials,
-                    onValueChange = { initials = it },
-                    label = { Text("Initials (Optional)") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 16.dp)
-                )
                 Text("Select Behavior:", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(bottom = 8.dp))
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -99,8 +90,7 @@ fun BehaviorDialog(
                                         studentId = studentId,
                                         comment = notes,
                                         type = behaviorType,
-                                        timestamp = System.currentTimeMillis(),
-                                        initials = initials
+                                        timestamp = System.currentTimeMillis()
                                     )
                                     viewModel.addBehaviorEvent(behaviorEvent)
                                 }

@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.model
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Student
@@ -71,25 +72,25 @@ fun Student.toStudentUiItem(
         fullName = "$firstName $lastName",
         nickname = nickname,
         initials = "${firstName.first()}${lastName.first()}",
-        xPosition = xPosition.toDouble(),
-        yPosition = yPosition.toDouble(),
-        displayWidth = (customWidth ?: defaultWidth).dp,
-        displayHeight = (customHeight ?: defaultHeight).dp,
-        displayBackgroundColor = backgroundColors,
-        displayOutlineColor = outlineColors,
-        displayTextColor = textColor,
-        displayOutlineThickness = (customOutlineThickness ?: defaultOutlineThickness).dp,
-        displayCornerRadius = (customCornerRadius ?: defaultCornerRadius).dp,
-        displayPadding = (customPadding ?: defaultPadding).dp,
+        xPosition = mutableStateOf(xPosition.toFloat()),
+        yPosition = mutableStateOf(yPosition.toFloat()),
+        displayWidth = mutableStateOf((customWidth ?: defaultWidth).dp),
+        displayHeight = mutableStateOf((customHeight ?: defaultHeight).dp),
+        displayBackgroundColor = mutableStateOf(backgroundColors),
+        displayOutlineColor = mutableStateOf(outlineColors),
+        displayTextColor = mutableStateOf(textColor),
+        displayOutlineThickness = mutableStateOf((customOutlineThickness ?: defaultOutlineThickness).dp),
+        displayCornerRadius = mutableStateOf((customCornerRadius ?: defaultCornerRadius).dp),
+        displayPadding = mutableStateOf((customPadding ?: defaultPadding).dp),
         recentBehaviorDescription = recentBehaviorDescription,
         recentHomeworkDescription = recentHomeworkDescription,
         recentQuizDescription = recentQuizDescription,
         sessionLogText = sessionLogText,
         groupColor = groupColor?.let { safeParseColor(it) },
         groupId = groupId,
-        fontFamily = fontFamily,
-        fontSize = fontSize,
-        fontColor = fontColor,
+        fontFamily = mutableStateOf(fontFamily),
+        fontSize = mutableStateOf(fontSize),
+        fontColor = mutableStateOf(fontColor),
         temporaryTask = temporaryTask
     )
 }

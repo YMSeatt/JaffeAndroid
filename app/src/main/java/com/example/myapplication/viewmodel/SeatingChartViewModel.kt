@@ -150,34 +150,34 @@ class SeatingChartViewModel @Inject constructor(
 
 
         studentsForDisplay.addSource(allStudents) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(it)
         }
         studentsForDisplay.addSource(allStudentsForDisplay) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(sessionQuizLogs) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(sessionHomeworkLogs) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(isSessionActive) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(allBehaviorEvents) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(allHomeworkLogs) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(allQuizLogs) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
         studentsForDisplay.addSource(allRules) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
 
 
@@ -190,7 +190,7 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 delay(60000) // 1 minute
-                updateStudentsForDisplay()
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
         }
     }
@@ -223,14 +223,13 @@ class SeatingChartViewModel @Inject constructor(
                 appPreferencesRepository.homeworkDisplayTimeoutFlow, // Added new timeout flow
                 appPreferencesRepository.quizDisplayTimeoutFlow // Added new timeout flow
             ) { _ ->
-                updateStudentsForDisplay()
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
             }.collect()
         }
     }
 
-    private fun updateStudentsForDisplay() {
+    private fun updateStudentsForDisplay(students: List<Student>) {
         viewModelScope.launch {
-            val students = allStudents.value ?: return@launch
             val studentsForDisplayData = allStudentsForDisplay.value ?: return@launch
             val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
             val groups = studentGroupDao.getAllStudentGroups().first()
@@ -282,122 +281,121 @@ class SeatingChartViewModel @Inject constructor(
             val defaultFontSize = appPreferencesRepository.defaultStudentFontSizeFlow.first()
             val defaultFontColor = appPreferencesRepository.defaultStudentFontColorFlow.first()
 
-            val studentsWithBehavior = students.map { student ->
-                val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
-                    recentBehaviorDescription = emptyList(),
-                    recentHomeworkDescription = emptyList(),
-                    recentQuizDescription = emptyList(),
-                    sessionLogText = emptyList(),
-                    groupColor = null,
-                    conditionalFormattingResult = emptyList(),
-                    defaultWidth = defaultWidth,
-                    defaultHeight = defaultHeight,
-                    defaultBackgroundColor = defaultBgColor,
-                    defaultOutlineColor = defaultOutlineColor,
-                    defaultTextColor = defaultTextColor,
-                    defaultOutlineThickness = defaultOutlineThickness,
-                    defaultCornerRadius = defaultCornerRadius,
-                    defaultPadding = defaultPadding,
-                    defaultFontFamily = defaultFontFamily,
-                    defaultFontSize = defaultFontSize,
-                    defaultFontColor = defaultFontColor
-                )
-
-                val lastCleared = lastClearedTimestamps[student.id] ?: 0L
-                val recentEvents = if (student.showLogs) {
-                    behaviorEventDao.getRecentBehaviorEventsForStudentListFiltered(
-                        student.id, behaviorLimit, lastCleared, behaviorDisplayTimeout, currentTime
-                    )
-                } else {
-                    emptyList()
-                }
-                val recentHomework = if (student.showLogs) {
-                    homeworkLogDao.getRecentHomeworkLogsForStudentListFiltered(
-                        student.id, homeworkLimit, lastCleared, homeworkDisplayTimeout, currentTime
-                    )
-                } else {
-                    emptyList()
-                }
-                val recentQuizzes = if (student.showLogs) {
-                    quizLogDao.getRecentQuizLogsForStudentListFiltered(
-                        student.id, quizLimit, lastCleared, quizDisplayTimeout, currentTime
-                    )
-                } else {
-                    emptyList()
-                }
-
-                val behaviorDescription = recentEvents.map {
-                    val description = if (useInitialsForBehavior) {
-                        behaviorInitialsMap[it.type] ?: it.type.first().toString()
-                    } else {
-                        it.type
-                    }
-                    if (it.comment.isNullOrBlank()) {
-                        description
-                    } else {
-                        "$description: ${it.comment}"
-                    }
-                }
-
-                val homeworkDescription = recentHomework.map {
-                    val status = if (it.isComplete) "Done" else "Not Done"
-                    if (useInitialsForHomework) {
-                        (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
-                    } else {
-                        "${it.assignmentName}: $status"
-                    }
-                }
-                val quizDescription = recentQuizzes.map {
-                    if (useInitialsForQuiz) {
-                        quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
-                    } else {
-                        it.quizName
-                    }
-                }
-
-                val sessionLogs = if (isSessionActive.value == true) {
-                    val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                    val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
-                    (quizLogs + homeworkLogs).take(maxLogsToDisplay)
-                } else {
-                    emptyList()
-                }
-
-                val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormatting(
-                    student = studentDetails,
-                    rules = allRules.value ?: emptyList(),
-                    behaviorLog = allBehaviorEvents.value ?: emptyList(),
-                    quizLog = allQuizLogs.value ?: emptyList(),
-                    homeworkLog = allHomeworkLogs.value ?: emptyList(),
-                    isLiveQuizActive = isSessionActive.value ?: false,
-                    liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                    isLiveHomeworkActive = isSessionActive.value ?: false,
-                    liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                    currentMode = currentMode.value ?: "behavior"
-                )
-
-                student.toStudentUiItem(
-                    recentBehaviorDescription = behaviorDescription,
-                    recentHomeworkDescription = homeworkDescription,
-                    recentQuizDescription = quizDescription,
-                    sessionLogText = sessionLogs,
-                    groupColor = groups.find { group -> group.id == student.groupId }?.color,
-                    conditionalFormattingResult = conditionalFormattingResult,
-                    defaultWidth = defaultWidth,
-                    defaultHeight = defaultHeight,
-                    defaultBackgroundColor = defaultBgColor,
-                    defaultOutlineColor = defaultOutlineColor,
-                    defaultTextColor = defaultTextColor,
-                    defaultOutlineThickness = defaultOutlineThickness,
-                    defaultCornerRadius = defaultCornerRadius,
-                    defaultPadding = defaultPadding,
-                    defaultFontFamily = defaultFontFamily,
-                    defaultFontSize = defaultFontSize,
-                    defaultFontColor = defaultFontColor
-                )
-            }
-            studentsForDisplay.postValue(studentsWithBehavior)
-        }
+                        val studentsWithBehavior = students.map { student ->
+                            val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
+                                recentBehaviorDescription = emptyList(),
+                                recentHomeworkDescription = emptyList(),
+                                recentQuizDescription = emptyList(),
+                                sessionLogText = emptyList(),
+                                groupColor = null,
+                                conditionalFormattingResult = emptyList(),
+                                defaultWidth = defaultWidth,
+                                defaultHeight = defaultHeight,
+                                defaultBackgroundColor = defaultBgColor,
+                                defaultOutlineColor = defaultOutlineColor,
+                                defaultTextColor = defaultTextColor,
+                                defaultOutlineThickness = defaultOutlineThickness,
+                                defaultCornerRadius = defaultCornerRadius,
+                                defaultPadding = defaultPadding,
+                                defaultFontFamily = defaultFontFamily,
+                                defaultFontSize = defaultFontSize,
+                                defaultFontColor = defaultFontColor
+                            )
+            
+                            val lastCleared = lastClearedTimestamps[student.id] ?: 0L
+                            val recentEvents = if (student.showLogs) {
+                                behaviorEventDao.getRecentBehaviorEventsForStudentListFiltered(
+                                    student.id, behaviorLimit, lastCleared, behaviorDisplayTimeout, currentTime      
+                                )
+                            } else {
+                                emptyList()
+                            }
+                            val recentHomework = if (student.showLogs) {
+                                homeworkLogDao.getRecentHomeworkLogsForStudentListFiltered(
+                                    student.id, homeworkLimit, lastCleared, homeworkDisplayTimeout, currentTime      
+                                )
+                            } else {
+                                emptyList()
+                            }
+                            val recentQuizzes = if (student.showLogs) {
+                                quizLogDao.getRecentQuizLogsForStudentListFiltered(
+                                    student.id, quizLimit, lastCleared, quizDisplayTimeout, currentTime
+                                )
+                            } else {
+                                emptyList()
+                            }
+            
+                            val behaviorDescription = recentEvents.map {
+                                val description = if (useInitialsForBehavior) {
+                                    behaviorInitialsMap[it.type] ?: it.type.first().toString()
+                                } else {
+                                    it.type
+                                }
+                                if (it.comment.isNullOrBlank()) {
+                                    description
+                                } else {
+                                    "$description: ${it.comment}"
+                                }
+                            }
+            
+                            val homeworkDescription = recentHomework.map {
+                                val status = if (it.isComplete) "Done" else "Not Done"
+                                if (useInitialsForHomework) {
+                                    (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
+                                } else {
+                                    "${it.assignmentName}: $status"
+                                }
+                            }
+                            val quizDescription = recentQuizzes.map {
+                                if (useInitialsForQuiz) {
+                                    quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
+                                } else {
+                                    it.quizName
+                                }
+                            }
+            
+                            val sessionLogs = if (isSessionActive.value == true) {
+                                val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
+                                val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
+                                (quizLogs + homeworkLogs).take(maxLogsToDisplay)
+                            } else {
+                                emptyList()
+                            }
+            
+                            val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormatting(
+                                student = studentDetails,
+                                rules = allRules.value ?: emptyList(),
+                                behaviorLog = allBehaviorEvents.value ?: emptyList(),
+                                quizLog = allQuizLogs.value ?: emptyList(),
+                                homeworkLog = allHomeworkLogs.value ?: emptyList(),
+                                isLiveQuizActive = isSessionActive.value ?: false,
+                                liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                                isLiveHomeworkActive = isSessionActive.value ?: false,
+                                liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                                currentMode = currentMode.value ?: "behavior"
+                            )
+            
+                            student.toStudentUiItem(
+                                recentBehaviorDescription = behaviorDescription,
+                                recentHomeworkDescription = homeworkDescription,
+                                recentQuizDescription = quizDescription,
+                                sessionLogText = sessionLogs,
+                                groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                                conditionalFormattingResult = conditionalFormattingResult,
+                                defaultWidth = defaultWidth,
+                                defaultHeight = defaultHeight,
+                                defaultBackgroundColor = defaultBgColor,
+                                defaultOutlineColor = defaultOutlineColor,
+                                defaultTextColor = defaultTextColor,
+                                defaultOutlineThickness = defaultOutlineThickness,
+                                defaultCornerRadius = defaultCornerRadius,
+                                defaultPadding = defaultPadding,
+                                defaultFontFamily = defaultFontFamily,
+                                defaultFontSize = defaultFontSize,
+                                defaultFontColor = defaultFontColor
+                            )
+                        }
+                        studentsForDisplay.postValue(studentsWithBehavior)        }
     }
 
     fun clearRecentLogsForStudent(studentId: Long) {
@@ -527,7 +525,7 @@ class SeatingChartViewModel @Inject constructor(
             )
             val positionedStudent = student.copy(
                 xPosition = resolvedX,
-                yPosition = resolvedY as Float
+                yPosition = resolvedY
             )
             val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
             executeCommand(command)
@@ -566,7 +564,7 @@ class SeatingChartViewModel @Inject constructor(
         withContext(Dispatchers.IO) {
             repository.deleteStudent(student)
             withContext(Dispatchers.Main) {
-                updateStudentsForDisplay()
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
         }
     }
@@ -602,7 +600,7 @@ class SeatingChartViewModel @Inject constructor(
                     oldX,
                     oldY,
                     resolvedX,
-                    resolvedY as Float
+                    resolvedY
                 )
                 executeCommand(command)
             }
@@ -674,82 +672,86 @@ class SeatingChartViewModel @Inject constructor(
 
     fun alignSelectedItems(alignment: String) {
         viewModelScope.launch {
-            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true }
-            if (selectedStudents.isNullOrEmpty()) return@launch
+            val selectedUiItems = studentsForDisplay.value?.filter { selectedStudentIds.value?.contains(it.id) == true }
+            if (selectedUiItems.isNullOrEmpty()) return@launch
+            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true } ?: return@launch
 
-            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
-            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
-
-            val newStudents = when (alignment) {
+            when (alignment) {
                 "top" -> {
-                    val topY = selectedStudents.minOf { it.yPosition }
-                    selectedStudents.map { it.copy(yPosition = topY) }
+                    val topY = selectedUiItems.minOf { it.yPosition.value }
+                    selectedUiItems.forEach { it.yPosition.value = topY }
+                    selectedStudents.forEach { student ->
+                        val newStudent = student.copy(yPosition = topY)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                    }
                 }
                 "bottom" -> {
-                    val bottomY = selectedStudents.maxOf { it.yPosition + (it.customHeight ?: defaultHeight) }
-                    selectedStudents.map { it.copy(yPosition = bottomY - (it.customHeight ?: defaultHeight)) }
+                    val bottomY = selectedUiItems.maxOf { it.yPosition.value + it.displayHeight.value.value }
+                    selectedUiItems.forEach { it.yPosition.value = bottomY - it.displayHeight.value.value }
+                    selectedStudents.forEach { student ->
+                        val uiItem = selectedUiItems.find { it.id == student.id.toInt() } ?: return@forEach
+                        val newStudent = student.copy(yPosition = bottomY - uiItem.displayHeight.value.value)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                    }
                 }
                 "left" -> {
-                    val leftX = selectedStudents.minOf { it.xPosition }
-                    selectedStudents.map { it.copy(xPosition = leftX) }
+                    val leftX = selectedUiItems.minOf { it.xPosition.value }
+                    selectedUiItems.forEach { it.xPosition.value = leftX }
+                    selectedStudents.forEach { student ->
+                        val newStudent = student.copy(xPosition = leftX)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                    }
                 }
                 "right" -> {
-                    val rightX = selectedStudents.maxOf { it.xPosition + (it.customWidth ?: defaultWidth) }
-                    selectedStudents.map { it.copy(xPosition = rightX - (it.customWidth ?: defaultWidth)) }
+                    val rightX = selectedUiItems.maxOf { it.xPosition.value + it.displayWidth.value.value }
+                    selectedUiItems.forEach { it.xPosition.value = rightX - it.displayWidth.value.value }
+                    selectedStudents.forEach { student ->
+                        val uiItem = selectedUiItems.find { it.id == student.id.toInt() } ?: return@forEach
+                        val newStudent = student.copy(xPosition = rightX - uiItem.displayWidth.value.value)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                    }
                 }
-                else -> emptyList()
-            }
-
-            newStudents.forEach { newStudent ->
-                val oldStudent = selectedStudents.find { it.id == newStudent.id } ?: return@forEach
-                val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, newStudent)
-                executeCommand(command)
             }
         }
     }
 
     fun distributeSelectedItems(distribution: String) {
         viewModelScope.launch {
-            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true }
-            if (selectedStudents.isNullOrEmpty() || selectedStudents.size < 2) return@launch
+            val selectedUiItems = studentsForDisplay.value?.filter { selectedStudentIds.value?.contains(it.id) == true }?.toMutableList()
+            if (selectedUiItems.isNullOrEmpty() || selectedUiItems.size < 2) return@launch
+            val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true } ?: return@launch
 
-            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
-            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
-
-            val newStudents = when (distribution) {
+            when (distribution) {
                 "horizontal" -> {
-                    val sortedStudents = selectedStudents.sortedBy { it.xPosition }
-                    val minX = sortedStudents.first().xPosition
-                    val maxX = sortedStudents.last().xPosition + (sortedStudents.last().customWidth ?: defaultWidth)
-                    val totalWidth = sortedStudents.sumOf { it.customWidth ?: defaultWidth }
-                    val spacing = (maxX - minX - totalWidth) / (selectedStudents.size - 1)
+                    selectedUiItems.sortBy { it.xPosition.value }
+                    val minX = selectedUiItems.first().xPosition.value
+                    val maxX = selectedUiItems.last().xPosition.value + selectedUiItems.last().displayWidth.value.value
+                    val totalWidth = selectedUiItems.sumOf { it.displayWidth.value.value.toDouble() }.toFloat()
+                    val spacing = (maxX - minX - totalWidth) / (selectedUiItems.size - 1)
                     var currentX = minX
-                    sortedStudents.map {
-                        val newStudent = it.copy(xPosition = currentX)
-                        currentX += (it.customWidth ?: defaultWidth) + spacing
-                        newStudent
+                    selectedUiItems.forEach { uiItem ->
+                        uiItem.xPosition.value = currentX
+                        val student = selectedStudents.find { it.id == uiItem.id.toLong() } ?: return@forEach
+                        val newStudent = student.copy(xPosition = currentX)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        currentX += uiItem.displayWidth.value.value + spacing
                     }
                 }
                 "vertical" -> {
-                    val sortedStudents = selectedStudents.sortedBy { it.yPosition }
-                    val minY = sortedStudents.first().yPosition
-                    val maxY = sortedStudents.last().yPosition + (sortedStudents.last().customHeight ?: defaultHeight)
-                    val totalHeight = sortedStudents.sumOf { it.customHeight ?: defaultHeight }
-                    val spacing = (maxY - minY - totalHeight) / (selectedStudents.size - 1)
+                    selectedUiItems.sortBy { it.yPosition.value }
+                    val minY = selectedUiItems.first().yPosition.value
+                    val maxY = selectedUiItems.last().yPosition.value + selectedUiItems.last().displayHeight.value.value
+                    val totalHeight = selectedUiItems.sumOf { it.displayHeight.value.value.toDouble() }.toFloat()
+                    val spacing = (maxY - minY - totalHeight) / (selectedUiItems.size - 1)
                     var currentY = minY
-                    sortedStudents.map {
-                        val newStudent = it.copy(yPosition = currentY)
-                        currentY += (it.customHeight ?: defaultHeight) + spacing
-                        newStudent
+                    selectedUiItems.forEach { uiItem ->
+                        uiItem.yPosition.value = currentY
+                        val student = selectedStudents.find { it.id == uiItem.id.toLong() } ?: return@forEach
+                        val newStudent = student.copy(yPosition = currentY)
+                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        currentY += uiItem.displayHeight.value.value + spacing
                     }
                 }
-                else -> emptyList()
-            }
-
-            newStudents.forEach { newStudent ->
-                val oldStudent = selectedStudents.find { it.id == newStudent.id } ?: return@forEach
-                val command = UpdateStudentCommand(this@SeatingChartViewModel, oldStudent, newStudent)
-                executeCommand(command)
             }
         }
     }
@@ -859,21 +861,17 @@ class SeatingChartViewModel @Inject constructor(
         val studentPositions = JSONArray(layoutData.getString("students"))
         for (i in 0 until studentPositions.length()) {
             val pos = studentPositions.getJSONObject(i)
-            studentDao.updatePosition(
-                pos.getLong("id"),
-                pos.getDouble("x").toFloat(),
-                pos.getDouble("y").toFloat()
-            )
+            val x = pos.getDouble("x").toFloat()
+            val y = pos.getDouble("y").toFloat()
+            studentDao.updatePosition(pos.getLong("id"), x, y)
         }
 
         val furniturePositions = JSONArray(layoutData.getString("furniture"))
         for (i in 0 until furniturePositions.length()) {
             val pos = furniturePositions.getJSONObject(i)
-            furnitureDao.updatePosition(
-                pos.getLong("id"),
-                pos.getDouble("x").toFloat(),
-                pos.getDouble("y").toFloat()
-            )
+            val x = pos.getDouble("x").toFloat()
+            val y = pos.getDouble("y").toFloat()
+            furnitureDao.updatePosition(pos.getLong("id"), x, y)
         }
     }
 
@@ -899,7 +897,7 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertBehaviorEvent(event)
             withContext(Dispatchers.Main) {
-                updateStudentsForDisplay()
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
         }
     }
@@ -907,7 +905,7 @@ class SeatingChartViewModel @Inject constructor(
     fun deleteBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
         behaviorEventDao.delete(event)
         withContext(Dispatchers.Main) {
-            updateStudentsForDisplay()
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
     }
 
@@ -915,7 +913,7 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             behaviorEventDao.updateBehaviorEvent(event)
             withContext(Dispatchers.Main) {
-                updateStudentsForDisplay()
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
         }
     }

@@ -30,35 +30,35 @@ object CollisionDetector {
             // A simple heuristic to assign students to columns, can be improved
             var placed = false
             for (i in 0 until columns.size) {
-                if (student.xPosition < (columnWidths.slice(0 until i)
+                if (student.xPosition.value < (columnWidths.slice(0 until i)
                         .sum() + columnWidths[i] + PADDING * i)
                 ) {
                     columns[i].add(student)
                     columnWidths[i] =
-                        max(columnWidths[i], student.displayWidth.value.toInt())
+                        max(columnWidths[i], student.displayWidth.value.value.toInt())
                     placed = true
                     break
                 }
             }
             if (!placed) {
                 columns.add(mutableListOf(student))
-                columnWidths.add(student.displayWidth.value.toInt())
+                columnWidths.add(student.displayWidth.value.value.toInt())
             }
         }
 
         for (i in 0 until columns.size) {
             val column = columns[i]
-            column.sortBy { it.yPosition }
+            column.sortBy { it.yPosition.value }
             var currentY: Float = 0.0f
             for (student in column) {
                 if (currentY + (movedStudent.customHeight
-                        ?: DEFAULT_HEIGHT) < student.yPosition
+                        ?: DEFAULT_HEIGHT) < student.yPosition.value
                 ) {
                     val x = (columnWidths.slice(0 until i).sum() + PADDING * i).toFloat()
                     return Pair(x, currentY)
                 }
                 currentY =
-                    (student.yPosition.toFloat() + student.displayHeight.value + PADDING).toFloat()
+                    (student.yPosition.value + student.displayHeight.value.value + PADDING).toFloat()
             }
             if (canvasHeight == 0 || currentY + (movedStudent.customHeight
                     ?: DEFAULT_HEIGHT) < canvasHeight
