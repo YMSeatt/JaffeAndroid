@@ -590,8 +590,33 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Empty migration because the new tables are added via entities.
-                // Room will create the tables automatically.
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `quizzes` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `student_id` INTEGER NOT NULL,
+                        `template_id` INTEGER,
+                        `score` REAL NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`student_id`) REFERENCES `students`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`template_id`) REFERENCES `quiz_templates`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_quizzes_student_id` ON `quizzes` (`student_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_quizzes_template_id` ON `quizzes` (`template_id`)")
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `homework` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `student_id` INTEGER NOT NULL,
+                        `template_id` INTEGER,
+                        `status` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`student_id`) REFERENCES `students`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`template_id`) REFERENCES `homework_templates`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_homework_student_id` ON `homework` (`student_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_homework_template_id` ON `homework` (`template_id`)")
             }
         }
 
