@@ -41,6 +41,7 @@ fun SettingsNavHost(
                 onNavigateToExport = { navController.navigate("export") },
                 onNavigateToEmailSchedules = { navController.navigate("email_schedules") },
                 onNavigateToReminders = { navController.navigate("reminders") },
+                onNavigateToQuizTemplates = { navController.navigate("quiz_templates") },
                 onDismiss = onDismiss
             )
         }
@@ -69,6 +70,11 @@ fun SettingsNavHost(
         }
         composable("reminders") {
             RemindersScreen(
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable("quiz_templates") {
+            QuizTemplateScreen(
                 onDismiss = { navController.popBackStack() }
             )
         }
