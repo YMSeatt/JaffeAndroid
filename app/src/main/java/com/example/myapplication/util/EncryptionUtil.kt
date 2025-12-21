@@ -88,7 +88,7 @@ class FernetCipher(private val key: ByteArray) {
         mac.init(signingKey)
         val calculatedHmac = mac.doFinal(messageToVerify)
 
-        if (!hmacFromToken.contentEquals(calculatedHmac)) {
+        if (!java.security.MessageDigest.isEqual(hmacFromToken, calculatedHmac)) {
             throw SecurityException("Invalid token signature")
         }
 
