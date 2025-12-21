@@ -9,10 +9,10 @@ import androidx.room.ForeignKey
 @Entity(tableName = "quiz_templates")
 data class QuizTemplate(
     @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    val id: Int = 0,
     val name: String,
-    val numQuestions: Int?,
-    val marksData: String // JSON string for marks data
+    val numQuestions: Int,
+    val defaultMarks: Map<String, Int>
 )
 
 @Entity(

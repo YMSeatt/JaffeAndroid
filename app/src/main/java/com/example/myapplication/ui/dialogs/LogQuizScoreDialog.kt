@@ -78,12 +78,12 @@ fun LogQuizScoreDialog(
 
     LaunchedEffect(selectedTemplate) {
         selectedTemplate?.let { template ->
-            numQuestions = template.numQuestions?.toString() ?: ""
-            if (template.marksData.isNotBlank()) {
+            numQuestions = template.numQuestions.toString()
+            if (template.defaultMarks.isNotEmpty()) {
                 try {
-                    val deserializedMarks = Json.decodeFromString<Map<String, String>>(template.marksData)
+                    val convertedMarks = template.defaultMarks.mapValues { it.value.toString() }
                     marksData.clear()
-                    marksData.putAll(deserializedMarks)
+                    marksData.putAll(convertedMarks)
                 } catch (_: Exception) {
                     // Handle decoding error if necessary
                 }
