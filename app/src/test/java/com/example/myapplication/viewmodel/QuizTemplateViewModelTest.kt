@@ -36,6 +36,7 @@ class QuizTemplateViewModelTest {
     fun `insert should call repository's insert`() = runTest {
         val quizTemplate = QuizTemplate(name = "Test", numQuestions = 10, defaultMarks = emptyMap())
         viewModel.insert(quizTemplate)
+        testDispatcher.scheduler.advanceUntilIdle()
         coVerify { repository.insert(quizTemplate) }
     }
 
@@ -43,6 +44,7 @@ class QuizTemplateViewModelTest {
     fun `update should call repository's update`() = runTest {
         val quizTemplate = QuizTemplate(id = 1, name = "Test", numQuestions = 10, defaultMarks = emptyMap())
         viewModel.update(quizTemplate)
+        testDispatcher.scheduler.advanceUntilIdle()
         coVerify { repository.update(quizTemplate) }
     }
 
@@ -50,6 +52,7 @@ class QuizTemplateViewModelTest {
     fun `delete should call repository's delete`() = runTest {
         val quizTemplate = QuizTemplate(id = 1, name = "Test", numQuestions = 10, defaultMarks = emptyMap())
         viewModel.delete(quizTemplate)
+        testDispatcher.scheduler.advanceUntilIdle()
         coVerify { repository.delete(quizTemplate) }
     }
 }

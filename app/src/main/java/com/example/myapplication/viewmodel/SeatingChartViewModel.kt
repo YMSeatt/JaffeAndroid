@@ -106,7 +106,7 @@ class SeatingChartViewModel @Inject constructor(
     val customHomeworkStatuses: Flow<List<String>> =
         appPreferencesRepository.homeworkStatusesListFlow.map { it.toList() }
 
-    val allQuizTemplates: LiveData<List<QuizTemplate>>
+    val allQuizTemplates: LiveData<List<QuizTemplate>> = quizTemplateDao.getAll().asLiveData()
     val quizMarkTypes: LiveData<List<QuizMarkType>>
     val allCustomBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>>
     val allCustomHomeworkTypes: LiveData<List<com.example.myapplication.data.CustomHomeworkType>>
@@ -141,7 +141,6 @@ class SeatingChartViewModel @Inject constructor(
         allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
         allQuizLogs = quizLogDao.getAllQuizLogs()
         allRules = AppDatabase.getDatabase(application).conditionalFormattingRuleDao().getAllRules()
-        allQuizTemplates = quizTemplateDao.getAllQuizTemplates().asLiveData()
         quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
         allCustomBehaviors = AppDatabase.getDatabase(application).customBehaviorDao().getAllCustomBehaviors()
