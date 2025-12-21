@@ -5,16 +5,15 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 
 class MapTypeConverter {
-    private val gson = Gson()
-    private val mapType = object : TypeToken<Map<String, Int>>() {}.type
-
     @TypeConverter
     fun fromString(value: String): Map<String, Int> {
-        return gson.fromJson(value, mapType)
+        val mapType = object : TypeToken<Map<String, Int>>() {}.type
+        return Gson().fromJson(value, mapType)
     }
 
     @TypeConverter
     fun fromMap(map: Map<String, Int>): String {
+        val gson = Gson()
         return gson.toJson(map)
     }
 }
