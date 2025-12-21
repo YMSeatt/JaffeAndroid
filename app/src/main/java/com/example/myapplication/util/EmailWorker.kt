@@ -99,7 +99,8 @@ class EmailWorker(
                     studentGroups = studentGroups,
                     quizMarkTypes = quizMarkTypes,
                     customHomeworkTypes = customHomeworkTypes,
-                    customHomeworkStatuses = customHomeworkStatuses
+                    customHomeworkStatuses = customHomeworkStatuses,
+                    encrypt = options.encrypt
                 )
 
                 val to = inputData.getString("email_address") ?: from

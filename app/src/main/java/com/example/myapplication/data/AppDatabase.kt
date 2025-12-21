@@ -8,8 +8,8 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class], version = 30, exportSchema = false)
-@TypeConverters(Converters::class, MapTypeConverter::class)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class], version = 30, exportSchema = false)
+@TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun studentDao(): StudentDao
@@ -31,6 +31,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reminderDao(): ReminderDao
     abstract fun emailScheduleDao(): EmailScheduleDao
     abstract fun pendingEmailDao(): PendingEmailDao
+    abstract fun quizDao(): QuizDao
+    abstract fun homeworkDao(): HomeworkDao
 
     companion object {
         const val DATABASE_NAME = "seating_chart_database"
@@ -588,8 +590,33 @@ abstract class AppDatabase : RoomDatabase() {
 
         val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                db.execSQL("ALTER TABLE quiz_templates ADD COLUMN defaultMarks TEXT NOT NULL DEFAULT '{}'")
-                db.execSQL("UPDATE quiz_templates SET defaultMarks = marksData")
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `quizzes` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `student_id` INTEGER NOT NULL,
+                        `template_id` INTEGER,
+                        `score` REAL NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`student_id`) REFERENCES `students`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`template_id`) REFERENCES `quiz_templates`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_quizzes_student_id` ON `quizzes` (`student_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_quizzes_template_id` ON `quizzes` (`template_id`)")
+
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `homework` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `student_id` INTEGER NOT NULL,
+                        `template_id` INTEGER,
+                        `status` TEXT NOT NULL,
+                        `timestamp` INTEGER NOT NULL,
+                        FOREIGN KEY(`student_id`) REFERENCES `students`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE,
+                        FOREIGN KEY(`template_id`) REFERENCES `homework_templates`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                """.trimIndent())
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_homework_student_id` ON `homework` (`student_id`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_homework_template_id` ON `homework` (`template_id`)")
             }
         }
 

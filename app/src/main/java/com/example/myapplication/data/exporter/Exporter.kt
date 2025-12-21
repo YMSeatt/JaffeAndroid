@@ -10,11 +10,13 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentGroup
+import com.example.myapplication.util.EncryptionUtil
 import kotlinx.serialization.json.Json
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -34,7 +36,8 @@ class Exporter(
         studentGroups: List<StudentGroup>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
-        customHomeworkStatuses: List<CustomHomeworkStatus>
+        customHomeworkStatuses: List<CustomHomeworkStatus>,
+        encrypt: Boolean
     ) {
         val workbook = XSSFWorkbook()
 
@@ -104,12 +107,21 @@ class Exporter(
 
 
         // Write to file
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        workbook.write(byteArrayOutputStream)
+        val fileContent = byteArrayOutputStream.toByteArray()
+        workbook.close()
+
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
-                workbook.write(outputStream)
+                if (encrypt) {
+                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
+                } else {
+                    outputStream.write(fileContent)
+                }
             }
         }
-        workbook.close()
     }
 
     private suspend fun createSheet(

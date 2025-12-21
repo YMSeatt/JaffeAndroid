@@ -483,7 +483,8 @@ class SeatingChartViewModel @Inject constructor(
             studentGroups = studentGroups,
             quizMarkTypes = quizMarkTypes,
             customHomeworkTypes = customHomeworkTypes,
-            customHomeworkStatuses = customHomeworkStatuses
+            customHomeworkStatuses = customHomeworkStatuses,
+            encrypt = false
         )
         return@withContext Result.success(Unit)
     }
