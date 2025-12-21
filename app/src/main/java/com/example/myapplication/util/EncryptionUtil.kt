@@ -76,9 +76,13 @@ class FernetCipher(private val key: ByteArray) {
      */
     fun decrypt(token: String, ttl: Int): ByteArray {
         val decodedToken = Base64.getUrlDecoder().decode(token)
-        val minLength = 1 + 8 + IV_SIZE + 1 + HMAC_SIZE // version + ts + iv + min-cipher-block + hmac
-        if (decodedToken.size < minLength) {
+        val overhead = 1 + 8 + IV_SIZE + HMAC_SIZE
+        val minCiphertextLength = 16
+        if (decodedToken.size < overhead + minCiphertextLength) {
             throw SecurityException("Invalid token length")
+        }
+        if ((decodedToken.size - overhead) % 16 != 0) {
+            throw SecurityException("Invalid token: ciphertext length is not a multiple of the block size.")
         }
 
         val hmacFromToken = decodedToken.takeLast(HMAC_SIZE).toByteArray()
