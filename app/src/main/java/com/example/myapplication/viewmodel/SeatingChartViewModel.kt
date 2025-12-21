@@ -67,8 +67,10 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 
 private const val MILLIS_IN_HOUR = 3_600_000L
 
@@ -115,6 +117,8 @@ class SeatingChartViewModel @Inject constructor(
 
     private val commandUndoStack = Stack<Command>()
     private val commandRedoStack = Stack<Command>()
+    private val pendingStudentPositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
+    private val pendingFurniturePositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
 
     // In-memory session data
     private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
@@ -183,7 +187,7 @@ class SeatingChartViewModel @Inject constructor(
         observePreferenceChanges()
 
         furnitureForDisplay.addSource(allFurniture) { furnitureList ->
-            furnitureForDisplay.value = furnitureList.map { it.toUiItem() }
+            updateFurnitureForDisplay(furnitureList)
         }
 
         viewModelScope.launch {
@@ -373,8 +377,19 @@ class SeatingChartViewModel @Inject constructor(
                                 liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
                                 currentMode = currentMode.value ?: "behavior"
                             )
+
+                            // Apply pending position if available
+                            val pendingPos = pendingStudentPositions[student.id.toInt()]
+                            var studentForUi = student
+                            if (pendingPos != null) {
+                                if (abs(student.xPosition - pendingPos.first) < 0.1f && abs(student.yPosition - pendingPos.second) < 0.1f) {
+                                    pendingStudentPositions.remove(student.id.toInt())
+                                } else {
+                                    studentForUi = student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                                }
+                            }
             
-                            student.toStudentUiItem(
+                            studentForUi.toStudentUiItem(
                                 recentBehaviorDescription = behaviorDescription,
                                 recentHomeworkDescription = homeworkDescription,
                                 recentQuizDescription = quizDescription,
@@ -594,6 +609,11 @@ class SeatingChartViewModel @Inject constructor(
                     studentsForDisplay.value ?: emptyList(),
                     canvasHeight
                 )
+
+                // Optimistic update
+                pendingStudentPositions[studentId] = resolvedX to resolvedY
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
+
                 val command = MoveStudentCommand(
                     this@SeatingChartViewModel,
                     studentId,
@@ -795,6 +815,12 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             val furniture = repository.getFurnitureById(furnitureId.toLong())
             furniture?.let {
+                // Optimistic update
+                pendingFurniturePositions[furnitureId] = newX to newY
+                withContext(Dispatchers.Main) {
+                    updateFurnitureForDisplay(allFurniture.value ?: emptyList())
+                }
+
                 val command = MoveFurnitureCommand(
                     this@SeatingChartViewModel,
                     furnitureId,
@@ -806,6 +832,23 @@ class SeatingChartViewModel @Inject constructor(
                 executeCommand(command)
             }
         }
+    }
+
+    private fun updateFurnitureForDisplay(furnitureList: List<Furniture>) {
+        val mappedList = furnitureList.map { furniture ->
+            val pending = pendingFurniturePositions[furniture.id]
+            if (pending != null) {
+                if (abs(furniture.xPosition - pending.first) < 0.1f && abs(furniture.yPosition - pending.second) < 0.1f) {
+                    pendingFurniturePositions.remove(furniture.id)
+                    furniture.toUiItem()
+                } else {
+                    furniture.copy(xPosition = pending.first, yPosition = pending.second).toUiItem()
+                }
+            } else {
+                furniture.toUiItem()
+            }
+        }
+        furnitureForDisplay.postValue(mappedList)
     }
 
     fun internalUpdateFurniturePosition(furnitureId: Long, newX: Float, newY: Float) {
@@ -1055,11 +1098,9 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     private suspend fun executeCommand(command: Command) {
-        viewModelScope.launch {
-            command.execute()
-            commandUndoStack.push(command)
-            commandRedoStack.clear()
-        }.join()
+        command.execute()
+        commandUndoStack.push(command)
+        commandRedoStack.clear()
     }
 
     fun assignTaskToStudent(studentId: Long, task: String) {

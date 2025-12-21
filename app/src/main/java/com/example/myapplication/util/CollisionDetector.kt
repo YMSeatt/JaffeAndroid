@@ -14,28 +14,21 @@ object CollisionDetector {
         students: List<StudentUiItem>,
         canvasHeight: Int
     ): Pair<Float, Float> {
-        if (students.isEmpty()) {
+        if (students.isEmpty() || (students.size == 1 && students[0].id.toLong() == movedStudent.id)) {
             return Pair(0f, 0f)
         }
 
         val columns = mutableListOf<MutableList<StudentUiItem>>()
         val columnWidths = mutableListOf<Int>()
 
-        // Initialize with a single column
-        columns.add(mutableListOf())
-        columnWidths.add(0)
-
         for (student in students) {
             if (student.id.toLong() == movedStudent.id) continue
-            // A simple heuristic to assign students to columns, can be improved
             var placed = false
             for (i in 0 until columns.size) {
-                if (student.xPosition.value < (columnWidths.slice(0 until i)
-                        .sum() + columnWidths[i] + PADDING * i)
-                ) {
+                val columnRightEdge = columnWidths.slice(0..i).sum() + PADDING * i
+                if (student.xPosition.value < columnRightEdge) {
                     columns[i].add(student)
-                    columnWidths[i] =
-                        max(columnWidths[i], student.displayWidth.value.value.toInt())
+                    columnWidths[i] = max(columnWidths[i], student.displayWidth.value.value.toInt())
                     placed = true
                     break
                 }
@@ -45,6 +38,8 @@ object CollisionDetector {
                 columnWidths.add(student.displayWidth.value.value.toInt())
             }
         }
+
+        if (columns.isEmpty()) return Pair(0f, 0f)
 
         for (i in 0 until columns.size) {
             val column = columns[i]

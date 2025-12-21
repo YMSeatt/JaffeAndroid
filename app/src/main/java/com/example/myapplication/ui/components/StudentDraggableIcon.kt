@@ -49,6 +49,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -146,7 +147,7 @@ fun StudentDraggableIcon(
                                 change.consume()
                                 offsetX += dragAmount.x / canvasScale
                                 offsetY += dragAmount.y / canvasScale
-                                
+
                                 // Update MutableState for instant UI feedback to observers
                                 studentUiItem.xPosition.value = offsetX
                                 studentUiItem.yPosition.value = offsetY
@@ -300,7 +301,7 @@ fun StudentDraggableIcon(
                                             fontFamily = getFontFamily(studentUiItem.fontFamily.value),
                                             fontSize = studentUiItem.fontSize.value.sp,
                                             textAlign = TextAlign.Center,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                            fontWeight = FontWeight.Bold
                                         )
                                     )
                                 }
@@ -327,7 +328,7 @@ fun StudentDraggableIcon(
                                             fontFamily = getFontFamily(studentUiItem.fontFamily.value),
                                             fontSize = studentUiItem.fontSize.value.sp,
                                             textAlign = TextAlign.Center,
-                                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                            fontWeight = FontWeight.Bold
                                         )
                                     )
                                 }
