@@ -14,6 +14,8 @@ import com.example.myapplication.data.DefaultStudentStyle
 import com.example.myapplication.data.EmailSchedule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -111,28 +113,17 @@ class AppPreferencesRepository(private val context: Context) {
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.EMAIL_SCHEDULES] ?: emptySet()).mapNotNull {
-                val parts = it.split(";")
-                if (parts.size != 2) return@mapNotNull null
-                val timeParts = parts[0].split(":")
-                if (timeParts.size != 2) return@mapNotNull null
-                val hour = timeParts[0].toIntOrNull() ?: return@mapNotNull null
-                val minute = timeParts[1].toIntOrNull() ?: return@mapNotNull null
-                val days = parts[1].split(",").toSet()
-                EmailSchedule(
-                    hour = hour, minute = minute, days = days,
-                    id = TODO(),
-                    daysOfWeek = TODO(),
-                    recipientEmail = TODO(),
-                    subject = TODO(),
-                    body = TODO(),
-                    enabled = TODO()
-                )
+                try {
+                    kotlinx.serialization.json.Json.decodeFromString<EmailSchedule>(it)
+                } catch (e: Exception) {
+                    null
+                }
             }
         }
 
     suspend fun updateEmailSchedules(schedules: List<EmailSchedule>) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map { "${it.hour}:${it.minute};${it.days.joinToString(",")}" }.toSet()
+            settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map { kotlinx.serialization.json.Json.encodeToString(it) }.toSet()
         }
     }
 
