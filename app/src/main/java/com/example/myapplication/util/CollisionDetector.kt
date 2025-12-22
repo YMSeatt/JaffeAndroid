@@ -7,63 +7,71 @@ import kotlin.math.max
 object CollisionDetector {
 
     private const val PADDING = 10
+    private const val DEFAULT_WIDTH = 150
     private const val DEFAULT_HEIGHT = 100
 
     fun resolveCollisions(
         movedStudent: Student,
         students: List<StudentUiItem>,
+        canvasWidth: Int,
         canvasHeight: Int
     ): Pair<Float, Float> {
-        if (students.isEmpty() || (students.size == 1 && students[0].id.toLong() == movedStudent.id)) {
-            return Pair(movedStudent.xPosition, movedStudent.yPosition)
-        }
+        if (canvasWidth == 0) return Pair(0f, 0f)
 
-        val columns = mutableListOf<MutableList<StudentUiItem>>()
-        val columnWidths = mutableListOf<Int>()
+        val iconWidth = movedStudent.customWidth ?: DEFAULT_WIDTH
+        val iconHeight = movedStudent.customHeight ?: DEFAULT_HEIGHT
+
+        val numColumns = max(1, canvasWidth / (iconWidth + PADDING))
+        val columnWidth = canvasWidth / numColumns
+
+        val grid = mutableMapOf<Int, MutableList<StudentUiItem>>()
 
         for (student in students) {
             if (student.id.toLong() == movedStudent.id) continue
-            var placed = false
-            for (i in 0 until columns.size) {
-                val columnRightEdge = columnWidths.slice(0..i).sum() + PADDING * i
-                if (student.xPosition.value < columnRightEdge) {
-                    columns[i].add(student)
-                    columnWidths[i] = max(columnWidths[i], student.displayWidth.value.value.toInt())
-                    placed = true
+            val studentX = max(0f, student.xPosition.value)
+            val col = (studentX / columnWidth).toInt().coerceIn(0, numColumns - 1)
+            grid.getOrPut(col) { mutableListOf() }.add(student)
+        }
+
+        val potentialSpots = mutableListOf<Pair<Float, Float>>()
+
+        // Find the first available spot in each column
+        for (col in 0 until numColumns) {
+            val x = col * columnWidth + (columnWidth - iconWidth) / 2f
+            val columnStudents = grid[col]?.sortedBy { it.yPosition.value } ?: emptyList()
+
+            var currentY = 0f
+            var spotFoundInCol = false
+
+            if (columnStudents.isEmpty()) {
+                potentialSpots.add(Pair(x, currentY))
+                continue
+            }
+
+            for (student in columnStudents) {
+                if (currentY + iconHeight + PADDING < student.yPosition.value) {
+                    potentialSpots.add(Pair(x, currentY))
+                    spotFoundInCol = true
                     break
                 }
+                currentY = student.yPosition.value + student.displayHeight.value.value + PADDING
             }
-            if (!placed) {
-                columns.add(mutableListOf(student))
-                columnWidths.add(student.displayWidth.value.value.toInt())
+
+            if (!spotFoundInCol) {
+                potentialSpots.add(Pair(x, currentY))
             }
         }
 
-        if (columns.isEmpty()) return Pair(0f, 0f)
-
-        for (i in 0 until columns.size) {
-            val column = columns[i]
-            column.sortBy { it.yPosition.value }
-            var currentY: Float = 0.0f
-            for (student in column) {
-                if (currentY + (movedStudent.customHeight
-                        ?: DEFAULT_HEIGHT) < student.yPosition.value
-                ) {
-                    val x = (columnWidths.slice(0 until i).sum() + PADDING * i).toFloat()
-                    return Pair(x, currentY)
-                }
-                currentY =
-                    (student.yPosition.value + student.displayHeight.value.value + PADDING).toFloat()
-            }
-            if (canvasHeight == 0 || currentY + (movedStudent.customHeight
-                    ?: DEFAULT_HEIGHT) < canvasHeight
-            ) {
-                val x = (columnWidths.slice(0 until i).sum() + PADDING * i).toFloat()
-                return Pair(x, currentY)
-            }
+        // Filter out spots that are off-canvas, if canvasHeight is specified
+        val validSpots = if (canvasHeight <= 0) {
+            potentialSpots
+        } else {
+            potentialSpots.filter { it.second + iconHeight <= canvasHeight }
         }
-        // Add a new column
-        val x = (columnWidths.sum() + PADDING * columns.size).toFloat()
-        return Pair(x, 0f)
+
+        val spotsToSearch = if (validSpots.isNotEmpty()) validSpots else potentialSpots
+
+        // Find the best spot: Min Y, then Min X
+        return spotsToSearch.minWithOrNull(compareBy({ it.second }, { it.first })) ?: Pair(0f, 0f)
     }
 }

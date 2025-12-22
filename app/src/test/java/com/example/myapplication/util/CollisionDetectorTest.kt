@@ -14,7 +14,7 @@ class CollisionDetectorTest {
         id: Int,
         x: Float,
         y: Float,
-        width: Float = 100f,
+        width: Float = 150f,
         height: Float = 100f
     ): StudentUiItem {
         return StudentUiItem(
@@ -44,74 +44,85 @@ class CollisionDetectorTest {
         )
     }
 
-    private fun createStudent(id: Long): Student {
+    private fun createStudent(id: Long, width: Int? = null, height: Int? = null): Student {
         return Student(
             id = id,
             firstName = "Student",
             lastName = "$id",
-            stringId = "$id"
+            stringId = "$id",
+            customWidth = width,
+            customHeight = height
         )
     }
 
     @Test
-    fun `resolveCollisions returns (0,0) for empty list`() {
+    fun `resolveCollisions returns (0,0) for zero canvas width`() {
         val movedStudent = createStudent(1)
         val students = emptyList<StudentUiItem>()
-        val result = CollisionDetector.resolveCollisions(movedStudent, students, 1000)
-        assertEquals(0f, result.first, 0.01f)
-        assertEquals(0f, result.second, 0.01f)
+        val (x, y) = CollisionDetector.resolveCollisions(movedStudent, students, 0, 1000)
+        assertEquals(0f, x, 0.01f)
+        assertEquals(0f, y, 0.01f)
     }
 
     @Test
-    fun `resolveCollisions places second student below first if fits`() {
-        val s1 = createStudentUiItem(1, 0f, 0f, 100f, 100f)
-        val movedStudent = createStudent(2)
+    fun `places first student in top-left of grid`() {
+        val movedStudent = createStudent(1, width = 150, height = 100)
+        val students = emptyList<StudentUiItem>()
+        // Canvas = 800 wide. Icon = 150 + 10 padding = 160. 800 / 160 = 5 columns.
+        // Column width = 800 / 5 = 160.
+        // X pos = col * colWidth + (colWidth - iconWidth) / 2
+        // X pos = 0 * 160 + (160 - 150) / 2 = 5f
+        val (x, y) = CollisionDetector.resolveCollisions(movedStudent, students, 800, 1000)
+        assertEquals(5f, x, 0.01f)
+        assertEquals(0f, y, 0.01f)
+    }
+
+    @Test
+    fun `places second student in next available spot (top-down, left-to-right)`() {
+        val movedStudent = createStudent(2, width = 150, height = 100)
+        // Student 1 is at (5, 0)
+        val s1 = createStudentUiItem(1, 5f, 0f, width = 150f, height = 100f)
         val students = listOf(s1)
-        
-        // s1 is in column 0. columnWidths[0] = 100.
-        // resolveCollisions loop for i=0:
-        // currentY starts at 0.
-        // s1.y is 0. 0 + 100 < 0 is false.
-        // currentY becomes 0 + 100 + 10 = 110.
-        // canvasHeight is 1000. 110 + 100 < 1000 is true.
-        // returns (0, 110).
-        
-        val result = CollisionDetector.resolveCollisions(movedStudent, students, 1000)
-        assertEquals(0f, result.first, 0.01f)
-        assertEquals(110f, result.second, 0.01f)
+        // Canvas = 800 wide. 5 columns.
+        // Algorithm should find the next open spot at the top of the canvas, which is column 1, y=0
+        val (x, y) = CollisionDetector.resolveCollisions(movedStudent, students, 800, 1000)
+        assertEquals(165f, x, 0.01f) // Column 1
+        assertEquals(0f, y, 0.01f)
     }
 
     @Test
-    fun `resolveCollisions places student in new column if height exceeded`() {
-        val s1 = createStudentUiItem(1, 0f, 0f, 100f, 100f)
-        // Canvas height 150. s1 takes 100. Next needs 100. 110 + 100 = 210 > 150.
-        // Should move to next column.
-        
-        val movedStudent = createStudent(2)
-        val students = listOf(s1)
-        
-        val result = CollisionDetector.resolveCollisions(movedStudent, students, 150)
-        
-        // Column 0 width = 100. Padding = 10.
-        // Next X should be 100 + 10 = 110.
-        assertEquals(110f, result.first, 0.01f)
-        assertEquals(0f, result.second, 0.01f)
+    fun `places student in new column if first is full`() {
+        val movedStudent = createStudent(6, width = 150, height = 100)
+        val students = listOf(
+            createStudentUiItem(1, 5f, 0f),
+            createStudentUiItem(2, 165f, 0f),
+            createStudentUiItem(3, 325f, 0f),
+            createStudentUiItem(4, 485f, 0f),
+            createStudentUiItem(5, 645f, 0f)
+        )
+        // All top row spots are filled. Should go to the next available spot, which is Col 0, Row 1
+        // Y pos = 0 (y of s1) + 100 (height of s1) + 10 (padding) = 110
+        val (x, y) = CollisionDetector.resolveCollisions(movedStudent, students, 800, 1000)
+        assertEquals(5f, x, 0.01f) // Column 0
+        assertEquals(110f, y, 0.01f)
     }
 
-    @Test
-    fun `resolveCollisions finds gap between students`() {
-        val s1 = createStudentUiItem(1, 0f, 0f, 100f, 100f)
-        val s2 = createStudentUiItem(2, 0f, 300f, 100f, 100f)
-        val movedStudent = createStudent(3)
-        val students = listOf(s1, s2)
-        
-        // Column 0 has s1 at 0 and s2 at 300.
-        // i=0, student=s1: currentY=0. 0+100 < 0 false. currentY = 0+100+10 = 110.
-        // i=0, student=s2: currentY=110. 110+100 < 300? Yes (210 < 300).
-        // Returns (0, 110).
-        
-        val result = CollisionDetector.resolveCollisions(movedStudent, students, 1000)
-        assertEquals(0f, result.first, 0.01f)
-        assertEquals(110f, result.second, 0.01f)
+     @Test
+    fun `finds empty spot in grid`() {
+        val movedStudent = createStudent(4, width = 150, height = 100)
+        // Grid with a hole in the second column
+        // Col 0
+        val s1 = createStudentUiItem(1, 5f, 0f)
+        val s2 = createStudentUiItem(2, 5f, 110f)
+        // Col 1 - s3 is missing at y=0
+        // Col 2
+        val s3 = createStudentUiItem(3, 325f, 0f)
+        val students = listOf(s1, s2, s3)
+
+        // It should find the empty spot in column 1 at y=0
+        // Col 1 X pos = 165
+        val (x, y) = CollisionDetector.resolveCollisions(movedStudent, students, 800, 1000)
+        assertEquals(165f, x, 0.01f)
+        assertEquals(0f, y, 0.01f)
     }
 }
