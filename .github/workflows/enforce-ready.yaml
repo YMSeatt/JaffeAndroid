@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: 'Promote PR to Ready'
         env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          GITHUB_TOKEN: '${{ secrets.GH_PRT }}'
           PR_URL: '${{ github.event.pull_request.html_url }}'
         run: |
           echo "Draft detected. Promoting PR to ready for review..."
