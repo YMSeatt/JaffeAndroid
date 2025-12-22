@@ -130,6 +130,7 @@ class SeatingChartViewModel @Inject constructor(
 
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
     var canvasHeight by mutableStateOf(0)
+    var canvasWidth by mutableStateOf(0)
 
 
     fun clearSelection() {
@@ -536,6 +537,7 @@ class SeatingChartViewModel @Inject constructor(
             val (resolvedX, resolvedY) = CollisionDetector.resolveCollisions(
                 student,
                 studentsForDisplay.value ?: emptyList(),
+                canvasWidth,
                 canvasHeight
             )
             val positionedStudent = student.copy(
