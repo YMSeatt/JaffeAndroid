@@ -2,6 +2,20 @@ package com.example.myapplication.di
 
 import android.content.Context
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.BehaviorEventDao
+import com.example.myapplication.data.CustomBehaviorDao
+import com.example.myapplication.data.CustomHomeworkTypeDao
+import com.example.myapplication.data.HomeworkLogDao
+import com.example.myapplication.data.QuizLogDao
+import com.example.myapplication.data.EmailScheduleDao
+import com.example.myapplication.data.FurnitureDao
+import com.example.myapplication.data.GuideDao
+import com.example.myapplication.data.HomeworkTemplateDao
+import com.example.myapplication.data.LayoutTemplateDao
+import com.example.myapplication.data.QuizMarkTypeDao
+import com.example.myapplication.data.QuizTemplateDao
+import com.example.myapplication.data.StudentDao
+import com.example.myapplication.data.StudentGroupDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -15,53 +29,77 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context) = AppDatabase.getDatabase(context)
+    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        return AppDatabase.getDatabase(context)
+    }
 
     @Provides
-    fun provideStudentDao(appDatabase: AppDatabase) = appDatabase.studentDao()
+    fun provideStudentDao(appDatabase: AppDatabase): StudentDao {
+        return appDatabase.studentDao()
+    }
 
     @Provides
-    fun provideFurnitureDao(appDatabase: AppDatabase) = appDatabase.furnitureDao()
+    fun provideBehaviorEventDao(appDatabase: AppDatabase): BehaviorEventDao {
+        return appDatabase.behaviorEventDao()
+    }
 
     @Provides
-    fun provideLayoutTemplateDao(appDatabase: AppDatabase) = appDatabase.layoutTemplateDao()
+    fun provideHomeworkLogDao(appDatabase: AppDatabase): HomeworkLogDao {
+        return appDatabase.homeworkLogDao()
+    }
 
     @Provides
-    fun provideBehaviorEventDao(appDatabase: AppDatabase) = appDatabase.behaviorEventDao()
+    fun provideQuizLogDao(appDatabase: AppDatabase): QuizLogDao {
+        return appDatabase.quizLogDao()
+    }
 
     @Provides
-    fun provideQuizLogDao(appDatabase: AppDatabase) = appDatabase.quizLogDao()
+    fun provideQuizMarkTypeDao(appDatabase: AppDatabase): QuizMarkTypeDao {
+        return appDatabase.quizMarkTypeDao()
+    }
 
     @Provides
-    fun provideHomeworkLogDao(appDatabase: AppDatabase) = appDatabase.homeworkLogDao()
+    fun provideCustomBehaviorDao(appDatabase: AppDatabase): CustomBehaviorDao {
+        return appDatabase.customBehaviorDao()
+    }
 
     @Provides
-    fun provideStudentGroupDao(appDatabase: AppDatabase) = appDatabase.studentGroupDao()
+    fun provideCustomHomeworkTypeDao(appDatabase: AppDatabase): CustomHomeworkTypeDao {
+        return appDatabase.customHomeworkTypeDao()
+    }
 
     @Provides
-    fun provideConditionalFormattingRuleDao(appDatabase: AppDatabase) = appDatabase.conditionalFormattingRuleDao()
+    fun provideStudentGroupDao(appDatabase: AppDatabase): StudentGroupDao {
+        return appDatabase.studentGroupDao()
+    }
 
     @Provides
-    fun provideHomeworkTemplateDao(appDatabase: AppDatabase) = appDatabase.homeworkTemplateDao()
+    fun provideFurnitureDao(appDatabase: AppDatabase): FurnitureDao {
+        return appDatabase.furnitureDao()
+    }
 
     @Provides
-    fun provideQuizTemplateDao(appDatabase: AppDatabase) = appDatabase.quizTemplateDao()
+    fun provideLayoutTemplateDao(appDatabase: AppDatabase): LayoutTemplateDao {
+        return appDatabase.layoutTemplateDao()
+    }
 
     @Provides
-    fun provideQuizMarkTypeDao(appDatabase: AppDatabase) = appDatabase.quizMarkTypeDao()
+    fun provideEmailScheduleDao(appDatabase: AppDatabase): EmailScheduleDao {
+        return appDatabase.emailScheduleDao()
+    }
 
     @Provides
-    fun provideGuideDao(appDatabase: AppDatabase) = appDatabase.guideDao()
+    fun provideGuideDao(appDatabase: AppDatabase): GuideDao {
+        return appDatabase.guideDao()
+    }
 
     @Provides
-    fun provideCustomBehaviorDao(appDatabase: AppDatabase) = appDatabase.customBehaviorDao()
+    fun provideQuizTemplateDao(appDatabase: AppDatabase): QuizTemplateDao {
+        return appDatabase.quizTemplateDao()
+    }
 
     @Provides
-    fun provideCustomHomeworkTypeDao(appDatabase: AppDatabase) = appDatabase.customHomeworkTypeDao()
-
-    @Provides
-    fun provideCustomHomeworkStatusDao(appDatabase: AppDatabase) = appDatabase.customHomeworkStatusDao()
-
-    @Provides
-    fun provideEmailScheduleDao(appDatabase: AppDatabase) = appDatabase.emailScheduleDao()
+    fun provideHomeworkTemplateDao(appDatabase: AppDatabase): HomeworkTemplateDao {
+        return appDatabase.homeworkTemplateDao()
+    }
 }

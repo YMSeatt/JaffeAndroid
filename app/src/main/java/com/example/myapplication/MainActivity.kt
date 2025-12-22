@@ -155,43 +155,9 @@ class MainActivity : ComponentActivity() {
     var showEmailDialog by mutableStateOf(false)
     var emailUri by mutableStateOf<Uri?>(null)
 
-    private val studentGroupsViewModelFactory by lazy {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(StudentGroupsViewModel::class.java)) {
-                    val studentGroupDao = AppDatabase.getDatabase(applicationContext).studentGroupDao()
-                    @Suppress("UNCHECKED_CAST")
-                    return StudentGroupsViewModel(studentGroupDao) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
-    }
+    val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
 
-    val studentGroupsViewModel: StudentGroupsViewModel by viewModels { studentGroupsViewModelFactory }
-
-    private val statsViewModelFactory by lazy {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
-                    val db = AppDatabase.getDatabase(applicationContext)
-                    @Suppress("UNCHECKED_CAST")
-                    return StatsViewModel(
-                        studentDao = db.studentDao(),
-                        behaviorEventDao = db.behaviorEventDao(),
-                        homeworkLogDao = db.homeworkLogDao(),
-                        quizLogDao = db.quizLogDao(),
-                        quizMarkTypeDao = db.quizMarkTypeDao(),
-                        customBehaviorDao = db.customBehaviorDao(),
-                        customHomeworkTypeDao = db.customHomeworkTypeDao()
-                    ) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
-    }
-
-    val statsViewModel: StatsViewModel by viewModels { statsViewModelFactory }
+    val statsViewModel: StatsViewModel by viewModels()
 
     val importJsonLauncher = registerForActivityResult(
         ActivityResultContracts.GetContent()
