@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Dump Actor Info
+        run: echo "The actor is ${{ github.actor }}"
 
       # --- STEP 1: Wait 5 minutes then trigger review ---
       - name: Wait for 5 Minutes
