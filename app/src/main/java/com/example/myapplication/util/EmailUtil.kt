@@ -1,7 +1,6 @@
 package com.example.myapplication.util
 
 import android.content.Context
-import android.util.Log
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.NetworkType
@@ -10,6 +9,7 @@ import androidx.work.WorkManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Properties
+import java.util.regex.Pattern
 import javax.activation.DataHandler
 import javax.activation.FileDataSource
 import javax.mail.Authenticator
@@ -26,8 +26,11 @@ import javax.mail.internet.MimeMultipart
 
 class EmailUtil(private val context: Context) {
 
-    private val TAG = "EmailUtil"
     private val workManager = WorkManager.getInstance(context)
+
+    private fun isValidEmail(email: String): Boolean {
+        return EMAIL_ADDRESS_PATTERN.matcher(email).matches()
+    }
 
     suspend fun sendEmailWithRetry(
         from: String,
@@ -68,10 +71,10 @@ class EmailUtil(private val context: Context) {
         body: String,
         attachmentPath: String? = null
     ) {
-        if (!EmailValidator.isValidEmail(from)) {
+        if (!isValidEmail(from)) {
             throw EmailException("Invalid 'from' email address: $from")
         }
-        if (!EmailValidator.isValidEmail(to)) {
+        if (!isValidEmail(to)) {
             throw EmailException("Invalid 'to' email address: $to")
         }
 
@@ -123,5 +126,17 @@ class EmailUtil(private val context: Context) {
                 throw EmailException("An unexpected error occurred.", e)
             }
         }
+    }
+
+    companion object {
+        private val EMAIL_ADDRESS_PATTERN = Pattern.compile(
+            "[a-zA-Z0-9\\+\\.\\_\\%\\-\\+]{1,256}" +
+                    "\\@" +
+                    "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,64}" +
+                    "(" +
+                    "\\." +
+                    "[a-zA-Z0-9][a-zA-Z0-9\\-]{0,25}" +
+                    ")+"
+        )
     }
 }
