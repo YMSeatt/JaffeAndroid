@@ -4,12 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class StudentGroupsViewModel(private val studentGroupDao: StudentGroupDao) : ViewModel() {
+@HiltViewModel
+class StudentGroupsViewModel @Inject constructor(private val studentGroupDao: StudentGroupDao) : ViewModel() {
 
     val allStudentGroups: StateFlow<List<StudentGroup>> = studentGroupDao.getAllStudentGroups()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())

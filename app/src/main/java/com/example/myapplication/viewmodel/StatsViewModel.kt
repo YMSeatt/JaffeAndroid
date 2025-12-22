@@ -3,16 +3,19 @@ package com.example.myapplication.viewmodel
 import androidx.lifecycle.*
 import com.example.myapplication.data.*
 import com.example.myapplication.data.exporter.ExportOptions
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
 
 // Define data classes to hold the summary information
 data class BehaviorSummary(val studentName: String, val behavior: String, val count: Int)
 data class QuizSummary(val studentName: String, val quizName: String, val averageScore: Double, val timesTaken: Int)
 data class HomeworkSummary(val studentName: String, val assignmentName: String, val count: Int, val totalPoints: Double)
 
-class StatsViewModel(
+@HiltViewModel
+class StatsViewModel @Inject constructor(
     private val studentDao: StudentDao,
     private val behaviorEventDao: BehaviorEventDao,
     private val homeworkLogDao: HomeworkLogDao,
@@ -170,23 +173,5 @@ class StatsViewModel(
             }
         }
         _homeworkSummary.postValue(summaryList)
-    }
-}
-
-class StatsViewModelFactory(
-    private val studentDao: StudentDao,
-    private val behaviorEventDao: BehaviorEventDao,
-    private val homeworkLogDao: HomeworkLogDao,
-    private val quizLogDao: QuizLogDao,
-    private val quizMarkTypeDao: QuizMarkTypeDao,
-    private val customBehaviorDao: CustomBehaviorDao,
-    private val customHomeworkTypeDao: CustomHomeworkTypeDao
-) : ViewModelProvider.Factory {
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(StatsViewModel::class.java)) {
-            @Suppress("UNCHECKED_CAST")
-            return StatsViewModel(studentDao, behaviorEventDao, homeworkLogDao, quizLogDao, quizMarkTypeDao, customBehaviorDao, customHomeworkTypeDao) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
