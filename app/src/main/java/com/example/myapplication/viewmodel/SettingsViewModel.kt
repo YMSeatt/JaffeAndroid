@@ -123,14 +123,14 @@ class SettingsViewModel(
         val customHomeworkTypesFile = directory?.findFile("custom_homework_types_v10.json")
         val homeworkTemplatesFile = directory?.findFile("homework_templates_v10.json")
 
-        if (classroomDataFile != null && studentGroupsFile != null && customBehaviorsFile != null && customHomeworkStatusesFile != null && customHomeworkTypesFile != null) {
+        if (classroomDataFile != null && studentGroupsFile != null && customBehaviorsFile != null && customHomeworkStatusesFile != null && customHomeworkTypesFile != null && homeworkTemplatesFile != null) {
             jsonImporter.importData(
                 classroomDataUri = classroomDataFile.uri,
                 studentGroupsUri = studentGroupsFile.uri,
                 customBehaviorsUri = customBehaviorsFile.uri,
                 customHomeworkStatusesUri = customHomeworkStatusesFile.uri,
                 customHomeworkTypesUri = customHomeworkTypesFile.uri,
-                homeworkTemplatesUri = homeworkTemplatesFile?.uri
+                homeworkTemplatesUri = homeworkTemplatesFile.uri
             )
         }
     }

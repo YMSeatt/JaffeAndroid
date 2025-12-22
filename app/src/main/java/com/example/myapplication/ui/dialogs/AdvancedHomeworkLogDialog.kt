@@ -72,9 +72,9 @@ fun AdvancedHomeworkLogDialog(
     var comment by remember { mutableStateOf("") }
     val homeworkTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
-    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(emptyList()) // kept for name suggestion if needed?
+    val homeworkTypes by settingsViewModel.customHomeworkTypes.observeAsState(initial = emptyList()) // kept for name suggestion if needed?
     var selectedHomeworkType by remember { mutableStateOf("") }
-    val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(emptyList())
+    val homeworkStatuses by settingsViewModel.customHomeworkStatuses.observeAsState(initial = emptyList())
     val statusNames = remember(homeworkStatuses) { homeworkStatuses.map { it.name } } // Extract names
     var selectedHomeworkStatus by remember { mutableStateOf("") }
 
@@ -191,7 +191,7 @@ fun AdvancedHomeworkLogDialog(
                                 )
                             }
                             // Custom statuses
-                            statusNames.forEach { status ->
+                            statusNames.forEach { status: String ->
                                 DropdownMenuItem(
                                     text = { Text(status) },
                                     onClick = {

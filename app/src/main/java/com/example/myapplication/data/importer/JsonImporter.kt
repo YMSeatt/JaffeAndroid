@@ -14,14 +14,14 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkLogDao
+import com.example.myapplication.data.HomeworkMarkStep
+import com.example.myapplication.data.HomeworkMarkType
+import com.example.myapplication.data.HomeworkTemplate
+import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
-import com.example.myapplication.data.HomeworkTemplate
-import com.example.myapplication.data.HomeworkTemplateDao
-import com.example.myapplication.data.HomeworkMarkStep
-import com.example.myapplication.data.HomeworkMarkType
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
@@ -38,7 +38,7 @@ class JsonImporter(
     private val studentGroupDao: StudentGroupDao,
     private val customBehaviorDao: CustomBehaviorDao,
     private val customHomeworkStatusDao: CustomHomeworkStatusDao,
-
+    private val customHomeworkTypeDao: CustomHomeworkTypeDao,
     private val homeworkTemplateDao: HomeworkTemplateDao
 ) {
 
@@ -52,7 +52,6 @@ class JsonImporter(
         studentGroupsUri: Uri,
         customBehaviorsUri: Uri,
         customHomeworkStatusesUri: Uri,
-
         customHomeworkTypesUri: Uri,
         homeworkTemplatesUri: Uri? = null
     ) {
@@ -60,11 +59,40 @@ class JsonImporter(
         importClassroomData(classroomDataUri)
         importCustomBehaviors(customBehaviorsUri)
         importCustomHomeworkStatuses(customHomeworkStatusesUri)
-
         importCustomHomeworkTypes(customHomeworkTypesUri)
         if (homeworkTemplatesUri != null) {
             importHomeworkTemplates(homeworkTemplatesUri)
         }
+    }
+
+    private suspend fun importHomeworkTemplates(uri: Uri) {
+        val content = readFileContent(uri)
+        val pythonData = json.decodeFromString<List<PythonHomeworkTemplate>>(content)
+        pythonData.forEach { pythonTemplate ->
+            val steps = pythonTemplate.steps.map { pythonStep ->
+                HomeworkMarkStep(
+                    label = pythonStep.label,
+                    type = when (pythonStep.type.lowercase()) {
+                        "checkbutton", "checkbox" -> HomeworkMarkType.CHECKBOX
+                        "scale", "slider", "score" -> HomeworkMarkType.SCORE
+                        "entry", "text", "comment" -> HomeworkMarkType.COMMENT
+                        else -> HomeworkMarkType.COMMENT // Fallback
+                    },
+                    maxValue = pythonStep.maxValue
+                )
+            }
+            val homeworkTemplate = HomeworkTemplate(
+                name = pythonTemplate.name,
+                marksData = json.encodeToString(steps)
+            )
+            homeworkTemplateDao.insert(homeworkTemplate)
+        }
+    }
+
+    private fun readFileContent(uri: Uri): String {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val reader = BufferedReader(InputStreamReader(inputStream))
+        return reader.readText()
     }
 
     private suspend fun importClassroomData(uri: Uri) {
@@ -114,7 +142,8 @@ class JsonImporter(
                 val behaviorEvent = BehaviorEvent(
                     studentId = student.id,
                     type = pythonBehaviorLog.behavior,
-                    timestamp = LocalDateTime.parse(pythonBehaviorLog.timestamp).toEpochSecond(ZoneOffset.UTC),
+                    timestamp = LocalDateTime.parse(pythonBehaviorLog.timestamp)
+                        .toEpochSecond(ZoneOffset.UTC),
                     comment = pythonBehaviorLog.comment
                 )
                 behaviorEventDao.insert(behaviorEvent)
@@ -129,7 +158,8 @@ class JsonImporter(
                     studentId = student.id,
                     assignmentName = pythonHomeworkLog.homeworkType,
                     status = pythonHomeworkLog.behavior,
-                    loggedAt = LocalDateTime.parse(pythonHomeworkLog.timestamp).toEpochSecond(ZoneOffset.UTC),
+                    loggedAt = LocalDateTime.parse(pythonHomeworkLog.timestamp)
+                        .toEpochSecond(ZoneOffset.UTC),
                     comment = pythonHomeworkLog.comment,
                     marksData = pythonHomeworkLog.homeworkDetails?.let { json.encodeToString(it) }
                 )
@@ -182,34 +212,5 @@ class JsonImporter(
             customHomeworkTypeDao.insert(customHomeworkType)
         }
 
-
-    private suspend fun importHomeworkTemplates(uri: Uri) {
-        val content = readFileContent(uri)
-        val pythonData = json.decodeFromString<List<PythonHomeworkTemplate>>(content)
-        pythonData.forEach { pythonTemplate ->
-            val steps = pythonTemplate.steps.map { pythonStep ->
-                HomeworkMarkStep(
-                    label = pythonStep.label,
-                    type = when (pythonStep.type.lowercase()) {
-                        "checkbutton", "checkbox" -> HomeworkMarkType.CHECKBOX
-                        "scale", "slider", "score" -> HomeworkMarkType.SCORE
-                        "entry", "text", "comment" -> HomeworkMarkType.COMMENT
-                        else -> HomeworkMarkType.COMMENT // Fallback
-                    },
-                    maxValue = pythonStep.maxValue
-                )
-            }
-            val homeworkTemplate = HomeworkTemplate(
-                name = pythonTemplate.name,
-                marksData = json.encodeToString(steps)
-            )
-            homeworkTemplateDao.insert(homeworkTemplate)
-        }
-    }
-
-    private fun readFileContent(uri: Uri): String {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val reader = BufferedReader(InputStreamReader(inputStream))
-        return reader.readText()
     }
 }

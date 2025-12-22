@@ -48,7 +48,8 @@ class SettingsActivity : ComponentActivity() {
             studentGroupDao = db.studentGroupDao(),
             customBehaviorDao = db.customBehaviorDao(),
             customHomeworkStatusDao = db.customHomeworkStatusDao(),
-            customHomeworkTypeDao = db.customHomeworkTypeDao()
+            customHomeworkTypeDao = db.customHomeworkTypeDao(),
+            homeworkTemplateDao = TODO()
         )
     }
 
