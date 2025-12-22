@@ -513,7 +513,7 @@ fun SeatingChartScreen(
                                 }
                                 showFileMenu = false
                             })
-                            DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath != null, onClick = {
+                            DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
                                 lastExportPath?.let { path ->
                                     val uri = path.toUri()
                                     val intent = Intent(Intent.ACTION_VIEW)
