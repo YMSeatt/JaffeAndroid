@@ -1,4 +1,4 @@
-name: Jules Delayed Merge
+name: Jules Delayed Review & Merge
 
 on:
   pull_request:
@@ -10,28 +10,50 @@ permissions:
   issues: write
 
 jobs:
-  wait-and-merge:
+  automation:
     runs-on: ubuntu-latest
     if: github.actor == 'google-labs-jules'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Wait for 1 Hour
-        run: sleep 3600
+      # --- STEP 1: Wait 5 minutes then trigger review ---
+      - name: Wait for 5 Minutes
+        run: sleep 300
         shell: bash
 
-      - name: Merge Pull Request
+      - name: Mark Ready and Trigger Review
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
-          # Verify PR is still open before attempting merge
-          PR_STATE=$(gh pr view ${{ github.event.pull_request.number }} --json state --jq .state)
+          echo "Marking PR as ready for review..."
+          gh pr ready "$PR_URL" || echo "PR already ready."
+
+          echo "Requesting Gemini review..."
+          gh pr comment "$PR_URL" --body "/gemini review"
+
+      # --- STEP 2: Wait for the remainder of the hour ---
+      - name: Wait for 1 Hour Total
+        run: sleep 3300
+        shell: bash
+
+      # --- STEP 3: Check status and Merge ---
+      - name: Final Check and Merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          echo "Checking if all status checks (including Gemini) have passed..."
           
+          # This command waits/checks if all CI checks are successful. 
+          # If they haven't passed, the script exits here to prevent merging broken code.
+          gh pr checks $PR_NUMBER --exit-status || (echo "Checks failed or still pending. Aborting auto-merge." && exit 1)
+
+          PR_STATE=$(gh pr view $PR_NUMBER --json state --jq .state)
           if [ "$PR_STATE" == "OPEN" ]; then
-            echo "Time elapsed. Merging PR #${{ github.event.pull_request.number }}..."
-            # Using --merge (create merge commit).
-            gh pr merge ${{ github.event.pull_request.number }} --merge --delete-branch
+            echo "All checks passed. Merging PR #$PR_NUMBER..."
+            gh pr merge $PR_NUMBER --merge --delete-branch
           else
-            echo "PR #${{ github.event.pull_request.number }} is already closed or merged. Skipping."
+            echo "PR #$PR_NUMBER is no longer open."
           fi
