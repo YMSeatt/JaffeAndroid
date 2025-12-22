@@ -1,4 +1,4 @@
-package com.example.myapplication.utils
+package com.example.myapplication.util
 
 import android.graphics.Typeface as AndroidTypeface // Alias for android.graphics.Typeface
 import androidx.compose.ui.text.font.FontFamily

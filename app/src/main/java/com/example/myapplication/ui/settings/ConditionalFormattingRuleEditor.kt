@@ -33,7 +33,7 @@ import com.example.myapplication.R
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.ui.components.ColorPickerField
 import com.example.myapplication.ui.components.MultiSelectDropdown
-import com.example.myapplication.utils.safeParseColor
+import com.example.myapplication.util.safeParseColor
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker

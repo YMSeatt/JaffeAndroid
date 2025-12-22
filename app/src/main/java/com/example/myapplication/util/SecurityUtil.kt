@@ -1,4 +1,4 @@
-package com.example.myapplication.utils
+package com.example.myapplication.util
 
 import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token

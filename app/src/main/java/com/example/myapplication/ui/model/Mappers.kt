@@ -5,7 +5,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Furniture
 
 
-import com.example.myapplication.utils.safeParseColor
+import com.example.myapplication.util.safeParseColor
 
 fun Furniture.toUiItem(): FurnitureUiItem {
     return FurnitureUiItem(
