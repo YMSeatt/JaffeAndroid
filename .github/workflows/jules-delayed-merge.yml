@@ -41,7 +41,7 @@ jobs:
       # --- STEP 3: Check status and Merge ---
       - name: Final Check and Merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.MY_GITHUB_PAT }} # Changed from GITHUB_TOKEN
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           echo "Checking if all status checks (including Gemini) have passed..."
