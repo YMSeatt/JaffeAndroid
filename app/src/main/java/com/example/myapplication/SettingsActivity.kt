@@ -49,7 +49,7 @@ class SettingsActivity : ComponentActivity() {
             customBehaviorDao = db.customBehaviorDao(),
             customHomeworkStatusDao = db.customHomeworkStatusDao(),
             customHomeworkTypeDao = db.customHomeworkTypeDao(),
-            homeworkTemplateDao = TODO()
+            homeworkTemplateDao = db.homeworkTemplateDao()
         )
     }
 
