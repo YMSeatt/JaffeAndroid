@@ -128,11 +128,10 @@ object EncryptionUtil {
 
     @Synchronized
     private fun getInstance(context: Context): FernetCipher {
-        if (fernetCipher == null) {
+        return fernetCipher ?: run {
             val key = getKey(context.applicationContext)
-            fernetCipher = FernetCipher(key)
+            FernetCipher(key).also { fernetCipher = it }
         }
-        return fernetCipher!!
     }
 
     /**
