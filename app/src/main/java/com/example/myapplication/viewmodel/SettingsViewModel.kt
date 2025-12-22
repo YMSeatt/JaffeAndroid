@@ -25,7 +25,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
-import com.example.myapplication.utils.SecurityUtil
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

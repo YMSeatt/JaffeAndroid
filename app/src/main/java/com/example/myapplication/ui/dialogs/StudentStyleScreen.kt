@@ -33,8 +33,8 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_FONT_SIZE_SP
 import com.example.myapplication.ui.components.ColorPickerField
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.StudentStyleViewModel
-import com.example.myapplication.utils.getAvailableFontFamilies
-import com.example.myapplication.utils.safeParseColor
+import com.example.myapplication.util.getAvailableFontFamilies
+import com.example.myapplication.util.safeParseColor
 import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController

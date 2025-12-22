@@ -100,7 +100,7 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.EmailWorker
-import com.example.myapplication.utils.captureComposable
+import com.example.myapplication.util.captureComposable
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel

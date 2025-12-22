@@ -8,7 +8,7 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
-import com.example.myapplication.utils.SecurityUtil
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first

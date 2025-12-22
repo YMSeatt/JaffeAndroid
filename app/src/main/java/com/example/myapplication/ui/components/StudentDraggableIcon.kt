@@ -55,7 +55,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.model.StudentUiItem
-import com.example.myapplication.utils.getFontFamily
+import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt

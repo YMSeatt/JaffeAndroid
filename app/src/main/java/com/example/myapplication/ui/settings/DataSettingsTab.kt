@@ -100,7 +100,7 @@ fun DataSettingsTab(
         onResult = { uri: Uri? ->
             uri?.let {
                 coroutineScope.launch {
-                    val result = com.example.myapplication.utils.ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository)
+                    val result = com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository)
                     if (result.isSuccess) {
                         Toast.makeText(context, "Imported ${result.getOrNull()} students", Toast.LENGTH_SHORT).show()
                     } else {
