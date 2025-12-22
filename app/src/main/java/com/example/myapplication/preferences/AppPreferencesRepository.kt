@@ -102,6 +102,10 @@ class AppPreferencesRepository(private val context: Context) {
 
         val CANVAS_BACKGROUND_COLOR = stringPreferencesKey("canvas_background_color")
         val GUIDES_STAY_WHEN_RULERS_HIDDEN = booleanPreferencesKey("guides_stay_when_rulers_hidden")
+
+        // Live Homework Session Preferences
+        val LIVE_HOMEWORK_SESSION_MODE = stringPreferencesKey("live_homework_session_mode") // "Yes/No" or "Select"
+        val LIVE_HOMEWORK_SELECT_OPTIONS = stringPreferencesKey("live_homework_select_options") // JSON or delimited string
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -763,6 +767,28 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateGuidesStayWhenRulersHidden(stay: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.GUIDES_STAY_WHEN_RULERS_HIDDEN] = stay
+        }
+    }
+
+    val liveHomeworkSessionModeFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIVE_HOMEWORK_SESSION_MODE] ?: "Yes/No"
+        }
+
+    suspend fun updateLiveHomeworkSessionMode(mode: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LIVE_HOMEWORK_SESSION_MODE] = mode
+        }
+    }
+
+    val liveHomeworkSelectOptionsFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] ?: "Done,Not Done,Signed,Returned" // Default options
+        }
+
+    suspend fun updateLiveHomeworkSelectOptions(options: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] = options
         }
     }
 }

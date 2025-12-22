@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.settings
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
@@ -23,6 +25,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.ui.dialogs.ArchiveViewerDialog
+import com.example.myapplication.ui.dialogs.ManageLiveHomeworkOptionsDialog
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.launch
 
@@ -50,10 +54,26 @@ private const val DATABASE_BACKUP_FILENAME = "student_organizer_backup.db"
 @Composable
 fun DataSettingsTab(
     settingsViewModel: SettingsViewModel,
-    studentRepository: StudentRepository
+    studentRepository: StudentRepository,
+    onNavigateToHomeworkTemplates: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val liveHomeworkSessionMode by settingsViewModel.liveHomeworkSessionMode.collectAsState()
+    val liveHomeworkSelectOptions by settingsViewModel.liveHomeworkSelectOptions.collectAsState()
+    var showManageLiveHomeworkOptionsDialog by remember { mutableStateOf(false) }
+
+    if (showManageLiveHomeworkOptionsDialog) {
+        ManageLiveHomeworkOptionsDialog(
+            currentOptions = liveHomeworkSelectOptions,
+            onDismiss = { showManageLiveHomeworkOptionsDialog = false },
+            onSave = {
+                settingsViewModel.updateLiveHomeworkSelectOptions(it)
+                showManageLiveHomeworkOptionsDialog = false
+            }
+        )
+    }
 
     val behaviorTypesList by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     var newBehaviorType by remember { mutableStateOf("") }
@@ -80,7 +100,12 @@ fun DataSettingsTab(
         onResult = { uri: Uri? ->
             uri?.let {
                 coroutineScope.launch {
-                    // TODO: Implement this with the new importer
+                    val result = com.example.myapplication.utils.ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository)
+                    if (result.isSuccess) {
+                        Toast.makeText(context, "Imported ${result.getOrNull()} students", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Import failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
@@ -192,7 +217,7 @@ fun DataSettingsTab(
         item {
             val emailPassword by settingsViewModel.emailPassword.collectAsState()
             OutlinedTextField(
-                value = emailPassword ?: "",
+                value = emailPassword,
                 onValueChange = { settingsViewModel.updateEmailPassword(it) },
                 label = { Text("Email Password") },
                 modifier = Modifier.fillMaxWidth()
@@ -442,10 +467,55 @@ fun DataSettingsTab(
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
+
+        item {
+            Text("Live Homework Session Settings", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Session Mode")
+                Row {
+                    RadioButton(
+                        selected = liveHomeworkSessionMode == "Yes/No",
+                        onClick = { settingsViewModel.updateLiveHomeworkSessionMode("Yes/No") }
+                    )
+                    Text("Yes/No", modifier = Modifier.align(Alignment.CenterVertically))
+                    Spacer(Modifier.width(8.dp))
+                    RadioButton(
+                        selected = liveHomeworkSessionMode == "Select",
+                        onClick = { settingsViewModel.updateLiveHomeworkSessionMode("Select") }
+                    )
+                    Text("Select", modifier = Modifier.align(Alignment.CenterVertically))
+                }
+            }
+        }
+        if (liveHomeworkSessionMode == "Select") {
+            item {
+                Button(
+                    onClick = { showManageLiveHomeworkOptionsDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Manage 'Select' Options")
+                }
+            }
+        }
+        item {
+            Button(
+                onClick = onNavigateToHomeworkTemplates,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Manage Homework Templates")
+            }
+            HorizontalDivider(Modifier.padding(top = 8.dp))
+        }
     }
 }
 
-private fun SettingsViewModel.updateEmailPassword(it: String) {}
+
 
 @Composable
 private fun ArchiveConfirmationDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {

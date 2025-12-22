@@ -604,11 +604,8 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             val student = getStudentForEditing(studentId.toLong())
             if (student != null) {
-                val (resolvedX, resolvedY) = CollisionDetector.resolveCollisions(
-                    student.copy(xPosition = newX, yPosition = newY),
-                    studentsForDisplay.value ?: emptyList(),
-                    canvasHeight
-                )
+                val resolvedX = newX
+                val resolvedY = newY
 
                 // Optimistic update
                 pendingStudentPositions[studentId] = resolvedX to resolvedY

@@ -88,25 +88,8 @@ fun StudentDraggableIcon(
     val density = LocalDensity.current
 
 
-    LaunchedEffect(cardSize, canvasSize) {
-        if (cardSize == androidx.compose.ui.unit.IntSize.Zero || canvasSize == androidx.compose.ui.unit.IntSize.Zero) return@LaunchedEffect
-
-        val studentBoxBottom = offsetY + cardSize.height
-        val canvasBottom = canvasSize.height
-
-        if (studentBoxBottom > canvasBottom) {
-            val newOffsetY = (canvasBottom - cardSize.height).toFloat()
-            if (newOffsetY.roundToInt() != offsetY.roundToInt()) {
-                viewModel.updateStudentPosition(
-                    studentUiItem.id,
-                    studentUiItem.xPosition.value,
-                    studentUiItem.yPosition.value,
-                    offsetX,
-                    newOffsetY
-                )
-            }
-        }
-    }
+    // Boundary check removed to prevent unexpected jumping. 
+    // The user should be able to place boxes freely on the canvas.
 
     LaunchedEffect(studentUiItem.xPosition.value, studentUiItem.yPosition.value) {
         offsetX = studentUiItem.xPosition.value

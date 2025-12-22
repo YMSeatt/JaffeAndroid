@@ -45,6 +45,7 @@ fun SettingsScreen(
     onNavigateToEmailSchedules: () -> Unit,
     onNavigateToReminders: () -> Unit,
     onNavigateToQuizTemplates: () -> Unit,
+    onNavigateToHomeworkTemplates: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -142,7 +143,11 @@ fun SettingsScreen(
                         onShowChangePasswordDialog = { showChangePasswordDialog = true }
                     )
                     1 -> DisplaySettingsTab(settingsViewModel = settingsViewModel)
-                    2 -> DataSettingsTab(settingsViewModel = settingsViewModel, studentRepository = studentRepository)
+                    2 -> DataSettingsTab(
+                        settingsViewModel = settingsViewModel,
+                        studentRepository = studentRepository,
+                        onNavigateToHomeworkTemplates = onNavigateToHomeworkTemplates
+                    )
                     3 -> AdvancedSettingsTab(
                         onNavigateToStudentGroups = onNavigateToStudentGroups,
                         onNavigateToConditionalFormatting = onNavigateToConditionalFormatting,

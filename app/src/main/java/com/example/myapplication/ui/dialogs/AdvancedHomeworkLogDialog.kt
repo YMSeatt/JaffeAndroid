@@ -1,6 +1,8 @@
 package com.example.myapplication.ui.dialogs
 
 import android.util.Log
+import androidx.compose.foundation.layout.Column // Added
+import androidx.compose.foundation.layout.Row // Added
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -10,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox // Added
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -17,6 +20,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider // Added
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,16 +31,18 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment // Added
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.HomeworkMarkType // Added
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.data.Student
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+import com.google.gson.Gson // Added
+import kotlin.math.roundToInt // Added
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,13 +72,14 @@ fun AdvancedHomeworkLogDialog(
     var comment by remember { mutableStateOf("") }
     val homeworkTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList())
     var selectedTemplate by remember { mutableStateOf<HomeworkTemplate?>(null) }
-    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(emptyList())
+    val homeworkTypes by viewModel.customHomeworkTypes.collectAsState(emptyList()) // kept for name suggestion if needed?
     var selectedHomeworkType by remember { mutableStateOf("") }
     val homeworkStatuses by viewModel.customHomeworkStatuses.collectAsState(emptyList())
+    val statusNames = remember(homeworkStatuses) { homeworkStatuses.map { it.name } } // Extract names
     var selectedHomeworkStatus by remember { mutableStateOf("") }
 
 
-    val marksData = remember { mutableStateMapOf<String, String>() }
+    val markValues = remember { mutableStateMapOf<String, Any>() } // stepId -> value
     var student by remember { mutableStateOf<Student?>(null) }
 
     LaunchedEffect(studentIds) {
@@ -81,16 +88,17 @@ fun AdvancedHomeworkLogDialog(
         }
     }
 
+    // When template is selected, initialize mark values
     LaunchedEffect(selectedTemplate) {
-        selectedTemplate?.let { template ->
-            if (template.marksData.isNotBlank()) {
-                try {
-                    val deserializedMarks = Json.decodeFromString<Map<String, String>>(template.marksData)
-                    marksData.clear()
-                    marksData.putAll(deserializedMarks)
-                } catch (e: Exception) {
-                    Log.e("AdvancedHomeworkLogDialog", "Error deserializing marksData", e)
-                }
+        markValues.clear()
+        selectedTemplate?.getSteps()?.forEach { step ->
+             // Use label as key for readability, ensure uniqueness if needed (simple approach: label)
+             // In a perfect world we'd handle duplicate labels, but for now we assume distinctness or last-win.
+             val key = step.label
+            when (step.type) {
+                HomeworkMarkType.CHECKBOX -> markValues[key] = false
+                HomeworkMarkType.SCORE -> markValues[key] = 0
+                HomeworkMarkType.COMMENT -> markValues[key] = ""
             }
         }
     }
@@ -111,19 +119,25 @@ fun AdvancedHomeworkLogDialog(
                     OutlinedTextField(
                         value = assignmentName,
                         onValueChange = { assignmentName = it },
-                        label = { Text("Assignment Name") }
+                        label = { Text("Assignment Name") },
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+                    
+                     // Homework Type - Maybe use it to populate assignment name? Or just a category? 
+                     // For now, let's keep it as an autocomplete for Assignment Name or separate field?
+                     // The original code had it as a separate dropdown.
+                     
                     var homeworkTypeExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
+                     ExposedDropdownMenuBox(
                         expanded = homeworkTypeExpanded,
                         onExpandedChange = { homeworkTypeExpanded = !homeworkTypeExpanded }
                     ) {
                         OutlinedTextField(
                             value = selectedHomeworkType,
-                            onValueChange = {},
+                            onValueChange = { selectedHomeworkType = it }, // Allow typing?
                             readOnly = true,
-                            label = { Text("Homework Type") },
+                            label = { Text("Homework Type (Optional)") },
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = homeworkTypeExpanded) },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -135,15 +149,17 @@ fun AdvancedHomeworkLogDialog(
                         ) {
                             homeworkTypes.forEach { type ->
                                 DropdownMenuItem(
-                                    text = { Text(type) },
+                                    text = { Text(type.name) },
                                     onClick = {
-                                        selectedHomeworkType = type
+                                        selectedHomeworkType = type.name
+                                        if (assignmentName.isBlank()) assignmentName = type.name // Auto-fill name if blank
                                         homeworkTypeExpanded = false
                                     }
                                 )
                             }
                         }
                     }
+
                     Spacer(modifier = Modifier.height(8.dp))
                     var homeworkStatusExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
@@ -164,7 +180,18 @@ fun AdvancedHomeworkLogDialog(
                             expanded = homeworkStatusExpanded,
                             onDismissRequest = { homeworkStatusExpanded = false }
                         ) {
-                            homeworkStatuses.forEach { status ->
+                            // Standard statuses
+                            listOf("Done", "Not Done", "Completed", "Incomplete", "Late", "Excused").forEach { status ->
+                                 DropdownMenuItem(
+                                    text = { Text(status) },
+                                    onClick = {
+                                        selectedHomeworkStatus = status
+                                        homeworkStatusExpanded = false
+                                    }
+                                )
+                            }
+                            // Custom statuses
+                            statusNames.forEach { status ->
                                 DropdownMenuItem(
                                     text = { Text(status) },
                                     onClick = {
@@ -195,11 +222,13 @@ fun AdvancedHomeworkLogDialog(
                             expanded = templateExpanded,
                             onDismissRequest = { templateExpanded = false }
                         ) {
+                            DropdownMenuItem(text = { Text("None")}, onClick = { selectedTemplate = null; templateExpanded = false})
                             homeworkTemplates.forEach { template ->
                                 DropdownMenuItem(
                                     text = { Text(template.name) },
                                     onClick = {
                                         selectedTemplate = template
+                                        if (assignmentName.isBlank()) assignmentName = template.name
                                         templateExpanded = false
                                     }
                                 )
@@ -207,25 +236,57 @@ fun AdvancedHomeworkLogDialog(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Marks:", style = MaterialTheme.typography.titleMedium)
                 }
 
-                items(homeworkTypes) { type ->
-                    OutlinedTextField(
-                        value = marksData[type] ?: "",
-                        onValueChange = { marksData[type] = it },
-                        label = { Text(type) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                    )
+                if (selectedTemplate != null) {
+                    val steps = selectedTemplate!!.getSteps()
+                    items(steps) { step ->
+                         Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            Text(step.label, style = MaterialTheme.typography.labelMedium)
+                            val key = step.label
+                            when (step.type) {
+                                HomeworkMarkType.CHECKBOX -> {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(
+                                            checked = (markValues[key] as? Boolean) == true,
+                                            onCheckedChange = { markValues[key] = it }
+                                        )
+                                        Text(if ((markValues[key] as? Boolean) == true) "Yes" else "No")
+                                    }
+                                }
+                                HomeworkMarkType.SCORE -> {
+                                    var score by remember(markValues[key]) { mutableStateOf(((markValues[key] as? Number)?.toFloat() ?: 0f)) }
+                                    Column {
+                                        Slider(
+                                            value = score,
+                                            onValueChange = { 
+                                                score = it
+                                                markValues[key] = it.roundToInt() 
+                                            },
+                                            valueRange = 0f..step.maxValue.toFloat(),
+                                            steps = if (step.maxValue > 0) step.maxValue - 1 else 0
+                                        )
+                                        Text("Score: ${score.roundToInt()} / ${step.maxValue}")
+                                    }
+                                }
+                                HomeworkMarkType.COMMENT -> {
+                                    OutlinedTextField(
+                                        value = (markValues[key] as? String) ?: "",
+                                        onValueChange = { markValues[key] = it },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 item {
                     OutlinedTextField(
                         value = comment,
                         onValueChange = { comment = it },
-                        label = { Text("Comment (Optional)") },
-                        modifier = Modifier.padding(top = 8.dp)
+                        label = { Text("Global Comment (Optional)") },
+                        modifier = Modifier.padding(top = 8.dp).fillMaxWidth()
                     )
                 }
             }
@@ -240,7 +301,7 @@ fun AdvancedHomeworkLogDialog(
                             status = selectedHomeworkStatus,
                             comment = comment,
                             loggedAt = System.currentTimeMillis(),
-                            marksData = Json.encodeToString(marksData.toMap()) // Serialize marksData map to JSON string
+                            marksData = Gson().toJson(markValues)
                         )
                     }
                     onSave(logs)

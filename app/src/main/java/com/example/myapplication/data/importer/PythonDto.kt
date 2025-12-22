@@ -97,3 +97,17 @@ data class PythonCustomHomeworkStatus(
 data class PythonCustomHomeworkType(
     val name: String
 )
+
+@Serializable
+data class PythonHomeworkTemplate(
+    val name: String,
+    val steps: List<PythonHomeworkMarkStep>
+)
+
+@Serializable
+data class PythonHomeworkMarkStep(
+    val label: String,
+    val type: String,
+    @SerialName("max_value")
+    val maxValue: Int = 1
+)

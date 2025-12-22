@@ -11,7 +11,8 @@ import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.util.EncryptionUtil
-import kotlinx.serialization.json.Json
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.ss.usermodel.Workbook
@@ -157,6 +158,26 @@ class Exporter(
             headers.add("Log Type")
         }
 
+        // Collect dynamic keys from Homework Logs if relevant
+        val dynamicHomeworkKeys = if (sheetName == "Homework Log" || isMasterLog) {
+            val relevantLogs = data.filterIsInstance<HomeworkLog>()
+            relevantLogs.flatMap { log ->
+                 try {
+                     log.marksData?.let { 
+                        val type = object : TypeToken<Map<String, Any>>() {}.type
+                        Gson().fromJson<Map<String, Any>>(it, type).keys 
+                     } ?: emptySet()
+                 } catch (e: Exception) {
+                     emptySet()
+                 }
+            }.distinct().filter { key ->
+                // Filter out keys already covered by Custom Types/Statuses
+                customHomeworkTypes.none { it.name == key } && customHomeworkStatuses.none { it.name == key }
+            }.sorted()
+        } else {
+            emptyList()
+        }
+
         when (sheetName) {
             "Behavior Log" -> headers.add("Behavior")
             "Quiz Log" -> {
@@ -170,6 +191,7 @@ class Exporter(
                 headers.add("Num Items")
                 customHomeworkTypes.forEach { headers.add(it.name) }
                 customHomeworkStatuses.forEach { headers.add(it.name) }
+                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
                 headers.add("Homework Score (Total Pts)")
                 headers.add("Homework Effort")
             }
@@ -179,6 +201,7 @@ class Exporter(
                 headers.add("Quiz Score (%)")
                 customHomeworkTypes.forEach { headers.add(it.name) }
                 customHomeworkStatuses.forEach { headers.add(it.name) }
+                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
                 headers.add("Homework Score (Total Pts)")
                 headers.add("Homework Effort")
             }
@@ -261,7 +284,8 @@ class Exporter(
                     }
 
                     val marksData = try {
-                        Json.decodeFromString<Map<String, String>>(item.marksData)
+                        val type = object : TypeToken<Map<String, Any>>() {}.type
+                        Gson().fromJson<Map<String, Any>>(item.marksData, type)
                     } catch (e: Exception) {
                         emptyMap()
                     }
@@ -270,7 +294,8 @@ class Exporter(
                     var totalPossible = 0.0
 
                     quizMarkTypes.forEach { markType ->
-                        val markCount = marksData[markType.name]?.toIntOrNull() ?: 0
+                        val rawValue = marksData[markType.name]
+                        val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
                         val markIndex = headers.indexOf(markType.name)
                         if (markIndex != -1) row.createCell(markIndex).apply {
                             setCellValue(markCount.toDouble())
@@ -302,7 +327,8 @@ class Exporter(
                         row.createCell(it).setCellValue(item.assignmentName)
                     }
                     val marksData = try {
-                        item.marksData?.let { Json.decodeFromString<Map<String, String>>(it) }
+                        val type = object : TypeToken<Map<String, Any>>() {}.type
+                        item.marksData?.let { Gson().fromJson<Map<String, Any>>(it, type) }
                     } catch (e: Exception) {
                         null
                     }
@@ -310,28 +336,33 @@ class Exporter(
                     if (marksData != null) {
                         var totalPoints = 0.0
                         var effort = ""
-                        customHomeworkTypes.forEach { type ->
-                            val value = marksData[type.name]
-                            val index = headers.indexOf(type.name)
-                            if (index != -1) row.createCell(index).apply {
-                                setCellValue(value ?: "")
-                                cellStyle = rightAlignmentStyle
-                            }
-                            if (value != null && value.toDoubleOrNull() != null) {
-                                totalPoints += value.toDouble()
+                        
+                        // Populate values for all known headers (Custom Types, Statuses, and Dynamic Keys)
+                        // We iterate the map entries to find matching headers
+                        marksData.forEach { (key, value) ->
+                            val index = headers.indexOf(key)
+                            if (index != -1) {
+                                val stringValue = value.toString()
+                                row.createCell(index).apply {
+                                    setCellValue(stringValue)
+                                    cellStyle = rightAlignmentStyle
+                                }
+                                val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
+                                if (doubleValue != null) {
+                                    // Heuristic: only add to total points if it's likely a score? 
+                                    // Or maybe we should only count known "Types"?
+                                    // For now, let's include it if it's numeric and NOT in Statuses
+                                    if (customHomeworkStatuses.none { it.name == key }) {
+                                         totalPoints += doubleValue
+                                    }
+                                }
+                                if (key.lowercase(Locale.getDefault()).contains("effort") || 
+                                    customHomeworkStatuses.any { it.name == key && it.name.lowercase().contains("effort") }) {
+                                    effort = stringValue
+                                }
                             }
                         }
-                        customHomeworkStatuses.forEach { status ->
-                            val value = marksData[status.name]
-                            val index = headers.indexOf(status.name)
-                            if (index != -1) row.createCell(index).apply {
-                                setCellValue(value ?: "")
-                                cellStyle = rightAlignmentStyle
-                            }
-                            if (status.name.lowercase(Locale.getDefault()).contains("effort")) {
-                                effort = value ?: ""
-                            }
-                        }
+
                         headers.indexOf("Homework Score (Total Pts)").takeIf { it != -1 }?.let {
                             row.createCell(it).apply {
                                 setCellValue(totalPoints)
@@ -420,11 +451,15 @@ class Exporter(
                 val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
                 val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
                 // Simplified score calculation
-                val marksData = try { Json.decodeFromString<Map<String, String>>(log.marksData) } catch (e: Exception) { emptyMap() }
+                val marksData = try { 
+                    val type = object : TypeToken<Map<String, Any>>() {}.type
+                    Gson().fromJson<Map<String, Any>>(log.marksData, type)
+                } catch (e: Exception) { emptyMap() }
                 var totalScore = 0.0
                 var totalPossible = 0.0
                 quizMarkTypes.forEach { markType ->
-                    val markCount = marksData[markType.name]?.toIntOrNull() ?: 0
+                    val rawValue = marksData[markType.name]
+                    val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
                     if (markType.contributesToTotal) {
                         totalPossible += log.numQuestions * markType.defaultPoints
                     }
@@ -468,9 +503,13 @@ class Exporter(
                 val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
                 var points = 0.0
                 log.marksData?.let {
-                    val marks = try { Json.decodeFromString<Map<String, String>>(it) } catch (e: Exception) { emptyMap() }
+                    val marks = try { 
+                        val type = object : TypeToken<Map<String, Any>>() {}.type
+                        Gson().fromJson<Map<String, Any>>(it, type)
+                    } catch (e: Exception) { emptyMap() }
                     marks.values.forEach { value ->
-                        value.toDoubleOrNull()?.let { points += it }
+                         val doubleVal = if (value is Number) value.toDouble() else value.toString().toDoubleOrNull()
+                        doubleVal?.let { points += it }
                     }
                 }
                 studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)

@@ -72,7 +72,8 @@ class SettingsViewModel(
                 studentGroupDao,
                 customBehaviorDao,
                 customHomeworkStatusDao,
-                customHomeworkTypeDao
+                customHomeworkTypeDao,
+                homeworkTemplateDao
             )
         }
     }
@@ -120,6 +121,7 @@ class SettingsViewModel(
         val customBehaviorsFile = directory?.findFile("custom_behaviors_v10.json")
         val customHomeworkStatusesFile = directory?.findFile("custom_homework_statuses_v10.json")
         val customHomeworkTypesFile = directory?.findFile("custom_homework_types_v10.json")
+        val homeworkTemplatesFile = directory?.findFile("homework_templates_v10.json")
 
         if (classroomDataFile != null && studentGroupsFile != null && customBehaviorsFile != null && customHomeworkStatusesFile != null && customHomeworkTypesFile != null) {
             jsonImporter.importData(
@@ -127,7 +129,8 @@ class SettingsViewModel(
                 studentGroupsUri = studentGroupsFile.uri,
                 customBehaviorsUri = customBehaviorsFile.uri,
                 customHomeworkStatusesUri = customHomeworkStatusesFile.uri,
-                customHomeworkTypesUri = customHomeworkTypesFile.uri
+                customHomeworkTypesUri = customHomeworkTypesFile.uri,
+                homeworkTemplatesUri = homeworkTemplatesFile?.uri
             )
         }
     }
@@ -224,6 +227,24 @@ class SettingsViewModel(
         }
     }
 
+    val liveHomeworkSessionMode: StateFlow<String> = preferencesRepository.liveHomeworkSessionModeFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Yes/No")
+
+    fun updateLiveHomeworkSessionMode(mode: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLiveHomeworkSessionMode(mode)
+        }
+    }
+
+    val liveHomeworkSelectOptions: StateFlow<String> = preferencesRepository.liveHomeworkSelectOptionsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "Done,Not Done,Signed,Returned")
+
+    fun updateLiveHomeworkSelectOptions(options: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLiveHomeworkSelectOptions(options)
+        }
+    }
+
     val appTheme: StateFlow<AppTheme> = preferencesRepository.appThemeFlow
         .map { themeName ->
             try {
@@ -237,6 +258,16 @@ class SettingsViewModel(
             started = SharingStarted.Lazily,
             initialValue = AppTheme.SYSTEM
         )
+
+    val emailPassword: StateFlow<String> = preferencesRepository.emailPasswordFlow
+        .map { it ?: "" }
+        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+
+    fun updateEmailPassword(password: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateEmailPassword(password)
+        }
+    }
 
     fun updateAppTheme(theme: AppTheme) {
         viewModelScope.launch {
@@ -649,16 +680,6 @@ class SettingsViewModel(
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultEmailAddress(email)
-        }
-    }
-
-    val emailPassword: StateFlow<String> = preferencesRepository.emailPasswordFlow
-        .map { it ?: "betp kgas eouc nhtq" }
-        .stateIn(viewModelScope, SharingStarted.Lazily, "betp kgas eouc nhtq")
-
-    fun updateEmailPassword(password: String) {
-        viewModelScope.launch {
-            preferencesRepository.updateEmailPassword(password)
         }
     }
 

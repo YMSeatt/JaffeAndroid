@@ -15,7 +15,7 @@ object CollisionDetector {
         canvasHeight: Int
     ): Pair<Float, Float> {
         if (students.isEmpty() || (students.size == 1 && students[0].id.toLong() == movedStudent.id)) {
-            return Pair(0f, 0f)
+            return Pair(movedStudent.xPosition, movedStudent.yPosition)
         }
 
         val columns = mutableListOf<MutableList<StudentUiItem>>()
