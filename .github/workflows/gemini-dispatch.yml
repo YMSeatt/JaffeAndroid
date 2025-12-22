@@ -25,7 +25,7 @@ defaults:
 jobs:
   debugger:
     if: |-
-     ${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}
+      ${{ fromJSON(vars.DEBUG || vars.ACTIONS_STEP_DEBUG || false) }}
     runs-on: 'ubuntu-latest'
     permissions:
       contents: 'read'
@@ -43,9 +43,6 @@ jobs:
           env | grep '^DEBUG_'
 
   dispatch:
-    # For PRs: only if not from a fork
-    # For comments: only if user types @gemini-cli and is OWNER/MEMBER/COLLABORATOR
-    # For issues: only on open/reopen
     if: |-
       (
         github.event_name == 'pull_request' &&
@@ -81,6 +78,13 @@ jobs:
           permission-issues: 'write'
           permission-pull-requests: 'write'
 
+      - name: 'Mark PR as ready for review'
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == true
+        env:
+          GITHUB_TOKEN: '${{ steps.mint_identity_token.outputs.token || secrets.GITHUB_TOKEN || github.token }}'
+          PR_NUMBER: '${{ github.event.pull_request.number }}'
+        run: gh pr ready "${PR_NUMBER}" --repo "${{ github.repository }}"
+
       - name: 'Extract command'
         id: 'extract_command'
         uses: 'actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea' # ratchet:actions/github-script@v7
@@ -93,13 +97,13 @@ jobs:
             const eventType = process.env.EVENT_TYPE
             core.setOutput('request', request);
 
-            if (request.startsWith("@gemini-cli /review")) {
+            if (request && request.startsWith("@gemini-cli /review")) {
               core.setOutput('command', 'review');
               const additionalContext = request.replace(/^@gemini-cli \/review/, '').trim();
               core.setOutput('additional_context', additionalContext);
-            } else if (request.startsWith("@gemini-cli /triage")) {
+            } else if (request && request.startsWith("@gemini-cli /triage")) {
               core.setOutput('command', 'triage');
-            } else if (request.startsWith("@gemini-cli")) {
+            } else if (request && request.startsWith("@gemini-cli")) {
               core.setOutput('command', 'invoke');
               const additionalContext = request.replace(/^@gemini-cli/, '').trim();
               core.setOutput('additional_context', additionalContext);
