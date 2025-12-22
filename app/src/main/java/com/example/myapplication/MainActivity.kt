@@ -329,9 +329,9 @@ class MainActivity : ComponentActivity() {
 fun EmailDialog(
     onDismissRequest: () -> Unit,
     onSend: (String, String, String) -> Unit,
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    fromAddress: String
 ) {
-    var from by remember { mutableStateOf("behaviorlogger@gmail.com") }
     var to by remember { mutableStateOf("") }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
@@ -342,8 +342,8 @@ fun EmailDialog(
         text = {
             Column {
                 TextField(
-                    value = from,
-                    onValueChange = { from = it },
+                    value = fromAddress,
+                    onValueChange = { },
                     label = { Text("From") },
                     readOnly = true
                 )
@@ -861,6 +861,7 @@ fun SeatingChartScreen(
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 val emailPassword by settingsViewModel.emailPassword.collectAsState()
                 EmailDialog(
+                    fromAddress = from,
                     onDismissRequest = { onShowEmailDialogChange(false) },
                     onSend = { to, subject, body ->
                         activity?.lifecycleScope?.launch {
