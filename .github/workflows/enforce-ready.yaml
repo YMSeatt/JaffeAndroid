@@ -1,0 +1,23 @@
+name: '🛡️ Enforce Ready PRs'
+
+on:
+  pull_request:
+    types:
+      - 'opened'
+
+jobs:
+  undraft:
+    name: 'Convert Draft to Ready'
+    # Only run if it's a draft and not from a fork (to ensure token permissions)
+    if: github.event.pull_request.draft == true && github.event.pull_request.head.repo.fork == false
+    runs-on: 'ubuntu-latest'
+    permissions:
+      pull-requests: 'write'
+    steps:
+      - name: 'Promote PR to Ready'
+        env:
+          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+          PR_URL: '${{ github.event.pull_request.html_url }}'
+        run: |
+          echo "Draft detected. Promoting PR to ready for review..."
+          gh pr ready "${PR_URL}"
