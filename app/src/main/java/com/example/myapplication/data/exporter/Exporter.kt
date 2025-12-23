@@ -10,7 +10,7 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentGroup
-import com.example.myapplication.util.EncryptionUtil
+import com.example.myapplication.util.SecurityUtil
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import org.apache.poi.ss.usermodel.HorizontalAlignment
@@ -26,6 +26,8 @@ import java.util.Locale
 class Exporter(
     private val context: Context
 ) {
+
+    private val securityUtil = SecurityUtil(context)
 
     suspend fun export(
         uri: Uri,
@@ -116,7 +118,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    val encryptedToken = securityUtil.encrypt(String(fileContent))
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)
