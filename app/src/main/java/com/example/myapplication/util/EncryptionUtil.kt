@@ -119,6 +119,9 @@ class FernetCipher(private val key: ByteArray) {
 /**
  * A singleton utility for handling Fernet encryption and decryption within the Android app.
  * It manages the secure storage and retrieval of the encryption key.
+ * This object provides a simple interface for encrypting and decrypting data using the Fernet
+ * symmetric encryption specification. It is designed to be a direct port of the Python
+ * `cryptography.fernet` library, ensuring compatibility with existing data.
  */
 object EncryptionUtil {
     private const val KEY_FILE_NAME = "fernet.key"
