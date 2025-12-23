@@ -101,6 +101,7 @@ import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -537,7 +538,7 @@ fun SeatingChartScreen(
                                 showViewMenu = false
                             })
                             AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
+                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
                             }
                         }
                     }
@@ -546,10 +547,10 @@ fun SeatingChartScreen(
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
-                        TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }
+                        TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.toTitleCase()) }
                         DropdownMenu(expanded = showModeMenu, onDismissRequest = { showModeMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
                             SessionType.entries.forEach { mode ->
-                                DropdownMenuItem(text = { Text(mode.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = {
+                                DropdownMenuItem(text = { Text(mode.name.toTitleCase()) }, onClick = {
                                     if (isSessionActive) {
                                         seatingChartViewModel.endSession()
                                     }
