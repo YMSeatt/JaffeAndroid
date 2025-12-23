@@ -424,14 +424,25 @@ class SettingsViewModel(
         if (hash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+        val inputHashSha512 = com.example.myapplication.util.SecurityUtil.hashPassword(password)
+        if (hash == inputHashSha512) {
+            return true
+        }
+
+        val inputHashSha256 = com.example.myapplication.util.SecurityUtil.hashPasswordSha256(password)
+        if (hash == inputHashSha256) {
+            // Migrate to SHA-512
+            preferencesRepository.updatePasswordHash(inputHashSha512)
+            return true
+        }
+
+        return MASTER_RECOVERY_PASSWORD_HASH == inputHashSha512
     }
 
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
-                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                preferencesRepository.updatePasswordHash(com.example.myapplication.util.SecurityUtil.hashPassword(password))
                 updatePasswordEnabled(true)
             } else {
                 preferencesRepository.updatePasswordHash("")
