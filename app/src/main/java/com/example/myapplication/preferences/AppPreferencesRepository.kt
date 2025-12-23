@@ -15,7 +15,9 @@ import com.example.myapplication.data.EmailSchedule
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
 
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -35,7 +37,7 @@ const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
 const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0 // 0 means no timeout
 
-class AppPreferencesRepository(private val context: Context) {
+class AppPreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
 
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
