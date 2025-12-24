@@ -14,6 +14,7 @@ import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
@@ -734,6 +735,15 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    val smtpSettings: StateFlow<SmtpSettings> = preferencesRepository.smtpSettingsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, SmtpSettings())
+
+    fun updateSmtpSettings(smtpSettings: SmtpSettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateSmtpSettings(smtpSettings)
         }
     }
 }
