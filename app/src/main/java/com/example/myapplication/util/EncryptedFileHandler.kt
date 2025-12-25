@@ -7,19 +7,19 @@ import java.nio.charset.StandardCharsets
 import javax.inject.Inject
 
 /**
- * Handles reading and writing encrypted files, with a graceful fallback to plaintext.
- * This utility uses the existing [EncryptionUtil] for cryptographic operations.
+ * Handles reading and writing encrypted files.
+ * This utility uses the [EncryptionUtil] for cryptographic operations.
  */
 class EncryptedFileHandler @Inject constructor() {
 
     /**
-     * Reads a file, attempts to decrypt it, and returns the content as a string.
-     * If decryption fails, it assumes the file is plaintext and returns the content directly.
+     * Reads a file and attempts to decrypt it.
      *
      * @param context The application context.
      * @param file The file to read.
-     * @return The file content as a string, or null if the file does not exist or is empty.
-     * @throws IOException if the file cannot be read.
+     * @return The decrypted file content as a string, or null if the file does not exist or is empty.
+     * @throws IOException if the file cannot be read or if decryption fails, wrapping the original
+     *         [SecurityException] or [IllegalArgumentException] to prevent data corruption.
      */
     @Throws(IOException::class)
     fun readFile(context: Context, file: File): String? {
@@ -28,17 +28,16 @@ class EncryptedFileHandler @Inject constructor() {
         }
 
         val fileContentBytes = file.readBytes()
+        val fileContentString = String(fileContentBytes, StandardCharsets.UTF_8)
 
-        // Try to decrypt first
+        // Attempt to decrypt. If it fails, it's a critical error.
         return try {
-            val decryptedBytes = EncryptionUtil.decrypt(context, String(fileContentBytes, StandardCharsets.UTF_8))
+            val decryptedBytes = EncryptionUtil.decrypt(context, fileContentString)
             String(decryptedBytes, StandardCharsets.UTF_8)
         } catch (e: SecurityException) {
-            // If decryption fails, assume it's plaintext
-            String(fileContentBytes, StandardCharsets.UTF_8)
+            throw IOException("Failed to decrypt file: invalid signature or format.", e)
         } catch (e: IllegalArgumentException) {
-            // Also handle Base64 decoding errors
-            String(fileContentBytes, StandardCharsets.UTF_8)
+            throw IOException("Failed to decrypt file: invalid Base64 encoding.", e)
         }
     }
 
