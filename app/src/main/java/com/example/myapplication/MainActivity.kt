@@ -83,6 +83,7 @@ import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
@@ -291,62 +292,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-@Composable
-fun EmailDialog(
-    onDismissRequest: () -> Unit,
-    onSend: (String, String, String) -> Unit,
-    settingsViewModel: SettingsViewModel,
-    fromAddress: String
-) {
-    var to by remember { mutableStateOf("") }
-    var subject by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text("Send Email") },
-        text = {
-            Column {
-                TextField(
-                    value = fromAddress,
-                    onValueChange = { },
-                    label = { Text("From") },
-                    readOnly = true
-                )
-                TextField(
-                    value = to,
-                    onValueChange = { to = it },
-                    label = { Text("To") }
-                )
-                TextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    label = { Text("Subject") }
-                )
-                TextField(
-                    value = body,
-                    onValueChange = { body = it },
-                    label = { Text("Body") }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSend(to, subject, body)
-                    onDismissRequest()
-                }
-            ) {
-                Text("Send")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
