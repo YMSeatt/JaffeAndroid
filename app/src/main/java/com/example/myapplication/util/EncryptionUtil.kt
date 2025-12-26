@@ -1,171 +1,116 @@
 package com.example.myapplication.util
 
 import android.content.Context
+import android.util.Base64
 import java.io.File
-import java.nio.ByteBuffer
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.Base64
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import java.nio.ByteBuffer
+import java.util.Arrays
 
-/**
- * A stateless class that implements the Fernet specification for symmetric encryption.
- * This class operates purely on byte arrays and has no Android dependencies, making it easily testable.
- *
- * @param key A 32-byte key used for both signing (first 16 bytes) and encryption (last 16 bytes).
- */
-class FernetCipher(private val key: ByteArray) {
+object EncryptionUtil {
 
-    private val signingKey: SecretKeySpec
-    private val encryptionKey: SecretKeySpec
+    private const val VERSION = 0x80.toByte()
+    private const val AES_BLOCK_SIZE = 16 // 128 bits
+    private const val KEY_FILE_NAME = "fernet.key"
 
-    companion object {
-        private const val VERSION: Byte = 0x80.toByte()
-        private const val HMAC_SIZE = 32
-        private const val IV_SIZE = 16
-    }
-
-    init {
-        if (key.size != 32) {
-            throw IllegalArgumentException("Fernet key must be 32 bytes long.")
+    fun getOrCreateKey(context: Context): ByteArray {
+        val keyFile = File(context.filesDir, KEY_FILE_NAME)
+        return if (keyFile.exists()) {
+            val key = ByteArray(32)
+            FileInputStream(keyFile).use { it.read(key) }
+            key
+        } else {
+            val newKey = ByteArray(32)
+            SecureRandom().nextBytes(newKey)
+            FileOutputStream(keyFile).use { it.write(newKey) }
+            newKey
         }
-        signingKey = SecretKeySpec(key, 0, 16, "HmacSHA256")
-        encryptionKey = SecretKeySpec(key, 16, 16, "AES")
     }
 
-    /**
-     * Encrypts a plaintext byte array into a URL-safe Base64 Fernet token.
-     */
-    fun encrypt(plaintext: ByteArray): String {
-        val iv = ByteArray(IV_SIZE)
+    fun encrypt(data: ByteArray, key: ByteArray): String {
+        require(key.size == 32) { "Key must be 32 bytes." }
+
+        val signingKey = key.sliceArray(0..15)
+        val encryptionKey = key.sliceArray(16..31)
+
+        val iv = ByteArray(AES_BLOCK_SIZE)
         SecureRandom().nextBytes(iv)
 
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.ENCRYPT_MODE, encryptionKey, IvParameterSpec(iv))
-        val ciphertext = cipher.doFinal(plaintext)
+        cipher.init(Cipher.ENCRYPT_MODE, SecretKeySpec(encryptionKey, "AES"), IvParameterSpec(iv))
+        val ciphertext = cipher.doFinal(data)
 
         val timestamp = System.currentTimeMillis() / 1000
+        val hmac = createHmac(signingKey, VERSION, timestamp, iv, ciphertext)
 
-        val buffer = ByteBuffer.allocate(1 + 8 + iv.size + ciphertext.size)
+        val buffer = ByteBuffer.allocate(1 + 8 + iv.size + ciphertext.size + hmac.size)
         buffer.put(VERSION)
         buffer.putLong(timestamp)
         buffer.put(iv)
         buffer.put(ciphertext)
-        val messageToSign = buffer.array()
+        buffer.put(hmac)
 
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(signingKey)
-        val hmac = mac.doFinal(messageToSign)
-
-        val finalBuffer = ByteBuffer.allocate(messageToSign.size + hmac.size)
-        finalBuffer.put(messageToSign)
-        finalBuffer.put(hmac)
-
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(finalBuffer.array())
+        return Base64.encodeToString(buffer.array(), Base64.URL_SAFE)
     }
 
-    /**
-     * Decrypts a Fernet token and verifies its integrity and validity.
-     *
-     * @param token The URL-safe Base64 Fernet token.
-     * @param ttl The time-to-live in seconds. If the token is older than this, decryption fails.
-     * @return The original plaintext as a byte array.
-     * @throws SecurityException if the token is invalid, tampered with, or expired.
-     */
-    fun decrypt(token: String, ttl: Int): ByteArray {
-        val decodedToken = Base64.getUrlDecoder().decode(token)
-        val minLength = 1 + 8 + IV_SIZE + 1 + HMAC_SIZE // version + ts + iv + min-cipher-block + hmac
-        if (decodedToken.size < minLength) {
-            throw SecurityException("Invalid token length")
-        }
+    fun decrypt(token: String, key: ByteArray, ttl: Long? = null): ByteArray {
+        require(key.size == 32) { "Key must be 32 bytes." }
 
-        val hmacFromToken = decodedToken.takeLast(HMAC_SIZE).toByteArray()
-        val messageToVerify = decodedToken.dropLast(HMAC_SIZE).toByteArray()
+        val decodedToken = Base64.decode(token, Base64.URL_SAFE)
+        val buffer = ByteBuffer.wrap(decodedToken)
 
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(signingKey)
-        val calculatedHmac = mac.doFinal(messageToVerify)
-
-        if (!hmacFromToken.contentEquals(calculatedHmac)) {
-            throw SecurityException("Invalid token signature")
-        }
-
-        val buffer = ByteBuffer.wrap(messageToVerify)
         val version = buffer.get()
         if (version != VERSION) {
-            throw SecurityException("Invalid token version")
+            throw IllegalArgumentException("Invalid token version.")
         }
 
         val timestamp = buffer.long
-        val currentTime = System.currentTimeMillis() / 1000
-        if (ttl > 0 && currentTime > timestamp + ttl) {
-            throw SecurityException("Token has expired")
+        if (ttl != null) {
+            val currentTime = System.currentTimeMillis() / 1000
+            if (timestamp + ttl < currentTime) {
+                throw SecurityException("Token has expired.")
+            }
         }
 
-        val iv = ByteArray(IV_SIZE)
+        val iv = ByteArray(AES_BLOCK_SIZE)
         buffer.get(iv)
 
-        val ciphertext = ByteArray(buffer.remaining())
+        val hmac = ByteArray(32)
+        val ciphertext = ByteArray(buffer.remaining() - hmac.size)
         buffer.get(ciphertext)
+        buffer.get(hmac)
+
+        val signingKey = key.sliceArray(0..15)
+        val encryptionKey = key.sliceArray(16..31)
+
+        val expectedHmac = createHmac(signingKey, version, timestamp, iv, ciphertext)
+
+        if (!MessageDigest.isEqual(hmac, expectedHmac)) {
+            throw SecurityException("Invalid HMAC signature.")
+        }
 
         val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-        cipher.init(Cipher.DECRYPT_MODE, encryptionKey, IvParameterSpec(iv))
+        cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(encryptionKey, "AES"), IvParameterSpec(iv))
         return cipher.doFinal(ciphertext)
     }
-}
 
-/**
- * A singleton utility for handling Fernet encryption and decryption within the Android app.
- * It manages the secure storage and retrieval of the encryption key.
- */
-object EncryptionUtil {
-    private const val KEY_FILE_NAME = "fernet.key"
-    private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
+    private fun createHmac(signingKey: ByteArray, version: Byte, timestamp: Long, iv: ByteArray, ciphertext: ByteArray): ByteArray {
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(signingKey, "HmacSHA256"))
 
-    private var fernetCipher: FernetCipher? = null
+        val buffer = ByteBuffer.allocate(1 + 8 + iv.size + ciphertext.size)
+        buffer.put(version)
+        buffer.putLong(timestamp)
+        buffer.put(iv)
+        buffer.put(ciphertext)
 
-    @Synchronized
-    private fun getInstance(context: Context): FernetCipher {
-        return fernetCipher ?: run {
-            val key = getKey(context.applicationContext)
-            FernetCipher(key).also { fernetCipher = it }
-        }
-    }
-
-    /**
-     * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
-     * it generates a new 32-byte key and saves it for future use.
-     */
-    private fun getKey(context: Context): ByteArray {
-        val keyFile = File(context.filesDir, KEY_FILE_NAME)
-        return if (keyFile.exists()) {
-            val keyBytes = keyFile.readBytes()
-            if (keyBytes.size == 32) keyBytes else generateAndSaveKey(keyFile)
-        } else {
-            generateAndSaveKey(keyFile)
-        }
-    }
-
-    private fun generateAndSaveKey(keyFile: File): ByteArray {
-        val newKey = ByteArray(32)
-        SecureRandom().nextBytes(newKey)
-        keyFile.writeBytes(newKey)
-        return newKey
-    }
-
-    /**
-     * Encrypts a plaintext byte array.
-     */
-    fun encrypt(context: Context, plaintext: ByteArray): String {
-        return getInstance(context).encrypt(plaintext)
-    }
-
-    /**
-     * Decrypts a Fernet token.
-     */
-    fun decrypt(context: Context, token: String, ttl: Int = TTL_SECONDS): ByteArray {
-        return getInstance(context).decrypt(token, ttl)
+        return mac.doFinal(buffer.array())
     }
 }
