@@ -116,7 +116,8 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    val key = EncryptionUtil.getOrCreateKey(context)
+                    val encryptedToken = EncryptionUtil.encrypt(fileContent, key)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)
@@ -529,9 +530,6 @@ class Exporter(
             }
         }
 
-        // for (i in 0..3) {
-        //     sheet.autoSizeColumn(i)
-        // }
     }
 
     private suspend fun createIndividualStudentSheets(

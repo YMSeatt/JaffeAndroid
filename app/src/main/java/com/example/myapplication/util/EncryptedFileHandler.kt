@@ -28,16 +28,18 @@ class EncryptedFileHandler @Inject constructor() {
         }
 
         val fileContentBytes = file.readBytes()
+        val key = EncryptionUtil.getOrCreateKey(context)
 
         // Try to decrypt first
         return try {
-            val decryptedBytes = EncryptionUtil.decrypt(context, String(fileContentBytes, StandardCharsets.UTF_8))
+            val token = String(fileContentBytes, StandardCharsets.UTF_8)
+            val decryptedBytes = EncryptionUtil.decrypt(token, key, null) // No TTL for file decryption
             String(decryptedBytes, StandardCharsets.UTF_8)
         } catch (e: SecurityException) {
             // If decryption fails, assume it's plaintext
             String(fileContentBytes, StandardCharsets.UTF_8)
         } catch (e: IllegalArgumentException) {
-            // Also handle Base64 decoding errors
+            // Also handle Base64 decoding errors or invalid versions
             String(fileContentBytes, StandardCharsets.UTF_8)
         }
     }
@@ -54,7 +56,9 @@ class EncryptedFileHandler @Inject constructor() {
     @Throws(IOException::class)
     fun writeFile(context: Context, file: File, data: String, encrypt: Boolean) {
         val dataBytes = if (encrypt) {
-            EncryptionUtil.encrypt(context, data.toByteArray(StandardCharsets.UTF_8)).toByteArray(StandardCharsets.UTF_8)
+            val key = EncryptionUtil.getOrCreateKey(context)
+            val encryptedData = EncryptionUtil.encrypt(data.toByteArray(StandardCharsets.UTF_8), key)
+            encryptedData.toByteArray(StandardCharsets.UTF_8)
         } else {
             data.toByteArray(StandardCharsets.UTF_8)
         }
