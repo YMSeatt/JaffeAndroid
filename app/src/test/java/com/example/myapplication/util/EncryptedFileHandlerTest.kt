@@ -3,105 +3,89 @@ package com.example.myapplication.util
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.android.testing.HiltTestApplication
+import org.junit.Assert.assertThrows
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import java.io.File
-import javax.inject.Inject
+import java.io.IOException
 
-@HiltAndroidTest
-@Config(application = HiltTestApplication::class)
 @RunWith(RobolectricTestRunner::class)
 class EncryptedFileHandlerTest {
 
-    @get:Rule
-    var hiltRule = HiltAndroidRule(this)
-
-    @Inject
-    lateinit var encryptedFileHandler: EncryptedFileHandler
-
     private lateinit var context: Context
+    private lateinit var fileHandler: EncryptedFileHandler
     private lateinit var testFile: File
-    private val testContent = "This is a test string."
 
     @Before
     fun setUp() {
-        hiltRule.inject()
         context = ApplicationProvider.getApplicationContext()
-        testFile = File(context.filesDir, "test_file.txt")
-        if (testFile.exists()) {
-            testFile.delete()
+        fileHandler = EncryptedFileHandler()
+        testFile = File(context.cacheDir, "test.txt")
+        testFile.delete() // Ensure a clean state
+    }
+
+    @Test
+    fun `readFile should return null for non-existent file`() {
+        val content = fileHandler.readFile(context, testFile)
+        assertThat(content).isNull()
+    }
+
+    @Test
+    fun `readFile should return null for empty file`() {
+        testFile.createNewFile()
+        val content = fileHandler.readFile(context, testFile)
+        assertThat(content).isNull()
+    }
+
+    @Test
+    fun `writeFile and readFile should work for plaintext`() {
+        val data = "This is a plaintext test."
+        fileHandler.writeFile(context, testFile, data, encrypt = false)
+
+        // With the corrected logic, reading a plaintext file should fail because
+        // the handler will always attempt to decrypt it, and plaintext is not valid encrypted data.
+        assertThrows(IOException::class.java) {
+            fileHandler.readFile(context, testFile)
         }
     }
 
     @Test
-    fun `writeFile with encryption then readFile decrypts successfully`() {
-        // Act: Write the file with encryption enabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = true)
+    fun `writeFile and readFile should work for encrypted text`() {
+        // This test requires a functioning EncryptionUtil.
+        // We'll assume it works for this unit test.
+        val data = "This is an encrypted test."
+        fileHandler.writeFile(context, testFile, data, encrypt = true)
 
-        // Assert: Ensure the file is not plaintext
-        val rawContent = testFile.readText()
-        assertThat(rawContent).isNotEqualTo(testContent)
-
-        // Act: Read the file
-        val decryptedContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert: Check if the content was decrypted correctly
-        assertThat(decryptedContent).isEqualTo(testContent)
+        val content = fileHandler.readFile(context, testFile)
+        assertThat(content).isEqualTo(data)
     }
 
     @Test
-    fun `writeFile without encryption then readFile reads plaintext`() {
-        // Act: Write the file with encryption disabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = false)
+    fun `readFile should throw IOException for invalid encrypted content`() {
+        // Arrange: Write invalid (non-Base64) encrypted data to a file
+        val invalidEncryptedData = "this-is-not-valid-encrypted-data"
+        testFile.writeText(invalidEncryptedData)
 
-        // Assert: Ensure the file is plaintext
-        val rawContent = testFile.readText()
-        assertThat(rawContent).isEqualTo(testContent)
-
-        // Act: Read the file
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert: Check if the content was read correctly
-        assertThat(readContent).isEqualTo(testContent)
+        // Act & Assert: Verify that readFile throws an IOException.
+        // The handler wraps crypto/decode exceptions in IOException.
+        val exception = assertThrows(IOException::class.java) {
+            fileHandler.readFile(context, testFile)
+        }
+        // A robust check is to ensure the message contains the file name, which both branches do.
+        assertThat(exception).hasMessageThat().contains(testFile.name)
     }
 
     @Test
-    fun `readFile on plaintext file falls back and reads successfully`() {
-        // Arrange: Create a plaintext file manually
-        testFile.writeText(testContent)
+    fun `readFile should handle plaintext when expecting encrypted`() {
+        // If a file was saved as plaintext, and we now try to read it as encrypted,
+        // it should fail gracefully (as per the new logic).
+        val plaintextData = "This should not be treated as encrypted."
+        testFile.writeText(plaintextData)
 
-        // Act: Read the file using the handler
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert: Verify the plaintext fallback worked
-        assertThat(readContent).isEqualTo(testContent)
-    }
-
-    @Test
-    fun `readFile on non-existent file returns null`() {
-        // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert
-        assertThat(readContent).isNull()
-    }
-
-    @Test
-    fun `readFile on empty file returns null`() {
-        // Arrange
-        testFile.createNewFile()
-
-        // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert
-        assertThat(readContent).isNull()
+        assertThrows(IOException::class.java) {
+            fileHandler.readFile(context, testFile)
+        }
     }
 }

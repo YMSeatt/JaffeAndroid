@@ -34,11 +34,11 @@ class EncryptedFileHandler @Inject constructor() {
             val decryptedBytes = EncryptionUtil.decrypt(context, String(fileContentBytes, StandardCharsets.UTF_8))
             String(decryptedBytes, StandardCharsets.UTF_8)
         } catch (e: SecurityException) {
-            // If decryption fails, assume it's plaintext
-            String(fileContentBytes, StandardCharsets.UTF_8)
+            // If decryption fails, it's a critical error.
+            throw IOException("Failed to decrypt file: ${file.name}", e)
         } catch (e: IllegalArgumentException) {
             // Also handle Base64 decoding errors
-            String(fileContentBytes, StandardCharsets.UTF_8)
+            throw IOException("Failed to decode encrypted file: ${file.name}", e)
         }
     }
 
