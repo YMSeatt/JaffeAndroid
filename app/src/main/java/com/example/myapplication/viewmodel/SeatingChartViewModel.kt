@@ -244,27 +244,9 @@ class SeatingChartViewModel @Inject constructor(
             val useInitialsForBehavior = appPreferencesRepository.useInitialsForBehaviorFlow.first()
             val useInitialsForHomework = appPreferencesRepository.useInitialsForHomeworkFlow.first()
             val useInitialsForQuiz = appPreferencesRepository.useInitialsForQuizFlow.first()
-            val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
-            val homeworkInitialsMap = appPreferencesRepository.homeworkInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
-            val quizInitialsMap = appPreferencesRepository.quizInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
+            val behaviorInitialsMap = parseKeyValueString(appPreferencesRepository.behaviorInitialsMapFlow.first())
+            val homeworkInitialsMap = parseKeyValueString(appPreferencesRepository.homeworkInitialsMapFlow.first())
+            val quizInitialsMap = parseKeyValueString(appPreferencesRepository.quizInitialsMapFlow.first())
             val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
 
             // Retrieve specific display timeouts
@@ -411,6 +393,15 @@ class SeatingChartViewModel @Inject constructor(
                             )
                         }
                         studentsForDisplay.postValue(studentsWithBehavior)        }
+    }
+
+    private fun parseKeyValueString(input: String): Map<String, String> {
+        return input.split(",")
+            .mapNotNull {
+                val parts = it.split(":", limit = 2)
+                if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+            }
+            .toMap()
     }
 
     fun clearRecentLogsForStudent(studentId: Long) {
