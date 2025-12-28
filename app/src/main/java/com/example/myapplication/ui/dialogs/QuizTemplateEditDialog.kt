@@ -26,7 +26,7 @@ fun QuizTemplateEditDialog(
 ) {
     var name by remember { mutableStateOf(quizTemplate?.name ?: "") }
     var numQuestions by remember { mutableStateOf(quizTemplate?.numQuestions?.toString() ?: "") }
-    // Add state for default marks here
+    var defaultMarks by remember { mutableStateOf(quizTemplate?.defaultMarks?.map { "${it.key}:${it.value}" }?.joinToString(", ") ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -43,19 +43,28 @@ fun QuizTemplateEditDialog(
                     value = numQuestions,
                     onValueChange = { numQuestions = it },
                     label = { Text("Number of Questions") },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                )
+                TextField(
+                    value = defaultMarks,
+                    onValueChange = { defaultMarks = it },
+                    label = { Text("Default Marks (e.g., A:10, B:5)") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Add UI for default marks here
             }
         },
         confirmButton = {
             Button(
                 onClick = {
+                    val marksMap = defaultMarks.split(',')
+                        .mapNotNull { it.trim().split(':').takeIf { parts -> parts.size == 2 } }
+                        .associate { (key, value) -> key.trim() to (value.trim().toIntOrNull() ?: 0) }
+
                     val template = QuizTemplate(
                         id = quizTemplate?.id ?: 0,
                         name = name,
                         numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        defaultMarks = emptyMap() // Replace with actual marks
+                        defaultMarks = marksMap
                     )
                     onSave(template)
                 }
