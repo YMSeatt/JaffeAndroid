@@ -8,8 +8,13 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
-import com.example.myapplication.util.SecurityUtil
+import com.example.myapplication.util.EncryptionUtil
+import com.macasaet.fernet.Key
+import com.macasaet.fernet.Token
+import com.macasaet.fernet.Validator
 import kotlinx.coroutines.Dispatchers
+import java.time.Duration
+import java.util.function.Function
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -68,13 +73,17 @@ class Importer(
     private suspend fun readAssetFile(fileName: String): String? {
         return try {
             val bytes = context.assets.open(fileName).use { it.readBytes() }
-
             if (encryptDataFilesFlow.first()) {
                 try {
-                    SecurityUtil.decrypt(String(bytes))
+                    String(EncryptionUtil.decrypt(context, String(bytes)))
                 } catch (e: Exception) {
-                    // If decryption fails, assume it's plaintext
-                    String(bytes)
+                    try {
+                        // Fallback to legacy decryption
+                        decryptLegacyFile(String(bytes))
+                    } catch (e: Exception) {
+                        // If all else fails, assume plaintext
+                        String(bytes)
+                    }
                 }
             } else {
                 String(bytes)
@@ -93,10 +102,15 @@ class Importer(
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
                         try {
-                            SecurityUtil.decrypt(String(bytes))
+                            String(EncryptionUtil.decrypt(context, String(bytes)))
                         } catch (e: Exception) {
-                            // If decryption fails, assume it's plaintext
-                            String(bytes)
+                            try {
+                                // Fallback to legacy decryption
+                                decryptLegacyFile(String(bytes))
+                            } catch (e: Exception) {
+                                // If all else fails, assume plaintext
+                                String(bytes)
+                            }
                         }
                     } else {
                         String(bytes)
@@ -107,6 +121,23 @@ class Importer(
                 Log.e("Importer", "Error during import from URI", e)
             }
         }
+    }
+
+    private fun decryptLegacyFile(data: String): String {
+        val key = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
+        val token = Token.fromString(data)
+
+        class StringValidator : Validator<String> {
+            override fun getTimeToLive(): Duration {
+                return Duration.ofDays(365 * 100) // A long TTL
+            }
+
+            override fun getTransformer(): Function<ByteArray, String> {
+                return Function { bytes -> String(bytes) }
+            }
+        }
+
+        return token.validateAndDecrypt(key, StringValidator())
     }
 
     private suspend fun importClassroomDataFromJson(jsonString: String) {
