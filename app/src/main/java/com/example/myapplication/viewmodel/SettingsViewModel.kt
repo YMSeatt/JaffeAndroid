@@ -25,7 +25,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
-import com.example.myapplication.util.SecurityUtil
+import com.example.myapplication.util.HashUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -424,14 +424,14 @@ class SettingsViewModel(
         if (hash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
+        val inputHash = HashUtil.hashPassword(password)
         return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
     }
 
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
-                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                preferencesRepository.updatePasswordHash(HashUtil.hashPassword(password))
                 updatePasswordEnabled(true)
             } else {
                 preferencesRepository.updatePasswordHash("")

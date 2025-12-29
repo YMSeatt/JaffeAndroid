@@ -8,6 +8,7 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
+import com.example.myapplication.util.EncryptionUtil
 import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -23,6 +24,7 @@ class Importer(
     private val db: AppDatabase,
     private val encryptDataFilesFlow: Flow<Boolean>
 ) {
+    private val encryptionUtil = EncryptionUtil(context)
 
     private val json = Json {
         ignoreUnknownKeys = true
@@ -65,20 +67,34 @@ class Importer(
             ?: throw IllegalArgumentException("Student with stringId $stringId not found")
     }
 
+    private suspend fun decryptBytes(bytes: ByteArray): String {
+        val stringifiedBytes = String(bytes, Charsets.UTF_8)
+        if (!encryptDataFilesFlow.first()) {
+            return stringifiedBytes
+        }
+
+        // Try new decryption first
+        try {
+            return encryptionUtil.decrypt(stringifiedBytes)
+        } catch (e: Exception) {
+            Log.d("Importer", "Failed to decrypt with new key, trying old key.")
+        }
+
+        // Fallback to old decryption
+        try {
+            return SecurityUtil.decrypt(stringifiedBytes)
+        } catch (e: Exception) {
+            Log.d("Importer", "Failed to decrypt with old key, assuming plaintext.")
+        }
+
+        // If all decryption fails, return as plaintext
+        return stringifiedBytes
+    }
+
     private suspend fun readAssetFile(fileName: String): String? {
         return try {
             val bytes = context.assets.open(fileName).use { it.readBytes() }
-
-            if (encryptDataFilesFlow.first()) {
-                try {
-                    SecurityUtil.decrypt(String(bytes))
-                } catch (e: Exception) {
-                    // If decryption fails, assume it's plaintext
-                    String(bytes)
-                }
-            } else {
-                String(bytes)
-            }
+            decryptBytes(bytes)
         } catch (e: IOException) {
             Log.e("Importer", "Error reading asset file: $fileName", e)
             null
@@ -91,16 +107,7 @@ class Importer(
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
                 if (bytes != null) {
-                    val jsonString = if (encryptDataFilesFlow.first()) {
-                        try {
-                            SecurityUtil.decrypt(String(bytes))
-                        } catch (e: Exception) {
-                            // If decryption fails, assume it's plaintext
-                            String(bytes)
-                        }
-                    } else {
-                        String(bytes)
-                    }
+                    val jsonString = decryptBytes(bytes)
                     importClassroomDataFromJson(jsonString)
                 }
             } catch (e: Exception) {
