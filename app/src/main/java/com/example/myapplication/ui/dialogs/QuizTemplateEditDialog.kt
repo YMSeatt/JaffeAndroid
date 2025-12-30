@@ -26,7 +26,7 @@ fun QuizTemplateEditDialog(
 ) {
     var name by remember { mutableStateOf(quizTemplate?.name ?: "") }
     var numQuestions by remember { mutableStateOf(quizTemplate?.numQuestions?.toString() ?: "") }
-    // Add state for default marks here
+    var defaultMarks by remember { mutableStateOf(quizTemplate?.defaultMarks?.map { "${it.key}:${it.value}" }?.joinToString(", ") ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -45,17 +45,35 @@ fun QuizTemplateEditDialog(
                     label = { Text("Number of Questions") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Add UI for default marks here
+                TextField(
+                    value = defaultMarks,
+                    onValueChange = { defaultMarks = it },
+                    label = { Text("Default Marks (e.g., A:10, B:5)") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
+                    val marksMap = defaultMarks.split(',')
+                        .mapNotNull {
+                            val parts = it.trim().split(':')
+                            if (parts.size == 2) {
+                                val key = parts[0].trim()
+                                val value = parts[1].trim().toIntOrNull()
+                                if (value != null) key to value else null
+                            } else {
+                                null
+                            }
+                        }
+                        .toMap()
+
                     val template = QuizTemplate(
                         id = quizTemplate?.id ?: 0,
                         name = name,
                         numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        defaultMarks = emptyMap() // Replace with actual marks
+                        defaultMarks = marksMap
                     )
                     onSave(template)
                 }
