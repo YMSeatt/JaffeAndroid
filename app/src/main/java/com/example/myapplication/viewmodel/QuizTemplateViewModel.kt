@@ -33,4 +33,26 @@ class QuizTemplateViewModel @Inject constructor(
     fun delete(quizTemplate: QuizTemplate) = viewModelScope.launch {
         repository.delete(quizTemplate)
     }
+
+    /**
+     * Saves a quiz template, checking for duplicate names first.
+     * @param quizTemplate The template to save.
+     * @return `true` if the template was saved successfully, `false` if a duplicate name exists.
+     */
+    fun saveTemplate(quizTemplate: QuizTemplate): Boolean {
+        val existingTemplate = quizTemplates.value.find {
+            it.name.equals(quizTemplate.name, ignoreCase = true) && it.id != quizTemplate.id
+        }
+
+        if (existingTemplate != null) {
+            return false // Duplicate name found
+        }
+
+        if (quizTemplate.id == 0) {
+            insert(quizTemplate)
+        } else {
+            update(quizTemplate)
+        }
+        return true
+    }
 }
