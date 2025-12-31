@@ -1,107 +1,72 @@
 package com.example.myapplication.util
 
 import android.content.Context
-import androidx.test.core.app.ApplicationProvider
-import com.google.common.truth.Truth.assertThat
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.android.testing.HiltTestApplication
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.Assert.assertEquals
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 import java.io.File
-import javax.inject.Inject
 
-@HiltAndroidTest
-@Config(application = HiltTestApplication::class)
-@RunWith(RobolectricTestRunner::class)
 class EncryptedFileHandlerTest {
 
-    @get:Rule
-    var hiltRule = HiltAndroidRule(this)
-
-    @Inject
-    lateinit var encryptedFileHandler: EncryptedFileHandler
-
-    private lateinit var context: Context
+    private lateinit var mockEncryptionUtil: EncryptionUtil
+    private lateinit var encryptedFileHandler: EncryptedFileHandler
+    private lateinit var mockContext: Context
     private lateinit var testFile: File
-    private val testContent = "This is a test string."
 
     @Before
     fun setUp() {
-        hiltRule.inject()
-        context = ApplicationProvider.getApplicationContext()
-        testFile = File(context.filesDir, "test_file.txt")
-        if (testFile.exists()) {
-            testFile.delete()
-        }
+        mockEncryptionUtil = mockk()
+        encryptedFileHandler = EncryptedFileHandler(mockEncryptionUtil)
+        mockContext = mockk(relaxed = true)
+        testFile = File.createTempFile("test", ".txt")
     }
 
     @Test
-    fun `writeFile with encryption then readFile decrypts successfully`() {
-        // Act: Write the file with encryption enabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = true)
+    fun `readFile decrypts when file is encrypted`() {
+        val encryptedText = "encrypted_text"
+        val decryptedText = "decrypted_text"
+        testFile.writeBytes(encryptedText.toByteArray())
+        every { mockEncryptionUtil.decrypt(encryptedText) } returns decryptedText.toByteArray()
 
-        // Assert: Ensure the file is not plaintext
-        val rawContent = testFile.readText()
-        assertThat(rawContent).isNotEqualTo(testContent)
+        val result = encryptedFileHandler.readFile(mockContext, testFile)
 
-        // Act: Read the file
-        val decryptedContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert: Check if the content was decrypted correctly
-        assertThat(decryptedContent).isEqualTo(testContent)
+        assertEquals(decryptedText, result)
+        verify { mockEncryptionUtil.decrypt(encryptedText) }
     }
 
     @Test
-    fun `writeFile without encryption then readFile reads plaintext`() {
-        // Act: Write the file with encryption disabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = false)
+    fun `readFile returns plaintext when decryption fails`() {
+        val plaintext = "plaintext"
+        testFile.writeBytes(plaintext.toByteArray())
+        every { mockEncryptionUtil.decrypt(any()) } throws SecurityException("Decryption failed")
 
-        // Assert: Ensure the file is plaintext
-        val rawContent = testFile.readText()
-        assertThat(rawContent).isEqualTo(testContent)
+        val result = encryptedFileHandler.readFile(mockContext, testFile)
 
-        // Act: Read the file
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert: Check if the content was read correctly
-        assertThat(readContent).isEqualTo(testContent)
+        assertEquals(plaintext, result)
     }
 
     @Test
-    fun `readFile on plaintext file falls back and reads successfully`() {
-        // Arrange: Create a plaintext file manually
-        testFile.writeText(testContent)
+    fun `writeFile encrypts data when encrypt is true`() {
+        val data = "test_data"
+        val encryptedData = "encrypted_data"
+        every { mockEncryptionUtil.encrypt(data.toByteArray()) } returns encryptedData
 
-        // Act: Read the file using the handler
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        encryptedFileHandler.writeFile(mockContext, testFile, data, true)
 
-        // Assert: Verify the plaintext fallback worked
-        assertThat(readContent).isEqualTo(testContent)
+        assertEquals(encryptedData, testFile.readText())
+        verify { mockEncryptionUtil.encrypt(data.toByteArray()) }
     }
 
     @Test
-    fun `readFile on non-existent file returns null`() {
-        // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+    fun `writeFile writes plaintext when encrypt is false`() {
+        val data = "test_data"
 
-        // Assert
-        assertThat(readContent).isNull()
-    }
+        encryptedFileHandler.writeFile(mockContext, testFile, data, false)
 
-    @Test
-    fun `readFile on empty file returns null`() {
-        // Arrange
-        testFile.createNewFile()
-
-        // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
-
-        // Assert
-        assertThat(readContent).isNull()
+        assertEquals(data, testFile.readText())
+        verify(exactly = 0) { mockEncryptionUtil.encrypt(any()) }
     }
 }

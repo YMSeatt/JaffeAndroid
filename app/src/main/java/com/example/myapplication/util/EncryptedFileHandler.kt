@@ -10,7 +10,9 @@ import javax.inject.Inject
  * Handles reading and writing encrypted files, with a graceful fallback to plaintext.
  * This utility uses the existing [EncryptionUtil] for cryptographic operations.
  */
-class EncryptedFileHandler @Inject constructor() {
+class EncryptedFileHandler @Inject constructor(
+    private val encryptionUtil: EncryptionUtil
+) {
 
     /**
      * Reads a file, attempts to decrypt it, and returns the content as a string.
@@ -31,7 +33,7 @@ class EncryptedFileHandler @Inject constructor() {
 
         // Try to decrypt first
         return try {
-            val decryptedBytes = EncryptionUtil.decrypt(context, String(fileContentBytes, StandardCharsets.UTF_8))
+            val decryptedBytes = encryptionUtil.decrypt(String(fileContentBytes, StandardCharsets.UTF_8))
             String(decryptedBytes, StandardCharsets.UTF_8)
         } catch (e: SecurityException) {
             // If decryption fails, assume it's plaintext
@@ -54,7 +56,7 @@ class EncryptedFileHandler @Inject constructor() {
     @Throws(IOException::class)
     fun writeFile(context: Context, file: File, data: String, encrypt: Boolean) {
         val dataBytes = if (encrypt) {
-            EncryptionUtil.encrypt(context, data.toByteArray(StandardCharsets.UTF_8)).toByteArray(StandardCharsets.UTF_8)
+            encryptionUtil.encrypt(data.toByteArray(StandardCharsets.UTF_8)).toByteArray(StandardCharsets.UTF_8)
         } else {
             data.toByteArray(StandardCharsets.UTF_8)
         }
