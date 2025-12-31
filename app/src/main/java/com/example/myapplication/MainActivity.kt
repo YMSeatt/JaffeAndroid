@@ -73,6 +73,7 @@ import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.GuideType
+import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
@@ -277,7 +278,7 @@ class MainActivity : ComponentActivity() {
             if (autoSendOnClose) {
                 val email: String = settingsViewModel.defaultEmailAddress.first()
                 if (email.isNotBlank()) {
-                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    val exportOptions = pendingExportOptions ?: ExportOptions()
                     val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
                         .setInputData(workDataOf(
                             "email_address" to email,
