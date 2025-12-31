@@ -57,10 +57,7 @@ fun QuizTemplateScreen(
         if (showEditDialog) {
             QuizTemplateEditDialog(
                 onDismiss = { showEditDialog = false },
-                onSave = { quizTemplate ->
-                    viewModel.insert(quizTemplate)
-                    showEditDialog = false
-                }
+                onSave = viewModel::saveTemplate
             )
         }
     }
