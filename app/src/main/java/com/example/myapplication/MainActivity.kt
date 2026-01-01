@@ -112,6 +112,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class SessionType {
     BEHAVIOR,
@@ -281,7 +283,7 @@ class MainActivity : ComponentActivity() {
                     val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
                         .setInputData(workDataOf(
                             "email_address" to email,
-                            "export_options" to exportOptions.toString()
+                            "export_options" to Json.encodeToString(exportOptions)
                         ))
                         .build()
                     WorkManager.getInstance(applicationContext).enqueue(workRequest)
