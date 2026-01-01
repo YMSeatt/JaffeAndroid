@@ -43,8 +43,9 @@ fun QuizTemplateEditDialog(
                     isError = nameError != null,
 
                 )
-                if (nameError != null) {
-                    Text(text = nameError!!, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
+                val currentNameError = nameError
+                if (currentNameError != null) {
+                    Text(text = currentNameError, color = androidx.compose.material3.MaterialTheme.colorScheme.error)
                 }
                 TextField(
                     value = numQuestions,
