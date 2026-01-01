@@ -693,42 +693,109 @@ fun SeatingChartScreen(
                 LoadLayoutDialog(layouts = layouts, onDismiss = { showLoadLayoutDialog = false }, onLoad = { layout -> seatingChartViewModel.loadLayout(layout); showLoadLayoutDialog = false }, onDelete = { layout -> seatingChartViewModel.deleteLayoutTemplate(layout) })
             }
 
-            if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
-                val student = selectedStudentUiItemForAction!!
-                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
-                var showGroupMenu by remember { mutableStateOf(false) }
+            if (showStudentActionMenu) {
+                selectedStudentUiItemForAction?.let { student ->
+                    val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                    var showGroupMenu by remember { mutableStateOf(false) }
+                    var showBehaviorLogViewer by remember { mutableStateOf(false) }
 
-                var showBehaviorLogViewer by remember { mutableStateOf(false) }
-
-                DropdownMenu(expanded = true, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
-                    DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
-                        coroutineScope.launch { editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong()); showAddEditStudentDialog = true }
-                        showStudentActionMenu = false
-                    })
-                    DropdownMenuItem(text = { Text("Delete Student") }, onClick = { seatingChartViewModel.deleteStudents(setOf(student.id)); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Behavior") }, onClick = { showBehaviorDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("View Behavior Log") }, onClick = { showBehaviorLogViewer = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Homework") }, onClick = { showAdvancedHomeworkLogDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = { showLogQuizScoreDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign Task") }, onClick = { showAssignTaskDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Change Student Box Style") }, onClick = { showStudentStyleDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Clear Recent Logs") }, onClick = { seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Show Recent Logs") }, onClick = { seatingChartViewModel.showRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign to Group") }, onClick = { showGroupMenu = true })
-                    if (student.groupId != null) {
-                        DropdownMenuItem(text = { Text("Remove from Group") }, onClick = { seatingChartViewModel.removeStudentFromGroup(student.id.toLong()); showStudentActionMenu = false })
+                    DropdownMenu(
+                        expanded = true,
+                        onDismissRequest = { showStudentActionMenu = false },
+                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
+                    ) {
+                        DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
+                            coroutineScope.launch {
+                                editingStudent =
+                                    seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                showAddEditStudentDialog = true
+                            }
+                            showStudentActionMenu = false
+                        })
+                        DropdownMenuItem(
+                            text = { Text("Delete Student") },
+                            onClick = {
+                                seatingChartViewModel.deleteStudents(setOf(student.id))
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Behavior") },
+                            onClick = {
+                                showBehaviorDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("View Behavior Log") },
+                            onClick = {
+                                showBehaviorLogViewer = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Homework") },
+                            onClick = {
+                                showAdvancedHomeworkLogDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Quiz Score") },
+                            onClick = {
+                                showLogQuizScoreDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign Task") },
+                            onClick = {
+                                showAssignTaskDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Change Student Box Style") },
+                            onClick = {
+                                showStudentStyleDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Clear Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Show Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign to Group") },
+                            onClick = { showGroupMenu = true })
+                        if (student.groupId != null) {
+                            DropdownMenuItem(text = { Text("Remove from Group") }, onClick = {
+                                seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
-                }
-                if (showBehaviorLogViewer) {
-                    BehaviorLogViewerDialog(
-                        studentId = student.id.toLong(),
-                        viewModel = seatingChartViewModel,
-                        onDismiss = { showBehaviorLogViewer = false }
-                    )
-                }
-                DropdownMenu(expanded = showGroupMenu, onDismissRequest = { showGroupMenu = false }) {
-                    groups.forEach { group ->
-                        DropdownMenuItem(text = { Text(group.name) }, onClick = { seatingChartViewModel.assignStudentToGroup(student.id.toLong(), group.id); showGroupMenu = false; showStudentActionMenu = false })
+                    if (showBehaviorLogViewer) {
+                        BehaviorLogViewerDialog(
+                            studentId = student.id.toLong(),
+                            viewModel = seatingChartViewModel,
+                            onDismiss = { showBehaviorLogViewer = false }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showGroupMenu,
+                        onDismissRequest = { showGroupMenu = false }) {
+                        groups.forEach { group ->
+                            DropdownMenuItem(text = { Text(group.name) }, onClick = {
+                                seatingChartViewModel.assignStudentToGroup(
+                                    student.id.toLong(),
+                                    group.id
+                                )
+                                showGroupMenu = false
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
                 }
             }
