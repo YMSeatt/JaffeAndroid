@@ -52,6 +52,7 @@ import com.example.myapplication.ui.model.toUiItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.CollisionDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -88,6 +89,7 @@ class SeatingChartViewModel @Inject constructor(
     private val quizTemplateDao: QuizTemplateDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
     private val appPreferencesRepository: AppPreferencesRepository,
+    private val exporter: Exporter,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -475,7 +477,6 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     suspend fun exportData(
-        context: Context,
         uri: Uri,
         options: com.example.myapplication.data.exporter.ExportOptions
     ): Result<Unit> = withContext(Dispatchers.IO) {
@@ -485,10 +486,9 @@ class SeatingChartViewModel @Inject constructor(
         val quizLogs = quizLogDao.getAllQuizLogsList()
         val studentGroups = studentGroupDao.getAllStudentGroupsList()
         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-        val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
-        val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
+        val customHomeworkTypes = AppDatabase.getDatabase(getApplication()).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
+        val customHomeworkStatuses = AppDatabase.getDatabase(getApplication()).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
 
-        val exporter = com.example.myapplication.data.exporter.Exporter(context)
         exporter.export(
             uri = uri,
             options = options,
@@ -500,30 +500,31 @@ class SeatingChartViewModel @Inject constructor(
             quizMarkTypes = quizMarkTypes,
             customHomeworkTypes = customHomeworkTypes,
             customHomeworkStatuses = customHomeworkStatuses,
-            encrypt = false
+            encrypt = false,
+            context = getApplication()
         )
         return@withContext Result.success(Unit)
     }
 
-    suspend fun importStudentsFromExcel(context: Context, uri: Uri): Result<Int> {
-        return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, context, repository)
+    suspend fun importStudentsFromExcel(uri: Uri): Result<Int> {
+        return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, getApplication(), repository)
     }
 
-    fun importData(context: Context, uri: Uri) {
+    fun importData(uri: Uri) {
         viewModelScope.launch {
             Importer(
-                context,
-                AppDatabase.getDatabase(context),
+                getApplication(),
+                AppDatabase.getDatabase(getApplication()),
                 appPreferencesRepository.encryptDataFilesFlow
             ).importData(uri)
         }
     }
 
-    fun importFromPythonAssets(context: Context) {
+    fun importFromPythonAssets() {
         viewModelScope.launch {
             val importer = Importer(
-                context,
-                AppDatabase.getDatabase(context),
+                getApplication(),
+                AppDatabase.getDatabase(getApplication()),
                 appPreferencesRepository.encryptDataFilesFlow
             )
             importer.importFromAssets()

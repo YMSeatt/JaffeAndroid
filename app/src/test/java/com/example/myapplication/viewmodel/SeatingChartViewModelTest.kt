@@ -6,6 +6,7 @@ import androidx.lifecycle.Observer
 import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.commands.MoveStudentCommand
 import com.example.myapplication.data.*
+import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.ui.model.StudentUiItem
 import io.mockk.*
@@ -54,6 +55,8 @@ class SeatingChartViewModelTest {
     lateinit var quizMarkTypeDao: QuizMarkTypeDao
     @MockK(relaxed = true)
     lateinit var appPreferencesRepository: AppPreferencesRepository
+    @MockK(relaxed = true)
+    lateinit var exporter: Exporter
     @MockK(relaxed = true)
     lateinit var application: Application
 
@@ -120,6 +123,7 @@ class SeatingChartViewModelTest {
             quizTemplateDao,
             quizMarkTypeDao,
             appPreferencesRepository,
+            exporter,
             application
         )
     }
