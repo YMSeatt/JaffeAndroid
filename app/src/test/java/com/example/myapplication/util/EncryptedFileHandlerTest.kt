@@ -1,56 +1,48 @@
 package com.example.myapplication.util
 
-import android.content.Context
-import androidx.test.core.app.ApplicationProvider
 import com.google.common.truth.Truth.assertThat
-import dagger.hilt.android.testing.HiltAndroidRule
-import dagger.hilt.android.testing.HiltAndroidTest
-import dagger.hilt.android.testing.HiltTestApplication
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import org.junit.runner.RunWith
-import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
+import org.junit.rules.TemporaryFolder
 import java.io.File
-import javax.inject.Inject
+import java.nio.charset.StandardCharsets
 
-@HiltAndroidTest
-@Config(application = HiltTestApplication::class)
-@RunWith(RobolectricTestRunner::class)
 class EncryptedFileHandlerTest {
 
     @get:Rule
-    var hiltRule = HiltAndroidRule(this)
+    val temporaryFolder = TemporaryFolder()
 
-    @Inject
-    lateinit var encryptedFileHandler: EncryptedFileHandler
+    private lateinit var encryptedFileHandler: EncryptedFileHandler
+    private val encryptionUtil: EncryptionUtil = mockk()
 
-    private lateinit var context: Context
     private lateinit var testFile: File
     private val testContent = "This is a test string."
+    private val encryptedContent = "encrypted_string"
 
     @Before
     fun setUp() {
-        hiltRule.inject()
-        context = ApplicationProvider.getApplicationContext()
-        testFile = File(context.filesDir, "test_file.txt")
-        if (testFile.exists()) {
-            testFile.delete()
-        }
+        testFile = temporaryFolder.newFile("test_file.txt")
+        encryptedFileHandler = EncryptedFileHandler(encryptionUtil)
+
+        every { encryptionUtil.encrypt(any()) } returns encryptedContent
+        every { encryptionUtil.decrypt(encryptedContent) } returns testContent.toByteArray(StandardCharsets.UTF_8)
+        every { encryptionUtil.decrypt(testContent) } throws SecurityException("Invalid token")
     }
 
     @Test
     fun `writeFile with encryption then readFile decrypts successfully`() {
         // Act: Write the file with encryption enabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = true)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = true)
 
         // Assert: Ensure the file is not plaintext
         val rawContent = testFile.readText()
-        assertThat(rawContent).isNotEqualTo(testContent)
+        assertThat(rawContent).isEqualTo(encryptedContent)
 
         // Act: Read the file
-        val decryptedContent = encryptedFileHandler.readFile(context, testFile)
+        val decryptedContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Check if the content was decrypted correctly
         assertThat(decryptedContent).isEqualTo(testContent)
@@ -59,14 +51,14 @@ class EncryptedFileHandlerTest {
     @Test
     fun `writeFile without encryption then readFile reads plaintext`() {
         // Act: Write the file with encryption disabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = false)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = false)
 
         // Assert: Ensure the file is plaintext
         val rawContent = testFile.readText()
         assertThat(rawContent).isEqualTo(testContent)
 
         // Act: Read the file
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Check if the content was read correctly
         assertThat(readContent).isEqualTo(testContent)
@@ -78,7 +70,7 @@ class EncryptedFileHandlerTest {
         testFile.writeText(testContent)
 
         // Act: Read the file using the handler
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Verify the plaintext fallback worked
         assertThat(readContent).isEqualTo(testContent)
@@ -86,8 +78,11 @@ class EncryptedFileHandlerTest {
 
     @Test
     fun `readFile on non-existent file returns null`() {
+        // Arrange
+        val nonExistentFile = File(temporaryFolder.root, "non_existent.txt")
+
         // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(nonExistentFile)
 
         // Assert
         assertThat(readContent).isNull()
@@ -96,10 +91,9 @@ class EncryptedFileHandlerTest {
     @Test
     fun `readFile on empty file returns null`() {
         // Arrange
-        testFile.createNewFile()
-
+        val emptyFile = temporaryFolder.newFile("empty.txt")
         // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(emptyFile)
 
         // Assert
         assertThat(readContent).isNull()

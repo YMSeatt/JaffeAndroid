@@ -136,7 +136,6 @@ class MainActivity : ComponentActivity() {
             pendingExportOptions?.let { options ->
                 lifecycleScope.launch {
                     val result = seatingChartViewModel.exportData(
-                        context = this@MainActivity,
                         uri = it,
                         options = options
                     )
@@ -164,7 +163,7 @@ class MainActivity : ComponentActivity() {
     ) { uri: Uri? ->
         uri?.let {
             lifecycleScope.launch {
-                seatingChartViewModel.importData(this@MainActivity, it)
+                seatingChartViewModel.importData(it)
                 Toast.makeText(this@MainActivity, "Data imported successfully", Toast.LENGTH_SHORT).show()
             }
         }
@@ -175,7 +174,7 @@ class MainActivity : ComponentActivity() {
     ) { uri: Uri? ->
         uri?.let {
             lifecycleScope.launch {
-                val result = seatingChartViewModel.importStudentsFromExcel(this@MainActivity, it)
+                val result = seatingChartViewModel.importStudentsFromExcel(it)
                 result.onSuccess { count ->
                     Toast.makeText(this@MainActivity, "$count students imported successfully", Toast.LENGTH_SHORT).show()
                 }.onFailure { error ->
@@ -468,7 +467,7 @@ fun SeatingChartScreen(
                         DropdownMenu(expanded = showFileMenu, onDismissRequest = { showFileMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
                             DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showFileMenu = false })
                             DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showFileMenu = false })
+                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(); showFileMenu = false })
                             DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showFileMenu = false })
                             DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showFileMenu = false })
                             DropdownMenuItem(text = { Text("Export to Excel") }, onClick = {
@@ -837,7 +836,6 @@ fun SeatingChartScreen(
                             val uri = Uri.fromFile(file)
                             activity.pendingExportOptions?.let { options ->
                                 val result = seatingChartViewModel.exportData(
-                                    context = activity,
                                     uri = uri,
                                     options = options
                                 )

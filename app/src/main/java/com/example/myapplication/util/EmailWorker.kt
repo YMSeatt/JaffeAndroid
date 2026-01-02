@@ -36,7 +36,8 @@ class EmailWorker(
         val customHomeworkStatusDao = db.customHomeworkStatusDao()
         val pendingEmailDao = db.pendingEmailDao()
 
-        val exporter = Exporter(applicationContext)
+        val encryptionUtil = EncryptionUtil(applicationContext)
+        val exporter = Exporter(encryptionUtil)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         val preferencesRepository = AppPreferencesRepository(applicationContext)
@@ -100,7 +101,8 @@ class EmailWorker(
                     quizMarkTypes = quizMarkTypes,
                     customHomeworkTypes = customHomeworkTypes,
                     customHomeworkStatuses = customHomeworkStatuses,
-                    encrypt = options.encrypt
+                    encrypt = options.encrypt,
+                    context = applicationContext
                 )
 
                 val to = inputData.getString("email_address") ?: from

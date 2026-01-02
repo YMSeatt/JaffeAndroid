@@ -1,6 +1,7 @@
 package com.example.myapplication.util
 
 import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.nio.ByteBuffer
 import java.security.SecureRandom
@@ -9,6 +10,8 @@ import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * A stateless class that implements the Fernet specification for symmetric encryption.
@@ -117,27 +120,19 @@ class FernetCipher(private val key: ByteArray) {
 }
 
 /**
- * A singleton utility for handling Fernet encryption and decryption within the Android app.
+ * A utility for handling Fernet encryption and decryption within the Android app.
  * It manages the secure storage and retrieval of the encryption key.
+ * This class is designed to be injected as a singleton by Hilt.
  */
-object EncryptionUtil {
-    private const val KEY_FILE_NAME = "fernet.key"
-    private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
+@Singleton
+class EncryptionUtil @Inject constructor(@ApplicationContext private val context: Context) {
+    private val fernetCipher: FernetCipher
 
-    private var fernetCipher: FernetCipher? = null
-
-    @Synchronized
-    private fun getInstance(context: Context): FernetCipher {
-        return fernetCipher ?: run {
-            val key = getKey(context.applicationContext)
-            FernetCipher(key).also { fernetCipher = it }
-        }
+    init {
+        val key = getKey(context)
+        fernetCipher = FernetCipher(key)
     }
 
-    /**
-     * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
-     * it generates a new 32-byte key and saves it for future use.
-     */
     private fun getKey(context: Context): ByteArray {
         val keyFile = File(context.filesDir, KEY_FILE_NAME)
         return if (keyFile.exists()) {
@@ -158,14 +153,19 @@ object EncryptionUtil {
     /**
      * Encrypts a plaintext byte array.
      */
-    fun encrypt(context: Context, plaintext: ByteArray): String {
-        return getInstance(context).encrypt(plaintext)
+    fun encrypt(plaintext: ByteArray): String {
+        return fernetCipher.encrypt(plaintext)
     }
 
     /**
      * Decrypts a Fernet token.
      */
-    fun decrypt(context: Context, token: String, ttl: Int = TTL_SECONDS): ByteArray {
-        return getInstance(context).decrypt(token, ttl)
+    fun decrypt(token: String, ttl: Int = TTL_SECONDS): ByteArray {
+        return fernetCipher.decrypt(token, ttl)
+    }
+
+    companion object {
+        private const val KEY_FILE_NAME = "fernet.key"
+        private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
     }
 }

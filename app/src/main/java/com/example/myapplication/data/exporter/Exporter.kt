@@ -22,9 +22,10 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
-class Exporter(
-    private val context: Context
+class Exporter @Inject constructor(
+    private val encryptionUtil: EncryptionUtil
 ) {
 
     suspend fun export(
@@ -38,7 +39,10 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        encrypt: Boolean
+        encrypt: Boolean,
+        // This is a bit of a hack, but we need the context to write the file
+        // We can't inject it because this class is not a singleton
+        context: Context
     ) {
         val workbook = XSSFWorkbook()
 
@@ -116,7 +120,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    val encryptedToken = encryptionUtil.encrypt(fileContent)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)
@@ -163,9 +167,9 @@ class Exporter(
             val relevantLogs = data.filterIsInstance<HomeworkLog>()
             relevantLogs.flatMap { log ->
                  try {
-                     log.marksData?.let { 
+                     log.marksData?.let {
                         val type = object : TypeToken<Map<String, Any>>() {}.type
-                        Gson().fromJson<Map<String, Any>>(it, type).keys 
+                        Gson().fromJson<Map<String, Any>>(it, type).keys
                      } ?: emptySet()
                  } catch (e: Exception) {
                      emptySet()
@@ -336,7 +340,7 @@ class Exporter(
                     if (marksData != null) {
                         var totalPoints = 0.0
                         var effort = ""
-                        
+
                         // Populate values for all known headers (Custom Types, Statuses, and Dynamic Keys)
                         // We iterate the map entries to find matching headers
                         marksData.forEach { (key, value) ->
@@ -349,14 +353,14 @@ class Exporter(
                                 }
                                 val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
                                 if (doubleValue != null) {
-                                    // Heuristic: only add to total points if it's likely a score? 
+                                    // Heuristic: only add to total points if it's likely a score?
                                     // Or maybe we should only count known "Types"?
                                     // For now, let's include it if it's numeric and NOT in Statuses
                                     if (customHomeworkStatuses.none { it.name == key }) {
                                          totalPoints += doubleValue
                                     }
                                 }
-                                if (key.lowercase(Locale.getDefault()).contains("effort") || 
+                                if (key.lowercase(Locale.getDefault()).contains("effort") ||
                                     customHomeworkStatuses.any { it.name == key && it.name.lowercase().contains("effort") }) {
                                     effort = stringValue
                                 }
@@ -451,7 +455,7 @@ class Exporter(
                 val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
                 val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
                 // Simplified score calculation
-                val marksData = try { 
+                val marksData = try {
                     val type = object : TypeToken<Map<String, Any>>() {}.type
                     Gson().fromJson<Map<String, Any>>(log.marksData, type)
                 } catch (e: Exception) { emptyMap() }
@@ -503,7 +507,7 @@ class Exporter(
                 val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
                 var points = 0.0
                 log.marksData?.let {
-                    val marks = try { 
+                    val marks = try {
                         val type = object : TypeToken<Map<String, Any>>() {}.type
                         Gson().fromJson<Map<String, Any>>(it, type)
                     } catch (e: Exception) { emptyMap() }
