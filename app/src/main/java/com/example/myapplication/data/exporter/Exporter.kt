@@ -24,7 +24,8 @@ import java.util.Date
 import java.util.Locale
 
 class Exporter(
-    private val context: Context
+    private val context: Context,
+    private val encryptionUtil: EncryptionUtil
 ) {
 
     suspend fun export(
@@ -116,7 +117,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    val encryptedToken = encryptionUtil.encrypt(fileContent)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)
