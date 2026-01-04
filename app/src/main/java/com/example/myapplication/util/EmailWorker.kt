@@ -8,6 +8,8 @@ import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -18,10 +20,13 @@ import java.util.Locale
 import java.util.Calendar
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
+import androidx.hilt.work.HiltWorker
 
-class EmailWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
+@HiltWorker
+class EmailWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val exporter: Exporter
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -36,7 +41,6 @@ class EmailWorker(
         val customHomeworkStatusDao = db.customHomeworkStatusDao()
         val pendingEmailDao = db.pendingEmailDao()
 
-        val exporter = Exporter(applicationContext)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         val preferencesRepository = AppPreferencesRepository(applicationContext)

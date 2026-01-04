@@ -43,14 +43,14 @@ class EncryptedFileHandlerTest {
     @Test
     fun `writeFile with encryption then readFile decrypts successfully`() {
         // Act: Write the file with encryption enabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = true)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = true)
 
         // Assert: Ensure the file is not plaintext
         val rawContent = testFile.readText()
         assertThat(rawContent).isNotEqualTo(testContent)
 
         // Act: Read the file
-        val decryptedContent = encryptedFileHandler.readFile(context, testFile)
+        val decryptedContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Check if the content was decrypted correctly
         assertThat(decryptedContent).isEqualTo(testContent)
@@ -59,14 +59,14 @@ class EncryptedFileHandlerTest {
     @Test
     fun `writeFile without encryption then readFile reads plaintext`() {
         // Act: Write the file with encryption disabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = false)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = false)
 
         // Assert: Ensure the file is plaintext
         val rawContent = testFile.readText()
         assertThat(rawContent).isEqualTo(testContent)
 
         // Act: Read the file
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Check if the content was read correctly
         assertThat(readContent).isEqualTo(testContent)
@@ -78,7 +78,7 @@ class EncryptedFileHandlerTest {
         testFile.writeText(testContent)
 
         // Act: Read the file using the handler
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert: Verify the plaintext fallback worked
         assertThat(readContent).isEqualTo(testContent)
@@ -87,7 +87,7 @@ class EncryptedFileHandlerTest {
     @Test
     fun `readFile on non-existent file returns null`() {
         // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert
         assertThat(readContent).isNull()
@@ -99,7 +99,7 @@ class EncryptedFileHandlerTest {
         testFile.createNewFile()
 
         // Act
-        val readContent = encryptedFileHandler.readFile(context, testFile)
+        val readContent = encryptedFileHandler.readFile(testFile)
 
         // Assert
         assertThat(readContent).isNull()

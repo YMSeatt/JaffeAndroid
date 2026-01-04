@@ -88,6 +88,7 @@ class SeatingChartViewModel @Inject constructor(
     private val quizTemplateDao: QuizTemplateDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
     private val appPreferencesRepository: AppPreferencesRepository,
+    private val exporter: com.example.myapplication.data.exporter.Exporter,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -488,7 +489,6 @@ class SeatingChartViewModel @Inject constructor(
         val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
         val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
 
-        val exporter = com.example.myapplication.data.exporter.Exporter(context)
         exporter.export(
             uri = uri,
             options = options,

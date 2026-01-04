@@ -13,6 +13,7 @@ import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.util.EncryptionUtil
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import dagger.hilt.android.qualifiers.ApplicationContext
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.ss.usermodel.VerticalAlignment
 import org.apache.poi.ss.usermodel.Workbook
@@ -22,9 +23,11 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
-class Exporter(
-    private val context: Context
+class Exporter @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val encryptionUtil: EncryptionUtil
 ) {
 
     suspend fun export(
@@ -116,7 +119,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = EncryptionUtil.encrypt(context, fileContent)
+                    val encryptedToken = encryptionUtil.encrypt(fileContent)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)
