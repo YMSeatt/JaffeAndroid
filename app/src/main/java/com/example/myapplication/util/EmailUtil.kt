@@ -40,6 +40,12 @@ class EmailUtil(private val context: Context) {
         body: String,
         attachmentPath: String? = null
     ) {
+        if (!isValidEmail(from)) {
+            throw EmailException("Invalid 'from' email address: $from")
+        }
+        if (!isValidEmail(to)) {
+            throw EmailException("Invalid 'to' email address: $to")
+        }
         val data = Data.Builder()
             .putString("request_type", "send_email")
             .putString("from", from)
@@ -71,13 +77,6 @@ class EmailUtil(private val context: Context) {
         body: String,
         attachmentPath: String? = null
     ) {
-        if (!isValidEmail(from)) {
-            throw EmailException("Invalid 'from' email address: $from")
-        }
-        if (!isValidEmail(to)) {
-            throw EmailException("Invalid 'to' email address: $to")
-        }
-
         withContext(Dispatchers.IO) {
             val properties = Properties().apply {
                 put("mail.smtp.host", "smtp.gmail.com")
