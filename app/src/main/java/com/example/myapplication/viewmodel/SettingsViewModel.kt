@@ -684,7 +684,7 @@ class SettingsViewModel(
     }
 
     val autoSendEmailOnClose: StateFlow<Boolean> = preferencesRepository.autoSendEmailOnCloseFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
