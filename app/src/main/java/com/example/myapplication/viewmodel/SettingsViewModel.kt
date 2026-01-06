@@ -675,7 +675,7 @@ class SettingsViewModel(
     }
 
     val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "behaviorlogger@gmail.com")
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "behaviorlogger@gmail.com")
 
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
@@ -684,7 +684,7 @@ class SettingsViewModel(
     }
 
     val autoSendEmailOnClose: StateFlow<Boolean> = preferencesRepository.autoSendEmailOnCloseFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {

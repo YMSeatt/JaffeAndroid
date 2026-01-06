@@ -136,6 +136,7 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.11.1")
     testImplementation("androidx.test:core:1.5.0")
     testImplementation("com.google.truth:truth:1.1.3")
+    testImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation(libs.androidx.espresso.core)

@@ -272,20 +272,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        lifecycleScope.launch {
-            val autoSendOnClose: Boolean = settingsViewModel.autoSendEmailOnClose.first()
-            if (autoSendOnClose) {
-                val email: String = settingsViewModel.defaultEmailAddress.first()
-                if (email.isNotBlank()) {
-                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
-                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
-                        .setInputData(workDataOf(
-                            "email_address" to email,
-                            "export_options" to exportOptions.toString()
-                        ))
-                        .build()
-                    WorkManager.getInstance(applicationContext).enqueue(workRequest)
-                }
+        if (settingsViewModel.autoSendEmailOnClose.value) {
+            val email = settingsViewModel.defaultEmailAddress.value
+            if (email.isNotBlank()) {
+                val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                    .setInputData(workDataOf(
+                        "email_address" to email,
+                        "export_options" to exportOptions.toString()
+                    ))
+                    .build()
+                WorkManager.getInstance(applicationContext).enqueue(workRequest)
             }
         }
     }
