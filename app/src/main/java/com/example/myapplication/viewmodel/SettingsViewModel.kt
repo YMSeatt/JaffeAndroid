@@ -420,12 +420,25 @@ class SettingsViewModel(
     }
 
     suspend fun checkPassword(password: String): Boolean {
-        val hash = preferencesRepository.passwordHashFlow.first()
-        if (hash.isNullOrEmpty()) {
+        val storedHash = preferencesRepository.passwordHashFlow.first()
+        if (storedHash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+
+        val newHash = SecurityUtil.hashPassword(password) // SHA-512
+        if (storedHash == newHash || MASTER_RECOVERY_PASSWORD_HASH == newHash) {
+            return true
+        }
+
+        // For backward compatibility, check against the old SHA-256 hash
+        val oldHash = SecurityUtil.hashPassword(password, "SHA-256")
+        if (storedHash == oldHash) {
+            // If it matches, update the hash to the new algorithm automatically
+            preferencesRepository.updatePasswordHash(newHash)
+            return true
+        }
+
+        return false
     }
 
     fun setPassword(password: String) {
