@@ -415,17 +415,28 @@ class SettingsViewModel(
         }
     }
 
-    companion object {
-        private const val MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292"
-    }
-
     suspend fun checkPassword(password: String): Boolean {
         val hash = preferencesRepository.passwordHashFlow.first()
+
         if (hash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+
+        // Check against the new SHA-512 hash
+        val sha512Hash = SecurityUtil.hashPassword(password, "SHA-512")
+        if (hash == sha512Hash) {
+            return true
+        }
+
+        // Check against the old SHA-256 hash for backward compatibility
+        val sha256Hash = SecurityUtil.hashPassword(password, "SHA-256")
+        if (hash == sha256Hash) {
+            // If the old hash matches, update it to the new one
+            preferencesRepository.updatePasswordHash(sha512Hash)
+            return true
+        }
+
+        return false
     }
 
     fun setPassword(password: String) {
