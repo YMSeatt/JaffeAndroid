@@ -295,7 +295,6 @@ class MainActivity : ComponentActivity() {
 fun EmailDialog(
     onDismissRequest: () -> Unit,
     onSend: (String, String, String) -> Unit,
-    settingsViewModel: SettingsViewModel,
     fromAddress: String
 ) {
     var to by remember { mutableStateOf("") }
@@ -861,8 +860,7 @@ fun SeatingChartScreen(
                             }
                             onShowEmailDialogChange(false)
                         }
-                    },
-                    settingsViewModel = settingsViewModel
+                    }
                 )
             }
 
