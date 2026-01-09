@@ -55,7 +55,8 @@ private const val DATABASE_BACKUP_FILENAME = "student_organizer_backup.db"
 fun DataSettingsTab(
     settingsViewModel: SettingsViewModel,
     studentRepository: StudentRepository,
-    onNavigateToHomeworkTemplates: () -> Unit
+    onNavigateToHomeworkTemplates: () -> Unit,
+    onNavigateToQuizTemplates: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -509,6 +510,13 @@ fun DataSettingsTab(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text("Manage Homework Templates")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = onNavigateToQuizTemplates,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Manage Quiz Templates")
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }

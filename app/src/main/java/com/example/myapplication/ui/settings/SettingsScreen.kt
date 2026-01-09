@@ -146,15 +146,15 @@ fun SettingsScreen(
                     2 -> DataSettingsTab(
                         settingsViewModel = settingsViewModel,
                         studentRepository = studentRepository,
-                        onNavigateToHomeworkTemplates = onNavigateToHomeworkTemplates
+                        onNavigateToHomeworkTemplates = onNavigateToHomeworkTemplates,
+                        onNavigateToQuizTemplates = onNavigateToQuizTemplates
                     )
                     3 -> AdvancedSettingsTab(
                         onNavigateToStudentGroups = onNavigateToStudentGroups,
                         onNavigateToConditionalFormatting = onNavigateToConditionalFormatting,
                         onNavigateToExport = onNavigateToExport,
                         onNavigateToEmailSchedules = onNavigateToEmailSchedules,
-                        onNavigateToReminders = onNavigateToReminders,
-                        onNavigateToQuizTemplates = onNavigateToQuizTemplates
+                        onNavigateToReminders = onNavigateToReminders
                     )
                 }
             }
