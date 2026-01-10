@@ -54,7 +54,7 @@ class SettingsActivity : ComponentActivity() {
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(application)
+        SettingsViewModelFactory(application, androidx.work.WorkManager.getInstance(applicationContext))
     }
 
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {
