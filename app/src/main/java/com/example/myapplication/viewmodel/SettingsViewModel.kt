@@ -14,6 +14,7 @@ import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
@@ -25,8 +26,14 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.util.SecurityUtil
+import com.example.myapplication.util.EmailWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -38,10 +45,11 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class SettingsViewModel(
-    application: Application
+    application: Application,
+    private val workManager: WorkManager,
+    private val preferencesRepository: AppPreferencesRepository
 ) : AndroidViewModel(application) {
 
-    private val preferencesRepository = AppPreferencesRepository(application)
     private val db = AppDatabase.getDatabase(application)
     private val studentDao = db.studentDao()
     private val furnitureDao = db.furnitureDao()
@@ -734,6 +742,25 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    fun handleOnStop(exportOptions: com.example.myapplication.data.exporter.ExportOptions?) {
+        viewModelScope.launch {
+            val autoSendOnClose: Boolean = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email: String = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val options = exportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(workDataOf(
+                            "email_address" to email,
+                            "export_options" to Json.encodeToString(ExportOptions.serializer(), options)
+                        ))
+                        .build()
+                    workManager.enqueue(workRequest)
+                }
+            }
         }
     }
 }
