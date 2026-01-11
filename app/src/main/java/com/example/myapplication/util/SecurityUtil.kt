@@ -35,9 +35,9 @@ object SecurityUtil {
         return token.validateAndDecrypt(ENCRYPTION_KEY, StringValidator())
     }
 
-    fun hashPassword(password: String): String {
+    fun hashPassword(password: String, algorithm: String = "SHA-512"): String {
         val bytes = password.toByteArray()
-        val md = MessageDigest.getInstance("SHA-256")
+        val md = MessageDigest.getInstance(algorithm)
         val digest = md.digest(bytes)
         return digest.fold("") { str, it -> str + "%02x".format(it) }
     }
