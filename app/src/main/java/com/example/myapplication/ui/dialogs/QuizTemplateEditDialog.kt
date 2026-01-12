@@ -1,8 +1,8 @@
 package com.example.myapplication.ui.dialogs
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,18 +26,18 @@ fun QuizTemplateEditDialog(
 ) {
     var name by remember { mutableStateOf(quizTemplate?.name ?: "") }
     var numQuestions by remember { mutableStateOf(quizTemplate?.numQuestions?.toString() ?: "") }
-    // Add state for default marks here
+    var defaultMarks by remember { mutableStateOf(quizTemplate?.defaultMarks?.map { "${it.key}=${it.value}" }?.joinToString(", ") ?: "") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (quizTemplate == null) "Add Quiz Template" else "Edit Quiz Template") },
         text = {
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Template Name") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    modifier = Modifier.fillMaxWidth()
                 )
                 TextField(
                     value = numQuestions,
@@ -45,17 +45,23 @@ fun QuizTemplateEditDialog(
                     label = { Text("Number of Questions") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Add UI for default marks here
+                TextField(
+                    value = defaultMarks,
+                    onValueChange = { defaultMarks = it },
+                    label = { Text("Default Marks (e.g., correct=1, incorrect=0)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
             Button(
                 onClick = {
+                    val marksMap = parseDefaultMarks(defaultMarks)
                     val template = QuizTemplate(
                         id = quizTemplate?.id ?: 0,
                         name = name,
                         numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        defaultMarks = emptyMap() // Replace with actual marks
+                        defaultMarks = marksMap
                     )
                     onSave(template)
                 }
@@ -69,4 +75,11 @@ fun QuizTemplateEditDialog(
             }
         }
     )
+}
+
+private fun parseDefaultMarks(marks: String): Map<String, Int> {
+    return marks.split(",")
+        .map { it.trim().split("=") }
+        .filter { it.size == 2 }
+        .associate { it[0] to (it[1].toIntOrNull() ?: 0) }
 }

@@ -18,8 +18,7 @@ fun AdvancedSettingsTab(
     onNavigateToConditionalFormatting: () -> Unit,
     onNavigateToExport: () -> Unit,
     onNavigateToEmailSchedules: () -> Unit,
-    onNavigateToReminders: () -> Unit,
-    onNavigateToQuizTemplates: () -> Unit
+    onNavigateToReminders: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -67,11 +66,6 @@ fun AdvancedSettingsTab(
         }
         item {
             Spacer(Modifier.height(8.dp))
-        }
-        item {
-            Button(onClick = onNavigateToQuizTemplates, modifier = Modifier.fillMaxWidth()) {
-                Text("Manage Quiz Templates")
-            }
         }
     }
 }
