@@ -39,7 +39,6 @@ fun SettingsNavHost(
                 onNavigateToStudentGroups = { navController.navigate("student_groups") },
                 onNavigateToConditionalFormatting = { navController.navigate("conditional_formatting") },
                 onNavigateToExport = { navController.navigate("export") },
-                onNavigateToEmailSchedules = { navController.navigate("email_schedules") },
                 onNavigateToReminders = { navController.navigate("reminders") },
                 onNavigateToQuizTemplates = { navController.navigate("quiz_templates") },
                 onNavigateToHomeworkTemplates = { navController.navigate("homework_templates") },
@@ -61,11 +60,6 @@ fun SettingsNavHost(
         composable("export") {
             ExportScreen(
                 studentRepository = studentRepository,
-                onDismiss = { navController.popBackStack() }
-            )
-        }
-        composable("email_schedules") {
-            EmailSchedulesScreen(
                 onDismiss = { navController.popBackStack() }
             )
         }

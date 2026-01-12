@@ -17,7 +17,6 @@ fun AdvancedSettingsTab(
     onNavigateToStudentGroups: () -> Unit,
     onNavigateToConditionalFormatting: () -> Unit,
     onNavigateToExport: () -> Unit,
-    onNavigateToEmailSchedules: () -> Unit,
     onNavigateToReminders: () -> Unit,
     onNavigateToQuizTemplates: () -> Unit
 ) {
@@ -51,11 +50,6 @@ fun AdvancedSettingsTab(
         }
         item {
             Spacer(Modifier.height(8.dp))
-        }
-        item {
-            Button(onClick = onNavigateToEmailSchedules, modifier = Modifier.fillMaxWidth()) {
-                Text("Email Schedules")
-            }
         }
         item {
             Spacer(Modifier.height(8.dp))

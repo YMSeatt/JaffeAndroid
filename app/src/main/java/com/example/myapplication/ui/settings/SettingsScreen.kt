@@ -42,7 +42,6 @@ fun SettingsScreen(
     onNavigateToStudentGroups: () -> Unit,
     onNavigateToConditionalFormatting: () -> Unit,
     onNavigateToExport: () -> Unit,
-    onNavigateToEmailSchedules: () -> Unit,
     onNavigateToReminders: () -> Unit,
     onNavigateToQuizTemplates: () -> Unit,
     onNavigateToHomeworkTemplates: () -> Unit,
@@ -152,7 +151,6 @@ fun SettingsScreen(
                         onNavigateToStudentGroups = onNavigateToStudentGroups,
                         onNavigateToConditionalFormatting = onNavigateToConditionalFormatting,
                         onNavigateToExport = onNavigateToExport,
-                        onNavigateToEmailSchedules = onNavigateToEmailSchedules,
                         onNavigateToReminders = onNavigateToReminders,
                         onNavigateToQuizTemplates = onNavigateToQuizTemplates
                     )
