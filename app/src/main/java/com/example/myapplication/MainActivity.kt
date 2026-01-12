@@ -28,6 +28,7 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -460,88 +461,6 @@ fun SeatingChartScreen(
                         }
                     }
 
-                    IconButton(onClick = { seatingChartViewModel.undo() }) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo") }
-                    IconButton(onClick = { seatingChartViewModel.redo() }) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
-                    Box {
-                        IconButton(onClick = { showFileMenu = true }) { Text("File") }
-                        val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
-                        DropdownMenu(expanded = showFileMenu, onDismissRequest = { showFileMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
-                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Export to Excel") }, onClick = {
-                                if (seatingChartViewModel.studentsForDisplay.value?.isNotEmpty() == true) {
-                                    showExportDialog = true
-                                } else {
-                                    Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
-                                }
-                                showFileMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
-                                lastExportPath?.let { path ->
-                                    val uri = path.toUri()
-                                    val intent = Intent(Intent.ACTION_VIEW)
-                                    intent.setDataAndType(uri, "vnd.android.document/directory")
-                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                    if (intent.resolveActivity(context.packageManager) != null) {
-                                        context.startActivity(intent)
-                                    } else {
-                                        Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                                showFileMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Export Database") }, onClick = {
-                                coroutineScope.launch {
-                                    val uri = settingsViewModel.shareDatabase()
-                                    if (uri != null) {
-                                        val intent = Intent(Intent.ACTION_SEND).apply {
-                                            type = "application/octet-stream"
-                                            putExtra(Intent.EXTRA_STREAM, uri)
-                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                        }
-                                        context.startActivity(Intent.createChooser(intent, "Share Database"))
-                                    } else {
-                                        Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                                showFileMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showFileMenu = false })
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { showViewMenu = true }) { Text("View") }
-                        DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
-                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showViewMenu = false })
-                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showViewMenu = false })
-                            DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
-                                guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
-                                showViewMenu = false
-                            })
-                            DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
-                                coroutineScope.launch {
-                                    val view = (context as Activity).window.decorView
-                                    val bitmap = captureComposable(view, context.window)
-                                    if (bitmap != null) {
-                                        settingsViewModel.saveScreenshot(bitmap)
-                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                                showViewMenu = false
-                            })
-                            AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
-                            }
-                        }
-                    }
-
                     var showModeMenu by remember { mutableStateOf(false) }
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
@@ -568,8 +487,87 @@ fun SeatingChartScreen(
                         }
                     }
 
-                    IconButton(onClick = onNavigateToSettings) { Icon(Icons.Filled.Settings, contentDescription = "Settings") }
-                    IconButton(onClick = onHelpClick) { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help") }
+                    var showMoreMenu by remember { mutableStateOf(false) }
+                    Box {
+                        IconButton(onClick = { showMoreMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        }
+                        val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
+                        DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                            DropdownMenuItem(text = { Text("Undo") }, onClick = { seatingChartViewModel.undo(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Redo") }, onClick = { seatingChartViewModel.redo(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Export to Excel") }, onClick = {
+                                if (seatingChartViewModel.studentsForDisplay.value?.isNotEmpty() == true) {
+                                    showExportDialog = true
+                                } else {
+                                    Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
+                                }
+                                showMoreMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
+                                lastExportPath?.let { path ->
+                                    val uri = path.toUri()
+                                    val intent = Intent(Intent.ACTION_VIEW)
+                                    intent.setDataAndType(uri, "vnd.android.document/directory")
+                                    intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    if (intent.resolveActivity(context.packageManager) != null) {
+                                        context.startActivity(intent)
+                                    } else {
+                                        Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showMoreMenu = false
+                            })
+                             DropdownMenuItem(text = { Text("Export Database") }, onClick = {
+                                coroutineScope.launch {
+                                    val uri = settingsViewModel.shareDatabase()
+                                    if (uri != null) {
+                                        val intent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "application/octet-stream"
+                                            putExtra(Intent.EXTRA_STREAM, uri)
+                                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                        }
+                                        context.startActivity(Intent.createChooser(intent, "Share Database"))
+                                    } else {
+                                        Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showMoreMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
+                                guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
+                                showMoreMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
+                                coroutineScope.launch {
+                                    val view = (context as Activity).window.decorView
+                                    val bitmap = captureComposable(view, context.window)
+                                    if (bitmap != null) {
+                                        settingsViewModel.saveScreenshot(bitmap)
+                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showMoreMenu = false
+                            })
+                            AppTheme.entries.forEach { theme ->
+                                DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showMoreMenu = false })
+                            }
+                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Settings") }, onClick = { onNavigateToSettings(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showMoreMenu = false })
+                        }
+                    }
                 }
             )
         },
