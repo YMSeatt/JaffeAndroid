@@ -146,6 +146,7 @@ fun SettingsScreen(
                     2 -> DataSettingsTab(
                         settingsViewModel = settingsViewModel,
                         studentRepository = studentRepository,
+                        onNavigateToQuizTemplates = onNavigateToQuizTemplates,
                         onNavigateToHomeworkTemplates = onNavigateToHomeworkTemplates
                     )
                     3 -> AdvancedSettingsTab(
@@ -153,8 +154,7 @@ fun SettingsScreen(
                         onNavigateToConditionalFormatting = onNavigateToConditionalFormatting,
                         onNavigateToExport = onNavigateToExport,
                         onNavigateToEmailSchedules = onNavigateToEmailSchedules,
-                        onNavigateToReminders = onNavigateToReminders,
-                        onNavigateToQuizTemplates = onNavigateToQuizTemplates
+                        onNavigateToReminders = onNavigateToReminders
                     )
                 }
             }
