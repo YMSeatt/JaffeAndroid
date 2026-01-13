@@ -416,7 +416,7 @@ class SettingsViewModel(
     }
 
     companion object {
-        private const val MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292"
+        private const val MASTER_RECOVERY_PASSWORD_HASH = "58a3641152ec953f54f1f237f5a77c73b0a2944b0d87630325062a4d048415707f1f6c772c67295f1c24bd742b6355883833d7120a4b7931348121d5a711b221"
     }
 
     suspend fun checkPassword(password: String): Boolean {
@@ -424,14 +424,28 @@ class SettingsViewModel(
         if (hash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+
+        // Check against the new SHA-512 hash
+        val sha512Hash = SecurityUtil.hashPassword(password, "SHA-512")
+        if (hash == sha512Hash) {
+            return true
+        }
+
+        // For backward compatibility, check against the old SHA-256 hash
+        val sha256Hash = SecurityUtil.hashPassword(password, "SHA-256")
+        if (hash == sha256Hash) {
+            // If the old hash is correct, update it to the new one
+            preferencesRepository.updatePasswordHash(sha512Hash)
+            return true
+        }
+
+        return MASTER_RECOVERY_PASSWORD_HASH == sha512Hash
     }
 
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
-                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password, "SHA-512"))
                 updatePasswordEnabled(true)
             } else {
                 preferencesRepository.updatePasswordHash("")
