@@ -16,12 +16,16 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.Calendar
+import androidx.hilt.work.HiltWorker
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 
-class EmailWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
+@HiltWorker
+class EmailWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val encryptionUtil: EncryptionUtil
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -36,7 +40,7 @@ class EmailWorker(
         val customHomeworkStatusDao = db.customHomeworkStatusDao()
         val pendingEmailDao = db.pendingEmailDao()
 
-        val exporter = Exporter(applicationContext)
+        val exporter = Exporter(applicationContext, encryptionUtil)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
         val preferencesRepository = AppPreferencesRepository(applicationContext)

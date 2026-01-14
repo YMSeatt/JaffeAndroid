@@ -56,6 +56,8 @@ class SeatingChartViewModelTest {
     lateinit var appPreferencesRepository: AppPreferencesRepository
     @MockK(relaxed = true)
     lateinit var application: Application
+    @MockK(relaxed = true)
+    lateinit var encryptionUtil: com.example.myapplication.util.EncryptionUtil
 
     private lateinit var viewModel: SeatingChartViewModel
 
@@ -120,6 +122,7 @@ class SeatingChartViewModelTest {
             quizTemplateDao,
             quizMarkTypeDao,
             appPreferencesRepository,
+            encryptionUtil,
             application
         )
     }
