@@ -52,8 +52,9 @@ import com.example.myapplication.ui.model.toUiItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.CollisionDetector
+import com.example.myapplication.util.ConditionalFormattingEngine
+import com.example.myapplication.util.EncryptionUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlin.math.roundToInt
@@ -88,6 +89,7 @@ class SeatingChartViewModel @Inject constructor(
     private val quizTemplateDao: QuizTemplateDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
     private val appPreferencesRepository: AppPreferencesRepository,
+    private val encryptionUtil: EncryptionUtil,
     application: Application
 ) : AndroidViewModel(application) {
 
@@ -488,7 +490,7 @@ class SeatingChartViewModel @Inject constructor(
         val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
         val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
 
-        val exporter = com.example.myapplication.data.exporter.Exporter(context)
+        val exporter = com.example.myapplication.data.exporter.Exporter(context, encryptionUtil)
         exporter.export(
             uri = uri,
             options = options,
