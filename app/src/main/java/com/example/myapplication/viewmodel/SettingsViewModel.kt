@@ -38,10 +38,9 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class SettingsViewModel(
-    application: Application
+    application: Application,
+    private val preferencesRepository: AppPreferencesRepository
 ) : AndroidViewModel(application) {
-
-    private val preferencesRepository = AppPreferencesRepository(application)
     private val db = AppDatabase.getDatabase(application)
     private val studentDao = db.studentDao()
     private val furnitureDao = db.furnitureDao()
@@ -420,18 +419,31 @@ class SettingsViewModel(
     }
 
     suspend fun checkPassword(password: String): Boolean {
-        val hash = preferencesRepository.passwordHashFlow.first()
-        if (hash.isNullOrEmpty()) {
+        val storedHash = preferencesRepository.passwordHashFlow.first()
+        if (storedHash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+
+        // Check against the new SHA-512 hash
+        val newHash = SecurityUtil.hashPassword(password, "SHA-512")
+        if (storedHash == newHash || MASTER_RECOVERY_PASSWORD_HASH == newHash) {
+            return true
+        }
+
+        // For backward compatibility, check against the old SHA-256 hash
+        val oldHash = SecurityUtil.hashPassword(password, "SHA-256")
+        if (storedHash == oldHash) {
+            // If the old hash matches, upgrade to the new hash
+            preferencesRepository.updatePasswordHash(newHash)
+            return true
+        }
+        return false
     }
 
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
-                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password, "SHA-512"))
                 updatePasswordEnabled(true)
             } else {
                 preferencesRepository.updatePasswordHash("")
