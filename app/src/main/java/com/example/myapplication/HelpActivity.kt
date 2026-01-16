@@ -134,7 +134,7 @@ class HelpActivity : ComponentActivity() {
 @Composable
 fun HelpSection(title: String, content: String) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
+        Text(title, style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.padding(4.dp))
         Text(content, style = MaterialTheme.typography.bodyMedium)
     }
