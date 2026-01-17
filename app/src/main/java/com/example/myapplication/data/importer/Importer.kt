@@ -8,6 +8,7 @@ import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.Student
+import com.example.myapplication.util.EncryptionUtil
 import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,7 @@ class Importer(
 
             if (encryptDataFilesFlow.first()) {
                 try {
-                    SecurityUtil.decrypt(String(bytes))
+                    String(EncryptionUtil.decrypt(String(bytes)))
                 } catch (e: Exception) {
                     // If decryption fails, assume it's plaintext
                     String(bytes)
@@ -93,7 +94,7 @@ class Importer(
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
                         try {
-                            SecurityUtil.decrypt(String(bytes))
+                            String(EncryptionUtil.decrypt(String(bytes)))
                         } catch (e: Exception) {
                             // If decryption fails, assume it's plaintext
                             String(bytes)
