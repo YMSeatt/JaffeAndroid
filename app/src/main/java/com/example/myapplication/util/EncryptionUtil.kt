@@ -1,7 +1,5 @@
 package com.example.myapplication.util
 
-import android.content.Context
-import java.io.File
 import java.nio.ByteBuffer
 import java.security.SecureRandom
 import java.util.Base64
@@ -118,54 +116,26 @@ class FernetCipher(private val key: ByteArray) {
 
 /**
  * A singleton utility for handling Fernet encryption and decryption within the Android app.
- * It manages the secure storage and retrieval of the encryption key.
+ * It uses the hardcoded key from [SecurityUtil].
  */
 object EncryptionUtil {
-    private const val KEY_FILE_NAME = "fernet.key"
-    private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
+    private const val TTL_SECONDS = 0 // No TTL for decryption, mirroring Python implementation
 
-    private var fernetCipher: FernetCipher? = null
-
-    @Synchronized
-    private fun getInstance(context: Context): FernetCipher {
-        return fernetCipher ?: run {
-            val key = getKey(context.applicationContext)
-            FernetCipher(key).also { fernetCipher = it }
-        }
-    }
-
-    /**
-     * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
-     * it generates a new 32-byte key and saves it for future use.
-     */
-    private fun getKey(context: Context): ByteArray {
-        val keyFile = File(context.filesDir, KEY_FILE_NAME)
-        return if (keyFile.exists()) {
-            val keyBytes = keyFile.readBytes()
-            if (keyBytes.size == 32) keyBytes else generateAndSaveKey(keyFile)
-        } else {
-            generateAndSaveKey(keyFile)
-        }
-    }
-
-    private fun generateAndSaveKey(keyFile: File): ByteArray {
-        val newKey = ByteArray(32)
-        SecureRandom().nextBytes(newKey)
-        keyFile.writeBytes(newKey)
-        return newKey
+    private val fernetCipher: FernetCipher by lazy {
+        FernetCipher(SecurityUtil.getEncryptionKey())
     }
 
     /**
      * Encrypts a plaintext byte array.
      */
-    fun encrypt(context: Context, plaintext: ByteArray): String {
-        return getInstance(context).encrypt(plaintext)
+    fun encrypt(plaintext: ByteArray): String {
+        return fernetCipher.encrypt(plaintext)
     }
 
     /**
      * Decrypts a Fernet token.
      */
-    fun decrypt(context: Context, token: String, ttl: Int = TTL_SECONDS): ByteArray {
-        return getInstance(context).decrypt(token, ttl)
+    fun decrypt(token: String, ttl: Int = TTL_SECONDS): ByteArray {
+        return fernetCipher.decrypt(token, ttl)
     }
 }
