@@ -4,6 +4,7 @@ import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token
 import com.macasaet.fernet.Validator
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
 import java.util.function.Function
@@ -35,10 +36,36 @@ object SecurityUtil {
         return token.validateAndDecrypt(ENCRYPTION_KEY, StringValidator())
     }
 
+    private fun generateSalt(): ByteArray {
+        val random = SecureRandom()
+        val salt = ByteArray(16)
+        random.nextBytes(salt)
+        return salt
+    }
+
     fun hashPassword(password: String): String {
-        val bytes = password.toByteArray()
+        val salt = generateSalt()
         val md = MessageDigest.getInstance("SHA-256")
-        val digest = md.digest(bytes)
-        return digest.fold("") { str, it -> str + "%02x".format(it) }
+        md.update(salt)
+        val digest = md.digest(password.toByteArray())
+        val saltHex = salt.fold("") { str, it -> str + "%02x".format(it) }
+        val digestHex = digest.fold("") { str, it -> str + "%02x".format(it) }
+        return "$saltHex:$digestHex"
+    }
+
+    fun verifyPassword(password: String, storedHash: String): Boolean {
+        return try {
+            val (saltHex, hashHex) = storedHash.split(":")
+            val salt = ByteArray(saltHex.length / 2) {
+                saltHex.substring(it * 2, it * 2 + 2).toInt(16).toByte()
+            }
+            val md = MessageDigest.getInstance("SHA-256")
+            md.update(salt)
+            val newDigest = md.digest(password.toByteArray())
+            val newDigestHex = newDigest.fold("") { str, it -> str + "%02x".format(it) }
+            newDigestHex == hashHex
+        } catch (e: Exception) {
+            false
+        }
     }
 }
