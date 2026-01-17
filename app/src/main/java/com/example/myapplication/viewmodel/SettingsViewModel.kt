@@ -31,9 +31,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.myapplication.data.exporter.ExportOptions
+import com.example.myapplication.util.EmailWorker
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
@@ -689,6 +696,29 @@ class SettingsViewModel(
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateAutoSendEmailOnClose(enabled)
+        }
+    }
+
+    fun handleOnStop(pendingExportOptions: ExportOptions?) {
+        viewModelScope.launch {
+            val autoSendOnClose: Boolean = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email: String = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: ExportOptions()
+                    val exportOptionsJson = Json.encodeToString(exportOptions)
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "request_type" to "daily_report",
+                                "email_address" to email,
+                                "export_options" to exportOptionsJson
+                            )
+                        )
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 
