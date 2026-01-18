@@ -1,5 +1,6 @@
 package com.example.myapplication.viewmodel
 
+import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.data.QuizTemplateRepository
 import io.mockk.coVerify
@@ -12,18 +13,24 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 
 @ExperimentalCoroutinesApi
 class QuizTemplateViewModelTest {
 
+    @get:Rule
+    val instantTaskExecutorRule = InstantTaskExecutorRule()
+
     private val testDispatcher = StandardTestDispatcher()
+
     private lateinit var viewModel: QuizTemplateViewModel
-    private val repository: QuizTemplateRepository = mockk(relaxed = true)
+    private lateinit var repository: QuizTemplateRepository
 
     @Before
-    fun setUp() {
+    fun setup() {
         Dispatchers.setMain(testDispatcher)
+        repository = mockk(relaxed = true)
         viewModel = QuizTemplateViewModel(repository)
     }
 
