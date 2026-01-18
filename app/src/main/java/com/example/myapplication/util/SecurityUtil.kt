@@ -4,8 +4,10 @@ import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token
 import com.macasaet.fernet.Validator
 import java.security.MessageDigest
+import java.security.SecureRandom
 import java.time.Duration
 import java.time.Instant
+import java.util.Locale
 import java.util.function.Function
 import java.util.function.Supplier
 
@@ -36,9 +38,46 @@ object SecurityUtil {
     }
 
     fun hashPassword(password: String): String {
-        val bytes = password.toByteArray()
+        val salt = ByteArray(16)
+        val random = SecureRandom()
+        random.nextBytes(salt)
+
         val md = MessageDigest.getInstance("SHA-256")
-        val digest = md.digest(bytes)
-        return digest.fold("") { str, it -> str + "%02x".format(it) }
+        md.update(salt)
+        val hashedPassword = md.digest(password.toByteArray(Charsets.UTF_8))
+
+        val saltHex = salt.fold("") { str, it -> str + String.format(Locale.US, "%02x", it) }
+        val hashedPasswordHex = hashedPassword.fold("") { str, it -> str + String.format(Locale.US, "%02x", it) }
+
+        return "$saltHex:$hashedPasswordHex"
+    }
+
+    fun verifyPassword(password: String, storedHash: String): Boolean {
+        try {
+            if (storedHash.contains(":")) {
+                // New salted hash format
+                val parts = storedHash.split(":")
+                if (parts.size != 2) return false
+
+                val salt = parts[0].chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+                val originalHash = parts[1]
+
+                val md = MessageDigest.getInstance("SHA-256")
+                md.update(salt)
+                val newHash = md.digest(password.toByteArray(Charsets.UTF_8))
+                    .fold("") { str, it -> str + String.format(Locale.US, "%02x", it) }
+
+                return newHash == originalHash
+            } else {
+                // Old unsalted hash format for backward compatibility
+                val bytes = password.toByteArray(Charsets.UTF_8)
+                val md = MessageDigest.getInstance("SHA-256")
+                val digest = md.digest(bytes)
+                val hashedInput = digest.fold("") { str, it -> str + String.format(Locale.US, "%02x", it) }
+                return hashedInput == storedHash
+            }
+        } catch (e: Exception) {
+            return false
+        }
     }
 }
