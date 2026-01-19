@@ -36,13 +36,20 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.myapplication.data.exporter.ExportOptions
+import com.example.myapplication.util.EmailWorker
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SettingsViewModel(
-    application: Application
+    application: Application,
+    private val preferencesRepository: AppPreferencesRepository,
+    db: AppDatabase
 ) : AndroidViewModel(application) {
 
-    private val preferencesRepository = AppPreferencesRepository(application)
-    private val db = AppDatabase.getDatabase(application)
     private val studentDao = db.studentDao()
     private val furnitureDao = db.furnitureDao()
     private val studentGroupDao = db.studentGroupDao()
@@ -734,6 +741,27 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    fun handleOnStop(pendingExportOptions: ExportOptions?) {
+        viewModelScope.launch {
+            val autoSendOnClose: Boolean = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email: String = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: ExportOptions()
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "email_address" to email,
+                                "export_options" to Json.encodeToString(exportOptions)
+                            )
+                        )
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 }
