@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -15,18 +16,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.myapplication.data.QuizTemplate
+import com.example.myapplication.viewmodel.QuizTemplateViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizTemplateEditDialog(
     onDismiss: () -> Unit,
     onSave: (QuizTemplate) -> Unit,
-    quizTemplate: QuizTemplate? = null
+    quizTemplate: QuizTemplate? = null,
+    viewModel: QuizTemplateViewModel = hiltViewModel()
 ) {
     var name by remember { mutableStateOf(quizTemplate?.name ?: "") }
     var numQuestions by remember { mutableStateOf(quizTemplate?.numQuestions?.toString() ?: "") }
-    // Add state for default marks here
+    val defaultMarks = remember { mutableStateOf(quizTemplate?.defaultMarks?.toMutableMap() ?: mutableMapOf()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -37,7 +41,9 @@ fun QuizTemplateEditDialog(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text("Template Name") },
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
                 )
                 TextField(
                     value = numQuestions,
@@ -45,7 +51,26 @@ fun QuizTemplateEditDialog(
                     label = { Text("Number of Questions") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                // Add UI for default marks here
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                Text("Default Marks")
+                Column {
+                    viewModel.defaultMarkTypes.forEach { markType ->
+                        var markValue by remember { mutableStateOf(defaultMarks.value[markType.name]?.toString() ?: "") }
+                        TextField(
+                            value = markValue,
+                            onValueChange = {
+                                markValue = it
+                                if (it.isNotEmpty()) {
+                                    defaultMarks.value[markType.name] = it.toIntOrNull() ?: 0
+                                } else {
+                                    defaultMarks.value.remove(markType.name)
+                                }
+                            },
+                            label = { Text(markType.name) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
@@ -55,7 +80,7 @@ fun QuizTemplateEditDialog(
                         id = quizTemplate?.id ?: 0,
                         name = name,
                         numQuestions = numQuestions.toIntOrNull() ?: 0,
-                        defaultMarks = emptyMap() // Replace with actual marks
+                        defaultMarks = defaultMarks.value
                     )
                     onSave(template)
                 }
