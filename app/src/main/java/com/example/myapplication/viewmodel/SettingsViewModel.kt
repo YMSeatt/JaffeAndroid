@@ -9,11 +9,15 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
@@ -25,6 +29,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
+import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,11 +39,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
 class SettingsViewModel(
-    application: Application
+    application: Application,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : AndroidViewModel(application) {
 
     private val preferencesRepository = AppPreferencesRepository(application)
@@ -62,7 +71,7 @@ class SettingsViewModel(
     val restoreComplete: LiveData<Boolean> = _restoreComplete
 
     init {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             jsonImporter = JsonImporter(
                 application,
                 studentDao,
@@ -79,7 +88,7 @@ class SettingsViewModel(
     }
 
     fun archiveCurrentYear() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val context = getApplication<Application>()
             AppDatabase.getDatabase(context).close()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
@@ -98,7 +107,7 @@ class SettingsViewModel(
     }
 
     fun loadArchivedDatabase(fileName: String) {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val context = getApplication<Application>()
             AppDatabase.switchToArchive(context, fileName)
             _restoreComplete.postValue(true)
@@ -106,7 +115,7 @@ class SettingsViewModel(
     }
 
     fun restoreLiveDatabase() {
-        viewModelScope.launch(Dispatchers.IO) {
+        viewModelScope.launch(ioDispatcher) {
             val context = getApplication<Application>()
             AppDatabase.switchToLive(context)
             _restoreComplete.postValue(true)
@@ -689,6 +698,26 @@ class SettingsViewModel(
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updateAutoSendEmailOnClose(enabled)
+        }
+    }
+
+    fun scheduleEmailOnClose(pendingExportOptions: ExportOptions?) {
+        viewModelScope.launch {
+            val autoSendOnClose = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: ExportOptions()
+                    val exportOptionsJson = Json.encodeToString(exportOptions)
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(workDataOf(
+                            "email_address" to email,
+                            "export_options" to exportOptionsJson
+                        ))
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 

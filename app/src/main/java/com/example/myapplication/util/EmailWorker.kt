@@ -47,8 +47,43 @@ class EmailWorker(
             return@withContext Result.failure()
         }
 
-        val requestType = inputData.getString("request_type")
+        val requestType = inputData.getString("request_type") ?: "auto_send"
         when (requestType) {
+            "auto_send" -> {
+                val emailAddress = inputData.getString("email_address") ?: return@withContext Result.failure()
+                val exportOptionsJson = inputData.getString("export_options") ?: return@withContext Result.failure()
+                val options = Json.decodeFromString<ExportOptions>(exportOptionsJson)
+
+                val file = File(applicationContext.cacheDir, "auto_export.xlsx")
+                val uri = FileProvider.getUriForFile(
+                    applicationContext,
+                    "com.example.myapplication.fileprovider",
+                    file
+                )
+
+                exporter.export(
+                    uri = uri,
+                    options = options,
+                    students = studentDao.getAllStudentsNonLiveData(),
+                    behaviorEvents = behaviorEventDao.getAllBehaviorEventsList(),
+                    homeworkLogs = homeworkLogDao.getAllHomeworkLogsList(),
+                    quizLogs = quizLogDao.getAllQuizLogsList(),
+                    studentGroups = studentGroupDao.getAllStudentGroupsList(),
+                    quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList(),
+                    customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList(),
+                    customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList(),
+                    encrypt = options.encrypt
+                )
+
+                EmailUtil(applicationContext).sendEmail(
+                    from = from,
+                    password = password,
+                    to = emailAddress,
+                    subject = "Automatic Data Export",
+                    body = "Attached is the data export as requested.",
+                    attachmentPath = file.absolutePath
+                )
+            }
             "daily_report" -> {
                 val students = studentDao.getAllStudentsNonLiveData()
                 val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
