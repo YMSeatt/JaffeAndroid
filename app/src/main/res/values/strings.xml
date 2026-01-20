@@ -16,4 +16,12 @@
     <string name="color_picker_dialog_title">Choose Color</string>
     <string name="color_picker_dialog_ok">OK</string>
     <string name="color_picker_dialog_cancel">Cancel</string>
+    <string name="quiz_template_edit_dialog_add_title">Add Quiz Template</string>
+    <string name="quiz_template_edit_dialog_edit_title">Edit Quiz Template</string>
+    <string name="quiz_template_edit_dialog_name_label">Template Name</string>
+    <string name="quiz_template_edit_dialog_name_error">Name cannot be empty</string>
+    <string name="quiz_template_edit_dialog_num_questions_label">Number of Questions</string>
+    <string name="quiz_template_edit_dialog_num_questions_error">Please enter a positive number</string>
+    <string name="dialog_save">Save</string>
+    <string name="dialog_cancel">Cancel</string>
 </resources>

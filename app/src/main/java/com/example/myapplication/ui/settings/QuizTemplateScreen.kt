@@ -1,9 +1,18 @@
 package com.example.myapplication.ui.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -17,8 +26,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.ui.dialogs.QuizTemplateEditDialog
 import com.example.myapplication.viewmodel.QuizTemplateViewModel
 
@@ -30,6 +42,7 @@ fun QuizTemplateScreen(
 ) {
     val quizTemplates by viewModel.quizTemplates.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
 
     Scaffold(
         topBar = {
@@ -43,25 +56,71 @@ fun QuizTemplateScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showEditDialog = true }) {
+            FloatingActionButton(onClick = {
+                selectedTemplate = null
+                showEditDialog = true
+            }) {
                 Icon(Icons.Default.Add, contentDescription = "Add Quiz Template")
             }
         }
     ) { paddingValues ->
-        // List of quiz templates will be displayed here
-        Text(
-            text = "Quiz templates will be listed here.",
-            modifier = Modifier.padding(paddingValues)
-        )
+        LazyColumn(
+            modifier = Modifier.padding(paddingValues).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(quizTemplates) { template ->
+                QuizTemplateItem(
+                    template = template,
+                    onEdit = {
+                        selectedTemplate = it
+                        showEditDialog = true
+                    },
+                    onDelete = { viewModel.delete(it) }
+                )
+            }
+        }
 
         if (showEditDialog) {
             QuizTemplateEditDialog(
+                quizTemplate = selectedTemplate,
                 onDismiss = { showEditDialog = false },
                 onSave = { quizTemplate ->
-                    viewModel.insert(quizTemplate)
+                    if (selectedTemplate == null) {
+                        viewModel.insert(quizTemplate)
+                    } else {
+                        viewModel.update(quizTemplate)
+                    }
                     showEditDialog = false
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun QuizTemplateItem(
+    template: QuizTemplate,
+    onEdit: (QuizTemplate) -> Unit,
+    onDelete: (QuizTemplate) -> Unit
+) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Text(text = template.name)
+                Text(text = "${template.numQuestions} questions")
+            }
+            Row {
+                IconButton(onClick = { onEdit(template) }) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit")
+                }
+                IconButton(onClick = { onDelete(template) }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete")
+                }
+            }
         }
     }
 }

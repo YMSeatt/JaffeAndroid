@@ -6,6 +6,7 @@ import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.data.QuizTemplateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -15,22 +16,28 @@ class QuizTemplateViewModel @Inject constructor(
     private val repository: QuizTemplateRepository
 ) : ViewModel() {
 
-    val quizTemplates = repository.getAll()
+    val quizTemplates: StateFlow<List<QuizTemplate>> = repository.getAll()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    fun insert(quizTemplate: QuizTemplate) = viewModelScope.launch {
-        repository.insert(quizTemplate)
+    fun insert(quizTemplate: QuizTemplate) {
+        viewModelScope.launch {
+            repository.insert(quizTemplate)
+        }
     }
 
-    fun update(quizTemplate: QuizTemplate) = viewModelScope.launch {
-        repository.update(quizTemplate)
+    fun update(quizTemplate: QuizTemplate) {
+        viewModelScope.launch {
+            repository.update(quizTemplate)
+        }
     }
 
-    fun delete(quizTemplate: QuizTemplate) = viewModelScope.launch {
-        repository.delete(quizTemplate)
+    fun delete(quizTemplate: QuizTemplate) {
+        viewModelScope.launch {
+            repository.delete(quizTemplate)
+        }
     }
 }
