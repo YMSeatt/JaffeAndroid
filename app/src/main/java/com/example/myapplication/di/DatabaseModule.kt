@@ -16,6 +16,8 @@ import com.example.myapplication.data.QuizMarkTypeDao
 import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroupDao
+import com.example.myapplication.data.ConditionalFormattingRuleDao
+import com.example.myapplication.data.SystemBehaviorDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -101,5 +103,15 @@ object DatabaseModule {
     @Provides
     fun provideHomeworkTemplateDao(appDatabase: AppDatabase): HomeworkTemplateDao {
         return appDatabase.homeworkTemplateDao()
+    }
+
+    @Provides
+    fun provideConditionalFormattingRuleDao(appDatabase: AppDatabase): ConditionalFormattingRuleDao {
+        return appDatabase.conditionalFormattingRuleDao()
+    }
+
+    @Provides
+    fun provideSystemBehaviorDao(appDatabase: AppDatabase): SystemBehaviorDao {
+        return appDatabase.systemBehaviorDao()
     }
 }

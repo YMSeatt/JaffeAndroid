@@ -64,6 +64,7 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -105,7 +106,6 @@ import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StatsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -122,9 +122,7 @@ enum class SessionType {
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
-    private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(application)
-    }
+    private val settingsViewModel: SettingsViewModel by viewModels()
     private val guideViewModel: GuideViewModel by viewModels()
 
     var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
@@ -232,11 +230,7 @@ class MainActivity : ComponentActivity() {
                         }
                     } else if (showReminders) {
                         RemindersScreen(
-                            viewModel = androidx.lifecycle.viewmodel.compose.viewModel(factory = object : ViewModelProvider.Factory {
-                                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                                    return ReminderViewModel(application) as T
-                                }
-                            }),
+                            viewModel = hiltViewModel(),
                             onDismiss = { showReminders = false }
                         )
                         BackHandler {

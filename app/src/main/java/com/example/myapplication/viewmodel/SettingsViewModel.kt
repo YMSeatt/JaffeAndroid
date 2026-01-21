@@ -2,11 +2,13 @@ package com.example.myapplication.viewmodel
 
 import android.app.Application
 import android.content.Intent
+import android.graphics.Bitmap
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.documentfile.provider.DocumentFile
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.AppDatabase
@@ -26,6 +28,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.util.SecurityUtil
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,13 +39,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import javax.inject.Inject
 
-class SettingsViewModel(
-    application: Application
-) : AndroidViewModel(application) {
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    private val application: Application,
+    private val preferencesRepository: AppPreferencesRepository,
+    private val db: AppDatabase,
+    private val jsonImporter: JsonImporter
+) : ViewModel() {
 
-    private val preferencesRepository = AppPreferencesRepository(application)
-    private val db = AppDatabase.getDatabase(application)
+
     private val studentDao = db.studentDao()
     private val furnitureDao = db.furnitureDao()
     private val studentGroupDao = db.studentGroupDao()
@@ -56,31 +63,14 @@ class SettingsViewModel(
     private val homeworkTemplateDao = db.homeworkTemplateDao()
     private val behaviorEventDao = db.behaviorEventDao()
     private val homeworkLogDao = db.homeworkLogDao()
-    private lateinit var jsonImporter: JsonImporter
 
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
 
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            jsonImporter = JsonImporter(
-                application,
-                studentDao,
-                furnitureDao,
-                behaviorEventDao,
-                homeworkLogDao,
-                studentGroupDao,
-                customBehaviorDao,
-                customHomeworkStatusDao,
-                customHomeworkTypeDao,
-                homeworkTemplateDao
-            )
-        }
-    }
 
     fun archiveCurrentYear() {
         viewModelScope.launch(Dispatchers.IO) {
-            val context = getApplication<Application>()
+            val context = application
             AppDatabase.getDatabase(context).close()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
@@ -92,14 +82,14 @@ class SettingsViewModel(
     }
 
     fun listArchivedDatabases(): List<String> {
-        val context = getApplication<Application>()
+        val context = application
         return context.filesDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }
             ?.map { it.name } ?: emptyList()
     }
 
     fun loadArchivedDatabase(fileName: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            val context = getApplication<Application>()
+            val context = application
             AppDatabase.switchToArchive(context, fileName)
             _restoreComplete.postValue(true)
         }
@@ -107,14 +97,14 @@ class SettingsViewModel(
 
     fun restoreLiveDatabase() {
         viewModelScope.launch(Dispatchers.IO) {
-            val context = getApplication<Application>()
+            val context = application
             AppDatabase.switchToLive(context)
             _restoreComplete.postValue(true)
         }
     }
 
     suspend fun importFromJson(uri: Uri) {
-        val directory = DocumentFile.fromTreeUri(getApplication(), uri)
+        val directory = DocumentFile.fromTreeUri(application, uri)
 
         val classroomDataFile = directory?.findFile("classroom_data_v10.json")
         val studentGroupsFile = directory?.findFile("student_groups_v10.json")
@@ -441,8 +431,8 @@ class SettingsViewModel(
     }
 
     suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
-        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
-        getApplication<Application>().contentResolver.openOutputStream(uri)?.use { outputStream ->
+        val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        application.contentResolver.openOutputStream(uri)?.use { outputStream ->
             FileInputStream(dbFile).use { inputStream ->
                 inputStream.copyTo(outputStream)
             }
@@ -450,9 +440,9 @@ class SettingsViewModel(
     }
 
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
-        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
-        AppDatabase.getDatabase(getApplication()).close()
-        getApplication<Application>().contentResolver.openInputStream(uri)?.use { inputStream ->
+        val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        AppDatabase.getDatabase(application).close()
+        application.contentResolver.openInputStream(uri)?.use { inputStream ->
             FileOutputStream(dbFile, false).use { outputStream ->
                 inputStream.copyTo(outputStream)
             }
@@ -461,11 +451,11 @@ class SettingsViewModel(
     }
 
     fun triggerRebirth() {
-        val packageManager = getApplication<Application>().packageManager
-        val intent = packageManager.getLaunchIntentForPackage(getApplication<Application>().packageName)
+        val packageManager = application.packageManager
+        val intent = packageManager.getLaunchIntentForPackage(application.packageName)
         val componentName = intent!!.component
         val mainIntent = Intent.makeRestartActivityTask(componentName)
-        getApplication<Application>().startActivity(mainIntent)
+        application.startActivity(mainIntent)
         Runtime.getRuntime().exit(0)
     }
 
@@ -611,19 +601,19 @@ class SettingsViewModel(
     }
 
     suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
-        val dbFile = getApplication<Application>().getDatabasePath(AppDatabase.DATABASE_NAME)
-        val cacheDir = getApplication<Application>().cacheDir
+        val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        val cacheDir = application.cacheDir
         val sharedDbFile = java.io.File(cacheDir, "seating_chart_database.db")
         dbFile.copyTo(sharedDbFile, overwrite = true)
-        return@withContext androidx.core.content.FileProvider.getUriForFile(
-            getApplication(),
+        return@withContext FileProvider.getUriForFile(
+            application,
             "com.example.myapplication.fileprovider",
             sharedDbFile
         )
     }
 
-    suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
-        val context = getApplication<Application>()
+    suspend fun saveScreenshot(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
+        val context = application
         val filename = "screenshot_${System.currentTimeMillis()}.png"
         val contentValues = android.content.ContentValues().apply {
             put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
@@ -637,7 +627,7 @@ class SettingsViewModel(
             uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
             uri?.let {
                 resolver.openOutputStream(it)?.use { outputStream ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
                 }
             }
         } catch (e: Exception) {
@@ -648,7 +638,7 @@ class SettingsViewModel(
     }
 
     suspend fun exportDataFolder(directoryUri: Uri) = withContext(Dispatchers.IO) {
-        val context = getApplication<Application>()
+        val context = application
         val contentResolver = context.contentResolver
         val directory = DocumentFile.fromTreeUri(context, directoryUri)
 

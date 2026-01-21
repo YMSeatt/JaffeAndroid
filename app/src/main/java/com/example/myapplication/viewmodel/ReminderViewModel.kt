@@ -1,29 +1,25 @@
 package com.example.myapplication.viewmodel
 
 import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
-import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Reminder
 import com.example.myapplication.data.ReminderDao
 import com.example.myapplication.util.ReminderManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ReminderViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val reminderDao: ReminderDao
+@HiltViewModel
+class ReminderViewModel @Inject constructor(
+    private val reminderDao: ReminderDao,
     private val reminderManager: ReminderManager
-    val allReminders: LiveData<List<Reminder>>
+) : ViewModel() {
 
-    init {
-        val db = AppDatabase.getDatabase(application)
-        reminderDao = db.reminderDao()
-        allReminders = reminderDao.getAllReminders().asLiveData()
-        reminderManager = ReminderManager(application)
-    }
+    val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders().asLiveData()
 
     fun insert(reminder: Reminder) {
         viewModelScope.launch(Dispatchers.IO) {
