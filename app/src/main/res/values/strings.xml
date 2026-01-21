@@ -16,4 +16,53 @@
     <string name="color_picker_dialog_title">Choose Color</string>
     <string name="color_picker_dialog_ok">OK</string>
     <string name="color_picker_dialog_cancel">Cancel</string>
+    <string name="help_screen_title">Help</string>
+    <string name="help_screen_back_button_description">Back</string>
+    <string name="help_screen_welcome">Welcome to the Seating Chart App!</string>
+    <string name="help_screen_app_description">This app helps you manage your classroom by creating seating charts, logging student behavior, and tracking quiz and homework scores.</string>
+    <string name="help_screen_seating_chart_title">Seating Chart</string>
+    <string name="help_screen_seating_chart_content">
+        - **Move Students/Furniture**: Drag items to move them around the canvas.\n
+        - **Resize**: Long-press a student or furniture to access the resize option, or use the \'Change Box Size\' option in the menu.\n
+        - **Zoom/Pan**: Pinch to zoom and drag with two fingers to pan the canvas.\n
+        - **Grid &amp; Rulers**: Toggle the grid and rulers in Settings to help align items. Enable \'Snap to Grid\' for precise placement.\n
+        - **Guides**: Add horizontal or vertical guides from the \'View\' menu to assist with alignment.\n
+        - **Layouts**: Save your current arrangement as a layout template via \'File > Save Layout\'. Load saved layouts via \'File > Load Layout\'.
+    </string>
+    <string name="help_screen_students_furniture_title">Students &amp; Furniture</string>
+    <string name="help_screen_students_furniture_content">
+        - **Add**: Use the Floating Action Button (FAB) to add new students or furniture.\n
+        - **Edit**: Long-press a student to access the action menu, where you can edit details, change style, or delete.\n
+        - **Selection**: Toggle \'Select\' mode to select multiple students. You can then perform batch actions like aligning, distributing, or logging behavior.\n
+        - **Styling**: Customize the appearance of individual students (color, font, size) via \'Change Student Box Style\'.\n
+        - **Groups**: Assign students to groups for easier management and conditional formatting.
+    </string>
+    <string name="help_screen_logging_title">Logging</string>
+    <string name="help_screen_logging_content">
+        - **Behavior**: Log behavior events (positive/negative) for students. Customize behavior types in Settings.\n
+        - **Quiz**: Log quiz scores. You can enter scores manually or use the \'Live Quiz\' mode.\n
+        - **Homework**: Log homework completion and grades.\n
+        - **Recent Logs**: View recent logs for a student by long-pressing and selecting \'Show Recent Logs\'.
+    </string>
+    <string name="help_screen_conditional_formatting_title">Conditional Formatting</string>
+    <string name="help_screen_conditional_formatting_content">
+        - **Rules**: Create rules to automatically change the appearance of students based on conditions (e.g., low quiz score, specific group, behavior count).\n
+        - **Active Modes**: Rules can be active only in specific modes (Behavior, Quiz, Homework).\n
+        - **Active Times**: Rules can be scheduled to be active only during specific times and days.\n
+        - **Priority**: Rules are applied in order of priority. Higher priority rules override lower ones.
+    </string>
+    <string name="help_screen_exporting_data_title">Exporting &amp; Data</string>
+    <string name="help_screen_exporting_data_content">
+        - **Export to Excel**: Export student data, logs, and summaries to an Excel file via \'File > Export to Excel\'.\n
+        - **Email**: Share exported files directly via email.\n
+        - **Import**: Import student lists from Excel or restore data from JSON backups.\n
+        - **Backup**: Export the entire database to a file for backup purposes via \'File > Export Database\'.
+    </string>
+    <string name="help_screen_settings_title">Settings</string>
+    <string name="help_screen_settings_content">
+        - **Display**: Customize the canvas background color, default student box size, and font settings.\n
+        - **Behaviors/Homework**: Manage custom behavior types and homework types.\n
+        - **Security**: Set a master password to protect sensitive data.\n
+        - **Theme**: Switch between Light, Dark, and System themes.
+    </string>
 </resources>
