@@ -118,54 +118,69 @@ class FernetCipher(private val key: ByteArray) {
 
 /**
  * A singleton utility for handling Fernet encryption and decryption within the Android app.
- * It manages the secure storage and retrieval of the encryption key.
+ * It provides backward compatibility for data encrypted with a legacy, device-specific key.
+ *
+ * New data is always encrypted with the primary, hardcoded key for interoperability.
+ * Decryption first attempts to use the primary key. If that fails, it falls back to the
+ * legacy key if one exists on the device.
  */
 object EncryptionUtil {
-    private const val KEY_FILE_NAME = "fernet.key"
+    private const val LEGACY_KEY_FILE_NAME = "fernet.key"
+    private const val PRIMARY_KEY_STRING = "7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU="
     private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
 
-    private var fernetCipher: FernetCipher? = null
+    // The primary cipher, initialized once with the hardcoded key.
+    private val primaryCipher: FernetCipher = FernetCipher(Base64.getUrlDecoder().decode(PRIMARY_KEY_STRING))
+
+    // A map to hold legacy ciphers, keyed by context, to avoid re-reading the key file.
+    @Volatile
+    private var legacyCipher: FernetCipher? = null
 
     @Synchronized
-    private fun getInstance(context: Context): FernetCipher {
-        return fernetCipher ?: run {
-            val key = getKey(context.applicationContext)
-            FernetCipher(key).also { fernetCipher = it }
+    private fun getLegacyCipher(context: Context): FernetCipher? {
+        if (legacyCipher == null) {
+            val legacyKeyFile = File(context.applicationContext.filesDir, LEGACY_KEY_FILE_NAME)
+            if (legacyKeyFile.exists()) {
+                val legacyKey = legacyKeyFile.readBytes()
+                if (legacyKey.size == 32) {
+                    legacyCipher = FernetCipher(legacyKey)
+                }
+            }
         }
+        return legacyCipher
     }
 
     /**
-     * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
-     * it generates a new 32-byte key and saves it for future use.
+     * Encrypts a plaintext byte array using the primary (hardcoded) key.
      */
-    private fun getKey(context: Context): ByteArray {
-        val keyFile = File(context.filesDir, KEY_FILE_NAME)
-        return if (keyFile.exists()) {
-            val keyBytes = keyFile.readBytes()
-            if (keyBytes.size == 32) keyBytes else generateAndSaveKey(keyFile)
-        } else {
-            generateAndSaveKey(keyFile)
-        }
-    }
-
-    private fun generateAndSaveKey(keyFile: File): ByteArray {
-        val newKey = ByteArray(32)
-        SecureRandom().nextBytes(newKey)
-        keyFile.writeBytes(newKey)
-        return newKey
-    }
-
-    /**
-     * Encrypts a plaintext byte array.
-     */
-    fun encrypt(context: Context, plaintext: ByteArray): String {
-        return getInstance(context).encrypt(plaintext)
+    fun encrypt(plaintext: ByteArray): String {
+        return primaryCipher.encrypt(plaintext)
     }
 
     /**
      * Decrypts a Fernet token.
+     *
+     * It first attempts to decrypt with the primary key. If that fails (e.g., due to an
+     * invalid signature or format), it will try decrypting with the legacy key, if available.
+     *
+     * @throws SecurityException if decryption fails with both keys.
      */
     fun decrypt(context: Context, token: String, ttl: Int = TTL_SECONDS): ByteArray {
-        return getInstance(context).decrypt(token, ttl)
+        return try {
+            primaryCipher.decrypt(token, ttl)
+        } catch (e: SecurityException) {
+            // If primary decryption fails, try the legacy cipher as a fallback
+            val legacy = getLegacyCipher(context)
+            legacy?.let {
+                try {
+                    return it.decrypt(token, ttl)
+                } catch (legacyException: SecurityException) {
+                    // Re-throw the original exception if the legacy key also fails
+                    throw e
+                }
+            }
+            // If there's no legacy cipher, re-throw the original exception
+            throw e
+        }
     }
 }

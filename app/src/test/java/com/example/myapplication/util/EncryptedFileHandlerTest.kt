@@ -13,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.security.SecureRandom
 import javax.inject.Inject
 
 @HiltAndroidTest
@@ -43,7 +44,7 @@ class EncryptedFileHandlerTest {
     @Test
     fun `writeFile with encryption then readFile decrypts successfully`() {
         // Act: Write the file with encryption enabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = true)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = true)
 
         // Assert: Ensure the file is not plaintext
         val rawContent = testFile.readText()
@@ -59,7 +60,7 @@ class EncryptedFileHandlerTest {
     @Test
     fun `writeFile without encryption then readFile reads plaintext`() {
         // Act: Write the file with encryption disabled
-        encryptedFileHandler.writeFile(context, testFile, testContent, encrypt = false)
+        encryptedFileHandler.writeFile(testFile, testContent, encrypt = false)
 
         // Assert: Ensure the file is plaintext
         val rawContent = testFile.readText()
@@ -103,5 +104,33 @@ class EncryptedFileHandlerTest {
 
         // Assert
         assertThat(readContent).isNull()
+    }
+
+    @Test
+    fun `readFile with legacy key decrypts successfully`() {
+        // Arrange: Create a legacy key and a FernetCipher instance with it
+        val legacyKey = ByteArray(32)
+        SecureRandom().nextBytes(legacyKey)
+        val legacyKeyFile = File(context.filesDir, "fernet.key")
+        legacyKeyFile.writeBytes(legacyKey)
+
+        val legacyCipher = FernetCipher(legacyKey)
+        val encryptedContent = legacyCipher.encrypt(testContent.toByteArray())
+        testFile.writeText(encryptedContent)
+
+        // Reset the singleton instance in EncryptionUtil to ensure it picks up the legacy key file
+        val field = EncryptionUtil::class.java.getDeclaredField("legacyCipher")
+        field.isAccessible = true
+        field.set(EncryptionUtil, null)
+
+
+        // Act: Read the file using the handler
+        val decryptedContent = encryptedFileHandler.readFile(context, testFile)
+
+        // Assert: Verify that the content was decrypted using the legacy key
+        assertThat(decryptedContent).isEqualTo(testContent)
+
+        // Clean up the legacy key file
+        legacyKeyFile.delete()
     }
 }
