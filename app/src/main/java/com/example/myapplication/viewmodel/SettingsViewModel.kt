@@ -7,8 +7,18 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import android.app.Application
+import android.content.Intent
+import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
@@ -26,6 +36,8 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.util.SecurityUtil
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -734,6 +746,25 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    fun scheduleEmailOnClose(exportOptions: com.example.myapplication.data.exporter.ExportOptions) {
+        viewModelScope.launch {
+            val autoSendOnClose = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptionsJson = Json.encodeToString(exportOptions)
+                    val workRequest = OneTimeWorkRequestBuilder<com.example.myapplication.util.EmailWorker>()
+                        .setInputData(workDataOf(
+                            "email_address" to email,
+                            "export_options" to exportOptionsJson
+                        ))
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 }
