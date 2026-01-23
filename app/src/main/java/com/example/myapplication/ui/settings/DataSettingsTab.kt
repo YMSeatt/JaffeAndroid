@@ -448,6 +448,7 @@ fun DataSettingsTab(
 
                     if (isNameValid && pointsValue != null) {
                         val newMarkType = QuizMarkType(
+                            pythonId = "",
                             name = newQuizMarkTypeName.trim(),
                             defaultPoints = pointsValue,
                             contributesToTotal = newQuizMarkContributesToTotal,

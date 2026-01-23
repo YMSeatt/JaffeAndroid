@@ -310,7 +310,10 @@ class SettingsViewModel(
 
     val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
     fun addQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
-        quizMarkTypeDao.insert(quizMarkType)
+        val newQuizMarkType = quizMarkType.copy(
+            pythonId = "custom_mark_${System.currentTimeMillis()}"
+        )
+        quizMarkTypeDao.insert(newQuizMarkType)
     }
     fun updateQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.update(quizMarkType)

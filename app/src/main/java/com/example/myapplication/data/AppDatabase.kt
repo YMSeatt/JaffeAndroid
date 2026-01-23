@@ -8,7 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class], version = 32, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class], version = 33, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -652,8 +652,23 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_32_33 = object : Migration(32, 33) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE quiz_mark_types ADD COLUMN python_id TEXT")
+                db.execSQL("UPDATE quiz_mark_types SET python_id = 'mark_correct' WHERE name = 'Correct'")
+                db.execSQL("UPDATE quiz_mark_types SET python_id = 'mark_incorrect' WHERE name = 'Incorrect'")
+                db.execSQL("UPDATE quiz_mark_types SET python_id = 'mark_partial' WHERE name = 'Partial Credit'")
+                db.execSQL("UPDATE quiz_mark_types SET python_id = 'extra_credit' WHERE name = 'Bonus'")
+                db.execSQL("UPDATE quiz_mark_types SET python_id = 'custom_mark_' || id WHERE python_id IS NULL")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_quiz_mark_types_python_id` ON `quiz_mark_types` (`python_id`)")
+            }
+        }
 
-        fun getDatabase(context: Context, dbName: String = DATABASE_NAME): AppDatabase {
+        fun getDatabase(
+            context: Context,
+            dbName: String = DATABASE_NAME,
+            callback: Callback? = null
+        ): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 val builder = if (dbName == DATABASE_NAME) {
                     Room.databaseBuilder(
@@ -669,7 +684,9 @@ abstract class AppDatabase : RoomDatabase() {
                     ).createFromFile(context.getDatabasePath(dbName))
                 }
 
-                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32)
+                callback?.let { builder.addCallback(it) }
+
+                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

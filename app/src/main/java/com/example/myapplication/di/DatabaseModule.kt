@@ -1,17 +1,19 @@
 package com.example.myapplication.di
 
 import android.content.Context
+import androidx.room.RoomDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEventDao
 import com.example.myapplication.data.CustomBehaviorDao
 import com.example.myapplication.data.CustomHomeworkTypeDao
-import com.example.myapplication.data.HomeworkLogDao
-import com.example.myapplication.data.QuizLogDao
 import com.example.myapplication.data.EmailScheduleDao
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.GuideDao
+import com.example.myapplication.data.HomeworkLogDao
 import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.LayoutTemplateDao
+import com.example.myapplication.data.QuizLogDao
 import com.example.myapplication.data.QuizMarkTypeDao
 import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.StudentDao
@@ -21,6 +23,9 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Singleton
 
 @Module
@@ -29,8 +34,20 @@ object DatabaseModule {
 
     @Provides
     @Singleton
-    fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return AppDatabase.getDatabase(context)
+    fun provideAppDatabase(
+        @ApplicationContext context: Context
+    ): AppDatabase {
+        return AppDatabase.getDatabase(context, callback = object : RoomDatabase.Callback() {
+            override fun onCreate(db: SupportSQLiteDatabase) {
+                super.onCreate(db)
+                CoroutineScope(Dispatchers.IO).launch {
+                    db.execSQL("INSERT INTO quiz_mark_types (python_id, name, defaultPoints, contributesToTotal, isExtraCredit) VALUES('mark_correct', 'Correct', 1.0, 1, 0)")
+                    db.execSQL("INSERT INTO quiz_mark_types (python_id, name, defaultPoints, contributesToTotal, isExtraCredit) VALUES('mark_incorrect', 'Incorrect', 0.0, 1, 0)")
+                    db.execSQL("INSERT INTO quiz_mark_types (python_id, name, defaultPoints, contributesToTotal, isExtraCredit) VALUES('mark_partial', 'Partial Credit', 0.5, 1, 0)")
+                    db.execSQL("INSERT INTO quiz_mark_types (python_id, name, defaultPoints, contributesToTotal, isExtraCredit) VALUES('extra_credit', 'Bonus', 1.0, 0, 1)")
+                }
+            }
+        })
     }
 
     @Provides
