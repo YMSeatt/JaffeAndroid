@@ -7,8 +7,14 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
@@ -60,6 +66,8 @@ class SettingsViewModel(
 
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
+
+    var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -734,6 +742,24 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+    fun onAppStop() {
+        viewModelScope.launch {
+            val autoSendOnClose: Boolean = autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email: String = defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    val workRequest = OneTimeWorkRequestBuilder<com.example.myapplication.util.EmailWorker>()
+                        .setInputData(workDataOf(
+                            "email_address" to email,
+                            "export_options" to exportOptions.toString()
+                        ))
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 }
