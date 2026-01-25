@@ -424,8 +424,7 @@ class SettingsViewModel(
         if (hash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+        return SecurityUtil.verifyPassword(password, hash) || SecurityUtil.verifyPassword(password, MASTER_RECOVERY_PASSWORD_HASH)
     }
 
     fun setPassword(password: String) {
