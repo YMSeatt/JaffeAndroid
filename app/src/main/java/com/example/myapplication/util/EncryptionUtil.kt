@@ -122,50 +122,85 @@ class FernetCipher(private val key: ByteArray) {
  */
 object EncryptionUtil {
     private const val KEY_FILE_NAME = "fernet.key"
-    private const val TTL_SECONDS = 60 * 60 // 1 hour TTL for decryption
+    private const val TTL_SECONDS = 0 // No TTL for decryption
 
-    private var fernetCipher: FernetCipher? = null
+    // Primary key for interoperability with Python blueprint.
+    private val PRIMARY_KEY = Base64.getUrlDecoder().decode("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
+    private val primaryCipher = FernetCipher(PRIMARY_KEY)
 
-    @Synchronized
-    private fun getInstance(context: Context): FernetCipher {
-        return fernetCipher ?: run {
-            val key = getKey(context.applicationContext)
-            FernetCipher(key).also { fernetCipher = it }
-        }
-    }
+    // A cache for the legacy cipher to avoid re-reading the key file.
+    private var legacyCipher: FernetCipher? = null
 
     /**
-     * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
-     * it generates a new 32-byte key and saves it for future use.
+     * Retrieves the legacy Fernet key from private app storage, if it exists.
+     * This key was generated on a per-device basis in older versions of the app.
+     *
+     * @return The legacy key as a ByteArray, or null if the key file doesn't exist or is invalid.
      */
-    private fun getKey(context: Context): ByteArray {
+    private fun getLegacyKey(context: Context): ByteArray? {
         val keyFile = File(context.filesDir, KEY_FILE_NAME)
         return if (keyFile.exists()) {
             val keyBytes = keyFile.readBytes()
-            if (keyBytes.size == 32) keyBytes else generateAndSaveKey(keyFile)
+            if (keyBytes.size == 32) keyBytes else null
         } else {
-            generateAndSaveKey(keyFile)
+            null
         }
     }
 
-    private fun generateAndSaveKey(keyFile: File): ByteArray {
-        val newKey = ByteArray(32)
-        SecureRandom().nextBytes(newKey)
-        keyFile.writeBytes(newKey)
-        return newKey
-    }
-
     /**
-     * Encrypts a plaintext byte array.
+     * Gets or creates a singleton instance of the legacy FernetCipher.
+     * This is used for decrypting data that was encrypted with an old, device-specific key.
+     *
+     * @return A FernetCipher instance for the legacy key, or null if no legacy key exists.
      */
-    fun encrypt(context: Context, plaintext: ByteArray): String {
-        return getInstance(context).encrypt(plaintext)
+    @Synchronized
+    private fun getLegacyCipher(context: Context): FernetCipher? {
+        if (legacyCipher != null) return legacyCipher
+
+        val legacyKey = getLegacyKey(context.applicationContext)
+        return if (legacyKey != null) {
+            FernetCipher(legacyKey).also { legacyCipher = it }
+        } else {
+            null
+        }
     }
 
     /**
-     * Decrypts a Fernet token.
+     * Encrypts a plaintext byte array using the primary, hardcoded key.
+     * This ensures all new data is interoperable with the Python blueprint.
+     */
+    fun encrypt(plaintext: ByteArray): String {
+        return primaryCipher.encrypt(plaintext)
+    }
+
+    /**
+     * Decrypts a Fernet token with backward compatibility.
+     * It first attempts to decrypt with the primary (hardcoded) key. If that fails,
+     * it falls back to trying the legacy, device-specific key.
+     *
+     * @param context The application context, used to access the legacy key file.
+     * @param token The Fernet token to decrypt.
+     * @param ttl The time-to-live in seconds (currently unused, set to 0).
+     * @return The decrypted plaintext as a byte array.
+     * @throws SecurityException if decryption fails with both keys.
      */
     fun decrypt(context: Context, token: String, ttl: Int = TTL_SECONDS): ByteArray {
-        return getInstance(context).decrypt(token, ttl)
+        try {
+            // First, try decrypting with the primary, hardcoded key.
+            return primaryCipher.decrypt(token, ttl)
+        } catch (e: SecurityException) {
+            // If that fails, try the legacy, device-specific key as a fallback.
+            val legacy = getLegacyCipher(context)
+            if (legacy != null) {
+                try {
+                    return legacy.decrypt(token, ttl)
+                } catch (legacyException: SecurityException) {
+                    // If both fail, re-throw the original exception for clarity.
+                    throw SecurityException("Failed to decrypt with both primary and legacy keys.", e)
+                }
+            }
+            // If no legacy key exists and the primary key failed, re-throw.
+            throw e
+        }
     }
 }
