@@ -52,10 +52,16 @@ import com.example.myapplication.ui.model.toUiItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.example.myapplication.util.ConditionalFormattingEngine
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.util.CollisionDetector
+import com.example.myapplication.util.ConditionalFormattingEngine
+import com.example.myapplication.util.EmailWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
@@ -131,7 +137,27 @@ class SeatingChartViewModel @Inject constructor(
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
     var canvasHeight by mutableStateOf(0)
     var canvasWidth by mutableStateOf(0)
+    var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
 
+
+    fun onStop(workManager: WorkManager, autoSend: Boolean, email: String) {
+        if (autoSend && email.isNotBlank()) {
+            pendingExportOptions?.let { options ->
+                viewModelScope.launch {
+                    val exportOptionsString = Json.encodeToString(options)
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "email_address" to email,
+                                "export_options" to exportOptionsString
+                            )
+                        )
+                        .build()
+                    workManager.enqueue(workRequest)
+                }
+            }
+        }
+    }
 
     fun clearSelection() {
         selectedStudentIds.value = emptySet()

@@ -1,15 +1,18 @@
 package com.example.myapplication.viewmodel
 
 import android.app.Application
+import android.app.Application
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.Observer
-import com.example.myapplication.commands.AddStudentCommand
-import com.example.myapplication.commands.MoveStudentCommand
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
 import com.example.myapplication.data.*
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.ui.model.StudentUiItem
 import io.mockk.*
 import io.mockk.impl.annotations.MockK
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -167,5 +170,26 @@ class SeatingChartViewModelTest {
         coVerify { studentDao.updatePosition(studentId.toLong(), any(), any()) } // Command calls internalUpdateStudentPosition which calls dao
         
         viewModel.studentsForDisplay.removeObserver(observer)
+    }
+
+    @Test
+    fun `onStop with autoSend enabled enqueues work request with serialized options`() = runTest {
+        val workManager = mockk<WorkManager>(relaxed = true)
+        val email = "test@example.com"
+        val exportOptions = ExportOptions(encrypt = true)
+        viewModel.pendingExportOptions = exportOptions
+
+        viewModel.onStop(workManager, autoSend = true, email = email)
+        advanceUntilIdle()
+
+        val slot = slot<OneTimeWorkRequest>()
+        verify { workManager.enqueue(capture(slot)) }
+
+        val workSpec = slot.captured.workSpec
+        val exportOptionsString = workSpec.input.getString("export_options")
+        val emailAddress = workSpec.input.getString("email_address")
+
+        assertEquals(email, emailAddress)
+        assertEquals(Json.encodeToString(exportOptions), exportOptionsString)
     }
 }
