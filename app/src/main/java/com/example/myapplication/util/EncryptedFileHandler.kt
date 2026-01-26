@@ -54,7 +54,7 @@ class EncryptedFileHandler @Inject constructor() {
     @Throws(IOException::class)
     fun writeFile(context: Context, file: File, data: String, encrypt: Boolean) {
         val dataBytes = if (encrypt) {
-            EncryptionUtil.encrypt(context, data.toByteArray(StandardCharsets.UTF_8)).toByteArray(StandardCharsets.UTF_8)
+            EncryptionUtil.encrypt(data.toByteArray(StandardCharsets.UTF_8)).toByteArray(StandardCharsets.UTF_8)
         } else {
             data.toByteArray(StandardCharsets.UTF_8)
         }
