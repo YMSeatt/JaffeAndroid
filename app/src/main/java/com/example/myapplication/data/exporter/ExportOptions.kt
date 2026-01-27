@@ -1,5 +1,8 @@
 package com.example.myapplication.data.exporter
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class ExportOptions(
     val relativeDateRange: String? = null,
     val startDate: Long? = null,
