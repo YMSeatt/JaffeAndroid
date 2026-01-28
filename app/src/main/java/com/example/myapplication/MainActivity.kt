@@ -115,6 +115,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class SessionType {
     BEHAVIOR,
