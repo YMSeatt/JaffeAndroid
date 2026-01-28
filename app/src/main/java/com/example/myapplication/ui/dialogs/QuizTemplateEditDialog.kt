@@ -48,7 +48,7 @@ fun QuizTemplateEditDialog(
                 TextField(
                     value = defaultMarks,
                     onValueChange = { defaultMarks = it },
-                    label = { Text("Default Marks (key:value, ...)") },
+                    label = { Text("Default Marks (e.g., A:10, B:5)") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
