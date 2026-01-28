@@ -14,6 +14,7 @@ import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
@@ -676,7 +677,8 @@ class SettingsViewModel(
 
     val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, "behaviorlogger@gmail.com")
-
+    val defaultEmailAddressValue: String
+        get() = defaultEmailAddress.value
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultEmailAddress(email)
@@ -685,6 +687,8 @@ class SettingsViewModel(
 
     val autoSendEmailOnClose: StateFlow<Boolean> = preferencesRepository.autoSendEmailOnCloseFlow
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val autoSendEmailOnCloseValue: Boolean
+        get() = autoSendEmailOnClose.value
 
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
@@ -734,6 +738,15 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    val smtpSettings: StateFlow<SmtpSettings> = preferencesRepository.smtpSettingsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, SmtpSettings())
+
+    fun updateSmtpSettings(smtpSettings: SmtpSettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateSmtpSettings(smtpSettings)
         }
     }
 }
