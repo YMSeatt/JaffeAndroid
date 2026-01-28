@@ -29,6 +29,7 @@ class Importer(
         isLenient = true
         coerceInputValues = true
     }
+    private val securityUtil = SecurityUtil(context)
 
     private fun parseTimestamp(timestamp: String): Long {
         // Handle different fractional second formats
@@ -71,7 +72,7 @@ class Importer(
 
             if (encryptDataFilesFlow.first()) {
                 try {
-                    SecurityUtil.decrypt(String(bytes))
+                    securityUtil.decrypt(String(bytes))
                 } catch (e: Exception) {
                     // If decryption fails, assume it's plaintext
                     String(bytes)
@@ -93,7 +94,7 @@ class Importer(
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
                         try {
-                            SecurityUtil.decrypt(String(bytes))
+                            securityUtil.decrypt(String(bytes))
                         } catch (e: Exception) {
                             // If decryption fails, assume it's plaintext
                             String(bytes)
