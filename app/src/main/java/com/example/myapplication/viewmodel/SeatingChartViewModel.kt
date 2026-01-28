@@ -68,8 +68,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
 import java.util.concurrent.ConcurrentHashMap
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.myapplication.data.exporter.ExportOptions
+import com.example.myapplication.util.EmailWorker
 import javax.inject.Inject
 import kotlinx.coroutines.delay
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import kotlin.math.abs
 
 private const val MILLIS_IN_HOUR = 3_600_000L
@@ -1117,6 +1124,30 @@ class SeatingChartViewModel @Inject constructor(
             val updatedStudent = student.copy(temporaryTask = null)
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
+        }
+    }
+
+    var pendingExportOptions: ExportOptions? by mutableStateOf(null)
+
+    fun onAppBackgrounded() {
+        viewModelScope.launch {
+            val autoSendOnClose = appPreferencesRepository.autoSendEmailOnClose.first()
+            if (autoSendOnClose) {
+                val email = appPreferencesRepository.defaultEmailAddress.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: ExportOptions()
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "request_type" to "daily_report",
+                                "email_address" to email,
+                                "export_options" to Json.encodeToString(exportOptions)
+                            )
+                        )
+                        .build()
+                    WorkManager.getInstance(getApplication()).enqueue(workRequest)
+                }
+            }
         }
     }
 }

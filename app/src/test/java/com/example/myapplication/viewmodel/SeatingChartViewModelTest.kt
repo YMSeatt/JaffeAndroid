@@ -14,7 +14,13 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import androidx.work.OneTimeWorkRequest
+import androidx.work.WorkManager
+import com.example.myapplication.data.exporter.ExportOptions
+import com.example.myapplication.util.EmailWorker
 import kotlinx.coroutines.test.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -167,5 +173,35 @@ class SeatingChartViewModelTest {
         coVerify { studentDao.updatePosition(studentId.toLong(), any(), any()) } // Command calls internalUpdateStudentPosition which calls dao
         
         viewModel.studentsForDisplay.removeObserver(observer)
+    }
+
+    @Test
+    fun `onAppBackgrounded enqueues WorkRequest when auto-send is enabled`() = runTest {
+        // Arrange
+        val workManager = mockk<WorkManager>(relaxed = true)
+        mockkStatic(WorkManager::class)
+        every { WorkManager.getInstance(application) } returns workManager
+
+        every { appPreferencesRepository.autoSendEmailOnClose } returns flowOf(true)
+        every { appPreferencesRepository.defaultEmailAddress } returns flowOf("test@example.com")
+
+        val exportOptions = ExportOptions(includeBehaviorLogs = true)
+        viewModel.pendingExportOptions = exportOptions
+
+        // Act
+        viewModel.onAppBackgrounded()
+        advanceUntilIdle()
+
+        // Assert
+        val slot = slot<OneTimeWorkRequest>()
+        verify { workManager.enqueue(capture(slot)) }
+
+        val workSpec = slot.captured.workSpec
+        assertEquals(EmailWorker::class.java.name, workSpec.workerClassName)
+
+        val data = workSpec.input
+        assertEquals("daily_report", data.getString("request_type"))
+        assertEquals("test@example.com", data.getString("email_address"))
+        assertEquals(Json.encodeToString(exportOptions), data.getString("export_options"))
     }
 }
