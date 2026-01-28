@@ -106,7 +106,7 @@ fun SettingsScreen(
             )
         }
     ) { paddingValues ->
-        val tabs = listOf("General", "Display", "Data", "Advanced")
+        val tabs = listOf("General", "Display", "Data", "Advanced", "SMTP")
         val pagerState = rememberPagerState(pageCount = { tabs.size })
         val coroutineScope = rememberCoroutineScope()
 
@@ -132,6 +132,11 @@ fun SettingsScreen(
                     onClick = { coroutineScope.launch { pagerState.animateScrollToPage(3) } },
                     text = { Text("Advanced") }
                 )
+                Tab(
+                    selected = pagerState.currentPage == 4,
+                    onClick = { coroutineScope.launch { pagerState.animateScrollToPage(4) } },
+                    text = { Text("SMTP") }
+                )
             }
             HorizontalPager(
                 state = pagerState,
@@ -156,6 +161,7 @@ fun SettingsScreen(
                         onNavigateToReminders = onNavigateToReminders,
                         onNavigateToQuizTemplates = onNavigateToQuizTemplates
                     )
+                    4 -> SmtpSettingsTab(viewModel = settingsViewModel)
                 }
             }
         }
