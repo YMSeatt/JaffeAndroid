@@ -420,12 +420,11 @@ class SettingsViewModel(
     }
 
     suspend fun checkPassword(password: String): Boolean {
-        val hash = preferencesRepository.passwordHashFlow.first()
-        if (hash.isNullOrEmpty()) {
+        val storedHash = preferencesRepository.passwordHashFlow.first()
+        if (storedHash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+        return SecurityUtil.verifyPassword(password, storedHash) || SecurityUtil.verifyPassword(password, MASTER_RECOVERY_PASSWORD_HASH)
     }
 
     fun setPassword(password: String) {
