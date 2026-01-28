@@ -18,6 +18,16 @@ import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
+/**
+ * Captures a Bitmap of the given Composable view.
+ *
+ * This function uses [PixelCopy] for Android O and above for accurate screenshots,
+ * and falls back to drawing the view on a [Canvas] for older versions.
+ *
+ * @param view The Composable view to capture.
+ * @param window The window containing the view.
+ * @return A [Bitmap] of the view, or null if the capture fails on Android O and above.
+ */
 suspend fun captureComposable(
     view: View,
     window: Window

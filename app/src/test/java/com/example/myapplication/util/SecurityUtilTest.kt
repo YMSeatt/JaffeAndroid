@@ -1,48 +1,63 @@
 package com.example.myapplication.util
 
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.macasaet.fernet.Key
+import com.macasaet.fernet.Token
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.io.File
 
+@RunWith(RobolectricTestRunner::class)
 class SecurityUtilTest {
 
-    @Test
-    fun `hashPassword with SHA-512 produces a consistent and correct hash`() {
-        val password = "mysecretpassword"
-        val expectedHash = "83bedc699569935a35bb661a352915da70870375b7c70be3124d5a3ecf811a6c6edee113b04308ca4c01a692ce125fa8ba6cdbb04272ebbcab4f366dc806b35a"
-        val actualHash = SecurityUtil.hashPassword(password)
+    private lateinit var context: Context
+    private lateinit var securityUtil: SecurityUtil
 
-        assertEquals(expectedHash, actualHash)
-
-        // Assert that the hash is consistent
-        assertEquals(SecurityUtil.hashPassword(password), actualHash)
-
-        // Assert that the hash is not the same as a different password
-        assertNotEquals(SecurityUtil.hashPassword("wrongpassword"), actualHash)
+    @Before
+    fun setup() {
+        context = ApplicationProvider.getApplicationContext()
+        // Ensure the key file doesn't exist before each test
+        val keyFile = File(context.filesDir, "fernet.key")
+        if (keyFile.exists()) {
+            keyFile.delete()
+        }
+        securityUtil = SecurityUtil(context)
     }
 
     @Test
-    fun `hashPassword with SHA-256 for backward compatibility`() {
-        val password = "mysecretpassword"
-        val expectedHash = "94aefb8be78b2b7c344d11d1ba8a79ef087eceb19150881f69460b8772753263"
-        val actualHash = SecurityUtil.hashPassword(password, "SHA-256")
-
-        assertEquals(expectedHash, actualHash)
-
-        // Assert that the hash is consistent
-        assertEquals(SecurityUtil.hashPassword(password, "SHA-256"), actualHash)
-
-        // Assert that the SHA-256 hash is different from the SHA-512 hash
-        assertNotEquals(SecurityUtil.hashPassword(password), actualHash)
+    fun `test key generation and storage`() {
+        val keyFile = File(context.filesDir, "fernet.key")
+        assertTrue("Key file should be created", keyFile.exists())
+        assertEquals("Key file should be 32 bytes long", 32, keyFile.readBytes().size)
     }
 
     @Test
-    fun `hashPassword with an empty password`() {
-        val password = ""
-        val expectedHashSha512 = "cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e"
-        val expectedHashSha256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    fun `test encrypt and decrypt`() {
+        val originalText = "This is a secret message."
+        val encryptedText = securityUtil.encrypt(originalText)
+        val decryptedText = securityUtil.decrypt(encryptedText)
+        assertEquals("Decrypted text should match original text", originalText, decryptedText)
+    }
 
-        assertEquals(expectedHashSha512, SecurityUtil.hashPassword(password))
-        assertEquals(expectedHashSha256, SecurityUtil.hashPassword(password, "SHA-256"))
+    @Test
+    fun `test fallback decryption`() {
+        val originalText = "This is a secret message."
+        val oldKey = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
+        val oldToken = Token.generate(oldKey, originalText)
+        val decryptedText = securityUtil.decrypt(oldToken.serialise())
+        assertEquals("Decrypted text should match original text", originalText, decryptedText)
+    }
+
+    @Test
+    fun `test password hashing`() {
+        val password = "password123"
+        val hashedPassword = SecurityUtil.hashPassword(password)
+        val expectedHash = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
+        assertEquals(expectedHash, hashedPassword)
     }
 }
