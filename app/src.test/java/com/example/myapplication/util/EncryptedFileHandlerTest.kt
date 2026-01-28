@@ -32,8 +32,8 @@ class EncryptedFileHandlerTest {
 
     @Before
     fun setUp() {
-        hiltRule.inject()
         context = ApplicationProvider.getApplicationContext()
+        hiltRule.inject()
         testFile = File(context.filesDir, "test_file.txt")
         if (testFile.exists()) {
             testFile.delete()
