@@ -1,6 +1,8 @@
 package com.example.myapplication.ui.settings
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -47,6 +49,7 @@ fun QuizTemplateScreen(
 ) {
     val quizTemplates by viewModel.quizTemplates.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
+    var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
     var editingTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var templateToDelete by remember { mutableStateOf<QuizTemplate?>(null) }
@@ -65,6 +68,7 @@ fun QuizTemplateScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
+                selectedTemplate = null
                 editingTemplate = null
                 showEditDialog = true
             }) {
