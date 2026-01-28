@@ -57,8 +57,16 @@ fun QuizTemplateEditDialog(
             Button(
                 onClick = {
                     val marksMap = defaultMarks.split(',')
-                        .mapNotNull { it.trim().split(':').takeIf { parts -> parts.size == 2 } }
-                        .associate { (key, value) -> key.trim() to (value.trim().toIntOrNull() ?: 0) }
+                        .mapNotNull { entry ->
+                            val parts = entry.split(':', limit = 2)
+                            if (parts.size == 2) {
+                                val key = parts[0].trim()
+                                val value = parts[1].trim().toIntOrNull()
+                                if (value != null) key to value else null
+                            } else {
+                                null
+                            }
+                        }.toMap()
 
                     val template = QuizTemplate(
                         id = quizTemplate?.id ?: 0,
