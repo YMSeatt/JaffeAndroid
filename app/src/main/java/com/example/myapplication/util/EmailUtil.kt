@@ -7,6 +7,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import android.util.Patterns
+import com.example.myapplication.data.SmtpSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Properties
@@ -38,7 +39,8 @@ class EmailUtil(private val context: Context) {
         to: String,
         subject: String,
         body: String,
-        attachmentPath: String? = null
+        attachmentPath: String? = null,
+        smtpSettings: SmtpSettings
     ) {
         val data = Data.Builder()
             .putString("request_type", "send_email")
@@ -48,6 +50,7 @@ class EmailUtil(private val context: Context) {
             .putString("subject", subject)
             .putString("body", body)
             .putString("attachment_path", attachmentPath)
+            .putString("smtp_settings", kotlinx.serialization.json.Json.encodeToString(SmtpSettings.serializer(), smtpSettings))
             .build()
 
         val constraints = Constraints.Builder()
@@ -69,7 +72,8 @@ class EmailUtil(private val context: Context) {
         to: String,
         subject: String,
         body: String,
-        attachmentPath: String? = null
+        attachmentPath: String? = null,
+        smtpSettings: SmtpSettings
     ) {
         if (!isValidEmail(from)) {
             throw EmailException("Invalid 'from' email address: $from")
@@ -80,10 +84,15 @@ class EmailUtil(private val context: Context) {
 
         withContext(Dispatchers.IO) {
             val properties = Properties().apply {
-                put("mail.smtp.host", "smtp.gmail.com")
-                put("mail.smtp.port", "587")
+                put("mail.smtp.host", smtpSettings.host)
+                put("mail.smtp.port", smtpSettings.port.toString())
                 put("mail.smtp.auth", "true")
-                put("mail.smtp.starttls.enable", "true")
+                if (smtpSettings.useSsl) {
+                    put("mail.smtp.socketFactory.port", smtpSettings.port.toString())
+                    put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
+                } else {
+                    put("mail.smtp.starttls.enable", "true")
+                }
             }
 
             val session = Session.getInstance(properties, object : Authenticator() {
