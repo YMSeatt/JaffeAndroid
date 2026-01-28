@@ -827,6 +827,7 @@ fun SeatingChartScreen(
                 val activity = (context as? MainActivity)
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 val emailPassword by settingsViewModel.emailPassword.collectAsState()
+                val smtpSettings by settingsViewModel.smtpSettings.collectAsState()
                 EmailDialog(
                     fromAddress = from,
                     onDismissRequest = { onShowEmailDialogChange(false) },
@@ -850,7 +851,8 @@ fun SeatingChartScreen(
                                             to = to,
                                             subject = subject,
                                             body = body,
-                                            attachmentPath = file.absolutePath
+                                            attachmentPath = file.absolutePath,
+                                            smtpSettings = smtpSettings
                                         )
                                         Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
                                     } catch (e: EmailException) {
