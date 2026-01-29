@@ -51,7 +51,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
-import com.example.myapplication.util.ReminderManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,7 +59,6 @@ fun RemindersScreen(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val reminderManager = remember { ReminderManager(context) }
     var showPermissionDialog by remember { mutableStateOf(false) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(
@@ -132,7 +130,7 @@ fun RemindersScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                if (reminderManager.canScheduleExactAlarms()) {
+                if (viewModel.canScheduleExactAlarms()) {
                     editingReminder = null
                     showAddEditDialog = true
                 } else {

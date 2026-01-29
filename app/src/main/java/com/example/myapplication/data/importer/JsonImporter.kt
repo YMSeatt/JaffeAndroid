@@ -25,12 +25,16 @@ import com.example.myapplication.data.StudentGroupDao
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.BufferedReader
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.InputStreamReader
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class JsonImporter(
-    private val context: Context,
+@Singleton
+class JsonImporter @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val studentDao: StudentDao,
     private val furnitureDao: FurnitureDao,
     private val behaviorEventDao: BehaviorEventDao,
