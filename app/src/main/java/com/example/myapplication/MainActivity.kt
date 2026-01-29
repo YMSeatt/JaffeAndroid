@@ -28,10 +28,12 @@ import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -73,6 +75,7 @@ import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.GuideType
+import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
@@ -83,6 +86,7 @@ import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
@@ -102,6 +106,7 @@ import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -113,6 +118,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class SessionType {
     BEHAVIOR,
@@ -273,25 +280,81 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        lifecycleScope.launch {
-            val autoSendOnClose: Boolean = settingsViewModel.autoSendEmailOnClose.first()
-            if (autoSendOnClose) {
-                val email: String = settingsViewModel.defaultEmailAddress.first()
-                if (email.isNotBlank()) {
-                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
-                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
-                        .setInputData(workDataOf(
+        val autoSendOnClose = settingsViewModel.autoSendEmailOnClose.value
+        if (autoSendOnClose) {
+            val email = settingsViewModel.defaultEmailAddress.value
+            if (email.isNotBlank()) {
+                val exportOptions =
+                    pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                    .setInputData(
+                        workDataOf(
                             "email_address" to email,
                             "export_options" to exportOptions.toString()
-                        ))
-                        .build()
-                    WorkManager.getInstance(applicationContext).enqueue(workRequest)
-                }
+                        )
+                    )
+                    .build()
+                WorkManager.getInstance(applicationContext).enqueue(workRequest)
             }
         }
     }
 }
 
+@Composable
+fun EmailDialog(
+    onDismissRequest: () -> Unit,
+    onSend: (String, String, String) -> Unit,
+    fromAddress: String
+) {
+    var to by remember { mutableStateOf("") }
+    var subject by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Send Email") },
+        text = {
+            Column {
+                TextField(
+                    value = fromAddress,
+                    onValueChange = { },
+                    label = { Text("From") },
+                    readOnly = true
+                )
+                TextField(
+                    value = to,
+                    onValueChange = { to = it },
+                    label = { Text("To") }
+                )
+                TextField(
+                    value = subject,
+                    onValueChange = { subject = it },
+                    label = { Text("Subject") }
+                )
+                TextField(
+                    value = body,
+                    onValueChange = { body = it },
+                    label = { Text("Body") }
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onSend(to, subject, body)
+                    onDismissRequest()
+                }
+            ) {
+                Text("Send")
+            }
+        },
+        dismissButton = {
+            Button(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -360,9 +423,6 @@ fun SeatingChartScreen(
             TopAppBar(
                 title = { Text("Seating Chart") },
                 actions = {
-                    var showFileMenu by remember { mutableStateOf(false) }
-                    var showViewMenu by remember { mutableStateOf(false) }
-
                     TextButton(
                         onClick = {
                             selectMode = !selectMode
@@ -407,22 +467,38 @@ fun SeatingChartScreen(
 
                     IconButton(onClick = { seatingChartViewModel.undo() }) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo") }
                     IconButton(onClick = { seatingChartViewModel.redo() }) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
+
+                    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+                    if (sessionType == SessionType.QUIZ || sessionType == SessionType.HOMEWORK) {
+                        TextButton(onClick = {
+                            if (isSessionActive) seatingChartViewModel.endSession() else seatingChartViewModel.startSession()
+                        }) {
+                            Text(if (isSessionActive) "End Session" else "Start Session")
+                        }
+                    }
+
+                    var showMoreMenu by remember { mutableStateOf(false) }
                     Box {
-                        IconButton(onClick = { showFileMenu = true }) { Text("File") }
+                        IconButton(onClick = { showMoreMenu = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        }
                         val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
-                        DropdownMenu(expanded = showFileMenu, onDismissRequest = { showFileMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
-                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showFileMenu = false })
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showMoreMenu = false })
                             DropdownMenuItem(text = { Text("Export to Excel") }, onClick = {
                                 if (seatingChartViewModel.studentsForDisplay.value?.isNotEmpty() == true) {
                                     showExportDialog = true
                                 } else {
                                     Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
                                 }
-                                showFileMenu = false
+                                showMoreMenu = false
                             })
                             DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
                                 lastExportPath?.let { path ->
@@ -436,10 +512,10 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                showFileMenu = false
+                                showMoreMenu = false
                             })
-                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showFileMenu = false })
-                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showFileMenu = false })
+                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showMoreMenu = false })
                             DropdownMenuItem(text = { Text("Export Database") }, onClick = {
                                 coroutineScope.launch {
                                     val uri = settingsViewModel.shareDatabase()
@@ -454,19 +530,15 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                showFileMenu = false
+                                showMoreMenu = false
                             })
-                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showFileMenu = false })
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { showViewMenu = true }) { Text("View") }
-                        DropdownMenu(expanded = showViewMenu, onDismissRequest = { showViewMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
-                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showViewMenu = false })
-                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showViewMenu = false })
+                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showMoreMenu = false })
+                            Divider()
+                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showMoreMenu = false })
                             DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
                                 guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
-                                showViewMenu = false
+                                showMoreMenu = false
                             })
                             DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
                                 coroutineScope.launch {
@@ -479,10 +551,12 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                showViewMenu = false
+                                showMoreMenu = false
                             })
+                            Divider()
+                            Text("Theme", modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                             AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
+                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
                             }
                         }
                     }
@@ -491,30 +565,22 @@ fun SeatingChartScreen(
                     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
-                        TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }
+                        TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.toTitleCase()) }
                         DropdownMenu(expanded = showModeMenu, onDismissRequest = { showModeMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
                             SessionType.entries.forEach { mode ->
-                                DropdownMenuItem(text = { Text(mode.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = {
+                                DropdownMenuItem(text = { Text(mode.name.toTitleCase()) }, onClick = {
                                     if (isSessionActive) {
                                         seatingChartViewModel.endSession()
                                     }
                                     sessionType = mode
-                                    showModeMenu = false
+                                    showMoreMenu = false
                                 })
                             }
+                            Divider()
+                            DropdownMenuItem(text = { Text("Settings") }, onClick = { onNavigateToSettings(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showMoreMenu = false })
                         }
                     }
-
-                    if (sessionType == SessionType.QUIZ || sessionType == SessionType.HOMEWORK) {
-                        TextButton(onClick = {
-                            if (isSessionActive) seatingChartViewModel.endSession() else seatingChartViewModel.startSession()
-                        }) {
-                            Text(if (isSessionActive) "End Session" else "Start Session")
-                        }
-                    }
-
-                    IconButton(onClick = onNavigateToSettings) { Icon(Icons.Filled.Settings, contentDescription = "Settings") }
-                    IconButton(onClick = onHelpClick) { Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help") }
                 }
             )
         },
@@ -638,42 +704,109 @@ fun SeatingChartScreen(
                 LoadLayoutDialog(layouts = layouts, onDismiss = { showLoadLayoutDialog = false }, onLoad = { layout -> seatingChartViewModel.loadLayout(layout); showLoadLayoutDialog = false }, onDelete = { layout -> seatingChartViewModel.deleteLayoutTemplate(layout) })
             }
 
-            if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
-                val student = selectedStudentUiItemForAction!!
-                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
-                var showGroupMenu by remember { mutableStateOf(false) }
+            if (showStudentActionMenu) {
+                selectedStudentUiItemForAction?.let { student ->
+                    val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                    var showGroupMenu by remember { mutableStateOf(false) }
+                    var showBehaviorLogViewer by remember { mutableStateOf(false) }
 
-                var showBehaviorLogViewer by remember { mutableStateOf(false) }
-
-                DropdownMenu(expanded = true, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
-                    DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
-                        coroutineScope.launch { editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong()); showAddEditStudentDialog = true }
-                        showStudentActionMenu = false
-                    })
-                    DropdownMenuItem(text = { Text("Delete Student") }, onClick = { seatingChartViewModel.deleteStudents(setOf(student.id)); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Behavior") }, onClick = { showBehaviorDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("View Behavior Log") }, onClick = { showBehaviorLogViewer = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Homework") }, onClick = { showAdvancedHomeworkLogDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = { showLogQuizScoreDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign Task") }, onClick = { showAssignTaskDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Change Student Box Style") }, onClick = { showStudentStyleDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Clear Recent Logs") }, onClick = { seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Show Recent Logs") }, onClick = { seatingChartViewModel.showRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign to Group") }, onClick = { showGroupMenu = true })
-                    if (student.groupId != null) {
-                        DropdownMenuItem(text = { Text("Remove from Group") }, onClick = { seatingChartViewModel.removeStudentFromGroup(student.id.toLong()); showStudentActionMenu = false })
+                    DropdownMenu(
+                        expanded = true,
+                        onDismissRequest = { showStudentActionMenu = false },
+                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
+                    ) {
+                        DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
+                            coroutineScope.launch {
+                                editingStudent =
+                                    seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                showAddEditStudentDialog = true
+                            }
+                            showStudentActionMenu = false
+                        })
+                        DropdownMenuItem(
+                            text = { Text("Delete Student") },
+                            onClick = {
+                                seatingChartViewModel.deleteStudents(setOf(student.id))
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Behavior") },
+                            onClick = {
+                                showBehaviorDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("View Behavior Log") },
+                            onClick = {
+                                showBehaviorLogViewer = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Homework") },
+                            onClick = {
+                                showAdvancedHomeworkLogDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Quiz Score") },
+                            onClick = {
+                                showLogQuizScoreDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign Task") },
+                            onClick = {
+                                showAssignTaskDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Change Student Box Style") },
+                            onClick = {
+                                showStudentStyleDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Clear Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Show Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign to Group") },
+                            onClick = { showGroupMenu = true })
+                        if (student.groupId != null) {
+                            DropdownMenuItem(text = { Text("Remove from Group") }, onClick = {
+                                seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
-                }
-                if (showBehaviorLogViewer) {
-                    BehaviorLogViewerDialog(
-                        studentId = student.id.toLong(),
-                        viewModel = seatingChartViewModel,
-                        onDismiss = { showBehaviorLogViewer = false }
-                    )
-                }
-                DropdownMenu(expanded = showGroupMenu, onDismissRequest = { showGroupMenu = false }) {
-                    groups.forEach { group ->
-                        DropdownMenuItem(text = { Text(group.name) }, onClick = { seatingChartViewModel.assignStudentToGroup(student.id.toLong(), group.id); showGroupMenu = false; showStudentActionMenu = false })
+                    if (showBehaviorLogViewer) {
+                        BehaviorLogViewerDialog(
+                            studentId = student.id.toLong(),
+                            viewModel = seatingChartViewModel,
+                            onDismiss = { showBehaviorLogViewer = false }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showGroupMenu,
+                        onDismissRequest = { showGroupMenu = false }) {
+                        groups.forEach { group ->
+                            DropdownMenuItem(text = { Text(group.name) }, onClick = {
+                                seatingChartViewModel.assignStudentToGroup(
+                                    student.id.toLong(),
+                                    group.id
+                                )
+                                showGroupMenu = false
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
                 }
             }
@@ -771,6 +904,7 @@ fun SeatingChartScreen(
                 val activity = (context as? MainActivity)
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 val emailPassword by settingsViewModel.emailPassword.collectAsState()
+                val smtpSettings by settingsViewModel.smtpSettings.collectAsState()
                 EmailDialog(
                     fromAddress = from,
                     onDismissRequest = { onShowEmailDialogChange(false) },
@@ -794,7 +928,8 @@ fun SeatingChartScreen(
                                             to = to,
                                             subject = subject,
                                             body = body,
-                                            attachmentPath = file.absolutePath
+                                            attachmentPath = file.absolutePath,
+                                            smtpSettings = smtpSettings
                                         )
                                         Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
                                     } catch (e: EmailException) {
