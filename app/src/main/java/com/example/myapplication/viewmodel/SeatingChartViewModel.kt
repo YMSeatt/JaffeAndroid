@@ -66,7 +66,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import com.example.myapplication.data.FurnitureLayout
+import com.example.myapplication.data.LayoutData
+import com.example.myapplication.data.StudentLayout
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Stack
@@ -254,27 +260,9 @@ class SeatingChartViewModel @Inject constructor(
             val useInitialsForBehavior = appPreferencesRepository.useInitialsForBehaviorFlow.first()
             val useInitialsForHomework = appPreferencesRepository.useInitialsForHomeworkFlow.first()
             val useInitialsForQuiz = appPreferencesRepository.useInitialsForQuizFlow.first()
-            val behaviorInitialsMap = appPreferencesRepository.behaviorInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
-            val homeworkInitialsMap = appPreferencesRepository.homeworkInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
-            val quizInitialsMap = appPreferencesRepository.quizInitialsMapFlow.first()
-                .split(",")
-                .mapNotNull {
-                    val parts = it.split(":", limit = 2)
-                    if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
-                }
-                .toMap()
+            val behaviorInitialsMap = parseKeyValueString(appPreferencesRepository.behaviorInitialsMapFlow.first())
+            val homeworkInitialsMap = parseKeyValueString(appPreferencesRepository.homeworkInitialsMapFlow.first())
+            val quizInitialsMap = parseKeyValueString(appPreferencesRepository.quizInitialsMapFlow.first())
             val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
 
             // Retrieve specific display timeouts
@@ -421,6 +409,15 @@ class SeatingChartViewModel @Inject constructor(
                             )
                         }
                         studentsForDisplay.postValue(studentsWithBehavior)        }
+    }
+
+    private fun parseKeyValueString(input: String): Map<String, String> {
+        return input.split(",")
+            .mapNotNull {
+                val parts = it.split(":", limit = 2)
+                if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+            }
+            .toMap()
     }
 
     fun clearRecentLogsForStudent(studentId: Long) {
@@ -873,28 +870,18 @@ class SeatingChartViewModel @Inject constructor(
 
     // Layout operations
     fun saveLayout(name: String) = viewModelScope.launch(Dispatchers.IO) {
-        val studentsJson = JSONArray(allStudents.value?.map { student ->
-            JSONObject().apply {
-                put("id", student.id)
-                put("x", student.xPosition)
-                put("y", student.yPosition)
-            }
-        }).toString()
+        val studentLayouts = allStudents.value?.map { student ->
+            StudentLayout(id = student.id, x = student.xPosition, y = student.yPosition)
+        } ?: emptyList()
 
-        val furnitureJson = JSONArray(allFurniture.value?.map { furniture ->
-            JSONObject().apply {
-                put("id", furniture.id)
-                put("x", furniture.xPosition)
-                put("y", furniture.yPosition)
-            }
-        }).toString()
+        val furnitureLayouts = allFurniture.value?.map { furniture ->
+            FurnitureLayout(id = furniture.id, x = furniture.xPosition, y = furniture.yPosition)
+        } ?: emptyList()
 
-        val layoutData = JSONObject().apply {
-            put("students", studentsJson)
-            put("furniture", furnitureJson)
-        }.toString()
+        val layoutData = LayoutData(students = studentLayouts, furniture = furnitureLayouts)
+        val layoutDataJson = Json.encodeToString(layoutData)
 
-        val layout = LayoutTemplate(name = name, layoutDataJson = layoutData)
+        val layout = LayoutTemplate(name = name, layoutDataJson = layoutDataJson)
         repository.insertLayoutTemplate(layout)
     }
 
@@ -909,21 +896,33 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     fun internalLoadLayout(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
-        val layoutData = JSONObject(layout.layoutDataJson)
-        val studentPositions = JSONArray(layoutData.getString("students"))
-        for (i in 0 until studentPositions.length()) {
-            val pos = studentPositions.getJSONObject(i)
-            val x = pos.getDouble("x").toFloat()
-            val y = pos.getDouble("y").toFloat()
-            studentDao.updatePosition(pos.getLong("id"), x, y)
-        }
+        try {
+            val layoutData = Json.decodeFromString<LayoutData>(layout.layoutDataJson)
 
-        val furniturePositions = JSONArray(layoutData.getString("furniture"))
-        for (i in 0 until furniturePositions.length()) {
-            val pos = furniturePositions.getJSONObject(i)
-            val x = pos.getDouble("x").toFloat()
-            val y = pos.getDouble("y").toFloat()
-            furnitureDao.updatePosition(pos.getLong("id"), x, y)
+            layoutData.students.forEach { studentLayout ->
+                studentDao.updatePosition(studentLayout.id, studentLayout.x, studentLayout.y)
+            }
+
+            layoutData.furniture.forEach { furnitureLayout ->
+                furnitureDao.updatePosition(furnitureLayout.id.toLong(), furnitureLayout.x, furnitureLayout.y)
+            }
+        } catch (e: Exception) {
+            val layoutData = JSONObject(layout.layoutDataJson)
+            val studentPositions = JSONArray(layoutData.getString("students"))
+            for (i in 0 until studentPositions.length()) {
+                val pos = studentPositions.getJSONObject(i)
+                val x = pos.getDouble("x").toFloat()
+                val y = pos.getDouble("y").toFloat()
+                studentDao.updatePosition(pos.getLong("id"), x, y)
+            }
+
+            val furniturePositions = JSONArray(layoutData.getString("furniture"))
+            for (i in 0 until furniturePositions.length()) {
+                val pos = furniturePositions.getJSONObject(i)
+                val x = pos.getDouble("x").toFloat()
+                val y = pos.getDouble("y").toFloat()
+                furnitureDao.updatePosition(pos.getLong("id"), x, y)
+            }
         }
     }
 

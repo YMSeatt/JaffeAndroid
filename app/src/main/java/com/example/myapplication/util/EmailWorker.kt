@@ -5,6 +5,7 @@ import androidx.core.content.FileProvider
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
@@ -42,6 +43,7 @@ class EmailWorker(
         val preferencesRepository = AppPreferencesRepository(applicationContext)
         val from = preferencesRepository.defaultEmailAddressFlow.first()
         val password = preferencesRepository.emailPasswordFlow.first()
+        val smtpSettings = preferencesRepository.smtpSettingsFlow.first()
 
         if (password.isNullOrBlank()) {
             return@withContext Result.failure()
@@ -114,7 +116,8 @@ class EmailWorker(
                     to = to,
                     subject = subject,
                     body = "Please find the daily report attached.",
-                    attachmentPath = file.absolutePath
+                    attachmentPath = file.absolutePath,
+                    smtpSettings = smtpSettings
                 )
             }
             "send_email" -> {
@@ -122,6 +125,13 @@ class EmailWorker(
                 val subject = inputData.getString("subject") ?: return@withContext Result.failure()
                 val body = inputData.getString("body") ?: return@withContext Result.failure()
                 val attachmentPath = inputData.getString("attachment_path")
+                val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
+                    try {
+                        Json.decodeFromString<SmtpSettings>(it)
+                    } catch (e: Exception) {
+                        smtpSettings
+                    }
+                } ?: smtpSettings
 
                 EmailUtil(applicationContext).sendEmail(
                     from = from,
@@ -129,7 +139,8 @@ class EmailWorker(
                     to = to,
                     subject = subject,
                     body = body,
-                    attachmentPath = attachmentPath
+                    attachmentPath = attachmentPath,
+                    smtpSettings = workerSmtpSettings
                 )
             }
             "process_pending_emails" -> {
@@ -140,7 +151,8 @@ class EmailWorker(
                         password = password,
                         to = email.recipientAddress,
                         subject = email.subject,
-                        body = email.body
+                        body = email.body,
+                        smtpSettings = smtpSettings
                     )
                     pendingEmailDao.delete(email.id)
                 }
