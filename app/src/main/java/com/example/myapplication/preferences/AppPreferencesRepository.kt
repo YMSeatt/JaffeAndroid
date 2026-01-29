@@ -12,10 +12,13 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.example.myapplication.data.DefaultStudentStyle
 import com.example.myapplication.data.EmailSchedule
+import com.example.myapplication.data.SmtpSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.json.Json
+import javax.inject.Inject
 
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -35,7 +38,7 @@ const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
 const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0 // 0 means no timeout
 
-class AppPreferencesRepository(private val context: Context) {
+class AppPreferencesRepository @Inject constructor(@ApplicationContext private val context: Context) {
 
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
@@ -108,6 +111,7 @@ class AppPreferencesRepository(private val context: Context) {
         // Live Homework Session Preferences
         val LIVE_HOMEWORK_SESSION_MODE = stringPreferencesKey("live_homework_session_mode") // "Yes/No" or "Select"
         val LIVE_HOMEWORK_SELECT_OPTIONS = stringPreferencesKey("live_homework_select_options") // JSON or delimited string
+        val SMTP_SETTINGS = stringPreferencesKey("smtp_settings")
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -780,6 +784,23 @@ class AppPreferencesRepository(private val context: Context) {
     suspend fun updateLiveHomeworkSelectOptions(options: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] = options
+        }
+    }
+
+    val smtpSettingsFlow: Flow<SmtpSettings> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.SMTP_SETTINGS]?.let {
+                try {
+                    Json.decodeFromString<SmtpSettings>(it)
+                } catch (e: Exception) {
+                    SmtpSettings()
+                }
+            } ?: SmtpSettings()
+        }
+
+    suspend fun updateSmtpSettings(smtpSettings: SmtpSettings) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.SMTP_SETTINGS] = Json.encodeToString(smtpSettings)
         }
     }
 }
