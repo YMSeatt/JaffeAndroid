@@ -75,6 +75,7 @@ import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.GuideType
+import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
@@ -85,6 +86,7 @@ import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
@@ -103,6 +105,7 @@ import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.ReminderViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -114,6 +117,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 enum class SessionType {
     BEHAVIOR,
@@ -274,20 +279,21 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
-        lifecycleScope.launch {
-            val autoSendOnClose: Boolean = settingsViewModel.autoSendEmailOnClose.first()
-            if (autoSendOnClose) {
-                val email: String = settingsViewModel.defaultEmailAddress.first()
-                if (email.isNotBlank()) {
-                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
-                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
-                        .setInputData(workDataOf(
+        val autoSendOnClose = settingsViewModel.autoSendEmailOnClose.value
+        if (autoSendOnClose) {
+            val email = settingsViewModel.defaultEmailAddress.value
+            if (email.isNotBlank()) {
+                val exportOptions =
+                    pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                    .setInputData(
+                        workDataOf(
                             "email_address" to email,
                             "export_options" to exportOptions.toString()
-                        ))
-                        .build()
-                    WorkManager.getInstance(applicationContext).enqueue(workRequest)
-                }
+                        )
+                    )
+                    .build()
+                WorkManager.getInstance(applicationContext).enqueue(workRequest)
             }
         }
     }
@@ -297,7 +303,6 @@ class MainActivity : ComponentActivity() {
 fun EmailDialog(
     onDismissRequest: () -> Unit,
     onSend: (String, String, String) -> Unit,
-    settingsViewModel: SettingsViewModel,
     fromAddress: String
 ) {
     var to by remember { mutableStateOf("") }
@@ -550,12 +555,19 @@ fun SeatingChartScreen(
                             Divider()
                             Text("Theme", modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                             AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = { settingsViewModel.updateAppTheme(theme); showMoreMenu = false })
+                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
                             }
-                            Divider()
-                            Text("Mode: ${sessionType.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }}", modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+                        }
+                    }
+
+                    var showModeMenu by remember { mutableStateOf(false) }
+                    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+
+                    Box {
+                        TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.toTitleCase()) }
+                        DropdownMenu(expanded = showModeMenu, onDismissRequest = { showModeMenu = false }, offset = DpOffset(x = 0.dp, y = 0.dp)) {
                             SessionType.entries.forEach { mode ->
-                                DropdownMenuItem(text = { Text(mode.name.lowercase().replaceFirstChar { it.titlecase(Locale.getDefault()) }) }, onClick = {
+                                DropdownMenuItem(text = { Text(mode.name.toTitleCase()) }, onClick = {
                                     if (isSessionActive) {
                                         seatingChartViewModel.endSession()
                                     }
@@ -691,42 +703,109 @@ fun SeatingChartScreen(
                 LoadLayoutDialog(layouts = layouts, onDismiss = { showLoadLayoutDialog = false }, onLoad = { layout -> seatingChartViewModel.loadLayout(layout); showLoadLayoutDialog = false }, onDelete = { layout -> seatingChartViewModel.deleteLayoutTemplate(layout) })
             }
 
-            if (showStudentActionMenu && selectedStudentUiItemForAction != null) {
-                val student = selectedStudentUiItemForAction!!
-                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
-                var showGroupMenu by remember { mutableStateOf(false) }
+            if (showStudentActionMenu) {
+                selectedStudentUiItemForAction?.let { student ->
+                    val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                    var showGroupMenu by remember { mutableStateOf(false) }
+                    var showBehaviorLogViewer by remember { mutableStateOf(false) }
 
-                var showBehaviorLogViewer by remember { mutableStateOf(false) }
-
-                DropdownMenu(expanded = true, onDismissRequest = { showStudentActionMenu = false }, offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)) {
-                    DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
-                        coroutineScope.launch { editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong()); showAddEditStudentDialog = true }
-                        showStudentActionMenu = false
-                    })
-                    DropdownMenuItem(text = { Text("Delete Student") }, onClick = { seatingChartViewModel.deleteStudents(setOf(student.id)); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Behavior") }, onClick = { showBehaviorDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("View Behavior Log") }, onClick = { showBehaviorLogViewer = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Homework") }, onClick = { showAdvancedHomeworkLogDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Log Quiz Score") }, onClick = { showLogQuizScoreDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign Task") }, onClick = { showAssignTaskDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Change Student Box Style") }, onClick = { showStudentStyleDialog = true; showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Clear Recent Logs") }, onClick = { seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Show Recent Logs") }, onClick = { seatingChartViewModel.showRecentLogsForStudent(student.id.toLong()); showStudentActionMenu = false })
-                    DropdownMenuItem(text = { Text("Assign to Group") }, onClick = { showGroupMenu = true })
-                    if (student.groupId != null) {
-                        DropdownMenuItem(text = { Text("Remove from Group") }, onClick = { seatingChartViewModel.removeStudentFromGroup(student.id.toLong()); showStudentActionMenu = false })
+                    DropdownMenu(
+                        expanded = true,
+                        onDismissRequest = { showStudentActionMenu = false },
+                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
+                    ) {
+                        DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
+                            coroutineScope.launch {
+                                editingStudent =
+                                    seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                showAddEditStudentDialog = true
+                            }
+                            showStudentActionMenu = false
+                        })
+                        DropdownMenuItem(
+                            text = { Text("Delete Student") },
+                            onClick = {
+                                seatingChartViewModel.deleteStudents(setOf(student.id))
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Behavior") },
+                            onClick = {
+                                showBehaviorDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("View Behavior Log") },
+                            onClick = {
+                                showBehaviorLogViewer = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Homework") },
+                            onClick = {
+                                showAdvancedHomeworkLogDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Log Quiz Score") },
+                            onClick = {
+                                showLogQuizScoreDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign Task") },
+                            onClick = {
+                                showAssignTaskDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Change Student Box Style") },
+                            onClick = {
+                                showStudentStyleDialog = true
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Clear Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.clearRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Show Recent Logs") },
+                            onClick = {
+                                seatingChartViewModel.showRecentLogsForStudent(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        DropdownMenuItem(
+                            text = { Text("Assign to Group") },
+                            onClick = { showGroupMenu = true })
+                        if (student.groupId != null) {
+                            DropdownMenuItem(text = { Text("Remove from Group") }, onClick = {
+                                seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
-                }
-                if (showBehaviorLogViewer) {
-                    BehaviorLogViewerDialog(
-                        studentId = student.id.toLong(),
-                        viewModel = seatingChartViewModel,
-                        onDismiss = { showBehaviorLogViewer = false }
-                    )
-                }
-                DropdownMenu(expanded = showGroupMenu, onDismissRequest = { showGroupMenu = false }) {
-                    groups.forEach { group ->
-                        DropdownMenuItem(text = { Text(group.name) }, onClick = { seatingChartViewModel.assignStudentToGroup(student.id.toLong(), group.id); showGroupMenu = false; showStudentActionMenu = false })
+                    if (showBehaviorLogViewer) {
+                        BehaviorLogViewerDialog(
+                            studentId = student.id.toLong(),
+                            viewModel = seatingChartViewModel,
+                            onDismiss = { showBehaviorLogViewer = false }
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showGroupMenu,
+                        onDismissRequest = { showGroupMenu = false }) {
+                        groups.forEach { group ->
+                            DropdownMenuItem(text = { Text(group.name) }, onClick = {
+                                seatingChartViewModel.assignStudentToGroup(
+                                    student.id.toLong(),
+                                    group.id
+                                )
+                                showGroupMenu = false
+                                showStudentActionMenu = false
+                            })
+                        }
                     }
                 }
             }
@@ -824,6 +903,7 @@ fun SeatingChartScreen(
                 val activity = (context as? MainActivity)
                 val from by settingsViewModel.defaultEmailAddress.collectAsState()
                 val emailPassword by settingsViewModel.emailPassword.collectAsState()
+                val smtpSettings by settingsViewModel.smtpSettings.collectAsState()
                 EmailDialog(
                     fromAddress = from,
                     onDismissRequest = { onShowEmailDialogChange(false) },
@@ -847,7 +927,8 @@ fun SeatingChartScreen(
                                             to = to,
                                             subject = subject,
                                             body = body,
-                                            attachmentPath = file.absolutePath
+                                            attachmentPath = file.absolutePath,
+                                            smtpSettings = smtpSettings
                                         )
                                         Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
                                     } catch (e: EmailException) {
@@ -859,8 +940,7 @@ fun SeatingChartScreen(
                             }
                             onShowEmailDialogChange(false)
                         }
-                    },
-                    settingsViewModel = settingsViewModel
+                    }
                 )
             }
 
