@@ -2,9 +2,8 @@ package com.example.myapplication.util
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.macasaet.fernet.Key
-import com.macasaet.fernet.Token
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -45,12 +44,11 @@ class SecurityUtilTest {
     }
 
     @Test
-    fun `test fallback decryption`() {
-        val originalText = "This is a secret message."
-        val oldKey = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
-        val oldToken = Token.generate(oldKey, originalText)
-        val decryptedText = securityUtil.decrypt(oldToken.serialise())
-        assertEquals("Decrypted text should match original text", originalText, decryptedText)
+    fun `test decryption failure`() {
+        val invalidToken = "gAAAAABl2c5-j2E8_2_9..." // Just an example of an invalid token
+        assertThrows(java.lang.SecurityException::class.java) {
+            securityUtil.decrypt(invalidToken)
+        }
     }
 
     @Test

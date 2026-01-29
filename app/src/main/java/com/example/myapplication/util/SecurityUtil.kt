@@ -28,9 +28,6 @@ class SecurityUtil(context: Context) {
         private const val KEY_FILE_NAME = "fernet.key"
         private const val TTL_SECONDS = 60 * 60 * 24 * 365 * 100 // 100 years
 
-        // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
-        private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
-
         fun hashPassword(password: String): String {
             val bytes = password.toByteArray()
             val md = MessageDigest.getInstance("SHA-256")
@@ -73,17 +70,10 @@ class SecurityUtil(context: Context) {
     }
 
     /**
-     * Decrypts a Fernet token. It first tries to decrypt with the new, secure key.
-     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     * Decrypts a Fernet token.
      */
     fun decrypt(token: String): String {
-        return try {
-            String(fernetCipher.decrypt(token, TTL_SECONDS))
-        } catch (e: Exception) {
-            // Fallback to old key
-            val oldToken = Token.fromString(token)
-            oldToken.validateAndDecrypt(FALLBACK_KEY, StringValidator())
-        }
+        return String(fernetCipher.decrypt(token, TTL_SECONDS))
     }
 
     class StringValidator : Validator<String> {
