@@ -52,6 +52,9 @@ import com.example.myapplication.ui.model.toUiItem
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.CollisionDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -77,6 +80,12 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlin.math.abs
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.example.myapplication.util.EmailWorker
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 private const val MILLIS_IN_HOUR = 3_600_000L
 
@@ -137,6 +146,7 @@ class SeatingChartViewModel @Inject constructor(
     val selectedStudentIds = MutableLiveData<Set<Int>>(emptySet())
     var canvasHeight by mutableStateOf(0)
     var canvasWidth by mutableStateOf(0)
+    var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
 
 
     fun clearSelection() {
@@ -1116,6 +1126,29 @@ class SeatingChartViewModel @Inject constructor(
             val updatedStudent = student.copy(temporaryTask = null)
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
+        }
+    }
+
+    fun handleOnStop(context: Context) {
+        viewModelScope.launch {
+            val autoSendOnClose: Boolean = appPreferencesRepository.autoSendEmailOnCloseFlow.first()
+            if (autoSendOnClose) {
+                val email: String = appPreferencesRepository.defaultEmailAddressFlow.first()
+                if (email.isNotBlank()) {
+                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    val exportOptionsJson = Json.encodeToString(exportOptions)
+                    val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
+                        .setInputData(
+                            workDataOf(
+                                "request_type" to "on_stop_export",
+                                "email_address" to email,
+                                "export_options" to exportOptionsJson
+                            )
+                        )
+                        .build()
+                    WorkManager.getInstance(context).enqueue(workRequest)
+                }
+            }
         }
     }
 }

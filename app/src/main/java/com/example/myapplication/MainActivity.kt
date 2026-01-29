@@ -135,13 +135,11 @@ class MainActivity : ComponentActivity() {
     }
     private val guideViewModel: GuideViewModel by viewModels()
 
-    var pendingExportOptions: com.example.myapplication.data.exporter.ExportOptions? by mutableStateOf(null)
-
     val createDocumentLauncher = registerForActivityResult(
         ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     ) { uri: Uri? ->
         uri?.let {
-            pendingExportOptions?.let { options ->
+            seatingChartViewModel.pendingExportOptions?.let { options ->
                 lifecycleScope.launch {
                     val result = seatingChartViewModel.exportData(
                         context = this@MainActivity,
@@ -157,7 +155,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        pendingExportOptions = null
+        seatingChartViewModel.pendingExportOptions = null
     }
 
     var showEmailDialog by mutableStateOf(false)
@@ -280,6 +278,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         super.onStop()
+        seatingChartViewModel.handleOnStop(this)
         val autoSendOnClose = settingsViewModel.autoSendEmailOnClose.value
         if (autoSendOnClose) {
             val email = settingsViewModel.defaultEmailAddress.value
@@ -890,7 +889,7 @@ fun SeatingChartScreen(
 
             if (showExportDialog) {
                 ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options, share ->
-                    (context as? MainActivity)?.pendingExportOptions = options
+                    seatingChartViewModel.pendingExportOptions = options
                     if (share) {
                         onShowEmailDialogChange(true)
                     } else {
@@ -914,7 +913,7 @@ fun SeatingChartScreen(
                             // Create a temporary file for the attachment
                             val file = kotlin.io.path.createTempFile("export", ".xlsx").toFile()
                             val uri = Uri.fromFile(file)
-                            activity.pendingExportOptions?.let { options ->
+                            seatingChartViewModel.pendingExportOptions?.let { options ->
                                 val result = seatingChartViewModel.exportData(
                                     context = activity,
                                     uri = uri,

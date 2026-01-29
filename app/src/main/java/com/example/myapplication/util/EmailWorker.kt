@@ -157,6 +157,48 @@ class EmailWorker(
                     pendingEmailDao.delete(email.id)
                 }
             }
+            "on_stop_export" -> {
+                val to = inputData.getString("email_address") ?: return@withContext Result.failure()
+                val exportOptionsJson = inputData.getString("export_options") ?: return@withContext Result.failure()
+                val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
+                val file = File(applicationContext.cacheDir, "on_stop_export.xlsx")
+                val uri = FileProvider.getUriForFile(
+                    applicationContext,
+                    "com.example.myapplication.fileprovider",
+                    file
+                )
+                val students = studentDao.getAllStudentsNonLiveData()
+                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+                val quizLogs = quizLogDao.getAllQuizLogsList()
+                val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+
+                exporter.export(
+                    uri = uri,
+                    options = exportOptions,
+                    students = students,
+                    behaviorEvents = behaviorEvents,
+                    homeworkLogs = homeworkLogs,
+                    quizLogs = quizLogs,
+                    studentGroups = studentGroups,
+                    quizMarkTypes = quizMarkTypes,
+                    customHomeworkTypes = customHomeworkTypes,
+                    customHomeworkStatuses = customHomeworkStatuses,
+                    encrypt = exportOptions.encrypt
+                )
+
+                EmailUtil(applicationContext).sendEmail(
+                    from = from,
+                    password = password,
+                    to = to,
+                    subject = "Seating Chart Export",
+                    body = "Attached is your requested data export.",
+                    attachmentPath = file.absolutePath
+                )
+            }
             else -> return@withContext Result.failure()
         }
 
