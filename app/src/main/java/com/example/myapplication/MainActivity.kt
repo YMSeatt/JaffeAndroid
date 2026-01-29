@@ -91,6 +91,7 @@ import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
 import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
+import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.ExportDialog
 import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
 import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
