@@ -14,6 +14,7 @@ import com.example.myapplication.data.CustomBehavior
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.QuizMarkType
+import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
 import com.example.myapplication.preferences.AppTheme
@@ -420,12 +421,25 @@ class SettingsViewModel(
     }
 
     suspend fun checkPassword(password: String): Boolean {
-        val hash = preferencesRepository.passwordHashFlow.first()
-        if (hash.isNullOrEmpty()) {
+        val storedHash = preferencesRepository.passwordHashFlow.first()
+        if (storedHash.isNullOrEmpty()) {
             return password.isBlank()
         }
-        val inputHash = SecurityUtil.hashPassword(password)
-        return hash == inputHash || MASTER_RECOVERY_PASSWORD_HASH == inputHash
+
+        val newHash = SecurityUtil.hashPassword(password) // SHA-512
+        if (storedHash == newHash || MASTER_RECOVERY_PASSWORD_HASH == newHash) {
+            return true
+        }
+
+        // For backward compatibility, check against the old SHA-256 hash
+        val oldHash = SecurityUtil.hashPassword(password, "SHA-256")
+        if (storedHash == oldHash) {
+            // If it matches, update the hash to the new algorithm automatically
+            preferencesRepository.updatePasswordHash(newHash)
+            return true
+        }
+
+        return false
     }
 
     fun setPassword(password: String) {
@@ -675,8 +689,9 @@ class SettingsViewModel(
     }
 
     val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "behaviorlogger@gmail.com")
-
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "behaviorlogger@gmail.com")
+    val defaultEmailAddressValue: String
+        get() = defaultEmailAddress.value
     fun updateDefaultEmailAddress(email: String) {
         viewModelScope.launch {
             preferencesRepository.updateDefaultEmailAddress(email)
@@ -684,7 +699,9 @@ class SettingsViewModel(
     }
 
     val autoSendEmailOnClose: StateFlow<Boolean> = preferencesRepository.autoSendEmailOnCloseFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+    val autoSendEmailOnCloseValue: Boolean
+        get() = autoSendEmailOnClose.value
 
     fun updateAutoSendEmailOnClose(enabled: Boolean) {
         viewModelScope.launch {
@@ -734,6 +751,15 @@ class SettingsViewModel(
     fun updateQuizDisplayTimeout(timeout: Int) {
         viewModelScope.launch {
             preferencesRepository.updateQuizDisplayTimeout(timeout)
+        }
+    }
+
+    val smtpSettings: StateFlow<SmtpSettings> = preferencesRepository.smtpSettingsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, SmtpSettings())
+
+    fun updateSmtpSettings(smtpSettings: SmtpSettings) {
+        viewModelScope.launch {
+            preferencesRepository.updateSmtpSettings(smtpSettings)
         }
     }
 }

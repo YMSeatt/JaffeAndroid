@@ -5,6 +5,7 @@ import androidx.core.content.FileProvider
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
@@ -42,6 +43,7 @@ class EmailWorker(
         val preferencesRepository = AppPreferencesRepository(applicationContext)
         val from = preferencesRepository.defaultEmailAddressFlow.first()
         val password = preferencesRepository.emailPasswordFlow.first()
+        val smtpSettings = preferencesRepository.smtpSettingsFlow.first()
 
         if (password.isNullOrBlank()) {
             return@withContext Result.failure()
@@ -114,7 +116,8 @@ class EmailWorker(
                     to = to,
                     subject = subject,
                     body = "Please find the daily report attached.",
-                    attachmentPath = file.absolutePath
+                    attachmentPath = file.absolutePath,
+                    smtpSettings = smtpSettings
                 )
             }
             "send_email" -> {
@@ -122,6 +125,13 @@ class EmailWorker(
                 val subject = inputData.getString("subject") ?: return@withContext Result.failure()
                 val body = inputData.getString("body") ?: return@withContext Result.failure()
                 val attachmentPath = inputData.getString("attachment_path")
+                val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
+                    try {
+                        Json.decodeFromString<SmtpSettings>(it)
+                    } catch (e: Exception) {
+                        smtpSettings
+                    }
+                } ?: smtpSettings
 
                 EmailUtil(applicationContext).sendEmail(
                     from = from,
@@ -129,7 +139,8 @@ class EmailWorker(
                     to = to,
                     subject = subject,
                     body = body,
-                    attachmentPath = attachmentPath
+                    attachmentPath = attachmentPath,
+                    smtpSettings = workerSmtpSettings
                 )
             }
             "process_pending_emails" -> {
@@ -140,10 +151,53 @@ class EmailWorker(
                         password = password,
                         to = email.recipientAddress,
                         subject = email.subject,
-                        body = email.body
+                        body = email.body,
+                        smtpSettings = smtpSettings
                     )
                     pendingEmailDao.delete(email.id)
                 }
+            }
+            "on_stop_export" -> {
+                val to = inputData.getString("email_address") ?: return@withContext Result.failure()
+                val exportOptionsJson = inputData.getString("export_options") ?: return@withContext Result.failure()
+                val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
+                val file = File(applicationContext.cacheDir, "on_stop_export.xlsx")
+                val uri = FileProvider.getUriForFile(
+                    applicationContext,
+                    "com.example.myapplication.fileprovider",
+                    file
+                )
+                val students = studentDao.getAllStudentsNonLiveData()
+                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+                val quizLogs = quizLogDao.getAllQuizLogsList()
+                val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+
+                exporter.export(
+                    uri = uri,
+                    options = exportOptions,
+                    students = students,
+                    behaviorEvents = behaviorEvents,
+                    homeworkLogs = homeworkLogs,
+                    quizLogs = quizLogs,
+                    studentGroups = studentGroups,
+                    quizMarkTypes = quizMarkTypes,
+                    customHomeworkTypes = customHomeworkTypes,
+                    customHomeworkStatuses = customHomeworkStatuses,
+                    encrypt = exportOptions.encrypt
+                )
+
+                EmailUtil(applicationContext).sendEmail(
+                    from = from,
+                    password = password,
+                    to = to,
+                    subject = "Seating Chart Export",
+                    body = "Attached is your requested data export.",
+                    attachmentPath = file.absolutePath
+                )
             }
             else -> return@withContext Result.failure()
         }
