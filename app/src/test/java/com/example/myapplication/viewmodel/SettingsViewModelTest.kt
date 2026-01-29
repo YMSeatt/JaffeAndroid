@@ -58,4 +58,19 @@ class SettingsViewModelTest {
         val updatedValue = viewModel.autoSendEmailOnClose.value
         assertTrue("Value should be true after update", updatedValue)
     }
+
+    @Test
+    fun `editModeEnabled StateFlow should reflect updated value`() = runTest {
+        // Given
+        val initialValue = viewModel.editModeEnabled.value
+        assertFalse("Initial value should be false", initialValue)
+
+        // When
+        viewModel.updateEditModeEnabled(true)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        val updatedValue = viewModel.editModeEnabled.value
+        assertTrue("Value should be true after update", updatedValue)
+    }
 }

@@ -1040,6 +1040,21 @@ fun SeatingChartTopAppBar(
                 }
                 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(if (editModeEnabled) "Disable Edit Mode" else "Enable Edit Mode") },
+                        onClick = {
+                            settingsViewModel.updateEditModeEnabled(!editModeEnabled)
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Edit, null) },
+                        trailingIcon = {
+                            Icon(
+                                if (editModeEnabled) Icons.Default.CheckCircle else Icons.Default.CheckCircleOutline,
+                                contentDescription = null
+                            )
+                        }
+                    )
+                    Divider()
                     if (editModeEnabled) {
                         DropdownMenuItem(text = { Text("Alignment Tools") }, onClick = { showMoreMenu = false; showAlignSubMenu = true }, leadingIcon = { Icon(Icons.Default.AutoFixHigh, null) })
                     }
