@@ -373,9 +373,16 @@ fun SeatingChartScreen(
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
+    var showDataMenu by remember { mutableStateOf(false) }
+    var showLayoutMenu by remember { mutableStateOf(false) }
+    var showGuidesMenu by remember { mutableStateOf(false) }
+    var showThemeMenu by remember { mutableStateOf(false) }
     var showChangeBoxSizeDialog by remember { mutableStateOf(false) }
     var showStudentStyleDialog by remember { mutableStateOf(false) }
     var showAssignTaskDialog by remember { mutableStateOf(false) }
+    var showAlignMenu by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var showModeMenu by remember { mutableStateOf(false) }
     var selectMode by remember { mutableStateOf(false) }
 
     var selectedStudentUiItemForAction by remember { mutableStateOf<StudentUiItem?>(null) }
@@ -429,13 +436,19 @@ fun SeatingChartScreen(
                     }
 
                     if (editModeEnabled) {
-                        Row {
-                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("top") }) { Text("Align Top") }
-                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("bottom") }) { Text("Align Bottom") }
-                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("left") }) { Text("Align Left") }
-                            TextButton(onClick = { seatingChartViewModel.alignSelectedItems("right") }) { Text("Align Right") }
-                            TextButton(onClick = { seatingChartViewModel.distributeSelectedItems("horizontal") }) { Text("Distribute H") }
-                            TextButton(onClick = { seatingChartViewModel.distributeSelectedItems("vertical") }) { Text("Distribute V") }
+                        Box {
+                            TextButton(onClick = { showAlignMenu = true }) { Text("Align") }
+                            DropdownMenu(
+                                expanded = showAlignMenu,
+                                onDismissRequest = { showAlignMenu = false }
+                            ) {
+                                DropdownMenuItem(text = { Text("Align Top") }, onClick = { seatingChartViewModel.alignSelectedItems("top"); showAlignMenu = false })
+                                DropdownMenuItem(text = { Text("Align Bottom") }, onClick = { seatingChartViewModel.alignSelectedItems("bottom"); showAlignMenu = false })
+                                DropdownMenuItem(text = { Text("Align Left") }, onClick = { seatingChartViewModel.alignSelectedItems("left"); showAlignMenu = false })
+                                DropdownMenuItem(text = { Text("Align Right") }, onClick = { seatingChartViewModel.alignSelectedItems("right"); showAlignMenu = false })
+                                DropdownMenuItem(text = { Text("Distribute Horizontal") }, onClick = { seatingChartViewModel.distributeSelectedItems("horizontal"); showAlignMenu = false })
+                                DropdownMenuItem(text = { Text("Distribute Vertical") }, onClick = { seatingChartViewModel.distributeSelectedItems("vertical"); showAlignMenu = false })
+                            }
                         }
                     }
 
@@ -466,7 +479,6 @@ fun SeatingChartScreen(
                         }
                     }
 
-                    var showMoreMenu by remember { mutableStateOf(false) }
                     Box {
                         IconButton(onClick = { showMoreMenu = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "More options")
@@ -476,18 +488,43 @@ fun SeatingChartScreen(
                             expanded = showMoreMenu,
                             onDismissRequest = { showMoreMenu = false }
                         ) {
-                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Layout") }, onClick = { showMoreMenu = false; showLayoutMenu = true })
+                            DropdownMenuItem(text = { Text("Data") }, onClick = { showMoreMenu = false; showDataMenu = true })
+                            DropdownMenuItem(text = { Text("Guides") }, onClick = { showMoreMenu = false; showGuidesMenu = true })
+                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
+                                coroutineScope.launch {
+                                    val view = (context as Activity).window.decorView
+                                    val bitmap = captureComposable(view, context.window)
+                                    if (bitmap != null) {
+                                        settingsViewModel.saveScreenshot(bitmap)
+                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                                showMoreMenu = false
+                            })
+                            DropdownMenuItem(text = { Text("Theme") }, onClick = { showMoreMenu = false; showThemeMenu = true })
+                        }
+
+                        DropdownMenu(expanded = showLayoutMenu, onDismissRequest = { showLayoutMenu = false }) {
+                            DropdownMenuItem(text = { Text("Save Layout") }, onClick = { showSaveLayoutDialog = true; showLayoutMenu = false })
+                            DropdownMenuItem(text = { Text("Load Layout") }, onClick = { showLoadLayoutDialog = true; showLayoutMenu = false })
+                        }
+
+                        DropdownMenu(expanded = showDataMenu, onDismissRequest = { showDataMenu = false }) {
+                            DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { (context as? MainActivity)?.importJsonLauncher?.launch("application/json"); showDataMenu = false })
+                            DropdownMenuItem(text = { Text("Import from Python") }, onClick = { seatingChartViewModel.importFromPythonAssets(context); showDataMenu = false })
+                            DropdownMenuItem(text = { Text("Import Students from Excel") }, onClick = { (context as? MainActivity)?.importStudentsLauncher?.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"); showDataMenu = false })
                             DropdownMenuItem(text = { Text("Export to Excel") }, onClick = {
                                 if (seatingChartViewModel.studentsForDisplay.value?.isNotEmpty() == true) {
                                     showExportDialog = true
                                 } else {
                                     Toast.makeText(context, "No student data to export", Toast.LENGTH_SHORT).show()
                                 }
-                                showMoreMenu = false
+                                showDataMenu = false
                             })
                             DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
                                 lastExportPath?.let { path ->
@@ -501,10 +538,8 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Could not open folder", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                showMoreMenu = false
+                                showDataMenu = false
                             })
-                            DropdownMenuItem(text = { Text("View Data") }, onClick = { onNavigateToDataViewer(); showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Reminders") }, onClick = { onNavigateToReminders(); showMoreMenu = false })
                             DropdownMenuItem(text = { Text("Export Database") }, onClick = {
                                 coroutineScope.launch {
                                     val uri = settingsViewModel.shareDatabase()
@@ -519,38 +554,26 @@ fun SeatingChartScreen(
                                         Toast.makeText(context, "Could not export database", Toast.LENGTH_SHORT).show()
                                     }
                                 }
-                                showMoreMenu = false
+                                showDataMenu = false
                             })
-                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showMoreMenu = false })
-                            Divider()
-                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Open Data Folder") }, onClick = { (context as? MainActivity)?.exportDataFolderLauncher?.launch(null); showDataMenu = false })
+                        }
+
+                        DropdownMenu(expanded = showGuidesMenu, onDismissRequest = { showGuidesMenu = false }) {
+                            DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showGuidesMenu = false })
+                            DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showGuidesMenu = false })
                             DropdownMenuItem(text = { Text("Clear Guides") }, onClick = {
                                 guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }
-                                showMoreMenu = false
+                                showGuidesMenu = false
                             })
-                            DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = {
-                                coroutineScope.launch {
-                                    val view = (context as Activity).window.decorView
-                                    val bitmap = captureComposable(view, context.window)
-                                    if (bitmap != null) {
-                                        settingsViewModel.saveScreenshot(bitmap)
-                                        Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
-                                    } else {
-                                        Toast.makeText(context, "Failed to capture screenshot", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                                showMoreMenu = false
-                            })
-                            Divider()
-                            Text("Theme", modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
+                        }
+
+                        DropdownMenu(expanded = showThemeMenu, onDismissRequest = { showThemeMenu = false }) {
                             AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showMoreMenu = false })
+                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showThemeMenu = false })
                             }
                         }
                     }
-
-                    var showModeMenu by remember { mutableStateOf(false) }
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.toTitleCase()) }
@@ -568,6 +591,13 @@ fun SeatingChartScreen(
                             DropdownMenuItem(text = { Text("Settings") }, onClick = { onNavigateToSettings(); showModeMenu = false })
                             DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showModeMenu = false })
                         }
+                    }
+
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                    IconButton(onClick = onHelpClick) {
+                        Icon(Icons.AutoMirrored.Filled.Help, contentDescription = "Help")
                     }
                 }
             )
