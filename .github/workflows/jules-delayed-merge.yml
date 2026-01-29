@@ -12,7 +12,6 @@ permissions:
 jobs:
   automation:
     runs-on: ubuntu-latest
-    if: github.actor == 'google-labs-jules'
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
