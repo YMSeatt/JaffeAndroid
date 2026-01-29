@@ -54,10 +54,24 @@ class SecurityUtilTest {
     }
 
     @Test
-    fun `test password hashing`() {
+    fun `test salted SHA-512 password hashing and verification`() {
         val password = "password123"
         val hashedPassword = SecurityUtil.hashPassword(password)
-        val expectedHash = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
-        assertEquals(expectedHash, hashedPassword)
+        assertTrue("New hash should be in the salted format", hashedPassword.contains(":"))
+        assertTrue("Password verification should succeed for new format", SecurityUtil.verifyPassword(password, hashedPassword))
+    }
+
+    @Test
+    fun `test legacy SHA-512 password verification`() {
+        val password = "master_password"
+        val legacyHash = "a4b834d3e543e95f512833a6206f4772186981cb64047432f6f40c7468200c2423719b8830f653066316279930e4e5f7e8a937ab949b806d203f562e8a719c36"
+        assertTrue("Password verification should succeed for legacy SHA-512 format", SecurityUtil.verifyPassword(password, legacyHash))
+    }
+
+    @Test
+    fun `test legacy SHA-256 password verification`() {
+        val password = "old_password"
+        val legacyHash = "a33a04e58319f39396342898b5840c822e153b827e873b56f87a87e0586e969d"
+        assertTrue("Password verification should succeed for legacy SHA-256 format", SecurityUtil.verifyPassword(password, legacyHash))
     }
 }

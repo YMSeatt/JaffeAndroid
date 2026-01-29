@@ -6,10 +6,10 @@ import com.macasaet.fernet.Token
 import com.macasaet.fernet.Validator
 import java.io.File
 import java.nio.ByteBuffer
+import android.util.Base64
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Duration
-import java.util.Base64
 import java.util.function.Function
 import javax.crypto.Cipher
 import javax.crypto.Mac
@@ -31,11 +31,58 @@ class SecurityUtil(context: Context) {
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
+        private const val SALT_SIZE = 16
+        private const val LEGACY_SHA256_HASH_LENGTH = 64
+        private const val LEGACY_SHA512_HASH_LENGTH = 128
+
         fun hashPassword(password: String): String {
-            val bytes = password.toByteArray()
-            val md = MessageDigest.getInstance("SHA-256")
-            val digest = md.digest(bytes)
-            return digest.fold("") { str, it -> str + "%02x".format(it) }
+            val salt = ByteArray(SALT_SIZE)
+            SecureRandom().nextBytes(salt)
+            val saltedPassword = salt + password.toByteArray(Charsets.UTF_8)
+
+            val md = MessageDigest.getInstance("SHA-512")
+            val digest = md.digest(saltedPassword)
+
+            return Base64.encodeToString(salt, Base64.NO_WRAP) + ":" + Base64.encodeToString(digest, Base64.NO_WRAP)
+        }
+
+        fun verifyPassword(password: String, storedHash: String): Boolean {
+            val parts = storedHash.split(":")
+            return when {
+                parts.size == 2 -> { // New salted SHA-512 format
+                    val salt = Base64.decode(parts[0], Base64.NO_WRAP)
+                    val originalHash = Base64.decode(parts[1], Base64.NO_WRAP)
+                    val saltedPassword = salt + password.toByteArray(Charsets.UTF_8)
+
+                    val md = MessageDigest.getInstance("SHA-512")
+                    val newHash = md.digest(saltedPassword)
+
+                    MessageDigest.isEqual(originalHash, newHash)
+                }
+                storedHash.length == LEGACY_SHA512_HASH_LENGTH -> { // Legacy unsalted SHA-512
+                    val md = MessageDigest.getInstance("SHA-512")
+                    val newHashBytes = md.digest(password.toByteArray(Charsets.UTF_8))
+                    val storedHashBytes = hexStringToByteArray(storedHash)
+                    MessageDigest.isEqual(newHashBytes, storedHashBytes)
+                }
+                storedHash.length == LEGACY_SHA256_HASH_LENGTH -> { // Legacy unsalted SHA-256
+                    val md = MessageDigest.getInstance("SHA-256")
+                    val newHashBytes = md.digest(password.toByteArray(Charsets.UTF_8))
+                    val storedHashBytes = hexStringToByteArray(storedHash)
+                    MessageDigest.isEqual(newHashBytes, storedHashBytes)
+                }
+                else -> false // Unknown format
+            }
+        }
+        private fun hexStringToByteArray(hexString: String): ByteArray {
+            val len = hexString.length
+            val data = ByteArray(len / 2)
+            var i = 0
+            while (i < len) {
+                data[i / 2] = ((Character.digit(hexString[i], 16) shl 4) + Character.digit(hexString[i + 1], 16)).toByte()
+                i += 2
+            }
+            return data
         }
     }
 
@@ -150,7 +197,7 @@ class FernetCipher(private val key: ByteArray) {
         finalBuffer.put(messageToSign)
         finalBuffer.put(hmac)
 
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(finalBuffer.array())
+        return Base64.encodeToString(finalBuffer.array(), Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
     }
 
     /**
@@ -162,7 +209,7 @@ class FernetCipher(private val key: ByteArray) {
      * @throws SecurityException if the token is invalid, tampered with, or expired.
      */
     fun decrypt(token: String, ttl: Int): ByteArray {
-        val decodedToken = Base64.getUrlDecoder().decode(token)
+        val decodedToken = Base64.decode(token, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
         val minLength = 1 + 8 + IV_SIZE + 1 + HMAC_SIZE // version + ts + iv + min-cipher-block + hmac
         if (decodedToken.size < minLength) {
             throw SecurityException("Invalid token length")
