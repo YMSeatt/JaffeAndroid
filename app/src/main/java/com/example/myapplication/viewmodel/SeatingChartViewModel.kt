@@ -7,8 +7,8 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
@@ -31,6 +31,10 @@ import com.example.myapplication.commands.UpdateStudentCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.BehaviorEventDao
+import com.example.myapplication.data.ConditionalFormattingRule
+import com.example.myapplication.data.ConditionalFormattingRuleDao
+import com.example.myapplication.data.CustomBehaviorDao
+import com.example.myapplication.data.CustomHomeworkTypeDao
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.FurnitureLayout
@@ -50,6 +54,7 @@ import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroupDao
+import com.example.myapplication.data.SystemBehaviorDao
 import com.example.myapplication.data.StudentLayout
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.data.importer.Importer
@@ -94,9 +99,13 @@ class SeatingChartViewModel @Inject constructor(
     private val homeworkTemplateDao: HomeworkTemplateDao,
     private val quizTemplateDao: QuizTemplateDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
+    private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao,
+    private val customBehaviorDao: CustomBehaviorDao,
+    private val customHomeworkTypeDao: CustomHomeworkTypeDao,
+    private val systemBehaviorDao: SystemBehaviorDao,
     private val appPreferencesRepository: AppPreferencesRepository,
-    application: Application
-) : AndroidViewModel(application) {
+    private val application: Application
+) : ViewModel() {
 
     val allStudents: LiveData<List<Student>>
     val allStudentsForDisplay: LiveData<List<com.example.myapplication.data.StudentDetailsForDisplay>>
@@ -153,12 +162,12 @@ class SeatingChartViewModel @Inject constructor(
         allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
         allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
         allQuizLogs = quizLogDao.getAllQuizLogs()
-        allRules = AppDatabase.getDatabase(application).conditionalFormattingRuleDao().getAllRules()
+        allRules = conditionalFormattingRuleDao.getAllRules()
         quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
-        allCustomBehaviors = AppDatabase.getDatabase(application).customBehaviorDao().getAllCustomBehaviors()
-    allCustomHomeworkTypes = AppDatabase.getDatabase(application).customHomeworkTypeDao().getAllCustomHomeworkTypes()
-        allSystemBehaviors = AppDatabase.getDatabase(application).systemBehaviorDao().getAllSystemBehaviors().asLiveData()
+        allCustomBehaviors = customBehaviorDao.getAllCustomBehaviors()
+        allCustomHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypes()
+        allSystemBehaviors = systemBehaviorDao.getAllSystemBehaviors().asLiveData()
 
 
         studentsForDisplay.addSource(allStudents) {

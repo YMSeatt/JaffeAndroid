@@ -8,9 +8,13 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Log
 import com.example.myapplication.data.Reminder
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Calendar
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ReminderManager(private val context: Context) {
+@Singleton
+class ReminderManager @Inject constructor(@ApplicationContext private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     fun canScheduleExactAlarms(): Boolean {

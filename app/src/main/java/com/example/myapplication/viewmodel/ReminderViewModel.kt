@@ -1,28 +1,31 @@
 package com.example.myapplication.viewmodel
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
-import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Reminder
 import com.example.myapplication.data.ReminderDao
 import com.example.myapplication.util.ReminderManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ReminderViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val reminderDao: ReminderDao
+@HiltViewModel
+class ReminderViewModel @Inject constructor(
+    private val reminderDao: ReminderDao,
     private val reminderManager: ReminderManager
+) : ViewModel() {
+
     val allReminders: LiveData<List<Reminder>>
 
     init {
-        val db = AppDatabase.getDatabase(application)
-        reminderDao = db.reminderDao()
         allReminders = reminderDao.getAllReminders().asLiveData()
-        reminderManager = ReminderManager(application)
+    }
+
+    fun canScheduleExactAlarms(): Boolean {
+        return reminderManager.canScheduleExactAlarms()
     }
 
     fun insert(reminder: Reminder) {

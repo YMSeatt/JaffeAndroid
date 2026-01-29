@@ -3,19 +3,26 @@ package com.example.myapplication.di
 import android.content.Context
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEventDao
+import com.example.myapplication.data.ConditionalFormattingRuleDao
 import com.example.myapplication.data.CustomBehaviorDao
+import com.example.myapplication.data.CustomHomeworkStatusDao
 import com.example.myapplication.data.CustomHomeworkTypeDao
 import com.example.myapplication.data.HomeworkLogDao
 import com.example.myapplication.data.QuizLogDao
 import com.example.myapplication.data.EmailScheduleDao
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.GuideDao
+import com.example.myapplication.data.HomeworkDao
 import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.LayoutTemplateDao
+import com.example.myapplication.data.PendingEmailDao
+import com.example.myapplication.data.QuizDao
 import com.example.myapplication.data.QuizMarkTypeDao
 import com.example.myapplication.data.QuizTemplateDao
+import com.example.myapplication.data.ReminderDao
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroupDao
+import com.example.myapplication.data.SystemBehaviorDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -101,5 +108,40 @@ object DatabaseModule {
     @Provides
     fun provideHomeworkTemplateDao(appDatabase: AppDatabase): HomeworkTemplateDao {
         return appDatabase.homeworkTemplateDao()
+    }
+
+    @Provides
+    fun provideConditionalFormattingRuleDao(appDatabase: AppDatabase): ConditionalFormattingRuleDao {
+        return appDatabase.conditionalFormattingRuleDao()
+    }
+
+    @Provides
+    fun provideCustomHomeworkStatusDao(appDatabase: AppDatabase): CustomHomeworkStatusDao {
+        return appDatabase.customHomeworkStatusDao()
+    }
+
+    @Provides
+    fun provideReminderDao(appDatabase: AppDatabase): ReminderDao {
+        return appDatabase.reminderDao()
+    }
+
+    @Provides
+    fun provideSystemBehaviorDao(appDatabase: AppDatabase): SystemBehaviorDao {
+        return appDatabase.systemBehaviorDao()
+    }
+
+    @Provides
+    fun providePendingEmailDao(appDatabase: AppDatabase): PendingEmailDao {
+        return appDatabase.pendingEmailDao()
+    }
+
+    @Provides
+    fun provideQuizDao(appDatabase: AppDatabase): QuizDao {
+        return appDatabase.quizDao()
+    }
+
+    @Provides
+    fun provideHomeworkDao(appDatabase: AppDatabase): HomeworkDao {
+        return appDatabase.homeworkDao()
     }
 }
