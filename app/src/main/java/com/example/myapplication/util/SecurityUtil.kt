@@ -31,9 +31,9 @@ class SecurityUtil(context: Context) {
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
-        fun hashPassword(password: String): String {
+        fun hashPassword(password: String, algorithm: String = "SHA-512"): String {
             val bytes = password.toByteArray()
-            val md = MessageDigest.getInstance("SHA-256")
+            val md = MessageDigest.getInstance(algorithm)
             val digest = md.digest(bytes)
             return digest.fold("") { str, it -> str + "%02x".format(it) }
         }

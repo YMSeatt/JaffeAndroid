@@ -4,12 +4,18 @@ import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.example.myapplication.commands.AddFurnitureCommand
 import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.commands.Command
@@ -27,10 +33,12 @@ import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.BehaviorEventDao
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.FurnitureDao
+import com.example.myapplication.data.FurnitureLayout
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkLogDao
 import com.example.myapplication.data.HomeworkTemplate
 import com.example.myapplication.data.HomeworkTemplateDao
+import com.example.myapplication.data.LayoutData
 import com.example.myapplication.data.LayoutTemplate
 import com.example.myapplication.data.LayoutTemplateDao
 import com.example.myapplication.data.QuizLog
@@ -42,6 +50,7 @@ import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroupDao
+import com.example.myapplication.data.StudentLayout
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.data.importer.Importer
 import com.example.myapplication.preferences.AppPreferencesRepository
@@ -49,26 +58,18 @@ import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.CollisionDetector
+import com.example.myapplication.util.ConditionalFormattingEngine
+import com.example.myapplication.util.EmailWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
-import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import com.example.myapplication.data.FurnitureLayout
-import com.example.myapplication.data.LayoutData
-import com.example.myapplication.data.StudentLayout
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -78,16 +79,7 @@ import org.json.JSONObject
 import java.util.Stack
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
-import kotlinx.coroutines.delay
 import kotlin.math.abs
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
-import com.example.myapplication.util.EmailWorker
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-
-private const val MILLIS_IN_HOUR = 3_600_000L
 
 @HiltViewModel
 class SeatingChartViewModel @Inject constructor(
@@ -239,9 +231,9 @@ class SeatingChartViewModel @Inject constructor(
                 appPreferencesRepository.defaultStudentFontFamilyFlow,
                 appPreferencesRepository.defaultStudentFontSizeFlow,
                 appPreferencesRepository.defaultStudentFontColorFlow,
-                appPreferencesRepository.behaviorDisplayTimeoutFlow, // Added new timeout flow
-                appPreferencesRepository.homeworkDisplayTimeoutFlow, // Added new timeout flow
-                appPreferencesRepository.quizDisplayTimeoutFlow // Added new timeout flow
+                appPreferencesRepository.behaviorDisplayTimeoutFlow,
+                appPreferencesRepository.homeworkDisplayTimeoutFlow,
+                appPreferencesRepository.quizDisplayTimeoutFlow
             ) { _ ->
                 updateStudentsForDisplay(allStudents.value ?: emptyList())
             }.collect()
@@ -265,7 +257,6 @@ class SeatingChartViewModel @Inject constructor(
             val quizInitialsMap = parseKeyValueString(appPreferencesRepository.quizInitialsMapFlow.first())
             val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
 
-            // Retrieve specific display timeouts
             val behaviorDisplayTimeout = appPreferencesRepository.behaviorDisplayTimeoutFlow.first()
             val homeworkDisplayTimeout = appPreferencesRepository.homeworkDisplayTimeoutFlow.first()
             val quizDisplayTimeout = appPreferencesRepository.quizDisplayTimeoutFlow.first()
@@ -454,30 +445,6 @@ class SeatingChartViewModel @Inject constructor(
                 command.execute()
                 commandUndoStack.push(command)
             }
-        }
-    }
-
-    private suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>?): List<BehaviorEvent> {
-        return if (studentIds.isNullOrEmpty()) {
-            behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
-        } else {
-            behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
-        }
-    }
-
-    private suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<HomeworkLog> {
-        return if (studentIds.isNullOrEmpty()) {
-            homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
-        } else {
-            homeworkLogDao.getFilteredHomeworkLogsWithStudents(startDate, endDate, studentIds)
-        }
-    }
-
-    private suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>?): List<QuizLog> {
-        return if (studentIds.isNullOrEmpty()) {
-            quizLogDao.getFilteredQuizLogs(startDate, endDate)
-        } else {
-            quizLogDao.getFilteredQuizLogsWithStudents(startDate, endDate, studentIds)
         }
     }
 
@@ -814,8 +781,6 @@ class SeatingChartViewModel @Inject constructor(
             repository.deleteFurniture(furniture)
         }
     }
-
-// In SeatingChartViewModel.kt
 
     fun updateFurniturePosition(furnitureId: Int, newX: Float, newY: Float) {
         viewModelScope.launch(Dispatchers.IO) {

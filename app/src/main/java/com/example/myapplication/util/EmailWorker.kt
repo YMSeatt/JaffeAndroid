@@ -93,7 +93,7 @@ class EmailWorker(
 
                 exporter.export(
                     uri = uri,
-                    options = options,
+                    options = finalOptions,
                     students = students,
                     behaviorEvents = behaviorEvents,
                     homeworkLogs = homeworkLogs,
@@ -102,7 +102,7 @@ class EmailWorker(
                     quizMarkTypes = quizMarkTypes,
                     customHomeworkTypes = customHomeworkTypes,
                     customHomeworkStatuses = customHomeworkStatuses,
-                    encrypt = options.encrypt
+                    encrypt = finalOptions.encrypt
                 )
 
                 val to = inputData.getString("email_address") ?: from
@@ -196,7 +196,8 @@ class EmailWorker(
                     to = to,
                     subject = "Seating Chart Export",
                     body = "Attached is your requested data export.",
-                    attachmentPath = file.absolutePath
+                    attachmentPath = file.absolutePath,
+                    smtpSettings = smtpSettings
                 )
             }
             else -> return@withContext Result.failure()

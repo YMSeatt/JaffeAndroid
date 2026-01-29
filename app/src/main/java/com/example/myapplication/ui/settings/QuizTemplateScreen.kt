@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,8 +24,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -50,11 +47,7 @@ fun QuizTemplateScreen(
     viewModel: QuizTemplateViewModel = hiltViewModel()
 ) {
     val quizTemplates by viewModel.quizTemplates.collectAsState()
-    var showEditDialog by remember { mutableStateOf<QuizTemplate?>(null) }
-    var isAddingNew by remember { mutableStateOf(false) }
-    var showDeleteConfirmDialog by remember { mutableStateOf<QuizTemplate?>(null) }
     var showEditDialog by remember { mutableStateOf(false) }
-    var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
     var editingTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     var templateToDelete by remember { mutableStateOf<QuizTemplate?>(null) }
@@ -73,7 +66,6 @@ fun QuizTemplateScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                selectedTemplate = null
                 editingTemplate = null
                 showEditDialog = true
             }) {
@@ -129,7 +121,7 @@ fun QuizTemplateScreen(
             }
         }
 
-        if (isAddingNew || showEditDialog != null) {
+        if (showEditDialog) {
             QuizTemplateEditDialog(
                 quizTemplate = editingTemplate,
                 onDismiss = { showEditDialog = false },
@@ -139,32 +131,11 @@ fun QuizTemplateScreen(
                     } else {
                         viewModel.update(quizTemplate)
                     }
-                    isAddingNew = false
-                    showEditDialog = null
+                    showEditDialog = false
                 }
             )
         }
 
-        showDeleteConfirmDialog?.let { template ->
-            AlertDialog(
-                onDismissRequest = { showDeleteConfirmDialog = null },
-                title = { Text("Delete Template") },
-                text = { Text("Are you sure you want to delete '${template.name}'?") },
-                confirmButton = {
-                    Button(onClick = {
-                        viewModel.delete(template)
-                        showDeleteConfirmDialog = null
-                    }) {
-                        Text("Delete")
-                    }
-                },
-                dismissButton = {
-                    Button(onClick = { showDeleteConfirmDialog = null }) {
-                        Text("Cancel")
-                    }
-                }
-            )
-        }
         if (showDeleteConfirmation) {
             AlertDialog(
                 onDismissRequest = { showDeleteConfirmation = false },

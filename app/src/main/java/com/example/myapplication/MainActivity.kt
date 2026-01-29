@@ -23,14 +23,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chair
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Divider
@@ -72,10 +70,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.GuideType
-import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.Student
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.DataViewerScreen
@@ -86,12 +82,10 @@ import com.example.myapplication.ui.components.StudentDraggableIcon
 import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
 import com.example.myapplication.ui.dialogs.AddEditStudentDialog
 import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
-import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.AssignTaskDialog
 import com.example.myapplication.ui.dialogs.BehaviorDialog
 import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
 import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
-import com.example.myapplication.ui.dialogs.EmailDialog
 import com.example.myapplication.ui.dialogs.ExportDialog
 import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
 import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
@@ -115,11 +109,7 @@ import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StatsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.util.Locale
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
 
 enum class SessionType {
     BEHAVIOR,
@@ -284,7 +274,7 @@ class MainActivity : ComponentActivity() {
             val email = settingsViewModel.defaultEmailAddress.value
             if (email.isNotBlank()) {
                 val exportOptions =
-                    pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    seatingChartViewModel.pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
                 val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
                     .setInputData(
                         workDataOf(
@@ -415,6 +405,7 @@ fun SeatingChartScreen(
     var isFabMenuOpen by remember { mutableStateOf(false) }
 
     val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
     Scaffold(
         snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
@@ -467,7 +458,6 @@ fun SeatingChartScreen(
                     IconButton(onClick = { seatingChartViewModel.undo() }) { Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo") }
                     IconButton(onClick = { seatingChartViewModel.redo() }) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
 
-                    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
                     if (sessionType == SessionType.QUIZ || sessionType == SessionType.HOMEWORK) {
                         TextButton(onClick = {
                             if (isSessionActive) seatingChartViewModel.endSession() else seatingChartViewModel.startSession()
@@ -555,13 +545,12 @@ fun SeatingChartScreen(
                             Divider()
                             Text("Theme", modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp))
                             AppTheme.entries.forEach { theme ->
-                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showViewMenu = false })
+                                DropdownMenuItem(text = { Text(theme.name.toTitleCase()) }, onClick = { settingsViewModel.updateAppTheme(theme); showMoreMenu = false })
                             }
                         }
                     }
 
                     var showModeMenu by remember { mutableStateOf(false) }
-                    val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
 
                     Box {
                         TextButton(onClick = { showModeMenu = true }) { Text(sessionType.name.toTitleCase()) }
@@ -572,12 +561,12 @@ fun SeatingChartScreen(
                                         seatingChartViewModel.endSession()
                                     }
                                     sessionType = mode
-                                    showMoreMenu = false
+                                    showModeMenu = false
                                 })
                             }
                             Divider()
-                            DropdownMenuItem(text = { Text("Settings") }, onClick = { onNavigateToSettings(); showMoreMenu = false })
-                            DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showMoreMenu = false })
+                            DropdownMenuItem(text = { Text("Settings") }, onClick = { onNavigateToSettings(); showModeMenu = false })
+                            DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showModeMenu = false })
                         }
                     }
                 }
