@@ -79,6 +79,7 @@ dependencies {
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
+    implementation(libs.androidx.games.activity)
     kapt(libs.hilt.compiler)
     // Hilt Testing
     testImplementation("com.google.dagger:hilt-android-testing:2.48")
