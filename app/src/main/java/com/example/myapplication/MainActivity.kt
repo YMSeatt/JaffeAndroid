@@ -287,7 +287,7 @@ class MainActivity : ComponentActivity() {
                     .setInputData(
                         workDataOf(
                             "email_address" to email,
-                            "export_options" to exportOptions.toString()
+                            "export_options" to Json.encodeToString(exportOptions)
                         )
                     )
                     .build()
