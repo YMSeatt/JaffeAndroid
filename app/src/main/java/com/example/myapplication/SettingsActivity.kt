@@ -17,7 +17,6 @@ import com.example.myapplication.ui.settings.SettingsNavHost
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -53,9 +52,7 @@ class SettingsActivity : ComponentActivity() {
         )
     }
 
-    private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(application)
-    }
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {
         object : ViewModelProvider.Factory {

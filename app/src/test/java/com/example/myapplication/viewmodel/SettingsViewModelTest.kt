@@ -8,6 +8,22 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import com.example.myapplication.data.BehaviorEventDao
+import com.example.myapplication.data.ConditionalFormattingRuleDao
+import com.example.myapplication.data.CustomBehaviorDao
+import com.example.myapplication.data.CustomHomeworkStatusDao
+import com.example.myapplication.data.CustomHomeworkTypeDao
+import com.example.myapplication.data.FurnitureDao
+import com.example.myapplication.data.HomeworkLogDao
+import com.example.myapplication.data.HomeworkTemplateDao
+import com.example.myapplication.data.LayoutTemplateDao
+import com.example.myapplication.data.QuizMarkTypeDao
+import com.example.myapplication.data.QuizTemplateDao
+import com.example.myapplication.data.StudentDao
+import com.example.myapplication.data.StudentGroupDao
+import com.example.myapplication.data.importer.JsonImporter
+import io.mockk.MockKAnnotations
+import io.mockk.impl.annotations.MockK
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -32,11 +48,62 @@ class SettingsViewModelTest {
 
     private lateinit var viewModel: SettingsViewModel
 
+    @MockK(relaxed = true)
+    private lateinit var application: Application
+    @MockK(relaxed = true)
+    private lateinit var preferencesRepository: AppPreferencesRepository
+    @MockK(relaxed = true)
+    private lateinit var jsonImporter: JsonImporter
+    @MockK(relaxed = true)
+    private lateinit var studentDao: StudentDao
+    @MockK(relaxed = true)
+    private lateinit var furnitureDao: FurnitureDao
+    @MockK(relaxed = true)
+    private lateinit var studentGroupDao: StudentGroupDao
+    @MockK(relaxed = true)
+    private lateinit var layoutTemplateDao: LayoutTemplateDao
+    @MockK(relaxed = true)
+    private lateinit var conditionalFormattingRuleDao: ConditionalFormattingRuleDao
+    @MockK(relaxed = true)
+    private lateinit var customBehaviorDao: CustomBehaviorDao
+    @MockK(relaxed = true)
+    private lateinit var customHomeworkTypeDao: CustomHomeworkTypeDao
+    @MockK(relaxed = true)
+    private lateinit var customHomeworkStatusDao: CustomHomeworkStatusDao
+    @MockK(relaxed = true)
+    private lateinit var quizMarkTypeDao: QuizMarkTypeDao
+    @MockK(relaxed = true)
+    private lateinit var quizTemplateDao: QuizTemplateDao
+    @MockK(relaxed = true)
+    private lateinit var homeworkTemplateDao: HomeworkTemplateDao
+    @MockK(relaxed = true)
+    private lateinit var behaviorEventDao: BehaviorEventDao
+    @MockK(relaxed = true)
+    private lateinit var homeworkLogDao: HomeworkLogDao
+
+
     @Before
     fun setup() {
+        MockKAnnotations.init(this)
         Dispatchers.setMain(testDispatcher)
-        val application = ApplicationProvider.getApplicationContext<Application>()
-        viewModel = SettingsViewModel(application)
+        viewModel = SettingsViewModel(
+            application,
+            preferencesRepository,
+            jsonImporter,
+            studentDao,
+            furnitureDao,
+            studentGroupDao,
+            layoutTemplateDao,
+            conditionalFormattingRuleDao,
+            customBehaviorDao,
+            customHomeworkTypeDao,
+            customHomeworkStatusDao,
+            quizMarkTypeDao,
+            quizTemplateDao,
+            homeworkTemplateDao,
+            behaviorEventDao,
+            homeworkLogDao
+        )
     }
 
     @After
