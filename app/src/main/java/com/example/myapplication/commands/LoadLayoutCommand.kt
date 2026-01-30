@@ -18,4 +18,6 @@ class LoadLayoutCommand(
     override suspend fun undo() {
         viewModel.internalUpdateAll(oldStudents, oldFurniture)
     }
+
+    override fun getDescription(): String = "Loaded Layout: ${layout.name}"
 }

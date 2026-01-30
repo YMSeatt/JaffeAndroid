@@ -114,6 +114,7 @@ import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
+import com.example.myapplication.ui.dialogs.UndoHistoryDialog
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -379,6 +380,7 @@ fun SeatingChartScreen(
     var showStudentActionMenu by remember { mutableStateOf(false) }
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
+    var showUndoHistoryDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     
     // Submenu States
@@ -490,6 +492,7 @@ fun SeatingChartScreen(
                         }
                     }
                 },
+                onShowUndoHistory = { showUndoHistoryDialog = true },
                 lastExportPath = lastExportPath,
                 selectedStudentUiItemForAction = selectedStudentUiItemForAction
             )
@@ -877,6 +880,13 @@ fun SeatingChartScreen(
                     )
                 }
             }
+
+            if (showUndoHistoryDialog) {
+                UndoHistoryDialog(
+                    viewModel = seatingChartViewModel,
+                    onDismissRequest = { showUndoHistoryDialog = false }
+                )
+            }
         }
     }
 }
@@ -917,6 +927,7 @@ fun SeatingChartTopAppBar(
     onOpenLastExportFolder: (String) -> Unit,
     onOpenAppDataFolder: () -> Unit,
     onShareDatabase: () -> Unit,
+    onShowUndoHistory: () -> Unit,
     lastExportPath: String?,
     selectedStudentUiItemForAction: StudentUiItem?
 ) {
@@ -1055,6 +1066,7 @@ fun SeatingChartTopAppBar(
                     DropdownMenuItem(text = { Text("Layouts") }, onClick = { showMoreMenu = false; showLayoutSubMenu = true }, leadingIcon = { Icon(Icons.Default.Layers, null) })
                     DropdownMenuItem(text = { Text("Guides & Grid") }, onClick = { showMoreMenu = false; showGuidesSubMenu = true }, leadingIcon = { Icon(Icons.Default.GridView, null) })
                     Divider()
+                    DropdownMenuItem(text = { Text("Undo History") }, onClick = { onShowUndoHistory(); showMoreMenu = false }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, null) })
                     DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = { onTakeScreenshot(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.PhotoCamera, null) })
                     DropdownMenuItem(text = { Text("Appearance") }, onClick = { showMoreMenu = false; showAppearanceSubMenu = true }, leadingIcon = { Icon(Icons.Default.Palette, null) })
                     Divider()

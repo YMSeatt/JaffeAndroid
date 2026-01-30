@@ -216,6 +216,20 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    fun getUndoHistory(): List<String> {
+        return commandUndoStack.map { it.getDescription() }
+    }
+
+    fun undoToStep(index: Int) {
+        viewModelScope.launch {
+            while (commandUndoStack.size > index + 1) {
+                val command = commandUndoStack.pop()
+                command.undo()
+                commandRedoStack.push(command)
+            }
+        }
+    }
+
     private fun observePreferenceChanges() {
         viewModelScope.launch {
             combine(

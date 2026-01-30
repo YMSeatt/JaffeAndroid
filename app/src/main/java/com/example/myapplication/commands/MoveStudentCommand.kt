@@ -17,4 +17,6 @@ class MoveStudentCommand(
     override suspend fun undo() {
         viewModel.internalUpdateStudentPosition(studentId.toLong(), oldX, oldY)
     }
+
+    override fun getDescription(): String = "Moved Student (ID: $studentId)"
 }

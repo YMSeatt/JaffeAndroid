@@ -14,4 +14,6 @@ class DeleteFurnitureCommand(
     override suspend fun undo() {
         viewModel.internalAddFurniture(furniture)
     }
+
+    override fun getDescription(): String = "Deleted ${furniture.type}"
 }
