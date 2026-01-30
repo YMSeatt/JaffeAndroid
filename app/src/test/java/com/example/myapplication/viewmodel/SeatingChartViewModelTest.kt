@@ -53,6 +53,14 @@ class SeatingChartViewModelTest {
     @MockK(relaxed = true)
     lateinit var quizMarkTypeDao: QuizMarkTypeDao
     @MockK(relaxed = true)
+    lateinit var conditionalFormattingRuleDao: ConditionalFormattingRuleDao
+    @MockK(relaxed = true)
+    lateinit var customBehaviorDao: CustomBehaviorDao
+    @MockK(relaxed = true)
+    lateinit var customHomeworkTypeDao: CustomHomeworkTypeDao
+    @MockK(relaxed = true)
+    lateinit var systemBehaviorDao: SystemBehaviorDao
+    @MockK(relaxed = true)
     lateinit var appPreferencesRepository: AppPreferencesRepository
     @MockK(relaxed = true)
     lateinit var application: Application
@@ -105,8 +113,11 @@ class SeatingChartViewModelTest {
         every { quizTemplateDao.getAll() } returns flowOf(emptyList())
         every { repository.getAllQuizMarkTypes() } returns flowOf(emptyList())
         every { homeworkTemplateDao.getAllHomeworkTemplates() } returns flowOf(emptyList())
+        every { conditionalFormattingRuleDao.getAllRules() } returns androidx.lifecycle.MutableLiveData(emptyList())
+        every { customBehaviorDao.getAllCustomBehaviors() } returns androidx.lifecycle.MutableLiveData(emptyList())
+        every { customHomeworkTypeDao.getAllCustomHomeworkTypes() } returns androidx.lifecycle.MutableLiveData(emptyList())
+        every { systemBehaviorDao.getAllSystemBehaviors() } returns flowOf(emptyList())
 
-        
         viewModel = SeatingChartViewModel(
             repository,
             studentDao,
@@ -119,6 +130,10 @@ class SeatingChartViewModelTest {
             homeworkTemplateDao,
             quizTemplateDao,
             quizMarkTypeDao,
+            conditionalFormattingRuleDao,
+            customBehaviorDao,
+            customHomeworkTypeDao,
+            systemBehaviorDao,
             appPreferencesRepository,
             application
         )

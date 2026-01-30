@@ -423,16 +423,15 @@ class SettingsViewModel @Inject constructor(
             return password.isBlank()
         }
 
-        val newHash = SecurityUtil.hashPassword(password) // SHA-512
-        if (storedHash == newHash || MASTER_RECOVERY_PASSWORD_HASH == newHash) {
+        if (SecurityUtil.verifyPassword(password, storedHash)) {
+            // If it matches but is in a legacy format (unsalted), upgrade it automatically
+            if (!storedHash.contains(":")) {
+                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+            }
             return true
         }
 
-        // For backward compatibility, check against the old SHA-256 hash
-        val oldHash = SecurityUtil.hashPassword(password, "SHA-256")
-        if (storedHash == oldHash) {
-            // If it matches, update the hash to the new algorithm automatically
-            preferencesRepository.updatePasswordHash(newHash)
+        if (SecurityUtil.verifyPassword(password, MASTER_RECOVERY_PASSWORD_HASH)) {
             return true
         }
 
