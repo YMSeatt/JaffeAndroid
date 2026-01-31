@@ -9,9 +9,12 @@ import com.example.myapplication.data.ConditionalFormattingRuleDao
 import com.example.myapplication.data.CustomBehaviorDao
 import com.example.myapplication.data.SystemBehaviorDao
 import com.example.myapplication.data.StudentGroupDao
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ConditionalFormattingRuleViewModel(
+@HiltViewModel
+class ConditionalFormattingRuleViewModel @Inject constructor(
     private val conditionalFormattingRuleDao: ConditionalFormattingRuleDao,
     private val customBehaviorDao: CustomBehaviorDao,
     private val systemBehaviorDao: SystemBehaviorDao,

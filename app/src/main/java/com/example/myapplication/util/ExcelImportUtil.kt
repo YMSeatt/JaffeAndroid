@@ -28,12 +28,13 @@ object ExcelImportUtil {
                     rows.next()
                 }
 
+                val formatter = org.apache.poi.ss.usermodel.DataFormatter()
                 while (rows.hasNext()) {
                     val row = rows.next()
-                    val firstName = row.getCell(0)?.stringCellValue ?: ""
-                    val lastName = row.getCell(1)?.stringCellValue ?: ""
-                    val nickname = row.getCell(2)?.stringCellValue ?: ""
-                    val gender = row.getCell(3)?.stringCellValue ?: ""
+                    val firstName = formatter.formatCellValue(row.getCell(0))
+                    val lastName = formatter.formatCellValue(row.getCell(1))
+                    val nickname = formatter.formatCellValue(row.getCell(2))
+                    val gender = formatter.formatCellValue(row.getCell(3))
 
                     if (firstName.isNotBlank() && lastName.isNotBlank()) {
                         val student = Student(
