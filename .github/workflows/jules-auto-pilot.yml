@@ -1,40 +1,57 @@
-- name : Process Jules PRs
-        env :
-          GH_TOKEN : ${{ secrets.GITHUB_TOKEN }}
-        run : |
-          # 1. FIND ALL OPEN PRs
-          # Removed filter for specific user to target all open PRs
-          PRS=$(gh pr list --state open --json number,createdAt,url --jq '.[]')
-          
+name: Process Jules PRs
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  process-prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install gh and jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gh jq
+
+      - name: Process Jules PRs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          PRS=$(gh pr list --state open --json number,createdAt,url --jq '.[]' || true)
+
           if [ -z "$PRS" ]; then
             echo "No open PRs found. Exiting."
             exit 0
           fi
 
-          # 2. LOOP THROUGH EACH PR
           echo "$PRS" | jq -c '.' | while read -r pr; do
             PR_NUM=$(echo "$pr" | jq -r '.number')
             PR_URL=$(echo "$pr" | jq -r '.url')
             CREATED_AT=$(echo "$pr" | jq -r '.createdAt')
 
-            # Calculate age in seconds
+            # Calculate age in seconds (works with ISO timestamps)
             AGE=$(( $(date +%s) - $(date -d "$CREATED_AT" +%s) ))
             echo "Processing PR #$PR_NUM (Age: $AGE seconds)..."
 
             # ACTION A: If older than 5 mins (300s) and not commented yet, request review
             if [ "$AGE" -ge 300 ]; then
-              ALREADY_COMMENTED=$(gh pr view $PR_NUM --json comments --jq '.comments[].body' | grep "/gemini review" || true)
+              ALREADY_COMMENTED=$(gh pr view "$PR_NUM" --json comments --jq '.comments[].body' 2>/dev/null | grep -F "/gemini review" || true)
               if [ -z "$ALREADY_COMMENTED" ]; then
                 echo "Triggering Gemini review for #$PR_NUM"
-                gh pr ready "$PR_URL" || true
-                gh pr comment "$PR_URL" --body "/gemini review"
+                gh pr ready "$PR_NUM" || true
+                gh pr comment "$PR_NUM" --body "/gemini review"
               fi
             fi
 
             # ACTION B: If older than 20 minutes (1200s), attempt merge regardless of checks
             if [ "$AGE" -ge 1200 ]; then
               echo "PR #$PR_NUM is over 20 minutes old. Attempting merge..."
-              # Removed the 'gh pr checks' conditional to merge even if failing
-              gh pr merge $PR_NUM --merge --admin || echo "Merge failed. PR might have conflicts or insufficient permissions."
+              gh pr merge "$PR_NUM" --merge --admin || echo "Merge failed. PR might have conflicts or insufficient permissions."
             fi
           done
