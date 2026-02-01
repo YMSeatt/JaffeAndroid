@@ -16,7 +16,6 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
-import com.example.myapplication.data.importer.JsonImporter // Corrected import
 
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

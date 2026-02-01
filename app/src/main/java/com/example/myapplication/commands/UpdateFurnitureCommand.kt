@@ -15,4 +15,6 @@ class UpdateFurnitureCommand(
     override suspend fun undo() {
         viewModel.internalUpdateFurniture(oldFurniture)
     }
+
+    override fun getDescription(): String = "Update furniture: ${newFurniture.name}"
 }

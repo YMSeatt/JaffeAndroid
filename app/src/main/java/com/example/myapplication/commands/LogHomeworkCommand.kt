@@ -14,4 +14,6 @@ class LogHomeworkCommand(
     override suspend fun undo() {
         viewModel.deleteHomeworkLog(log)
     }
+
+    override fun getDescription(): String = "Log homework: ${log.assignmentName}"
 }

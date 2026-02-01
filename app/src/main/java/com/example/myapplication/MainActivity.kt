@@ -114,6 +114,7 @@ import com.example.myapplication.ui.dialogs.LoadLayoutDialog
 import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
+import com.example.myapplication.ui.dialogs.UndoHistoryDialog
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -380,7 +381,8 @@ fun SeatingChartScreen(
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
-    
+    var showUndoHistoryDialog by remember { mutableStateOf(false) }
+
     // Submenu States
     var showAlignSubMenu by remember { mutableStateOf(false) }
 
@@ -436,6 +438,7 @@ fun SeatingChartScreen(
                 },
                 onUndo = { seatingChartViewModel.undo() },
                 onRedo = { seatingChartViewModel.redo() },
+                onShowUndoHistory = { showUndoHistoryDialog = true },
                 onBehaviorLog = { type ->
                     val targets = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                     targets.forEach { id ->
@@ -877,6 +880,13 @@ fun SeatingChartScreen(
                     )
                 }
             }
+
+            if (showUndoHistoryDialog) {
+                UndoHistoryDialog(
+                    viewModel = seatingChartViewModel,
+                    onDismissRequest = { showUndoHistoryDialog = false }
+                )
+            }
         }
     }
 }
@@ -895,6 +905,7 @@ fun SeatingChartTopAppBar(
     onToggleSelectMode: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
+    onShowUndoHistory: () -> Unit,
     onBehaviorLog: (String) -> Unit,
     onLogQuiz: () -> Unit,
     onDeleteSelected: () -> Unit,
@@ -1034,6 +1045,15 @@ fun SeatingChartTopAppBar(
                 }
                 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text("Undo History") },
+                        onClick = {
+                            onShowUndoHistory()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, null) }
+                    )
+                    Divider()
                     DropdownMenuItem(
                         text = { Text(if (editModeEnabled) "Disable Edit Mode" else "Enable Edit Mode") },
                         onClick = {

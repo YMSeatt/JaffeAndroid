@@ -70,6 +70,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
@@ -133,6 +136,12 @@ class SeatingChartViewModel @Inject constructor(
 
     private val commandUndoStack = Stack<Command>()
     private val commandRedoStack = Stack<Command>()
+    private val _undoStackState = MutableStateFlow<List<Command>>(emptyList())
+    val undoStackState: StateFlow<List<Command>> = _undoStackState.asStateFlow()
+
+    private fun updateUndoStackState() {
+        _undoStackState.value = commandUndoStack.toList()
+    }
     private val pendingStudentPositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
     private val pendingFurniturePositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
 
@@ -443,6 +452,7 @@ class SeatingChartViewModel @Inject constructor(
                 val command = commandUndoStack.pop()
                 command.undo()
                 commandRedoStack.push(command)
+                updateUndoStackState()
             }
         }
     }
@@ -453,7 +463,60 @@ class SeatingChartViewModel @Inject constructor(
                 val command = commandRedoStack.pop()
                 command.execute()
                 commandUndoStack.push(command)
+                updateUndoStackState()
             }
+        }
+    }
+
+    fun selectiveUndo(targetIndex: Int) {
+        if (targetIndex < 0 || targetIndex >= commandUndoStack.size) return
+
+        viewModelScope.launch {
+            // 1. Undo actions that occurred after the target command
+            val commandsToUndoCount = commandUndoStack.size - 1 - targetIndex
+            for (i in 0 until commandsToUndoCount) {
+                if (commandUndoStack.isEmpty()) break
+                val commandToUndo = commandUndoStack.pop()
+                try {
+                    commandToUndo.undo()
+                } catch (e: Exception) {
+                    Log.e("SeatingChartViewModel", "Error undoing command during selective undo", e)
+                    // Put it back if undo failed? Python does this.
+                    commandUndoStack.push(commandToUndo)
+                    updateUndoStackState()
+                    return@launch
+                }
+            }
+
+            // 2. The target command is now at the top. Pop it.
+            val targetCommand = commandUndoStack.pop()
+
+            // 3. Undo the target command itself
+            try {
+                targetCommand.undo()
+            } catch (e: Exception) {
+                Log.e("SeatingChartViewModel", "Error undoing target command during selective undo", e)
+                commandUndoStack.push(targetCommand)
+                updateUndoStackState()
+                return@launch
+            }
+
+            // 4. Re-execute the target command
+            try {
+                targetCommand.execute()
+                commandUndoStack.push(targetCommand)
+            } catch (e: Exception) {
+                Log.e("SeatingChartViewModel", "Error re-executing target command during selective undo", e)
+                updateUndoStackState()
+                return@launch
+            }
+
+            // 5. Invalidate subsequent history
+            commandRedoStack.clear()
+            updateUndoStackState()
+
+            // Refresh UI
+            updateStudentsForDisplay(allStudents.value ?: emptyList())
         }
     }
 
@@ -1083,6 +1146,7 @@ class SeatingChartViewModel @Inject constructor(
         command.execute()
         commandUndoStack.push(command)
         commandRedoStack.clear()
+        updateUndoStackState()
     }
 
     fun assignTaskToStudent(studentId: Long, task: String) {

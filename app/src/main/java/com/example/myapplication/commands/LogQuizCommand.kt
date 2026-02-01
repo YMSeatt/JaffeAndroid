@@ -14,4 +14,6 @@ class LogQuizCommand(
     override suspend fun undo() {
         viewModel.deleteQuizLog(log)
     }
+
+    override fun getDescription(): String = "Log quiz: ${log.quizName}"
 }

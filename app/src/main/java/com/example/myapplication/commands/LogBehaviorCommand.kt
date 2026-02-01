@@ -14,4 +14,6 @@ class LogBehaviorCommand(
     override suspend fun undo() {
         viewModel.deleteBehaviorEvent(event)
     }
+
+    override fun getDescription(): String = "Log behavior: ${event.type}"
 }
