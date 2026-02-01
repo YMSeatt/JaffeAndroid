@@ -9,6 +9,7 @@ import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -40,7 +41,8 @@ class EmailWorker(
         val exporter = Exporter(applicationContext)
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-        val preferencesRepository = AppPreferencesRepository(applicationContext)
+        val securityUtil = SecurityUtil(applicationContext)
+        val preferencesRepository = AppPreferencesRepository(applicationContext, securityUtil)
         val from = preferencesRepository.defaultEmailAddressFlow.first()
         val password = preferencesRepository.emailPasswordFlow.first()
         val smtpSettings = preferencesRepository.smtpSettingsFlow.first()

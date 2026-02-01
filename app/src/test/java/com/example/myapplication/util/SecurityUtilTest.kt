@@ -46,6 +46,28 @@ class SecurityUtilTest {
     }
 
     @Test
+    fun `test decryptSafe with valid token`() {
+        val originalText = "Secure message"
+        val encryptedText = securityUtil.encrypt(originalText)
+        val decryptedText = securityUtil.decryptSafe(encryptedText)
+        assertEquals("decryptSafe should decrypt valid tokens", originalText, decryptedText)
+    }
+
+    @Test
+    fun `test decryptSafe with plain text`() {
+        val plainText = "Plain text password"
+        val decryptedText = securityUtil.decryptSafe(plainText)
+        assertEquals("decryptSafe should return plain text if not a valid token", plainText, decryptedText)
+    }
+
+    @Test
+    fun `test decryptSafe with blank string`() {
+        val blankText = "   "
+        val decryptedText = securityUtil.decryptSafe(blankText)
+        assertEquals("decryptSafe should return blank string if input is blank", blankText, decryptedText)
+    }
+
+    @Test
     fun `test fallback decryption`() {
         val originalText = "This is a secret message."
         val oldKey = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")

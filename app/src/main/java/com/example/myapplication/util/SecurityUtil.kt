@@ -3,6 +3,9 @@ package com.example.myapplication.util
 import android.content.Context
 import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token
+import javax.inject.Inject
+import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.macasaet.fernet.Validator
 import android.util.Base64
 import java.io.File
@@ -20,7 +23,8 @@ import javax.crypto.spec.SecretKeySpec
  * A utility for handling Fernet encryption and decryption within the Android app.
  * It manages the secure storage and retrieval of the encryption key.
  */
-class SecurityUtil(context: Context) {
+@Singleton
+class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
     private val fernetCipher: FernetCipher
 
@@ -133,6 +137,19 @@ class SecurityUtil(context: Context) {
             // Fallback to old key
             val oldToken = Token.fromString(token)
             oldToken.validateAndDecrypt(FALLBACK_KEY, StringValidator())
+        }
+    }
+
+    /**
+     * Attempts to decrypt the given token. If decryption fails, it returns the original string.
+     * This is useful for migrating plain-text data to encrypted data.
+     */
+    fun decryptSafe(token: String): String {
+        if (token.isBlank()) return token
+        return try {
+            decrypt(token)
+        } catch (e: Exception) {
+            token
         }
     }
 
