@@ -135,6 +135,10 @@ import kotlinx.coroutines.launch
 import android.content.Context
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.material.icons.filled.PhotoCamera
+import com.example.myapplication.labs.ghost.GhostConfig
+import com.example.myapplication.labs.ghost.GhostInsight
+import com.example.myapplication.labs.ghost.GhostInsightDialog
+import com.example.myapplication.labs.ghost.GhostInsightEngine
 
 enum class SessionType {
     BEHAVIOR,
@@ -371,6 +375,12 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedStudentIds by seatingChartViewModel.selectedStudentIds.observeAsState(initial = emptySet())
+    val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
+    val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
+    val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
+
+    var showGhostInsightDialog by remember { mutableStateOf(false) }
+    var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -628,6 +638,22 @@ fun SeatingChartScreen(
                         onDismissRequest = { showStudentActionMenu = false },
                         offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
                     ) {
+                        if (GhostConfig.GHOST_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Neural Insight 👻") },
+                                onClick = {
+                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
+                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+
+                                    currentGhostInsight = GhostInsightEngine.generateInsight(
+                                        student.fullName, behavior, quiz, homework
+                                    )
+                                    showGhostInsightDialog = true
+                                    showStudentActionMenu = false
+                                }
+                            )
+                        }
                         DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                             coroutineScope.launch {
                                 editingStudent =
@@ -886,6 +912,15 @@ fun SeatingChartScreen(
                     viewModel = seatingChartViewModel,
                     onDismissRequest = { showUndoHistoryDialog = false }
                 )
+            }
+
+            if (showGhostInsightDialog) {
+                currentGhostInsight?.let { insight ->
+                    GhostInsightDialog(
+                        insight = insight,
+                        onDismiss = { showGhostInsightDialog = false }
+                    )
+                }
             }
         }
     }
