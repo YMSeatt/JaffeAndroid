@@ -48,9 +48,29 @@ data class Format(
     val outline: String? = null
 )
 
+data class DecodedConditionalFormattingRule(
+    val id: Int,
+    val priority: Int,
+    val condition: Condition,
+    val format: Format
+)
+
 object ConditionalFormattingEngine {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    fun decodeRules(rules: List<ConditionalFormattingRule>): List<DecodedConditionalFormattingRule> {
+        return rules.mapNotNull { rule ->
+            try {
+                val condition = json.decodeFromString<Condition>(rule.conditionJson)
+                val format = json.decodeFromString<Format>(rule.formatJson)
+                DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format)
+            } catch (e: Exception) {
+                Log.e("ConditionalFormattingEngine", "Error decoding rule ${rule.id}: ${e.message}")
+                null
+            }
+        }.sortedBy { it.priority }
+    }
 
     fun applyConditionalFormatting(
         student: StudentDetailsForDisplay,
@@ -64,34 +84,56 @@ object ConditionalFormattingEngine {
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String
     ): List<Pair<String?, String?>> {
+        val decodedRules = decodeRules(rules)
+        return applyConditionalFormattingDecoded(
+            student = student,
+            rules = decodedRules,
+            behaviorLog = behaviorLog,
+            quizLog = quizLog,
+            homeworkLog = homeworkLog,
+            isLiveQuizActive = isLiveQuizActive,
+            liveQuizScores = liveQuizScores,
+            isLiveHomeworkActive = isLiveHomeworkActive,
+            liveHomeworkScores = liveHomeworkScores,
+            currentMode = currentMode,
+            currentTimeMillis = System.currentTimeMillis(),
+            calendar = java.util.Calendar.getInstance()
+        )
+    }
+
+    fun applyConditionalFormattingDecoded(
+        student: StudentDetailsForDisplay,
+        rules: List<DecodedConditionalFormattingRule>,
+        behaviorLog: List<BehaviorEvent>,
+        quizLog: List<QuizLog>,
+        homeworkLog: List<HomeworkLog>,
+        isLiveQuizActive: Boolean,
+        liveQuizScores: Map<Long, Map<String, Any>>,
+        isLiveHomeworkActive: Boolean,
+        liveHomeworkScores: Map<Long, Map<String, Any>>,
+        currentMode: String,
+        currentTimeMillis: Long,
+        calendar: java.util.Calendar
+    ): List<Pair<String?, String?>> {
         val matchingFormats = mutableListOf<Pair<String?, String?>>()
 
-        // Sort rules by priority
-        val sortedRules = rules.sortedBy { it.priority }
-
-        for (rule in sortedRules) {
-            try {
-                val condition = json.decodeFromString<Condition>(rule.conditionJson)
-                val format = json.decodeFromString<Format>(rule.formatJson)
-
-                if (checkCondition(
-                        student,
-                        condition,
-                        behaviorLog,
-                        quizLog,
-                        homeworkLog,
-                        isLiveQuizActive,
-                        liveQuizScores,
-                        isLiveHomeworkActive,
-                        liveHomeworkScores,
-                        currentMode
-                    )
-                ) {
-                    matchingFormats.add(Pair(format.color, format.outline))
-                }
-            } catch (e: Exception) {
-                // Log error or handle gracefully
-                Log.e("ConditionalFormattingEngine", "Error processing rule ${rule.id}: ${e.message}", e)
+        for (rule in rules) {
+            if (checkCondition(
+                    student,
+                    rule.condition,
+                    behaviorLog,
+                    quizLog,
+                    homeworkLog,
+                    isLiveQuizActive,
+                    liveQuizScores,
+                    isLiveHomeworkActive,
+                    liveHomeworkScores,
+                    currentMode,
+                    currentTimeMillis,
+                    calendar
+                )
+            ) {
+                matchingFormats.add(Pair(rule.format.color, rule.format.outline))
             }
         }
 
@@ -108,7 +150,9 @@ object ConditionalFormattingEngine {
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
         liveHomeworkScores: Map<Long, Map<String, Any>>,
-        currentMode: String
+        currentMode: String,
+        currentTimeMillis: Long,
+        calendar: java.util.Calendar
     ): Boolean {
         // Check active_modes
         condition.activeModes?.let { activeModes ->
@@ -120,9 +164,8 @@ object ConditionalFormattingEngine {
         // Check active_times
         condition.activeTimes?.let { activeTimes ->
             if (activeTimes.isNotEmpty()) {
-                val now = java.util.Calendar.getInstance()
-                val dayOfWeek = now.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1, Saturday = 7
-                val currentTime = String.format("%02d:%02d", now.get(java.util.Calendar.HOUR_OF_DAY), now.get(java.util.Calendar.MINUTE))
+                val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1, Saturday = 7
+                val currentTimeString = String.format("%02d:%02d", calendar.get(java.util.Calendar.HOUR_OF_DAY), calendar.get(java.util.Calendar.MINUTE))
 
                 val isTimeValid = activeTimes.any { activeTime ->
                     val start = activeTime.startTime
@@ -140,7 +183,7 @@ object ConditionalFormattingEngine {
                         else -> -1 // Should not happen
                     }
 
-                    currentTime in start..end && calendarDayOfWeek in days
+                    currentTimeString in start..end && calendarDayOfWeek in days
                 }
 
                 if (!isTimeValid) {
@@ -155,7 +198,7 @@ object ConditionalFormattingEngine {
                 val behaviorNames = condition.behaviorNames?.split(',') ?: return false
                 val countThreshold = condition.countThreshold ?: return false
                 val timeWindowHours = condition.timeWindowHours ?: 24
-                val cutoffTime = System.currentTimeMillis() - timeWindowHours * 60 * 60 * 1000
+                val cutoffTime = currentTimeMillis - timeWindowHours * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
                     it.studentId == student.id.toLong() &&

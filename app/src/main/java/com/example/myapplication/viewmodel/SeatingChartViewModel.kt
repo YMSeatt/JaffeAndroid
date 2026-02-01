@@ -262,6 +262,16 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             val studentsForDisplayData = allStudentsForDisplay.value ?: return@launch
             val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
+
+            // Fetch logs and preferences in bulk to avoid N+1 queries
+            val allBehaviorEventsList = behaviorEventDao.getAllBehaviorEventsList()
+            val allHomeworkLogsList = homeworkLogDao.getAllHomeworkLogsList()
+            val allQuizLogsList = quizLogDao.getAllQuizLogsList()
+
+            val behaviorLogsByStudent = allBehaviorEventsList.groupBy { it.studentId }
+            val homeworkLogsByStudent = allHomeworkLogsList.groupBy { it.studentId }
+            val quizLogsByStudent = allQuizLogsList.groupBy { it.studentId }
+
             val groups = studentGroupDao.getAllStudentGroups().first()
             val behaviorLimit = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.first()
             val homeworkLimit = appPreferencesRepository.recentHomeworkLogsLimitFlow.first()
@@ -279,6 +289,9 @@ class SeatingChartViewModel @Inject constructor(
             val homeworkDisplayTimeout = appPreferencesRepository.homeworkDisplayTimeoutFlow.first()
             val quizDisplayTimeout = appPreferencesRepository.quizDisplayTimeoutFlow.first()
             val currentTime = System.currentTimeMillis()
+            val calendar = java.util.Calendar.getInstance()
+
+            val decodedRules = ConditionalFormattingEngine.decodeRules(allRules.value ?: emptyList())
 
             val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
             val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
@@ -315,23 +328,23 @@ class SeatingChartViewModel @Inject constructor(
             
                             val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                             val recentEvents = if (student.showLogs) {
-                                behaviorEventDao.getRecentBehaviorEventsForStudentListFiltered(
-                                    student.id, behaviorLimit, lastCleared, behaviorDisplayTimeout, currentTime      
-                                )
+                                behaviorLogsByStudent[student.id]?.filter {
+                                    it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
+                                }?.take(behaviorLimit) ?: emptyList()
                             } else {
                                 emptyList()
                             }
                             val recentHomework = if (student.showLogs) {
-                                homeworkLogDao.getRecentHomeworkLogsForStudentListFiltered(
-                                    student.id, homeworkLimit, lastCleared, homeworkDisplayTimeout, currentTime      
-                                )
+                                homeworkLogsByStudent[student.id]?.filter {
+                                    it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
+                                }?.take(homeworkLimit) ?: emptyList()
                             } else {
                                 emptyList()
                             }
                             val recentQuizzes = if (student.showLogs) {
-                                quizLogDao.getRecentQuizLogsForStudentListFiltered(
-                                    student.id, quizLimit, lastCleared, quizDisplayTimeout, currentTime
-                                )
+                                quizLogsByStudent[student.id]?.filter {
+                                    it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
+                                }?.take(quizLimit) ?: emptyList()
                             } else {
                                 emptyList()
                             }
@@ -373,17 +386,19 @@ class SeatingChartViewModel @Inject constructor(
                                 emptyList()
                             }
             
-                            val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormatting(
+                            val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
                                 student = studentDetails,
-                                rules = allRules.value ?: emptyList(),
-                                behaviorLog = allBehaviorEvents.value ?: emptyList(),
-                                quizLog = allQuizLogs.value ?: emptyList(),
-                                homeworkLog = allHomeworkLogs.value ?: emptyList(),
+                                rules = decodedRules,
+                                behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
+                                quizLog = quizLogsByStudent[student.id] ?: emptyList(),
+                                homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
                                 isLiveQuizActive = isSessionActive.value ?: false,
                                 liveQuizScores = liveQuizScores.value ?: emptyMap(),
                                 isLiveHomeworkActive = isSessionActive.value ?: false,
                                 liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                                currentMode = currentMode.value ?: "behavior"
+                                currentMode = currentMode.value ?: "behavior",
+                                currentTimeMillis = currentTime,
+                                calendar = calendar
                             )
 
                             // Apply pending position if available
