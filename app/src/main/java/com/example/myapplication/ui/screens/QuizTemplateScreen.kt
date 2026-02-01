@@ -47,6 +47,7 @@ fun QuizTemplateScreen(
     onDismiss: () -> Unit
 ) {
     val templates by viewModel.quizTemplates.collectAsState()
+    val markTypes by viewModel.quizMarkTypes.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf<QuizTemplate?>(null) }
     var selectedTemplate by remember { mutableStateOf<QuizTemplate?>(null) }
@@ -104,7 +105,8 @@ fun QuizTemplateScreen(
                 }
                 showEditDialog = false
             },
-            quizTemplate = selectedTemplate
+            quizTemplate = selectedTemplate,
+            markTypes = markTypes
         )
     }
 

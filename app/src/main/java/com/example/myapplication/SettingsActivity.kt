@@ -17,7 +17,6 @@ import com.example.myapplication.ui.settings.SettingsNavHost
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import com.example.myapplication.viewmodel.SettingsViewModelFactory
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -53,38 +52,9 @@ class SettingsActivity : ComponentActivity() {
         )
     }
 
-    private val settingsViewModel: SettingsViewModel by viewModels {
-        SettingsViewModelFactory(application)
-    }
-
-    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(StudentGroupsViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return StudentGroupsViewModel(db.studentGroupDao()) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
-    }
-
-    private val conditionalFormattingRuleViewModel: ConditionalFormattingRuleViewModel by viewModels {
-        object : ViewModelProvider.Factory {
-            override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                if (modelClass.isAssignableFrom(ConditionalFormattingRuleViewModel::class.java)) {
-                    @Suppress("UNCHECKED_CAST")
-                    return ConditionalFormattingRuleViewModel(
-                        db.conditionalFormattingRuleDao(),
-                        db.customBehaviorDao(),
-                        db.systemBehaviorDao(),
-                        db.studentGroupDao()
-                    ) as T
-                }
-                throw IllegalArgumentException("Unknown ViewModel class")
-            }
-        }
-    }
+    private val settingsViewModel: SettingsViewModel by viewModels()
+    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
+    private val conditionalFormattingRuleViewModel: ConditionalFormattingRuleViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

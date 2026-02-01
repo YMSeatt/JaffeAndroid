@@ -31,11 +31,13 @@ class QuizTemplateViewModelTest {
 
     private lateinit var viewModel: QuizTemplateViewModel
     private lateinit var repository: QuizTemplateRepository
+    private lateinit var markTypeRepository: com.example.myapplication.data.QuizMarkTypeRepository
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         repository = mockk(relaxed = true)
+        markTypeRepository = mockk(relaxed = true)
     }
 
     @After
@@ -51,9 +53,10 @@ class QuizTemplateViewModelTest {
             QuizTemplate(2, "Template 2", 20, emptyMap())
         )
         every { repository.getAll() } returns flowOf(templates)
+        every { markTypeRepository.getAll() } returns flowOf(emptyList())
 
         // When
-        viewModel = QuizTemplateViewModel(repository)
+        viewModel = QuizTemplateViewModel(repository, markTypeRepository)
 
         // Then
         val emittedTemplates = viewModel.quizTemplates.drop(1).first() // Drop the initial empty list
@@ -63,7 +66,7 @@ class QuizTemplateViewModelTest {
     @Test
     fun `insert should call repository's insert method`() = runTest {
         // Given
-        viewModel = QuizTemplateViewModel(repository)
+        viewModel = QuizTemplateViewModel(repository, markTypeRepository)
         val template = QuizTemplate(name = "New Template", numQuestions = 15, defaultMarks = emptyMap())
 
         // When
@@ -77,7 +80,7 @@ class QuizTemplateViewModelTest {
     @Test
     fun `update should call repository's update method`() = runTest {
         // Given
-        viewModel = QuizTemplateViewModel(repository)
+        viewModel = QuizTemplateViewModel(repository, markTypeRepository)
         val template = QuizTemplate(id = 1, name = "Updated Template", numQuestions = 12, defaultMarks = emptyMap())
 
         // When
@@ -91,7 +94,7 @@ class QuizTemplateViewModelTest {
     @Test
     fun `delete should call repository's delete method`() = runTest {
         // Given
-        viewModel = QuizTemplateViewModel(repository)
+        viewModel = QuizTemplateViewModel(repository, markTypeRepository)
         val template = QuizTemplate(id = 1, name = "Template to Delete", numQuestions = 10, defaultMarks = emptyMap())
 
         // When

@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.test.core.app.ApplicationProvider
 import com.example.myapplication.preferences.AppPreferencesRepository
+import io.mockk.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -31,12 +32,38 @@ class SettingsViewModelTest {
     private val testDispatcher = StandardTestDispatcher()
 
     private lateinit var viewModel: SettingsViewModel
+    private val preferencesRepository = mockk<AppPreferencesRepository>(relaxed = true)
 
     @Before
     fun setup() {
         Dispatchers.setMain(testDispatcher)
         val application = ApplicationProvider.getApplicationContext<Application>()
-        viewModel = SettingsViewModel(application)
+
+        // Mock StateFlows for constructor initialization
+        every { preferencesRepository.autoSendEmailOnCloseFlow } returns kotlinx.coroutines.flow.flowOf(false)
+        every { preferencesRepository.editModeEnabledFlow } returns kotlinx.coroutines.flow.flowOf(false)
+        every { preferencesRepository.appThemeFlow } returns kotlinx.coroutines.flow.flowOf("SYSTEM")
+        every { preferencesRepository.emailPasswordFlow } returns kotlinx.coroutines.flow.flowOf(null)
+        every { preferencesRepository.defaultEmailAddressFlow } returns kotlinx.coroutines.flow.flowOf("behaviorlogger@gmail.com")
+
+        viewModel = SettingsViewModel(
+            application,
+            preferencesRepository,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true)
+        )
     }
 
     @After
