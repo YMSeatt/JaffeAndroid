@@ -52,8 +52,8 @@ jobs:
                fi
             fi
 
-            # ACTION B: If older than 1 hour (3600s), attempt merge
-            if [ "$AGE" -ge 3600 ]; then
+            # ACTION B: If older than 1 hour (3600s), attempt merge - now 20 minutes
+            if [ "$AGE" -ge 1200 ]; then
                echo "PR #$PR_NUM is over 1 hour old. Checking checks..."
                
                # Only merge if checks are passing
