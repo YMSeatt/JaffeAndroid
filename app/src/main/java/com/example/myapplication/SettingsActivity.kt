@@ -7,11 +7,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.StudentRepository
-import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppTheme
 import com.example.myapplication.ui.settings.SettingsNavHost
 import com.example.myapplication.ui.theme.MyApplicationTheme
@@ -19,6 +15,7 @@ import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsActivity : ComponentActivity() {

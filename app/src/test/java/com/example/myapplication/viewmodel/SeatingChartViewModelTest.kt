@@ -118,7 +118,6 @@ class SeatingChartViewModelTest {
         every { customHomeworkTypeDao.getAllCustomHomeworkTypes() } returns androidx.lifecycle.MutableLiveData(emptyList())
         every { systemBehaviorDao.getAllSystemBehaviors() } returns flowOf(emptyList())
 
-        
         viewModel = SeatingChartViewModel(
             repository,
             studentDao,

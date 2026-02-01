@@ -4,12 +4,12 @@ import android.content.Context
 import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token
 import com.macasaet.fernet.Validator
+import android.util.Base64
 import java.io.File
 import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.time.Duration
-import java.util.Base64
 import java.util.function.Function
 import javax.crypto.Cipher
 import javax.crypto.Mac
@@ -31,11 +31,61 @@ class SecurityUtil(context: Context) {
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
-        fun hashPassword(password: String, algorithm: String = "SHA-512"): String {
-            val bytes = password.toByteArray()
+        /**
+         * Hashes a password using SHA-512 with a random salt.
+         * The result is in the format "salt:hash".
+         */
+        fun hashPassword(password: String): String {
+            val salt = ByteArray(16)
+            SecureRandom().nextBytes(salt)
+            val saltHex = salt.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+
+            val md = MessageDigest.getInstance("SHA-512")
+            val digest = md.digest((saltHex + password).toByteArray(Charsets.UTF_8))
+            val hashHex = digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+
+            return "$saltHex:$hashHex"
+        }
+
+        /**
+         * Verifies a password against a stored hash.
+         * Supports the new salted format and legacy unsalted SHA-256/SHA-512 hashes.
+         */
+        fun verifyPassword(password: String, storedHash: String): Boolean {
+            return if (storedHash.contains(":")) {
+                val parts = storedHash.split(":")
+                if (parts.size != 2) return false
+                val salt = parts[0]
+                val expectedHash = parts[1]
+
+                val md = MessageDigest.getInstance("SHA-512")
+                val digest = md.digest((salt + password).toByteArray(Charsets.UTF_8))
+                val actualHash = digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+                MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), expectedHash.toByteArray(Charsets.UTF_8))
+            } else {
+                when (storedHash.length) {
+                    128 -> { // Legacy SHA-512
+                        val actualHash = hashPasswordUnsalted(password, "SHA-512")
+                        MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))
+                    }
+                    64 -> { // Legacy SHA-256
+                        val actualHash = hashPasswordUnsalted(password, "SHA-256")
+                        MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))
+                    }
+                    else -> false
+                }
+            }
+        }
+
+        private fun hashPasswordUnsalted(password: String, algorithm: String): String {
             val md = MessageDigest.getInstance(algorithm)
-            val digest = md.digest(bytes)
-            return digest.fold("") { str, it -> str + "%02x".format(it) }
+            val digest = md.digest(password.toByteArray(Charsets.UTF_8))
+            return digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+        }
+
+        @Deprecated("Use hashPassword(String) for new passwords and verifyPassword for checking.")
+        fun hashPassword(password: String, algorithm: String): String {
+            return hashPasswordUnsalted(password, algorithm)
         }
     }
 
@@ -150,7 +200,7 @@ class FernetCipher(private val key: ByteArray) {
         finalBuffer.put(messageToSign)
         finalBuffer.put(hmac)
 
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(finalBuffer.array())
+        return Base64.encodeToString(finalBuffer.array(), Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
     }
 
     /**
@@ -162,7 +212,7 @@ class FernetCipher(private val key: ByteArray) {
      * @throws SecurityException if the token is invalid, tampered with, or expired.
      */
     fun decrypt(token: String, ttl: Int): ByteArray {
-        val decodedToken = Base64.getUrlDecoder().decode(token)
+        val decodedToken = Base64.decode(token, Base64.URL_SAFE or Base64.NO_WRAP)
         val minLength = 1 + 8 + IV_SIZE + 1 + HMAC_SIZE // version + ts + iv + min-cipher-block + hmac
         if (decodedToken.size < minLength) {
             throw SecurityException("Invalid token length")
@@ -175,7 +225,7 @@ class FernetCipher(private val key: ByteArray) {
         mac.init(signingKey)
         val calculatedHmac = mac.doFinal(messageToVerify)
 
-        if (!hmacFromToken.contentEquals(calculatedHmac)) {
+        if (!MessageDigest.isEqual(hmacFromToken, calculatedHmac)) {
             throw SecurityException("Invalid token signature")
         }
 

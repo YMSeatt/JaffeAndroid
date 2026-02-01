@@ -1,0 +1,67 @@
+name: Jules Auto-Pilot (Cron)
+
+on:
+  schedule:
+    # Runs at the start of every hour (UTC)
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows you to run it manually to test
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  jules-management:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Process Jules PRs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 1. FIND ALL OPEN PRs FROM JULES
+          PRS=$(gh pr list --author "google-labs-jules" --json number,createdAt,url --jq '.[]')
+
+          if [ -z "$PRS" ]; then
+            echo "No PRs from Jules found. Sleeping."
+            exit 0
+          fi
+
+          # 2. LOOP THROUGH EACH PR
+          echo "$PRS" | jq -c '.' | while read -r pr; do
+            PR_NUM=$(echo "$pr" | jq -r '.number')
+            PR_URL=$(echo "$pr" | jq -r '.url')
+            CREATED_AT=$(echo "$pr" | jq -r '.createdAt')
+            
+            # Calculate age in seconds
+            AGE=$(( $(date +%s) - $(date -d "$CREATED_AT" +%s) ))
+            
+            echo "Processing PR #$PR_NUM (Age: $AGE seconds)..."
+
+            # ACTION A: If older than 5 mins (300s) and not commented yet, request review
+            if [ "$AGE" -ge 300 ]; then
+               # Check if we already commented /gemini review
+               ALREADY_COMMENTED=$(gh pr view $PR_NUM --json comments --jq '.comments[].body' | grep "/gemini review" || true)
+               if [ -z "$ALREADY_COMMENTED" ]; then
+                  echo "Triggering Gemini review for #$PR_NUM"
+                  gh pr ready "$PR_URL" || true
+                  gh pr comment "$PR_URL" --body "/gemini review"
+               fi
+            fi
+
+            # ACTION B: If older than 1 hour (3600s), attempt merge
+            if [ "$AGE" -ge 3600 ]; then
+               echo "PR #$PR_NUM is over 1 hour old. Checking checks..."
+               
+               # Only merge if checks are passing
+               if gh pr checks $PR_NUM --exit-status; then
+                  echo "Merging PR #$PR_NUM"
+                  gh pr merge $PR_NUM --merge --delete-branch
+               else
+                  echo "Checks still failing or pending for #$PR_NUM. Skipping merge."
+               fi
+            fi
+          done
