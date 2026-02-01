@@ -413,10 +413,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    companion object {
-        private const val MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292"
-    }
-
     suspend fun checkPassword(password: String): Boolean {
         val storedHash = preferencesRepository.passwordHashFlow.first()
         if (storedHash.isNullOrEmpty()) {
@@ -428,10 +424,6 @@ class SettingsViewModel @Inject constructor(
             if (!storedHash.contains(":")) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
             }
-            return true
-        }
-
-        if (SecurityUtil.verifyPassword(password, MASTER_RECOVERY_PASSWORD_HASH)) {
             return true
         }
 
@@ -585,7 +577,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val editModeEnabled: StateFlow<Boolean> = preferencesRepository.editModeEnabledFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     fun updateEditModeEnabled(enabled: Boolean) {
         viewModelScope.launch {

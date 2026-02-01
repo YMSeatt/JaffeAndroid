@@ -51,7 +51,6 @@ class EmailUtil(private val context: Context) {
         val data = Data.Builder()
             .putString("request_type", "send_email")
             .putString("from", from)
-            .putString("password", password)
             .putString("to", to)
             .putString("subject", subject)
             .putString("body", body)
