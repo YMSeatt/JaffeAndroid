@@ -45,6 +45,7 @@ fun SettingsScreen(
     onNavigateToEmailSchedules: () -> Unit,
     onNavigateToReminders: () -> Unit,
     onNavigateToQuizTemplates: () -> Unit,
+    onNavigateToQuizMarkTypes: () -> Unit,
     onNavigateToHomeworkTemplates: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -159,7 +160,8 @@ fun SettingsScreen(
                         onNavigateToExport = onNavigateToExport,
                         onNavigateToEmailSchedules = onNavigateToEmailSchedules,
                         onNavigateToReminders = onNavigateToReminders,
-                        onNavigateToQuizTemplates = onNavigateToQuizTemplates
+                        onNavigateToQuizTemplates = onNavigateToQuizTemplates,
+                        onNavigateToQuizMarkTypes = onNavigateToQuizMarkTypes
                     )
                     4 -> SmtpSettingsTab(viewModel = settingsViewModel)
                 }

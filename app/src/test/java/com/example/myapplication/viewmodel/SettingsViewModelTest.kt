@@ -70,6 +70,7 @@ class SettingsViewModelTest {
     lateinit var homeworkLogDao: HomeworkLogDao
 
     private lateinit var viewModel: SettingsViewModel
+    private val preferencesRepository = mockk<AppPreferencesRepository>(relaxed = true)
 
     private val autoSendEmailOnCloseFlow = MutableStateFlow(false)
     private val editModeEnabledFlow = MutableStateFlow(false)
@@ -141,6 +142,20 @@ class SettingsViewModelTest {
         viewModel = SettingsViewModel(
             application,
             preferencesRepository,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+            mockk(relaxed = true)
             jsonImporter,
             studentDao,
             furnitureDao,

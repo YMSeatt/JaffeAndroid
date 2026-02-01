@@ -20,8 +20,34 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SettingsActivity : ComponentActivity() {
 
-    @Inject
-    lateinit var studentRepository: StudentRepository
+    private val db by lazy { AppDatabase.getDatabase(applicationContext) }
+    private val studentRepository by lazy {
+        StudentRepository(
+            studentDao = db.studentDao(),
+            behaviorEventDao = db.behaviorEventDao(),
+            homeworkLogDao = db.homeworkLogDao(),
+            furnitureDao = db.furnitureDao(),
+            quizLogDao = db.quizLogDao(),
+            layoutTemplateDao = db.layoutTemplateDao(),
+            quizMarkTypeDao = db.quizMarkTypeDao(),
+            context = applicationContext
+        )
+    }
+
+    private val jsonImporter by lazy {
+        JsonImporter(
+            context = applicationContext,
+            studentDao = db.studentDao(),
+            furnitureDao = db.furnitureDao(),
+            behaviorEventDao = db.behaviorEventDao(),
+            homeworkLogDao = db.homeworkLogDao(),
+            studentGroupDao = db.studentGroupDao(),
+            customBehaviorDao = db.customBehaviorDao(),
+            customHomeworkStatusDao = db.customHomeworkStatusDao(),
+            customHomeworkTypeDao = db.customHomeworkTypeDao(),
+            homeworkTemplateDao = db.homeworkTemplateDao()
+        )
+    }
 
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()

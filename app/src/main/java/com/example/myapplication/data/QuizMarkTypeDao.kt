@@ -28,4 +28,7 @@ interface QuizMarkTypeDao {
 
     @Query("SELECT * FROM quiz_mark_types WHERE id = :id")
     suspend fun getQuizMarkTypeById(id: Long): QuizMarkType?
+
+    @Query("DELETE FROM quiz_mark_types")
+    suspend fun deleteAll()
 }

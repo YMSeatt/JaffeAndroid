@@ -12,10 +12,18 @@ import javax.inject.Inject
 
 @HiltViewModel
 class QuizTemplateViewModel @Inject constructor(
-    private val repository: QuizTemplateRepository
+    private val repository: QuizTemplateRepository,
+    private val markTypeRepository: com.example.myapplication.data.QuizMarkTypeRepository
 ) : ViewModel() {
 
     val quizTemplates = repository.getAll()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val quizMarkTypes = markTypeRepository.getAll()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
