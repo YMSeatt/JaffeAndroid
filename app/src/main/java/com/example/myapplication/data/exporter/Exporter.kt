@@ -62,8 +62,7 @@ class Exporter(
         val filteredQuizLogs = quizLogs.filter { log ->
             (options.startDate == null || log.loggedAt >= options.startDate) &&
                     (options.endDate == null || log.loggedAt <= options.endDate) &&
-                    (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
-                    (options.behaviorTypes == null || options.behaviorTypes.contains(log.quizName))
+                    (options.studentIds == null || options.studentIds.contains(log.studentId))
         }
 
         val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
@@ -264,8 +263,10 @@ class Exporter(
 
             when (item) {
                 is BehaviorEvent -> {
-                    headers.indexOf("Behavior").takeIf { it != -1 }?.let {
-                        row.createCell(it).setCellValue(item.type)
+                    val behaviorCol = headers.indexOf("Behavior")
+                    val targetCol = if (behaviorCol != -1) behaviorCol else headers.indexOf("Item Name")
+                    if (targetCol != -1) {
+                        row.createCell(targetCol).setCellValue(item.type)
                     }
                     headers.indexOf("Comment").takeIf { it != -1 }?.let {
                         row.createCell(it).apply {
@@ -275,8 +276,10 @@ class Exporter(
                     }
                 }
                 is QuizLog -> {
-                    headers.indexOf("Quiz Name").takeIf { it != -1 }?.let {
-                        row.createCell(it).setCellValue(item.quizName)
+                    val quizCol = headers.indexOf("Quiz Name")
+                    val targetCol = if (quizCol != -1) quizCol else headers.indexOf("Item Name")
+                    if (targetCol != -1) {
+                        row.createCell(targetCol).setCellValue(item.quizName)
                     }
                     headers.indexOf("Num Questions").takeIf { it != -1 }?.let {
                         row.createCell(it).apply {
@@ -325,8 +328,10 @@ class Exporter(
                     }
                 }
                 is HomeworkLog -> {
-                    headers.indexOf("Homework Type/Session Name").takeIf { it != -1 }?.let {
-                        row.createCell(it).setCellValue(item.assignmentName)
+                    val homeworkCol = headers.indexOf("Homework Type/Session Name")
+                    val targetCol = if (homeworkCol != -1) homeworkCol else headers.indexOf("Item Name")
+                    if (targetCol != -1) {
+                        row.createCell(targetCol).setCellValue(item.assignmentName)
                     }
                     val marksData = try {
                         val type = object : TypeToken<Map<String, Any>>() {}.type
