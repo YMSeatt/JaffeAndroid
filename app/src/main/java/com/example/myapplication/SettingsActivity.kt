@@ -14,40 +14,16 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
 import com.example.myapplication.viewmodel.ConditionalFormattingRuleViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
+import com.example.myapplication.data.importer.JsonImporter // Corrected import
+
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsActivity : ComponentActivity() {
 
-    private val db by lazy { AppDatabase.getDatabase(applicationContext) }
-    private val studentRepository by lazy {
-        StudentRepository(
-            studentDao = db.studentDao(),
-            behaviorEventDao = db.behaviorEventDao(),
-            homeworkLogDao = db.homeworkLogDao(),
-            furnitureDao = db.furnitureDao(),
-            quizLogDao = db.quizLogDao(),
-            layoutTemplateDao = db.layoutTemplateDao(),
-            quizMarkTypeDao = db.quizMarkTypeDao(),
-            context = applicationContext
-        )
-    }
-
-    private val jsonImporter by lazy {
-        JsonImporter(
-            context = applicationContext,
-            studentDao = db.studentDao(),
-            furnitureDao = db.furnitureDao(),
-            behaviorEventDao = db.behaviorEventDao(),
-            homeworkLogDao = db.homeworkLogDao(),
-            studentGroupDao = db.studentGroupDao(),
-            customBehaviorDao = db.customBehaviorDao(),
-            customHomeworkStatusDao = db.customHomeworkStatusDao(),
-            customHomeworkTypeDao = db.customHomeworkTypeDao(),
-            homeworkTemplateDao = db.homeworkTemplateDao()
-        )
-    }
+    @Inject lateinit var studentRepository: StudentRepository
+    @Inject lateinit var jsonImporter: JsonImporter
 
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
