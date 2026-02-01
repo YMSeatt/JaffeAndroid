@@ -1,256 +1,117 @@
-package com.example.myapplication
+package com.example.myapplication.ui.screens
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
-import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.activity.result.ActivityResultLauncher
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.Redo
+import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Chair
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CheckCircleOutline
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.RadioButtonChecked
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import com.example.myapplication.MainActivity
+import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.GuideType
 import com.example.myapplication.preferences.AppTheme
-import com.example.myapplication.ui.DataViewerScreen
-import com.example.myapplication.ui.PasswordScreen
+import com.example.myapplication.ui.components.FurnitureDraggableIcon
+import com.example.myapplication.ui.components.GridAndRulers
+import com.example.myapplication.ui.components.StudentDraggableIcon
+import com.example.myapplication.ui.dialogs.AddEditFurnitureDialog
+import com.example.myapplication.ui.dialogs.AddEditStudentDialog
+import com.example.myapplication.ui.dialogs.AdvancedHomeworkLogDialog
+import com.example.myapplication.ui.dialogs.AssignTaskDialog
+import com.example.myapplication.ui.dialogs.BehaviorDialog
+import com.example.myapplication.ui.dialogs.BehaviorLogViewerDialog
+import com.example.myapplication.ui.dialogs.ChangeBoxSizeDialog
+import com.example.myapplication.ui.dialogs.EmailDialog
+import com.example.myapplication.ui.dialogs.ExportDialog
+import com.example.myapplication.ui.dialogs.LiveHomeworkMarkDialog
+import com.example.myapplication.ui.dialogs.LiveQuizMarkDialog
+import com.example.myapplication.ui.dialogs.LoadLayoutDialog
+import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
+import com.example.myapplication.ui.dialogs.SaveLayoutDialog
+import com.example.myapplication.ui.dialogs.StudentStyleScreen
+import com.example.myapplication.ui.dialogs.UndoHistoryDialog
 import com.example.myapplication.ui.model.SessionType
-import com.example.myapplication.ui.screens.RemindersScreen
-import com.example.myapplication.ui.screens.SeatingChartScreen
-import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.ui.model.StudentUiItem
+import com.example.myapplication.util.EmailException
+import com.example.myapplication.util.EmailUtil
+import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
-import com.example.myapplication.viewmodel.StatsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
-import androidx.hilt.navigation.compose.hiltViewModel
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import android.content.Context
-import androidx.activity.result.ActivityResultLauncher
-import androidx.compose.material.icons.filled.PhotoCamera
-import com.example.myapplication.labs.ghost.GhostConfig
-import com.example.myapplication.labs.ghost.GhostInsight
-import com.example.myapplication.labs.ghost.GhostInsightDialog
-import com.example.myapplication.labs.ghost.GhostInsightEngine
-
-enum class SessionType {
-    BEHAVIOR,
-    QUIZ,
-    HOMEWORK
-}
-
-@AndroidEntryPoint
-class MainActivity : ComponentActivity() {
-    private val seatingChartViewModel: SeatingChartViewModel by viewModels()
-    private val settingsViewModel: SettingsViewModel by viewModels()
-    private val guideViewModel: GuideViewModel by viewModels()
-    private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
-    private val statsViewModel: StatsViewModel by viewModels()
-
-    val createDocumentLauncher = registerForActivityResult(
-        ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    ) { uri: Uri? ->
-        uri?.let {
-            seatingChartViewModel.pendingExportOptions?.let { options ->
-                lifecycleScope.launch {
-                    val result = seatingChartViewModel.exportData(
-                        context = this@MainActivity,
-                        uri = it,
-                        options = options
-                    )
-                    if (result.isSuccess) {
-                        Toast.makeText(this@MainActivity, "Data exported successfully!", Toast.LENGTH_LONG).show()
-                        settingsViewModel.updateLastExportPath(it.toString())
-                    } else {
-                        Toast.makeText(this@MainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
-                    }
-                }
-            }
-        }
-        seatingChartViewModel.pendingExportOptions = null
-    }
-
-    var showEmailDialog by mutableStateOf(false)
-    var emailUri by mutableStateOf<Uri?>(null)
-
-    val importJsonLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            lifecycleScope.launch {
-                seatingChartViewModel.importData(this@MainActivity, it)
-                Toast.makeText(this@MainActivity, "Data imported successfully", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    val importStudentsLauncher = registerForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            lifecycleScope.launch {
-                val result = seatingChartViewModel.importStudentsFromExcel(this@MainActivity, it)
-                result.onSuccess { count ->
-                    Toast.makeText(this@MainActivity, "$count students imported successfully", Toast.LENGTH_SHORT).show()
-                }.onFailure { error ->
-                    Toast.makeText(this@MainActivity, "Error importing students: ${error.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    val exportDataFolderLauncher = registerForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri: Uri? ->
-        uri?.let {
-            lifecycleScope.launch {
-                settingsViewModel.exportDataFolder(it)
-                Toast.makeText(this@MainActivity, "Data exported successfully", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContent {
-            val currentAppThemeState by settingsViewModel.appTheme.collectAsState()
-            val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
-            var unlocked by remember { mutableStateOf(!passwordEnabled) }
-            var showDataViewer by remember { mutableStateOf(false) }
-            var showReminders by remember { mutableStateOf(false) }
-
-            val noAnimations by settingsViewModel.noAnimations.collectAsState()
-            val useBoldFont by settingsViewModel.useBoldFont.collectAsState()
-
-            MyApplicationTheme(
-                darkTheme = when (currentAppThemeState) {
-                    AppTheme.LIGHT -> false
-                    AppTheme.DARK -> true
-                    AppTheme.SYSTEM -> isSystemInDarkTheme()
-                    AppTheme.DYNAMIC -> isSystemInDarkTheme()
-                },
-                dynamicColor = currentAppThemeState == AppTheme.DYNAMIC,
-                disableAnimations = noAnimations,
-                useBoldFont = useBoldFont
-            ) {
-                if (unlocked) {
-                    if (showDataViewer) {
-                        DataViewerScreen(
-                            seatingChartViewModel = seatingChartViewModel,
-                            statsViewModel = statsViewModel,
-                            settingsViewModel = settingsViewModel,
-                            onDismiss = { showDataViewer = false }
-                        )
-                        BackHandler {
-                            showDataViewer = false
-                        }
-                    } else if (showReminders) {
-                        RemindersScreen(
-                            viewModel = hiltViewModel(),
-                            onDismiss = { showReminders = false }
-                        )
-                        BackHandler {
-                            showReminders = false
-                        }
-                    } else {
-                        var showEmailDialogState by remember { mutableStateOf(false) }
-                        SeatingChartScreen(
-                            seatingChartViewModel = seatingChartViewModel,
-                            settingsViewModel = settingsViewModel,
-                            studentGroupsViewModel = studentGroupsViewModel,
-                            guideViewModel = guideViewModel,
-                            onNavigateToSettings = {
-                                startActivity(Intent(this, SettingsActivity::class.java))
-                            },
-                            onNavigateToDataViewer = { showDataViewer = true },
-                            onNavigateToReminders = { showReminders = true },
-                            onHelpClick = {
-                                startActivity(Intent(this, HelpActivity::class.java))
-                            },
-                            onImportJson = { importJsonLauncher.launch("application/json") },
-                            onImportStudentsFromExcel = { importStudentsLauncher.launch("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") },
-                            onOpenAppDataFolder = { exportDataFolderLauncher.launch(null) },
-                            createDocumentLauncher = createDocumentLauncher,
-                            onShowEmailDialogChange = { showEmailDialogState = it },
-                            showEmailDialog = showEmailDialogState,
-                        )
-                    }
-                } else {
-                    PasswordScreen(settingsViewModel = settingsViewModel) {
-                        unlocked = true
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        seatingChartViewModel.handleOnStop(this)
-    }
-}
-
-@Composable
-fun EmailDialog(
-    onDismissRequest: () -> Unit,
-    onSend: (String, String, String) -> Unit,
-    fromAddress: String
-) {
-    var to by remember { mutableStateOf("") }
-    var subject by remember { mutableStateOf("") }
-    var body by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        title = { Text("Send Email") },
-        text = {
-            Column {
-                TextField(
-                    value = fromAddress,
-                    onValueChange = { },
-                    label = { Text("From") },
-                    readOnly = true
-                )
-                TextField(
-                    value = to,
-                    onValueChange = { to = it },
-                    label = { Text("To") }
-                )
-                TextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    label = { Text("Subject") }
-                )
-                TextField(
-                    value = body,
-                    onValueChange = { body = it },
-                    label = { Text("Body") }
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    onSend(to, subject, body)
-                    onDismissRequest()
-                }
-            ) {
-                Text("Send")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismissRequest) {
-                Text("Cancel")
-            }
-        }
-    )
-}
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -274,12 +135,6 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedStudentIds by seatingChartViewModel.selectedStudentIds.observeAsState(initial = emptySet())
-    val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
-    val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
-    val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
-
-    var showGhostInsightDialog by remember { mutableStateOf(false) }
-    var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -326,12 +181,12 @@ fun SeatingChartScreen(
 
     var isFabMenuOpen by remember { mutableStateOf(false) }
 
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
     val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
 
     Scaffold(
-        snackbarHost = { androidx.compose.material3.SnackbarHost(hostState = snackbarHostState) },
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             SeatingChartTopAppBar(
                 sessionType = sessionType,
@@ -341,7 +196,7 @@ fun SeatingChartScreen(
                 behaviorTypeNames = behaviorTypeNames,
                 onSessionTypeChange = { sessionType = it },
                 onToggleSession = { if (isSessionActive) seatingChartViewModel.endSession() else seatingChartViewModel.startSession() },
-                onToggleSelectMode = { 
+                onToggleSelectMode = {
                     selectMode = !selectMode
                     if (!selectMode) seatingChartViewModel.clearSelection()
                 },
@@ -366,7 +221,7 @@ fun SeatingChartScreen(
                 onTakeScreenshot = {
                     coroutineScope.launch {
                         val view = (context as Activity).window.decorView
-                        val bitmap = captureComposable(view, context.window)
+                        val bitmap = captureComposable(view, (context as Activity).window)
                         if (bitmap != null) {
                             settingsViewModel.saveScreenshot(bitmap)
                             Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
@@ -537,22 +392,6 @@ fun SeatingChartScreen(
                         onDismissRequest = { showStudentActionMenu = false },
                         offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
                     ) {
-                        if (GhostConfig.GHOST_MODE_ENABLED) {
-                            DropdownMenuItem(
-                                text = { Text("Neural Insight 👻") },
-                                onClick = {
-                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
-                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
-                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
-
-                                    currentGhostInsight = GhostInsightEngine.generateInsight(
-                                        student.fullName, behavior, quiz, homework
-                                    )
-                                    showGhostInsightDialog = true
-                                    showStudentActionMenu = false
-                                }
-                            )
-                        }
                         DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                             coroutineScope.launch {
                                 editingStudent =
@@ -661,9 +500,9 @@ fun SeatingChartScreen(
                             val result = snackbarHostState.showSnackbar(
                                 message = "Logged behavior for $count student(s)",
                                 actionLabel = "Undo",
-                                duration = androidx.compose.material3.SnackbarDuration.Short
+                                duration = SnackbarDuration.Short
                             )
-                            if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
+                            if (result == SnackbarResult.ActionPerformed) {
                                 repeat(count) { seatingChartViewModel.undo() }
                             }
                         }
@@ -812,15 +651,6 @@ fun SeatingChartScreen(
                     onDismissRequest = { showUndoHistoryDialog = false }
                 )
             }
-
-            if (showGhostInsightDialog) {
-                currentGhostInsight?.let { insight ->
-                    GhostInsightDialog(
-                        insight = insight,
-                        onDismiss = { showGhostInsightDialog = false }
-                    )
-                }
-            }
         }
     }
 }
@@ -877,7 +707,7 @@ fun SeatingChartTopAppBar(
     val context = LocalContext.current
 
     TopAppBar(
-        title = { 
+        title = {
             Column {
                 Text("Seating Chart", style = MaterialTheme.typography.titleMedium)
                 Text(sessionType.name.toTitleCase(), style = MaterialTheme.typography.bodySmall)
@@ -941,7 +771,7 @@ fun SeatingChartTopAppBar(
 
             // Reminders (moved from overflow)
             IconButton(onClick = onNavigateToReminders) { Icon(Icons.Default.Notifications, contentDescription = "Reminders") }
-            
+
             // Data & Export Dropdown (moved from overflow)
             Box {
                 IconButton(onClick = { showDataAndExportDropdown = true }) {
@@ -977,7 +807,7 @@ fun SeatingChartTopAppBar(
                 IconButton(onClick = { showMoreMenu = true }) {
                     Icon(Icons.Default.MoreVert, contentDescription = "More")
                 }
-                
+
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                     DropdownMenuItem(
                         text = { Text("Undo History") },
