@@ -14,4 +14,6 @@ class DeleteStudentCommand(
     override suspend fun undo() {
         viewModel.internalAddStudent(student)
     }
+
+    override fun getDescription(): String = "Delete student: ${student.firstName} ${student.lastName}"
 }

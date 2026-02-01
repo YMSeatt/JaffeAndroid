@@ -17,4 +17,6 @@ class MoveFurnitureCommand(
     override suspend fun undo() {
         viewModel.internalUpdateFurniturePosition(furnitureId.toLong(), oldX, oldY)
     }
+
+    override fun getDescription(): String = "Move furniture (ID: $furnitureId)"
 }

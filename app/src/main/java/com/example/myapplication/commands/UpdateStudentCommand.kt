@@ -15,4 +15,6 @@ class UpdateStudentCommand(
     override suspend fun undo() {
         viewModel.internalUpdateStudent(oldStudent)
     }
+
+    override fun getDescription(): String = "Update student: ${newStudent.firstName} ${newStudent.lastName}"
 }
