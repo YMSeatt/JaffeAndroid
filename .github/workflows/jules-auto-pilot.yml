@@ -23,7 +23,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 1. FIND ALL OPEN PRs FROM JULES
-          PRS=$(gh pr list --author "google-labs-jules" --json number,createdAt,url --jq '.[]')
+          PRS=$(gh pr list --json number,createdAt,url --jq '.[]')
 
           if [ -z "$PRS" ]; then
             echo "No PRs from Jules found. Sleeping."
