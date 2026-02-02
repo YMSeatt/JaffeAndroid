@@ -24,4 +24,24 @@ object GhostShader {
             return float4(color, 0.8 * pulse);
         }
     """
+
+    @Language("AGSL")
+    const val NEURAL_LINE = """
+        uniform float iTime;
+        uniform float3 iColor;
+        uniform float2 iResolution;
+
+        float4 main(float2 fragCoord) {
+            float2 uv = fragCoord / iResolution.xy;
+
+            // Pulsating intensity
+            float pulse = sin(iTime * 4.0) * 0.3 + 0.7;
+
+            // Add some "noise" or movement along the line
+            float movement = sin(uv.x * 20.0 + iTime * 10.0) * 0.1;
+
+            float3 finalColor = iColor * (pulse + movement);
+            return float4(finalColor, 0.9);
+        }
+    """
 }
