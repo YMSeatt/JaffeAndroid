@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
-import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -46,18 +45,17 @@ import kotlin.math.roundToInt
 fun FurnitureDraggableIcon(
     furnitureUiItem: FurnitureUiItem,
     viewModel: SeatingChartViewModel,
-    settingsViewModel: SettingsViewModel,
     scale: Float,
     canvasOffset: androidx.compose.ui.geometry.Offset,
     onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
-    noAnimations: Boolean
+    noAnimations: Boolean,
+    editModeEnabled: Boolean,
+    gridSnapEnabled: Boolean,
+    gridSize: Int
 ) {
     var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
     var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
-    val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState()
-    val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
-    val gridSize by settingsViewModel.gridSize.collectAsState()
     var width by remember { mutableStateOf(furnitureUiItem.displayWidth) }
     var height by remember { mutableStateOf(furnitureUiItem.displayHeight) }
 

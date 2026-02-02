@@ -174,11 +174,12 @@ fun SeatingChartScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
+    val userPreferences by seatingChartViewModel.userPreferences.collectAsState()
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
-    val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState(initial = false)
+    val editModeEnabled = userPreferences?.editModeEnabled ?: false
     var longPressPosition by remember { mutableStateOf(Offset.Zero) }
 
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -325,12 +326,15 @@ fun SeatingChartScreen(
                     )
             ) {
                 Box(modifier = Modifier.size(4000.dp)) {
+                    val noAnimations = userPreferences?.noAnimations ?: false
+                    val gridSnapEnabled = userPreferences?.gridSnapEnabled ?: false
+                    val gridSize = userPreferences?.gridSize ?: 20
+                    val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
+
                     students.forEach { studentItem ->
-                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
                         StudentDraggableIcon(
                             studentUiItem = studentItem,
                             viewModel = seatingChartViewModel,
-                            settingsViewModel = settingsViewModel,
                             showBehavior = showRecentBehavior,
                             isSelected = selectedStudentIds.contains(studentItem.id),
                             onClick = {
@@ -357,17 +361,19 @@ fun SeatingChartScreen(
                             },
                             onResize = { width, height -> seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt()) },
                             noAnimations = noAnimations,
+                            editModeEnabled = editModeEnabled,
+                            gridSnapEnabled = gridSnapEnabled,
+                            gridSize = gridSize,
+                            autoExpandEnabled = autoExpandEnabled,
                             canvasSize = canvasSize,
                             canvasScale = scale,
                             canvasOffset = offset
                         )
                     }
                     furniture.forEach { furnitureItem ->
-                        val noAnimations by settingsViewModel.noAnimations.collectAsState()
                         FurnitureDraggableIcon(
                             furnitureUiItem = furnitureItem,
                             viewModel = seatingChartViewModel,
-                            settingsViewModel = settingsViewModel,
                             scale = scale,
                             canvasOffset = offset,
                             onLongClick = {
@@ -377,7 +383,10 @@ fun SeatingChartScreen(
                                 }
                             },
                             onResize = { width, height -> seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt()) },
-                            noAnimations = noAnimations
+                            noAnimations = noAnimations,
+                            editModeEnabled = editModeEnabled,
+                            gridSnapEnabled = gridSnapEnabled,
+                            gridSize = gridSize
                         )
                     }
                 }

@@ -59,6 +59,7 @@ import com.example.myapplication.data.StudentLayout
 import com.example.myapplication.data.StudentRepository
 import com.example.myapplication.data.importer.Importer
 import com.example.myapplication.preferences.AppPreferencesRepository
+import com.example.myapplication.preferences.UserPreferences
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
@@ -70,11 +71,14 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -139,6 +143,12 @@ class SeatingChartViewModel @Inject constructor(
     private val _undoStackState = MutableStateFlow<List<Command>>(emptyList())
     val undoStackState: StateFlow<List<Command>> = _undoStackState.asStateFlow()
 
+    private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
+    val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
+
+    private val updateTrigger = MutableSharedFlow<Unit>(replay = 1)
+    private var updateJob: Job? = null
+
     private fun updateUndoStackState() {
         _undoStackState.value = commandUndoStack.toList()
     }
@@ -179,39 +189,29 @@ class SeatingChartViewModel @Inject constructor(
         allSystemBehaviors = systemBehaviorDao.getAllSystemBehaviors().asLiveData()
 
 
-        studentsForDisplay.addSource(allStudents) {
-            updateStudentsForDisplay(it)
-        }
-        studentsForDisplay.addSource(allStudentsForDisplay) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(sessionQuizLogs) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(sessionHomeworkLogs) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(isSessionActive) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(allBehaviorEvents) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(allHomeworkLogs) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(allQuizLogs) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
-        }
-        studentsForDisplay.addSource(allRules) {
-            updateStudentsForDisplay(allStudents.value ?: emptyList())
+        studentsForDisplay.addSource(allStudents) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allStudentsForDisplay) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(sessionQuizLogs) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(sessionHomeworkLogs) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(isSessionActive) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allBehaviorEvents) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allHomeworkLogs) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allQuizLogs) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allRules) { updateTrigger.tryEmit(Unit) }
+
+        viewModelScope.launch {
+            appPreferencesRepository.userPreferencesFlow.collect {
+                _userPreferences.value = it
+                updateTrigger.emit(Unit)
+            }
         }
 
-
-        observePreferenceChanges()
+        viewModelScope.launch {
+            updateTrigger.debounce(100).collect {
+                updateStudentsForDisplay(allStudents.value ?: emptyList())
+            }
+        }
 
         furnitureForDisplay.addSource(allFurniture) { furnitureList ->
             updateFurnitureForDisplay(furnitureList)
@@ -220,219 +220,178 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             while (true) {
                 delay(60000) // 1 minute
-                updateStudentsForDisplay(allStudents.value ?: emptyList())
+                updateTrigger.emit(Unit)
             }
         }
     }
 
-    private fun observePreferenceChanges() {
-        viewModelScope.launch {
-            combine(
-                appPreferencesRepository.recentBehaviorIncidentsLimitFlow,
-                appPreferencesRepository.recentHomeworkLogsLimitFlow,
-                appPreferencesRepository.recentLogsLimitFlow,
-                appPreferencesRepository.maxRecentLogsToDisplayFlow,
-                appPreferencesRepository.useInitialsForBehaviorFlow,
-                appPreferencesRepository.useInitialsForHomeworkFlow,
-                appPreferencesRepository.useInitialsForQuizFlow,
-                appPreferencesRepository.behaviorInitialsMapFlow,
-                appPreferencesRepository.homeworkInitialsMapFlow,
-                appPreferencesRepository.quizInitialsMapFlow,
-                appPreferencesRepository.defaultStudentBoxWidthFlow,
-                appPreferencesRepository.defaultStudentBoxHeightFlow,
-                appPreferencesRepository.defaultStudentBoxBackgroundColorFlow,
-                appPreferencesRepository.defaultStudentBoxOutlineColorFlow,
-                appPreferencesRepository.defaultStudentBoxTextColorFlow,
-                appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow,
-                appPreferencesRepository.defaultStudentBoxCornerRadiusFlow,
-                appPreferencesRepository.defaultStudentBoxPaddingFlow,
-                appPreferencesRepository.defaultStudentFontFamilyFlow,
-                appPreferencesRepository.defaultStudentFontSizeFlow,
-                appPreferencesRepository.defaultStudentFontColorFlow,
-                appPreferencesRepository.behaviorDisplayTimeoutFlow,
-                appPreferencesRepository.homeworkDisplayTimeoutFlow,
-                appPreferencesRepository.quizDisplayTimeoutFlow
-            ) { _ ->
-                updateStudentsForDisplay(allStudents.value ?: emptyList())
-            }.collect()
-        }
-    }
+    private val allGroups = studentGroupDao.getAllStudentGroups().asLiveData()
 
     private fun updateStudentsForDisplay(students: List<Student>) {
-        viewModelScope.launch {
-            val studentsForDisplayData = allStudentsForDisplay.value ?: return@launch
-            val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
+        val prefs = _userPreferences.value ?: return
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
+            withContext(Dispatchers.Default) {
+                val studentsForDisplayData = allStudentsForDisplay.value ?: return@withContext
+                val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
 
-            // Fetch logs and preferences in bulk to avoid N+1 queries
-            val allBehaviorEventsList = behaviorEventDao.getAllBehaviorEventsList()
-            val allHomeworkLogsList = homeworkLogDao.getAllHomeworkLogsList()
-            val allQuizLogsList = quizLogDao.getAllQuizLogsList()
+                val behaviorLogsByStudent = allBehaviorEvents.value?.groupBy { it.studentId } ?: emptyMap()
+                val homeworkLogsByStudent = allHomeworkLogs.value?.groupBy { it.studentId } ?: emptyMap()
+                val quizLogsByStudent = allQuizLogs.value?.groupBy { it.studentId } ?: emptyMap()
 
-            val behaviorLogsByStudent = allBehaviorEventsList.groupBy { it.studentId }
-            val homeworkLogsByStudent = allHomeworkLogsList.groupBy { it.studentId }
-            val quizLogsByStudent = allQuizLogsList.groupBy { it.studentId }
+                val groups = allGroups.value ?: emptyList()
+                val behaviorLimit = prefs.recentBehaviorIncidentsLimit
+                val homeworkLimit = prefs.recentHomeworkLogsLimit
+                val quizLimit = prefs.recentLogsLimit
+                val maxLogsToDisplay = prefs.maxRecentLogsToDisplay
+                val useInitialsForBehavior = prefs.useInitialsForBehavior
+                val useInitialsForHomework = prefs.useInitialsForHomework
+                val useInitialsForQuiz = prefs.useInitialsForQuiz
+                val behaviorInitialsMap = parseKeyValueString(prefs.behaviorInitialsMap)
+                val homeworkInitialsMap = parseKeyValueString(prefs.homeworkInitialsMap)
+                val quizInitialsMap = parseKeyValueString(prefs.quizInitialsMap)
+                val lastClearedTimestamps = prefs.studentLogsLastCleared
 
-            val groups = studentGroupDao.getAllStudentGroups().first()
-            val behaviorLimit = appPreferencesRepository.recentBehaviorIncidentsLimitFlow.first()
-            val homeworkLimit = appPreferencesRepository.recentHomeworkLogsLimitFlow.first()
-            val quizLimit = appPreferencesRepository.recentLogsLimitFlow.first()
-            val maxLogsToDisplay = appPreferencesRepository.maxRecentLogsToDisplayFlow.first()
-            val useInitialsForBehavior = appPreferencesRepository.useInitialsForBehaviorFlow.first()
-            val useInitialsForHomework = appPreferencesRepository.useInitialsForHomeworkFlow.first()
-            val useInitialsForQuiz = appPreferencesRepository.useInitialsForQuizFlow.first()
-            val behaviorInitialsMap = parseKeyValueString(appPreferencesRepository.behaviorInitialsMapFlow.first())
-            val homeworkInitialsMap = parseKeyValueString(appPreferencesRepository.homeworkInitialsMapFlow.first())
-            val quizInitialsMap = parseKeyValueString(appPreferencesRepository.quizInitialsMapFlow.first())
-            val lastClearedTimestamps = appPreferencesRepository.studentLogsLastClearedFlow.first()
+                val behaviorDisplayTimeout = prefs.behaviorDisplayTimeout
+                val homeworkDisplayTimeout = prefs.homeworkDisplayTimeout
+                val quizDisplayTimeout = prefs.quizDisplayTimeout
+                val currentTime = System.currentTimeMillis()
+                val calendar = java.util.Calendar.getInstance()
 
-            val behaviorDisplayTimeout = appPreferencesRepository.behaviorDisplayTimeoutFlow.first()
-            val homeworkDisplayTimeout = appPreferencesRepository.homeworkDisplayTimeoutFlow.first()
-            val quizDisplayTimeout = appPreferencesRepository.quizDisplayTimeoutFlow.first()
-            val currentTime = System.currentTimeMillis()
-            val calendar = java.util.Calendar.getInstance()
+                val decodedRules = ConditionalFormattingEngine.decodeRules(allRules.value ?: emptyList())
 
-            val decodedRules = ConditionalFormattingEngine.decodeRules(allRules.value ?: emptyList())
+                val defaultStyle = prefs.defaultStudentStyle
 
-            val defaultWidth = appPreferencesRepository.defaultStudentBoxWidthFlow.first()
-            val defaultHeight = appPreferencesRepository.defaultStudentBoxHeightFlow.first()
-            val defaultBgColor = appPreferencesRepository.defaultStudentBoxBackgroundColorFlow.first()
-            val defaultOutlineColor = appPreferencesRepository.defaultStudentBoxOutlineColorFlow.first()
-            val defaultTextColor = appPreferencesRepository.defaultStudentBoxTextColorFlow.first()
-            val defaultOutlineThickness = appPreferencesRepository.defaultStudentBoxOutlineThicknessFlow.first()
-            val defaultCornerRadius = appPreferencesRepository.defaultStudentBoxCornerRadiusFlow.first()
-            val defaultPadding = appPreferencesRepository.defaultStudentBoxPaddingFlow.first()
-            val defaultFontFamily = appPreferencesRepository.defaultStudentFontFamilyFlow.first()
-            val defaultFontSize = appPreferencesRepository.defaultStudentFontSizeFlow.first()
-            val defaultFontColor = appPreferencesRepository.defaultStudentFontColorFlow.first()
+                val studentsWithBehavior = students.map { student ->
+                    val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
+                        recentBehaviorDescription = emptyList(),
+                        recentHomeworkDescription = emptyList(),
+                        recentQuizDescription = emptyList(),
+                        sessionLogText = emptyList(),
+                        groupColor = null,
+                        conditionalFormattingResult = emptyList(),
+                        defaultWidth = defaultStyle.width,
+                        defaultHeight = defaultStyle.height,
+                        defaultBackgroundColor = defaultStyle.backgroundColor,
+                        defaultOutlineColor = defaultStyle.outlineColor,
+                        defaultTextColor = defaultStyle.textColor,
+                        defaultOutlineThickness = defaultStyle.outlineThickness,
+                        defaultCornerRadius = defaultStyle.cornerRadius,
+                        defaultPadding = defaultStyle.padding,
+                        defaultFontFamily = defaultStyle.fontFamily,
+                        defaultFontSize = defaultStyle.fontSize,
+                        defaultFontColor = defaultStyle.fontColor
+                    )
 
-                        val studentsWithBehavior = students.map { student ->
-                            val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
-                                recentBehaviorDescription = emptyList(),
-                                recentHomeworkDescription = emptyList(),
-                                recentQuizDescription = emptyList(),
-                                sessionLogText = emptyList(),
-                                groupColor = null,
-                                conditionalFormattingResult = emptyList(),
-                                defaultWidth = defaultWidth,
-                                defaultHeight = defaultHeight,
-                                defaultBackgroundColor = defaultBgColor,
-                                defaultOutlineColor = defaultOutlineColor,
-                                defaultTextColor = defaultTextColor,
-                                defaultOutlineThickness = defaultOutlineThickness,
-                                defaultCornerRadius = defaultCornerRadius,
-                                defaultPadding = defaultPadding,
-                                defaultFontFamily = defaultFontFamily,
-                                defaultFontSize = defaultFontSize,
-                                defaultFontColor = defaultFontColor
-                            )
-            
-                            val lastCleared = lastClearedTimestamps[student.id] ?: 0L
-                            val recentEvents = if (student.showLogs) {
-                                behaviorLogsByStudent[student.id]?.filter {
-                                    it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
-                                }?.take(behaviorLimit) ?: emptyList()
-                            } else {
-                                emptyList()
-                            }
-                            val recentHomework = if (student.showLogs) {
-                                homeworkLogsByStudent[student.id]?.filter {
-                                    it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
-                                }?.take(homeworkLimit) ?: emptyList()
-                            } else {
-                                emptyList()
-                            }
-                            val recentQuizzes = if (student.showLogs) {
-                                quizLogsByStudent[student.id]?.filter {
-                                    it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
-                                }?.take(quizLimit) ?: emptyList()
-                            } else {
-                                emptyList()
-                            }
-            
-                            val behaviorDescription = recentEvents.map {
-                                val description = if (useInitialsForBehavior) {
-                                    behaviorInitialsMap[it.type] ?: it.type.first().toString()
-                                } else {
-                                    it.type
-                                }
-                                if (it.comment.isNullOrBlank()) {
-                                    description
-                                } else {
-                                    "$description: ${it.comment}"
-                                }
-                            }
-            
-                            val homeworkDescription = recentHomework.map {
-                                val status = if (it.isComplete) "Done" else "Not Done"
-                                if (useInitialsForHomework) {
-                                    (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
-                                } else {
-                                    "${it.assignmentName}: $status"
-                                }
-                            }
-                            val quizDescription = recentQuizzes.map {
-                                if (useInitialsForQuiz) {
-                                    quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
-                                } else {
-                                    it.quizName
-                                }
-                            }
-            
-                            val sessionLogs = if (isSessionActive.value == true) {
-                                val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                                val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
-                                (quizLogs + homeworkLogs).take(maxLogsToDisplay)
-                            } else {
-                                emptyList()
-                            }
-            
-                            val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
-                                student = studentDetails,
-                                rules = decodedRules,
-                                behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
-                                quizLog = quizLogsByStudent[student.id] ?: emptyList(),
-                                homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
-                                isLiveQuizActive = isSessionActive.value ?: false,
-                                liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                                isLiveHomeworkActive = isSessionActive.value ?: false,
-                                liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                                currentMode = currentMode.value ?: "behavior",
-                                currentTimeMillis = currentTime,
-                                calendar = calendar
-                            )
+                    val lastCleared = lastClearedTimestamps[student.id] ?: 0L
+                    val recentEvents = if (student.showLogs) {
+                        behaviorLogsByStudent[student.id]?.filter {
+                            it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
+                        }?.take(behaviorLimit) ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
+                    val recentHomework = if (student.showLogs) {
+                        homeworkLogsByStudent[student.id]?.filter {
+                            it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
+                        }?.take(homeworkLimit) ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
+                    val recentQuizzes = if (student.showLogs) {
+                        quizLogsByStudent[student.id]?.filter {
+                            it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
+                        }?.take(quizLimit) ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
 
-                            // Apply pending position if available
-                            val pendingPos = pendingStudentPositions[student.id.toInt()]
-                            var studentForUi = student
-                            if (pendingPos != null) {
-                                if (abs(student.xPosition - pendingPos.first) < 0.1f && abs(student.yPosition - pendingPos.second) < 0.1f) {
-                                    pendingStudentPositions.remove(student.id.toInt())
-                                } else {
-                                    studentForUi = student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
-                                }
-                            }
-            
-                            studentForUi.toStudentUiItem(
-                                recentBehaviorDescription = behaviorDescription,
-                                recentHomeworkDescription = homeworkDescription,
-                                recentQuizDescription = quizDescription,
-                                sessionLogText = sessionLogs,
-                                groupColor = groups.find { group -> group.id == student.groupId }?.color,
-                                conditionalFormattingResult = conditionalFormattingResult,
-                                defaultWidth = defaultWidth,
-                                defaultHeight = defaultHeight,
-                                defaultBackgroundColor = defaultBgColor,
-                                defaultOutlineColor = defaultOutlineColor,
-                                defaultTextColor = defaultTextColor,
-                                defaultOutlineThickness = defaultOutlineThickness,
-                                defaultCornerRadius = defaultCornerRadius,
-                                defaultPadding = defaultPadding,
-                                defaultFontFamily = defaultFontFamily,
-                                defaultFontSize = defaultFontSize,
-                                defaultFontColor = defaultFontColor
-                            )
+                    val behaviorDescription = recentEvents.map {
+                        val description = if (useInitialsForBehavior) {
+                            behaviorInitialsMap[it.type] ?: it.type.first().toString()
+                        } else {
+                            it.type
                         }
-                        studentsForDisplay.postValue(studentsWithBehavior)        }
+                        if (it.comment.isNullOrBlank()) {
+                            description
+                        } else {
+                            "$description: ${it.comment}"
+                        }
+                    }
+
+                    val homeworkDescription = recentHomework.map {
+                        val status = if (it.isComplete) "Done" else "Not Done"
+                        if (useInitialsForHomework) {
+                            (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
+                        } else {
+                            "${it.assignmentName}: $status"
+                        }
+                    }
+                    val quizDescription = recentQuizzes.map {
+                        if (useInitialsForQuiz) {
+                            quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
+                        } else {
+                            it.quizName
+                        }
+                    }
+
+                    val sessionLogs = if (isSessionActive.value == true) {
+                        val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
+                        val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
+                        (quizLogs + homeworkLogs).take(maxLogsToDisplay)
+                    } else {
+                        emptyList()
+                    }
+
+                    val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
+                        student = studentDetails,
+                        rules = decodedRules,
+                        behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
+                        quizLog = quizLogsByStudent[student.id] ?: emptyList(),
+                        homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
+                        isLiveQuizActive = isSessionActive.value ?: false,
+                        liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                        isLiveHomeworkActive = isSessionActive.value ?: false,
+                        liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                        currentMode = currentMode.value ?: "behavior",
+                        currentTimeMillis = currentTime,
+                        calendar = calendar
+                    )
+
+                    // Apply pending position if available
+                    val pendingPos = pendingStudentPositions[student.id.toInt()]
+                    var studentForUi = student
+                    if (pendingPos != null) {
+                        if (abs(student.xPosition - pendingPos.first) < 0.1f && abs(student.yPosition - pendingPos.second) < 0.1f) {
+                            pendingStudentPositions.remove(student.id.toInt())
+                        } else {
+                            studentForUi = student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                        }
+                    }
+
+                    studentForUi.toStudentUiItem(
+                        recentBehaviorDescription = behaviorDescription,
+                        recentHomeworkDescription = homeworkDescription,
+                        recentQuizDescription = quizDescription,
+                        sessionLogText = sessionLogs,
+                        groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                        conditionalFormattingResult = conditionalFormattingResult,
+                        defaultWidth = defaultStyle.width,
+                        defaultHeight = defaultStyle.height,
+                        defaultBackgroundColor = defaultStyle.backgroundColor,
+                        defaultOutlineColor = defaultStyle.outlineColor,
+                        defaultTextColor = defaultStyle.textColor,
+                        defaultOutlineThickness = defaultStyle.outlineThickness,
+                        defaultCornerRadius = defaultStyle.cornerRadius,
+                        defaultPadding = defaultStyle.padding,
+                        defaultFontFamily = defaultStyle.fontFamily,
+                        defaultFontSize = defaultStyle.fontSize,
+                        defaultFontColor = defaultStyle.fontColor
+                    )
+                }
+                studentsForDisplay.postValue(studentsWithBehavior)
+            }
+        }
     }
 
     private fun parseKeyValueString(input: String): Map<String, String> {

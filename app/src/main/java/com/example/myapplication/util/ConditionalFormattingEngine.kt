@@ -52,7 +52,8 @@ data class DecodedConditionalFormattingRule(
     val id: Int,
     val priority: Int,
     val condition: Condition,
-    val format: Format
+    val format: Format,
+    val behaviorNamesList: List<String> = emptyList()
 )
 
 object ConditionalFormattingEngine {
@@ -64,7 +65,8 @@ object ConditionalFormattingEngine {
             try {
                 val condition = json.decodeFromString<Condition>(rule.conditionJson)
                 val format = json.decodeFromString<Format>(rule.formatJson)
-                DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format)
+                val behaviorNamesList = condition.behaviorNames?.split(',')?.map { it.trim() } ?: emptyList()
+                DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format, behaviorNamesList)
             } catch (e: Exception) {
                 Log.e("ConditionalFormattingEngine", "Error decoding rule ${rule.id}: ${e.message}")
                 null
@@ -120,7 +122,7 @@ object ConditionalFormattingEngine {
         for (rule in rules) {
             if (checkCondition(
                     student,
-                    rule.condition,
+                    rule,
                     behaviorLog,
                     quizLog,
                     homeworkLog,
@@ -142,7 +144,7 @@ object ConditionalFormattingEngine {
 
     private fun checkCondition(
         student: StudentDetailsForDisplay,
-        condition: Condition,
+        rule: DecodedConditionalFormattingRule,
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
@@ -154,6 +156,7 @@ object ConditionalFormattingEngine {
         currentTimeMillis: Long,
         calendar: java.util.Calendar
     ): Boolean {
+        val condition = rule.condition
         // Check active_modes
         condition.activeModes?.let { activeModes ->
             if (activeModes.isNotEmpty() && currentMode !in activeModes) {
@@ -195,14 +198,14 @@ object ConditionalFormattingEngine {
         return when (condition.type) {
             "group" -> student.groupId == condition.groupId
             "behavior_count" -> {
-                val behaviorNames = condition.behaviorNames?.split(',') ?: return false
+                val behaviorNames = rule.behaviorNamesList
                 val countThreshold = condition.countThreshold ?: return false
                 val timeWindowHours = condition.timeWindowHours ?: 24
-                val cutoffTime = currentTimeMillis - timeWindowHours * 60 * 60 * 1000
+                val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
                     it.studentId == student.id.toLong() &&
-                    behaviorNames.any { name -> it.type.equals(name.trim(), ignoreCase = true) } &&
+                    behaviorNames.any { name -> it.type.equals(name, ignoreCase = true) } &&
                     it.timestamp >= cutoffTime
                 }
                 count >= countThreshold
