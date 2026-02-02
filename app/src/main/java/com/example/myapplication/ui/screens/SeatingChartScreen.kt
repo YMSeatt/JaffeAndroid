@@ -40,7 +40,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -79,6 +79,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.MainActivity
+import com.example.myapplication.labs.ghost.GhostConfig
+import com.example.myapplication.labs.ghost.GhostInsight
+import com.example.myapplication.labs.ghost.GhostInsightDialog
+import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
 import com.example.myapplication.preferences.AppTheme
@@ -135,6 +139,12 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedStudentIds by seatingChartViewModel.selectedStudentIds.observeAsState(initial = emptySet())
+    val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
+    val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
+    val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
+
+    var showGhostInsightDialog by remember { mutableStateOf(false) }
+    var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -392,6 +402,22 @@ fun SeatingChartScreen(
                         onDismissRequest = { showStudentActionMenu = false },
                         offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
                     ) {
+                        if (GhostConfig.GHOST_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Neural Insight 👻") },
+                                onClick = {
+                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
+                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+
+                                    currentGhostInsight = GhostInsightEngine.generateInsight(
+                                        student.fullName, behavior, quiz, homework
+                                    )
+                                    showGhostInsightDialog = true
+                                    showStudentActionMenu = false
+                                }
+                            )
+                        }
                         DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                             coroutineScope.launch {
                                 editingStudent =
@@ -651,6 +677,15 @@ fun SeatingChartScreen(
                     onDismissRequest = { showUndoHistoryDialog = false }
                 )
             }
+
+            if (showGhostInsightDialog) {
+                currentGhostInsight?.let { insight ->
+                    GhostInsightDialog(
+                        insight = insight,
+                        onDismiss = { showGhostInsightDialog = false }
+                    )
+                }
+            }
         }
     }
 }
@@ -781,7 +816,7 @@ fun SeatingChartTopAppBar(
                     DropdownMenuItem(text = { Text("Import from JSON") }, onClick = { onImportJson(); showDataAndExportDropdown = false })
                     DropdownMenuItem(text = { Text("Import from Python Assets") }, onClick = { onImportFromPythonAssets(context); showDataAndExportDropdown = false })
                     DropdownMenuItem(text = { Text("Import from Excel") }, onClick = { onImportStudentsFromExcel(); showDataAndExportDropdown = false })
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text("Export to Excel") },
                         onClick = { onShowExport(); showDataAndExportDropdown = false },
@@ -793,7 +828,7 @@ fun SeatingChartTopAppBar(
                         }
                         showDataAndExportDropdown = false
                     })
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text("Backup Database (Share)") }, onClick = { onShareDatabase(); showDataAndExportDropdown = false })
                     DropdownMenuItem(text = { Text("Open App Data Folder") }, onClick = { onOpenAppDataFolder(); showDataAndExportDropdown = false })
                 }
@@ -817,7 +852,7 @@ fun SeatingChartTopAppBar(
                         },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, null) }
                     )
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(if (editModeEnabled) "Disable Edit Mode" else "Enable Edit Mode") },
                         onClick = {
@@ -832,16 +867,16 @@ fun SeatingChartTopAppBar(
                             )
                         }
                     )
-                    Divider()
+                    HorizontalDivider()
                     if (editModeEnabled) {
                         DropdownMenuItem(text = { Text("Alignment Tools") }, onClick = { showMoreMenu = false; showAlignSubMenu = true }, leadingIcon = { Icon(Icons.Default.AutoFixHigh, null) })
                     }
                     DropdownMenuItem(text = { Text("Layouts") }, onClick = { showMoreMenu = false; showLayoutSubMenu = true }, leadingIcon = { Icon(Icons.Default.Layers, null) })
                     DropdownMenuItem(text = { Text("Guides & Grid") }, onClick = { showMoreMenu = false; showGuidesSubMenu = true }, leadingIcon = { Icon(Icons.Default.GridView, null) })
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text("Take Screenshot") }, onClick = { onTakeScreenshot(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.PhotoCamera, null) })
                     DropdownMenuItem(text = { Text("Appearance") }, onClick = { showMoreMenu = false; showAppearanceSubMenu = true }, leadingIcon = { Icon(Icons.Default.Palette, null) })
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text("Help") }, onClick = { onHelpClick(); showMoreMenu = false }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.Help, null) })
                 }
 
@@ -851,7 +886,7 @@ fun SeatingChartTopAppBar(
                     DropdownMenuItem(text = { Text("Align Bottom") }, onClick = { seatingChartViewModel.alignSelectedItems("bottom"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Align Left") }, onClick = { seatingChartViewModel.alignSelectedItems("left"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Align Right") }, onClick = { seatingChartViewModel.alignSelectedItems("right"); showAlignSubMenu = false })
-                    Divider()
+                    HorizontalDivider()
                     DropdownMenuItem(text = { Text("Distribute Horizontal") }, onClick = { seatingChartViewModel.distributeSelectedItems("horizontal"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Distribute Vertical") }, onClick = { seatingChartViewModel.distributeSelectedItems("vertical"); showAlignSubMenu = false })
                 }
