@@ -46,6 +46,14 @@ class SecurityUtilTest {
     }
 
     @Test
+    fun `test binary encrypt and decrypt`() {
+        val originalData = byteArrayOf(0, 1, 2, 3, 4, 5, -1, -2, -3)
+        val encryptedText = securityUtil.encrypt(originalData)
+        val decryptedData = securityUtil.decryptToByteArray(encryptedText)
+        assertTrue("Decrypted data should match original data", originalData.contentEquals(decryptedData))
+    }
+
+    @Test
     fun `test decryptSafe with valid token`() {
         val originalText = "Secure message"
         val encryptedText = securityUtil.encrypt(originalText)

@@ -138,7 +138,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = securityUtil.encrypt(String(fileContent))
+                    val encryptedToken = securityUtil.encrypt(fileContent)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)

@@ -72,13 +72,13 @@ class Importer(
 
             if (encryptDataFilesFlow.first()) {
                 try {
-                    securityUtil.decrypt(String(bytes))
+                    securityUtil.decrypt(String(bytes, Charsets.UTF_8))
                 } catch (e: Exception) {
                     // If decryption fails, assume it's plaintext
-                    String(bytes)
+                    String(bytes, Charsets.UTF_8)
                 }
             } else {
-                String(bytes)
+                String(bytes, Charsets.UTF_8)
             }
         } catch (e: IOException) {
             Log.e("Importer", "Error reading asset file: $fileName", e)
@@ -94,13 +94,13 @@ class Importer(
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
                         try {
-                            securityUtil.decrypt(String(bytes))
+                            securityUtil.decrypt(String(bytes, Charsets.UTF_8))
                         } catch (e: Exception) {
                             // If decryption fails, assume it's plaintext
-                            String(bytes)
+                            String(bytes, Charsets.UTF_8)
                         }
                     } else {
-                        String(bytes)
+                        String(bytes, Charsets.UTF_8)
                     }
                     importClassroomDataFromJson(jsonString)
                 }
