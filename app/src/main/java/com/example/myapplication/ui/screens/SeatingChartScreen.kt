@@ -81,6 +81,7 @@ import androidx.lifecycle.lifecycleScope
 import com.example.myapplication.MainActivity
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostInsight
+import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.data.BehaviorEvent
@@ -302,6 +303,14 @@ fun SeatingChartScreen(
                 offset = offset,
                 canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
             )
+
+            if (GhostConfig.GHOST_MODE_ENABLED) {
+                NeuralMapLayer(
+                    students = students,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
 
             Box(
                 modifier = Modifier
