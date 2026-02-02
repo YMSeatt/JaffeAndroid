@@ -4,9 +4,12 @@ import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 import java.security.SecureRandom
-import java.util.Base64
+import android.util.Base64
 
+@RunWith(RobolectricTestRunner::class)
 class FernetCipherTest {
 
     private val testKey = ByteArray(32).apply { SecureRandom().nextBytes(this) }
@@ -28,9 +31,9 @@ class FernetCipherTest {
         val token = cipher.encrypt(plaintext)
 
         // Tamper with the token by changing a byte
-        val decodedToken = Base64.getUrlDecoder().decode(token)
+        val decodedToken = Base64.decode(token, Base64.URL_SAFE or Base64.NO_WRAP)
         decodedToken[decodedToken.size - 1] = (decodedToken[decodedToken.size - 1] + 1).toByte()
-        val tamperedToken = Base64.getUrlEncoder().withoutPadding().encodeToString(decodedToken)
+        val tamperedToken = Base64.encodeToString(decodedToken, Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING)
 
         val exception = assertThrows(SecurityException::class.java) {
             cipher.decrypt(tamperedToken, ttl = 60)

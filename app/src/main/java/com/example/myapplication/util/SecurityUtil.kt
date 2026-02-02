@@ -30,7 +30,7 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
     companion object {
         private const val KEY_FILE_NAME = "fernet.key"
-        private const val TTL_SECONDS = 60 * 60 * 24 * 365 * 50 // 50 years (fits in Int)
+        private const val TTL_SECONDS = 60L * 60 * 24 * 365 * 100 // 100 years
 
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
@@ -123,20 +123,35 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
      * Encrypts a plaintext string.
      */
     fun encrypt(plaintext: String): String {
-        return fernetCipher.encrypt(plaintext.toByteArray())
+        return encrypt(plaintext.toByteArray(Charsets.UTF_8))
     }
 
     /**
-     * Decrypts a Fernet token. It first tries to decrypt with the new, secure key.
+     * Encrypts a plaintext byte array into a URL-safe Base64 Fernet token.
+     */
+    fun encrypt(plaintext: ByteArray): String {
+        return fernetCipher.encrypt(plaintext)
+    }
+
+    /**
+     * Decrypts a Fernet token into a UTF-8 string. It first tries to decrypt with the new, secure key.
      * If that fails, it falls back to the old, hardcoded key to support data migration.
      */
     fun decrypt(token: String): String {
+        return String(decryptToByteArray(token), Charsets.UTF_8)
+    }
+
+    /**
+     * Decrypts a Fernet token into a byte array. It first tries to decrypt with the new, secure key.
+     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     */
+    fun decryptToByteArray(token: String): ByteArray {
         return try {
-            String(fernetCipher.decrypt(token, TTL_SECONDS))
+            fernetCipher.decrypt(token, TTL_SECONDS)
         } catch (e: Exception) {
             // Fallback to old key
             val oldToken = Token.fromString(token)
-            oldToken.validateAndDecrypt(FALLBACK_KEY, StringValidator())
+            oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
         }
     }
 
@@ -159,7 +174,17 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
         }
 
         override fun getTransformer(): Function<ByteArray, String> {
-            return Function { bytes -> String(bytes) }
+            return Function { bytes -> String(bytes, Charsets.UTF_8) }
+        }
+    }
+
+    class ByteArrayValidator : Validator<ByteArray> {
+        override fun getTimeToLive(): Duration {
+            return Duration.ofDays(365 * 100) // A long TTL
+        }
+
+        override fun getTransformer(): Function<ByteArray, ByteArray> {
+            return Function { bytes -> bytes }
         }
     }
 }
@@ -228,7 +253,7 @@ class FernetCipher(private val key: ByteArray) {
      * @return The original plaintext as a byte array.
      * @throws SecurityException if the token is invalid, tampered with, or expired.
      */
-    fun decrypt(token: String, ttl: Int): ByteArray {
+    fun decrypt(token: String, ttl: Long): ByteArray {
         val decodedToken = Base64.decode(token, Base64.URL_SAFE or Base64.NO_WRAP)
         val minLength = 1 + 8 + IV_SIZE + 1 + HMAC_SIZE // version + ts + iv + min-cipher-block + hmac
         if (decodedToken.size < minLength) {
