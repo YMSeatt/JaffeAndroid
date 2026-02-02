@@ -60,7 +60,6 @@ class MainActivity : ComponentActivity() {
             seatingChartViewModel.pendingExportOptions?.let { options ->
                 lifecycleScope.launch {
                     val result = seatingChartViewModel.exportData(
-                        context = this@MainActivity,
                         uri = it,
                         options = options
                     )
@@ -754,7 +753,6 @@ fun SeatingChartScreen(
                             val uri = Uri.fromFile(file)
                             seatingChartViewModel.pendingExportOptions?.let { options ->
                                 val result = seatingChartViewModel.exportData(
-                                    context = activity,
                                     uri = uri,
                                     options = options
                                 )

@@ -38,10 +38,9 @@ class EmailWorker(
         val customHomeworkStatusDao = db.customHomeworkStatusDao()
         val pendingEmailDao = db.pendingEmailDao()
 
-        val exporter = Exporter(applicationContext)
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-
         val securityUtil = SecurityUtil(applicationContext)
+        val exporter = Exporter(applicationContext, securityUtil)
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val preferencesRepository = AppPreferencesRepository(applicationContext, securityUtil)
         val from = preferencesRepository.defaultEmailAddressFlow.first()
         val password = preferencesRepository.emailPasswordFlow.first()

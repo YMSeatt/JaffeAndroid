@@ -22,18 +22,20 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 
 /**
  * Handles the generation of Excel (.xlsx) reports from application data.
  * Supports filtering by date, students, and log types, and can optionally encrypt the output.
  *
  * @param context The application context, used for accessing files and content resolver.
+ * @param securityUtil The security utility for encryption/decryption.
  */
-class Exporter(
-    private val context: Context
+class Exporter @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val securityUtil: SecurityUtil
 ) {
-
-    private val securityUtil = SecurityUtil(context)
 
     /**
      * Exports students, behavior events, homework logs, and quiz logs to an Excel file.
@@ -138,7 +140,7 @@ class Exporter(
         context.contentResolver.openFileDescriptor(uri, "w")?.use {
             FileOutputStream(it.fileDescriptor).use { outputStream ->
                 if (encrypt) {
-                    val encryptedToken = securityUtil.encrypt(String(fileContent))
+                    val encryptedToken = securityUtil.encrypt(fileContent)
                     outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
                 } else {
                     outputStream.write(fileContent)

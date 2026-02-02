@@ -107,7 +107,8 @@ class SeatingChartViewModel @Inject constructor(
     private val customHomeworkTypeDao: CustomHomeworkTypeDao,
     private val systemBehaviorDao: SystemBehaviorDao,
     private val appPreferencesRepository: AppPreferencesRepository,
-    private val application: Application
+    private val application: Application,
+    private val exporter: com.example.myapplication.data.exporter.Exporter
 ) : ViewModel() {
 
     val allStudents: LiveData<List<Student>>
@@ -536,7 +537,6 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     suspend fun exportData(
-        context: Context,
         uri: Uri,
         options: com.example.myapplication.data.exporter.ExportOptions
     ): Result<Unit> = withContext(Dispatchers.IO) {
@@ -546,10 +546,9 @@ class SeatingChartViewModel @Inject constructor(
         val quizLogs = quizLogDao.getAllQuizLogsList()
         val studentGroups = studentGroupDao.getAllStudentGroupsList()
         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-        val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
-        val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
+        val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+        val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
-        val exporter = com.example.myapplication.data.exporter.Exporter(context)
         exporter.export(
             uri = uri,
             options = options,

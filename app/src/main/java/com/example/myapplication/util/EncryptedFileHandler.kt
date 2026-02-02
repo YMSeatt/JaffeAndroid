@@ -9,12 +9,11 @@ import javax.inject.Inject
 
 /**
  * Handles reading and writing encrypted files, with a graceful fallback to plaintext.
+ * Use this for text-based files like JSON data.
  */
 class EncryptedFileHandler @Inject constructor(
-    @ApplicationContext context: Context
+    private val securityUtil: SecurityUtil
 ) {
-
-    private val securityUtil = SecurityUtil(context)
 
     /**
      * Reads a file, attempts to decrypt it, and returns the content as a string.
@@ -34,6 +33,7 @@ class EncryptedFileHandler @Inject constructor(
 
         // Try to decrypt first
         return try {
+            // We expect the file to contain a URL-safe Base64 Fernet token (which is a string)
             securityUtil.decrypt(String(fileContentBytes, StandardCharsets.UTF_8))
         } catch (e: SecurityException) {
             // If decryption fails, assume it's plaintext
