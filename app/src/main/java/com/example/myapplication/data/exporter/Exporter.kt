@@ -23,12 +23,33 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * Handles the generation of Excel (.xlsx) reports from application data.
+ * Supports filtering by date, students, and log types, and can optionally encrypt the output.
+ *
+ * @param context The application context, used for accessing files and content resolver.
+ */
 class Exporter(
     private val context: Context
 ) {
 
     private val securityUtil = SecurityUtil(context)
 
+    /**
+     * Exports students, behavior events, homework logs, and quiz logs to an Excel file.
+     *
+     * @param uri The Uri where the Excel file will be written.
+     * @param options Configuration for what data to include and how to format it.
+     * @param students List of all students.
+     * @param behaviorEvents List of behavior events to filter and export.
+     * @param homeworkLogs List of homework logs to filter and export.
+     * @param quizLogs List of quiz logs to filter and export.
+     * @param studentGroups List of student groups for group info sheet.
+     * @param quizMarkTypes Configuration for quiz marks (points, total contribution).
+     * @param customHomeworkTypes List of user-defined homework categories.
+     * @param customHomeworkStatuses List of user-defined homework status labels.
+     * @param encrypt Whether to encrypt the resulting Excel file using Fernet.
+     */
     suspend fun export(
         uri: Uri,
         options: ExportOptions,
@@ -126,6 +147,15 @@ class Exporter(
         }
     }
 
+    /**
+     * Creates a single worksheet in the given workbook and populates it with log data.
+     * Handles dynamic headers for Homework logs based on custom types and status.
+     *
+     * @param workbook The Apache POI Workbook instance.
+     * @param sheetName The name of the sheet to create.
+     * @param data The list of log entries (BehaviorEvent, HomeworkLog, or QuizLog).
+     * @param students Map of student IDs to Student objects for quick lookup.
+     */
     private suspend fun createSheet(
         workbook: Workbook,
         sheetName: String,
@@ -399,6 +429,12 @@ class Exporter(
         // }
     }
 
+    /**
+     * Creates a 'Summary' sheet containing aggregated statistics:
+     * - Behavior counts by student.
+     * - Quiz averages and attempt counts by student.
+     * - Homework completion counts and total points by student.
+     */
     private suspend fun createSummarySheet(
         workbook: Workbook,
         data: List<Any>,
@@ -541,6 +577,9 @@ class Exporter(
         // }
     }
 
+    /**
+     * Creates a separate worksheet for each student that has associated log entries.
+     */
     private suspend fun createIndividualStudentSheets(
         workbook: Workbook,
         data: List<Any>,
@@ -575,6 +614,9 @@ class Exporter(
         }
     }
 
+    /**
+     * Creates a 'Students Info' sheet with basic demographic and group assignment details.
+     */
     private suspend fun createStudentInfoSheet(workbook: Workbook, students: List<Student>, studentGroups: Map<Long, StudentGroup>) {
         val sheet = workbook.createSheet("Students Info")
         val headerRow = sheet.createRow(0)
