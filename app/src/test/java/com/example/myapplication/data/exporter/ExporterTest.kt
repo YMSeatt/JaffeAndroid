@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.example.myapplication.data.*
+import com.example.myapplication.util.SecurityUtil
 import io.mockk.every
 import io.mockk.mockk
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -37,7 +38,8 @@ class ExporterTest {
         every { pfd.fileDescriptor } returns fos.fd
         every { contentResolver.openFileDescriptor(uri, "w") } returns pfd
 
-        val exporter = Exporter(context)
+        val securityUtil = SecurityUtil(context)
+        val exporter = Exporter(context, securityUtil)
 
         val students = listOf(Student(id = 1, firstName = "John", lastName = "Doe", stringId = "1"))
         val behaviorEvents = listOf(BehaviorEvent(id = 1, studentId = 1, type = "Participation", timestamp = System.currentTimeMillis(), comment = "test comment"))
@@ -127,7 +129,8 @@ class ExporterTest {
         every { pfd.fileDescriptor } returns fos.fd
         every { contentResolver.openFileDescriptor(uri, "w") } returns pfd
 
-        val exporter = Exporter(context)
+        val securityUtil = SecurityUtil(context)
+        val exporter = Exporter(context, securityUtil)
 
         val students = listOf(Student(id = 1, firstName = "John", lastName = "Doe", stringId = "1"))
         val quizLogs = listOf(QuizLog(id = 1, studentId = 1, quizName = "Math Quiz", markValue = 10.0, maxMarkValue = 10.0, loggedAt = System.currentTimeMillis(), comment = null, marksData = "{}", numQuestions = 10, markType = "pts"))
