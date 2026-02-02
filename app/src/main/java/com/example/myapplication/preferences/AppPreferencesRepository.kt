@@ -15,6 +15,7 @@ import com.example.myapplication.data.EmailSchedule
 import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,6 +39,29 @@ const val DEFAULT_STUDENT_FONT_SIZE_SP = 16 // Example size in SP
 const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
 const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0 // 0 means no timeout
+
+data class UserPreferences(
+    val recentBehaviorIncidentsLimit: Int,
+    val recentHomeworkLogsLimit: Int,
+    val recentLogsLimit: Int,
+    val maxRecentLogsToDisplay: Int,
+    val useInitialsForBehavior: Boolean,
+    val useInitialsForHomework: Boolean,
+    val useInitialsForQuiz: Boolean,
+    val behaviorInitialsMap: String,
+    val homeworkInitialsMap: String,
+    val quizInitialsMap: String,
+    val studentLogsLastCleared: Map<Long, Long>,
+    val behaviorDisplayTimeout: Int,
+    val homeworkDisplayTimeout: Int,
+    val quizDisplayTimeout: Int,
+    val defaultStudentStyle: DefaultStudentStyle,
+    val autoExpandStudentBoxes: Boolean,
+    val editModeEnabled: Boolean,
+    val gridSnapEnabled: Boolean,
+    val gridSize: Int,
+    val noAnimations: Boolean
+)
 
 class AppPreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -808,6 +832,52 @@ class AppPreferencesRepository @Inject constructor(
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.SMTP_SETTINGS] = Json.encodeToString(smtpSettings)
         }
+    }
+
+    val userPreferencesFlow: Flow<UserPreferences> = combine(
+        recentBehaviorIncidentsLimitFlow,
+        recentHomeworkLogsLimitFlow,
+        recentLogsLimitFlow,
+        maxRecentLogsToDisplayFlow,
+        useInitialsForBehaviorFlow,
+        useInitialsForHomeworkFlow,
+        useInitialsForQuizFlow,
+        behaviorInitialsMapFlow,
+        homeworkInitialsMapFlow,
+        quizInitialsMapFlow,
+        studentLogsLastClearedFlow,
+        behaviorDisplayTimeoutFlow,
+        homeworkDisplayTimeoutFlow,
+        quizDisplayTimeoutFlow,
+        defaultStudentStyleFlow,
+        autoExpandStudentBoxesFlow,
+        editModeEnabledFlow,
+        gridSnapEnabledFlow,
+        gridSizeFlow,
+        noAnimationsFlow
+    ) { args ->
+        UserPreferences(
+            recentBehaviorIncidentsLimit = args[0] as Int,
+            recentHomeworkLogsLimit = args[1] as Int,
+            recentLogsLimit = args[2] as Int,
+            maxRecentLogsToDisplay = args[3] as Int,
+            useInitialsForBehavior = args[4] as Boolean,
+            useInitialsForHomework = args[5] as Boolean,
+            useInitialsForQuiz = args[6] as Boolean,
+            behaviorInitialsMap = args[7] as String,
+            homeworkInitialsMap = args[8] as String,
+            quizInitialsMap = args[9] as String,
+            studentLogsLastCleared = args[10] as Map<Long, Long>,
+            behaviorDisplayTimeout = args[11] as Int,
+            homeworkDisplayTimeout = args[12] as Int,
+            quizDisplayTimeout = args[13] as Int,
+            defaultStudentStyle = args[14] as DefaultStudentStyle,
+            autoExpandStudentBoxes = args[15] as Boolean,
+            editModeEnabled = args[16] as Boolean,
+            gridSnapEnabled = args[17] as Boolean,
+            gridSize = args[18] as Int,
+            noAnimations = args[19] as Boolean
+        )
     }
 }
 

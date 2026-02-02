@@ -57,7 +57,6 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
-import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -65,7 +64,6 @@ import kotlin.math.roundToInt
 fun StudentDraggableIcon(
     studentUiItem: StudentUiItem,
     viewModel: SeatingChartViewModel,
-    settingsViewModel: SettingsViewModel,
     showBehavior: Boolean,
     canvasSize: androidx.compose.ui.unit.IntSize,
     isSelected: Boolean,
@@ -73,15 +71,15 @@ fun StudentDraggableIcon(
     onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean,
+    editModeEnabled: Boolean,
+    gridSnapEnabled: Boolean,
+    gridSize: Int,
+    autoExpandEnabled: Boolean,
     canvasScale: Float,
     canvasOffset: Offset
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
-    val editModeEnabled by settingsViewModel.editModeEnabled.collectAsState()
-    val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
-    val gridSize by settingsViewModel.gridSize.collectAsState()
-    val autoExpandEnabled by settingsViewModel.autoExpandStudentBoxes.collectAsState()
     var width by remember { mutableStateOf(studentUiItem.displayWidth.value) }
     var height by remember { mutableStateOf(studentUiItem.displayHeight.value) }
     var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
