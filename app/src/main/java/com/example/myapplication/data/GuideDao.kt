@@ -13,7 +13,7 @@ interface GuideDao {
     fun getAllGuides(): Flow<List<Guide>>
 
     @Insert
-    suspend fun insert(guide: Guide)
+    suspend fun insert(guide: Guide): Long
 
     @Update
     suspend fun update(guide: Guide)
