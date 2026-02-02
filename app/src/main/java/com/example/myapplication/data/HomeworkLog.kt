@@ -6,6 +6,9 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
+/**
+ * Represents a record of a student's homework completion status.
+ */
 @Serializable
 @Entity(
     tableName = "homework_logs",
@@ -22,11 +25,16 @@ import kotlinx.serialization.Serializable
 data class HomeworkLog(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
+    /** The ID of the student associated with this log. */
     val studentId: Long,
+    /** Name of the homework assignment or session. */
     val assignmentName: String,
+    /** General status (e.g., "Done", "Not Done", "Signed"). */
     val status: String,
     val loggedAt: Long = System.currentTimeMillis(),
     val comment: String? = null,
-    val marksData: String? = null, // New field to store marks as a JSON string
+    /** A JSON string representing complex marks or effort scores. */
+    val marksData: String? = null,
+    /** Whether the homework recording session is finished. */
     val isComplete: Boolean = false
 )
