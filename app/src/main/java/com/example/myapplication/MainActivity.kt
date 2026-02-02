@@ -23,7 +23,6 @@ import com.example.myapplication.ui.model.SessionType
 import com.example.myapplication.ui.screens.RemindersScreen
 import com.example.myapplication.ui.screens.SeatingChartScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
-import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StatsViewModel
@@ -38,7 +37,6 @@ import androidx.activity.result.ActivityResultLauncher
 class MainActivity : ComponentActivity() {
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
-    private val guideViewModel: GuideViewModel by viewModels()
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
     private val statsViewModel: StatsViewModel by viewModels()
 
@@ -153,7 +151,6 @@ class MainActivity : ComponentActivity() {
                             seatingChartViewModel = seatingChartViewModel,
                             settingsViewModel = settingsViewModel,
                             studentGroupsViewModel = studentGroupsViewModel,
-                            guideViewModel = guideViewModel,
                             onNavigateToSettings = {
                                 startActivity(Intent(this, SettingsActivity::class.java))
                             },

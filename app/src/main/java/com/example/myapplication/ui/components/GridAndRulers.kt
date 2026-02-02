@@ -19,7 +19,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Guide
 import com.example.myapplication.data.GuideType
-import com.example.myapplication.viewmodel.GuideViewModel
+import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -27,7 +27,7 @@ import kotlin.math.floor
 @Composable
 fun GridAndRulers(
     settingsViewModel: SettingsViewModel,
-    guideViewModel: GuideViewModel,
+    seatingChartViewModel: SeatingChartViewModel,
     scale: Float,
     offset: Offset,
     canvasSize: androidx.compose.ui.geometry.Size
@@ -35,7 +35,7 @@ fun GridAndRulers(
     val showGrid by settingsViewModel.showGrid.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
     val showRulers by settingsViewModel.showRulers.collectAsState()
-    val guides by guideViewModel.guides.collectAsState(initial = emptyList())
+    val guides by seatingChartViewModel.allGuides.collectAsState()
     var draggedGuide by remember { mutableStateOf<Guide?>(null) }
 
     val canvasBackgroundColor by settingsViewModel.canvasBackgroundColor.collectAsState()
@@ -75,7 +75,11 @@ fun GridAndRulers(
                 },
                 onDragEnd = {
                     draggedGuide?.let {
-                        guideViewModel.updateGuide(it)
+                        // Find the original guide to get its old position for the command
+                        val originalGuide = guides.find { g -> g.id == it.id }
+                        if (originalGuide != null) {
+                            seatingChartViewModel.updateGuidePosition(originalGuide, it.position)
+                        }
                     }
                     draggedGuide = null
                 }

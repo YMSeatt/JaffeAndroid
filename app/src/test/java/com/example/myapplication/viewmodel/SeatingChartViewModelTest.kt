@@ -61,6 +61,8 @@ class SeatingChartViewModelTest {
     @MockK(relaxed = true)
     lateinit var systemBehaviorDao: SystemBehaviorDao
     @MockK(relaxed = true)
+    lateinit var guideDao: GuideDao
+    @MockK(relaxed = true)
     lateinit var appPreferencesRepository: AppPreferencesRepository
     @MockK(relaxed = true)
     lateinit var application: Application
@@ -117,6 +119,7 @@ class SeatingChartViewModelTest {
         every { customBehaviorDao.getAllCustomBehaviors() } returns androidx.lifecycle.MutableLiveData(emptyList())
         every { customHomeworkTypeDao.getAllCustomHomeworkTypes() } returns androidx.lifecycle.MutableLiveData(emptyList())
         every { systemBehaviorDao.getAllSystemBehaviors() } returns flowOf(emptyList())
+        every { guideDao.getAllGuides() } returns flowOf(emptyList())
 
         viewModel = SeatingChartViewModel(
             repository,
@@ -134,6 +137,7 @@ class SeatingChartViewModelTest {
             customBehaviorDao,
             customHomeworkTypeDao,
             systemBehaviorDao,
+            guideDao,
             appPreferencesRepository,
             application
         )

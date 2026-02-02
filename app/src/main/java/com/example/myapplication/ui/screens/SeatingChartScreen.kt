@@ -111,7 +111,6 @@ import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.captureComposable
 import com.example.myapplication.util.toTitleCase
-import com.example.myapplication.viewmodel.GuideViewModel
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
@@ -123,7 +122,6 @@ fun SeatingChartScreen(
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
     studentGroupsViewModel: StudentGroupsViewModel,
-    guideViewModel: GuideViewModel,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataViewer: () -> Unit,
     onNavigateToReminders: () -> Unit,
@@ -241,7 +239,6 @@ fun SeatingChartScreen(
                 editModeEnabled = editModeEnabled,
                 seatingChartViewModel = seatingChartViewModel,
                 settingsViewModel = settingsViewModel,
-                guideViewModel = guideViewModel,
                 onShowSaveLayout = { showSaveLayoutDialog = true },
                 onShowLoadLayout = { showLoadLayoutDialog = true },
                 onShowExport = { showExportDialog = true },
@@ -300,7 +297,7 @@ fun SeatingChartScreen(
         ) {
             GridAndRulers(
                 settingsViewModel = settingsViewModel,
-                guideViewModel = guideViewModel,
+                seatingChartViewModel = seatingChartViewModel,
                 scale = scale,
                 offset = offset,
                 canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
@@ -717,7 +714,6 @@ fun SeatingChartTopAppBar(
     editModeEnabled: Boolean,
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
-    guideViewModel: GuideViewModel,
     onShowSaveLayout: () -> Unit,
     onShowLoadLayout: () -> Unit,
     onShowExport: () -> Unit,
@@ -895,9 +891,12 @@ fun SeatingChartTopAppBar(
                     DropdownMenuItem(text = { Text("Load Saved Layout") }, onClick = { onShowLoadLayout(); showLayoutSubMenu = false }, leadingIcon = { Icon(Icons.Default.CloudDownload, null) })
                 }
                 DropdownMenu(expanded = showGuidesSubMenu, onDismissRequest = { showGuidesSubMenu = false }) {
-                    DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { guideViewModel.addGuide(GuideType.VERTICAL); showGuidesSubMenu = false })
-                    DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { guideViewModel.addGuide(GuideType.HORIZONTAL); showGuidesSubMenu = false })
-                    DropdownMenuItem(text = { Text("Clear All Guides") }, onClick = { guideViewModel.guides.value.forEach { guideViewModel.deleteGuide(it) }; showGuidesSubMenu = false })
+                    DropdownMenuItem(text = { Text("Add Vertical Guide") }, onClick = { seatingChartViewModel.addGuide(GuideType.VERTICAL); showGuidesSubMenu = false })
+                    DropdownMenuItem(text = { Text("Add Horizontal Guide") }, onClick = { seatingChartViewModel.addGuide(GuideType.HORIZONTAL); showGuidesSubMenu = false })
+                    DropdownMenuItem(text = { Text("Clear All Guides") }, onClick = {
+                        seatingChartViewModel.allGuides.value.forEach { seatingChartViewModel.deleteGuide(it) }
+                        showGuidesSubMenu = false
+                    })
                 }
                 DropdownMenu(expanded = showAppearanceSubMenu, onDismissRequest = { showAppearanceSubMenu = false }) {
                     AppTheme.entries.forEach { theme ->

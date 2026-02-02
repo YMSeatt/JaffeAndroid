@@ -17,14 +17,17 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.example.myapplication.commands.AddFurnitureCommand
+import com.example.myapplication.commands.AddGuideCommand
 import com.example.myapplication.commands.AddStudentCommand
 import com.example.myapplication.commands.Command
+import com.example.myapplication.commands.DeleteGuideCommand
 import com.example.myapplication.commands.DeleteStudentCommand
 import com.example.myapplication.commands.LoadLayoutCommand
 import com.example.myapplication.commands.LogBehaviorCommand
 import com.example.myapplication.commands.LogHomeworkCommand
 import com.example.myapplication.commands.LogQuizCommand
 import com.example.myapplication.commands.MoveFurnitureCommand
+import com.example.myapplication.commands.MoveGuideCommand
 import com.example.myapplication.commands.MoveStudentCommand
 import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
@@ -38,6 +41,9 @@ import com.example.myapplication.data.CustomHomeworkTypeDao
 import com.example.myapplication.data.Furniture
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.FurnitureLayout
+import com.example.myapplication.data.Guide
+import com.example.myapplication.data.GuideDao
+import com.example.myapplication.data.GuideType
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkLogDao
 import com.example.myapplication.data.HomeworkTemplate
@@ -71,12 +77,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
@@ -106,6 +114,7 @@ class SeatingChartViewModel @Inject constructor(
     private val customBehaviorDao: CustomBehaviorDao,
     private val customHomeworkTypeDao: CustomHomeworkTypeDao,
     private val systemBehaviorDao: SystemBehaviorDao,
+    private val guideDao: GuideDao,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val application: Application
 ) : ViewModel() {
@@ -118,6 +127,8 @@ class SeatingChartViewModel @Inject constructor(
     val allHomeworkLogs: LiveData<List<HomeworkLog>>
     val allQuizLogs: LiveData<List<QuizLog>>
     val allRules: LiveData<List<com.example.myapplication.data.ConditionalFormattingRule>>
+    val allGuides: StateFlow<List<Guide>> = guideDao.getAllGuides()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val studentsForDisplay = MediatorLiveData<List<StudentUiItem>>()
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
@@ -918,6 +929,40 @@ class SeatingChartViewModel @Inject constructor(
 
     suspend fun getFurnitureById(furnitureId: Int): Furniture? = withContext(Dispatchers.IO) {
         return@withContext repository.getFurnitureById(furnitureId.toLong())
+    }
+
+    // Guide operations
+    fun addGuide(type: GuideType) {
+        viewModelScope.launch {
+            val command = AddGuideCommand(this@SeatingChartViewModel, Guide(type = type, position = 0f))
+            executeCommand(command)
+        }
+    }
+
+    fun updateGuidePosition(guide: Guide, newPosition: Float) {
+        viewModelScope.launch {
+            val command = MoveGuideCommand(this@SeatingChartViewModel, guide, guide.position, newPosition)
+            executeCommand(command)
+        }
+    }
+
+    fun deleteGuide(guide: Guide) {
+        viewModelScope.launch {
+            val command = DeleteGuideCommand(this@SeatingChartViewModel, guide)
+            executeCommand(command)
+        }
+    }
+
+    suspend fun internalAddGuide(guide: Guide): Long = withContext(Dispatchers.IO) {
+        guideDao.insert(guide)
+    }
+
+    suspend fun internalUpdateGuide(guide: Guide) = withContext(Dispatchers.IO) {
+        guideDao.update(guide)
+    }
+
+    suspend fun internalDeleteGuide(guide: Guide) = withContext(Dispatchers.IO) {
+        guideDao.delete(guide)
     }
 
     // Layout operations
