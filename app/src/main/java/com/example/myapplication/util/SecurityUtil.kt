@@ -30,7 +30,7 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
     companion object {
         private const val KEY_FILE_NAME = "fernet.key"
-        private const val TTL_SECONDS = 60 * 60 * 24 * 365 * 100 // 100 years
+        private const val TTL_SECONDS = 60 * 60 * 24 * 365 * 50 // 50 years (fits in Int)
 
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
