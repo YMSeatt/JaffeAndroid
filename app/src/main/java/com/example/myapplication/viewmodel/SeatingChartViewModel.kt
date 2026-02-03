@@ -73,6 +73,7 @@ import com.example.myapplication.ui.model.toUiItem
 import com.example.myapplication.util.CollisionDetector
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.EmailWorker
+import com.example.myapplication.util.SecurityUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -120,6 +121,7 @@ class SeatingChartViewModel @Inject constructor(
     private val systemBehaviorDao: SystemBehaviorDao,
     private val guideDao: GuideDao,
     private val appPreferencesRepository: AppPreferencesRepository,
+    private val securityUtil: SecurityUtil,
     private val application: Application
 ) : ViewModel() {
 
@@ -531,7 +533,7 @@ class SeatingChartViewModel @Inject constructor(
             quizMarkTypes = quizMarkTypes,
             customHomeworkTypes = customHomeworkTypes,
             customHomeworkStatuses = customHomeworkStatuses,
-            encrypt = false
+            encrypt = options.encrypt
         )
         return@withContext Result.success(Unit)
     }
@@ -1198,8 +1200,8 @@ class SeatingChartViewModel @Inject constructor(
                         .setInputData(
                             workDataOf(
                                 "request_type" to "on_stop_export",
-                                "email_address" to email,
-                                "export_options" to exportOptionsJson
+                                "email_address" to securityUtil.encrypt(email),
+                                "export_options" to securityUtil.encrypt(exportOptionsJson)
                             )
                         )
                         .build()
