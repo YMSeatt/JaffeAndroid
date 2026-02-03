@@ -28,6 +28,9 @@ import com.example.myapplication.commands.LogHomeworkCommand
 import com.example.myapplication.commands.LogQuizCommand
 import com.example.myapplication.commands.MoveFurnitureCommand
 import com.example.myapplication.commands.MoveGuideCommand
+import com.example.myapplication.commands.MoveItemsCommand
+import com.example.myapplication.commands.ItemMove
+import com.example.myapplication.commands.ItemType
 import com.example.myapplication.commands.MoveStudentCommand
 import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
@@ -726,41 +729,51 @@ class SeatingChartViewModel @Inject constructor(
             if (selectedUiItems.isNullOrEmpty()) return@launch
             val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true } ?: return@launch
 
+            val moves = mutableListOf<ItemMove>()
             when (alignment) {
                 "top" -> {
                     val topY = selectedUiItems.minOf { it.yPosition.value }
-                    selectedUiItems.forEach { it.yPosition.value = topY }
                     selectedStudents.forEach { student ->
-                        val newStudent = student.copy(yPosition = topY)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        if (student.yPosition != topY) {
+                            selectedUiItems.find { it.id == student.id.toInt() }?.yPosition?.value = topY
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, student.xPosition, topY, student = student))
+                        }
                     }
                 }
                 "bottom" -> {
                     val bottomY = selectedUiItems.maxOf { it.yPosition.value + it.displayHeight.value.value }
-                    selectedUiItems.forEach { it.yPosition.value = bottomY - it.displayHeight.value.value }
                     selectedStudents.forEach { student ->
                         val uiItem = selectedUiItems.find { it.id == student.id.toInt() } ?: return@forEach
-                        val newStudent = student.copy(yPosition = bottomY - uiItem.displayHeight.value.value)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        val newY = bottomY - uiItem.displayHeight.value.value
+                        if (student.yPosition != newY) {
+                            uiItem.yPosition.value = newY
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, student.xPosition, newY, student = student))
+                        }
                     }
                 }
                 "left" -> {
                     val leftX = selectedUiItems.minOf { it.xPosition.value }
-                    selectedUiItems.forEach { it.xPosition.value = leftX }
                     selectedStudents.forEach { student ->
-                        val newStudent = student.copy(xPosition = leftX)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        if (student.xPosition != leftX) {
+                            selectedUiItems.find { it.id == student.id.toInt() }?.xPosition?.value = leftX
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, leftX, student.yPosition, student = student))
+                        }
                     }
                 }
                 "right" -> {
                     val rightX = selectedUiItems.maxOf { it.xPosition.value + it.displayWidth.value.value }
-                    selectedUiItems.forEach { it.xPosition.value = rightX - it.displayWidth.value.value }
                     selectedStudents.forEach { student ->
                         val uiItem = selectedUiItems.find { it.id == student.id.toInt() } ?: return@forEach
-                        val newStudent = student.copy(xPosition = rightX - uiItem.displayWidth.value.value)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        val newX = rightX - uiItem.displayWidth.value.value
+                        if (student.xPosition != newX) {
+                            uiItem.xPosition.value = newX
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, newX, student.yPosition, student = student))
+                        }
                     }
                 }
+            }
+            if (moves.isNotEmpty()) {
+                executeCommand(MoveItemsCommand(this@SeatingChartViewModel, moves))
             }
         }
     }
@@ -771,19 +784,21 @@ class SeatingChartViewModel @Inject constructor(
             if (selectedUiItems.isNullOrEmpty() || selectedUiItems.size < 2) return@launch
             val selectedStudents = allStudents.value?.filter { selectedStudentIds.value?.contains(it.id.toInt()) == true } ?: return@launch
 
+            val moves = mutableListOf<ItemMove>()
             when (distribution) {
                 "horizontal" -> {
                     selectedUiItems.sortBy { it.xPosition.value }
                     val minX = selectedUiItems.first().xPosition.value
                     val maxX = selectedUiItems.last().xPosition.value + selectedUiItems.last().displayWidth.value.value
                     val totalWidth = selectedUiItems.sumOf { it.displayWidth.value.value.toDouble() }.toFloat()
-                    val spacing = (maxX - minX - totalWidth) / (selectedUiItems.size - 1)
+                    val spacing = if (selectedUiItems.size > 1) (maxX - minX - totalWidth) / (selectedUiItems.size - 1) else 0f
                     var currentX = minX
                     selectedUiItems.forEach { uiItem ->
-                        uiItem.xPosition.value = currentX
                         val student = selectedStudents.find { it.id == uiItem.id.toLong() } ?: return@forEach
-                        val newStudent = student.copy(xPosition = currentX)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        if (student.xPosition != currentX) {
+                            uiItem.xPosition.value = currentX
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, currentX, student.yPosition, student = student))
+                        }
                         currentX += uiItem.displayWidth.value.value + spacing
                     }
                 }
@@ -792,16 +807,20 @@ class SeatingChartViewModel @Inject constructor(
                     val minY = selectedUiItems.first().yPosition.value
                     val maxY = selectedUiItems.last().yPosition.value + selectedUiItems.last().displayHeight.value.value
                     val totalHeight = selectedUiItems.sumOf { it.displayHeight.value.value.toDouble() }.toFloat()
-                    val spacing = (maxY - minY - totalHeight) / (selectedUiItems.size - 1)
+                    val spacing = if (selectedUiItems.size > 1) (maxY - minY - totalHeight) / (selectedUiItems.size - 1) else 0f
                     var currentY = minY
                     selectedUiItems.forEach { uiItem ->
-                        uiItem.yPosition.value = currentY
                         val student = selectedStudents.find { it.id == uiItem.id.toLong() } ?: return@forEach
-                        val newStudent = student.copy(yPosition = currentY)
-                        executeCommand(UpdateStudentCommand(this@SeatingChartViewModel, student, newStudent))
+                        if (student.yPosition != currentY) {
+                            uiItem.yPosition.value = currentY
+                            moves.add(ItemMove(student.id, ItemType.STUDENT, student.xPosition, student.yPosition, student.xPosition, currentY, student = student))
+                        }
                         currentY += uiItem.displayHeight.value.value + spacing
                     }
                 }
+            }
+            if (moves.isNotEmpty()) {
+                executeCommand(MoveItemsCommand(this@SeatingChartViewModel, moves))
             }
         }
     }
@@ -951,7 +970,7 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun internalLoadLayout(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
+    suspend fun internalLoadLayout(layout: LayoutTemplate) = withContext(Dispatchers.IO) {
         try {
             val layoutData = Json.decodeFromString<LayoutData>(layout.layoutDataJson)
 
@@ -982,11 +1001,9 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun internalUpdateAll(students: List<Student>, furniture: List<Furniture>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            studentDao.updateAll(students)
-            furnitureDao.updateAll(furniture)
-        }
+    suspend fun internalUpdateAll(students: List<Student>, furniture: List<Furniture>) = withContext(Dispatchers.IO) {
+        if (students.isNotEmpty()) studentDao.updateAll(students)
+        if (furniture.isNotEmpty()) furnitureDao.updateAll(furniture)
     }
 
     fun deleteLayoutTemplate(layout: LayoutTemplate) = viewModelScope.launch(Dispatchers.IO) {
