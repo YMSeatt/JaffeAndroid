@@ -4,8 +4,13 @@ import com.example.myapplication.data.Guide
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 
 /**
- * Command to move a guide.
- * Ports logic from Python's MoveGuideCommand.
+ * Command to move an alignment guide to a new position.
+ * Captures both the old and new positions to support undo/redo.
+ *
+ * @param viewModel The ViewModel to perform the database operations.
+ * @param guide The [Guide] entity being moved.
+ * @param oldPosition The position (X for vertical, Y for horizontal) before the move.
+ * @param newPosition The position after the move.
  */
 class MoveGuideCommand(
     private val viewModel: SeatingChartViewModel,
