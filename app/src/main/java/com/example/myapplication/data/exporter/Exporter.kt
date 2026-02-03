@@ -34,6 +34,18 @@ class Exporter(
 ) {
 
     private val securityUtil = SecurityUtil(context)
+    private val gson = Gson()
+    private val mapType = object : TypeToken<Map<String, Any>>() {}.type
+
+    private data class FormattingContext(
+        val headerStyle: org.apache.poi.ss.usermodel.CellStyle,
+        val rightAlignmentStyle: org.apache.poi.ss.usermodel.CellStyle,
+        val leftAlignmentStyle: org.apache.poi.ss.usermodel.CellStyle,
+        val fullDateFormat: SimpleDateFormat,
+        val dateFormat: SimpleDateFormat,
+        val timeFormat: SimpleDateFormat,
+        val dayFormat: SimpleDateFormat
+    )
 
     /**
      * Exports students, behavior events, homework logs, and quiz logs to an Excel file.
@@ -64,6 +76,25 @@ class Exporter(
         encrypt: Boolean
     ) {
         val workbook = XSSFWorkbook()
+
+        val boldFont = workbook.createFont().apply { bold = true }
+        val formattingContext = FormattingContext(
+            headerStyle = workbook.createCellStyle().apply {
+                setFont(boldFont)
+                alignment = HorizontalAlignment.CENTER
+                verticalAlignment = VerticalAlignment.CENTER
+            },
+            rightAlignmentStyle = workbook.createCellStyle().apply {
+                alignment = HorizontalAlignment.RIGHT
+            },
+            leftAlignmentStyle = workbook.createCellStyle().apply {
+                alignment = HorizontalAlignment.LEFT
+            },
+            fullDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+            dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
+            timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault()),
+            dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+        )
 
         // Filter data
         val filteredBehaviorEvents = behaviorEvents.filter { event ->
@@ -101,27 +132,27 @@ class Exporter(
         // Create sheets
         if (options.separateSheets) {
             if (options.includeBehaviorLogs) {
-                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
             }
             if (options.includeQuizLogs) {
-                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
             }
             if (options.includeHomeworkLogs) {
-                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
             }
             if (options.includeMasterLog) {
-                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
             }
         } else {
-            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
         }
 
         if (options.includeSummarySheet) {
-            createSummarySheet(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            createSummarySheet(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
         }
 
         if (options.includeIndividualStudentSheets) {
-            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
         }
 
         if (options.includeStudentInfoSheet) {
@@ -163,21 +194,10 @@ class Exporter(
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
-        customHomeworkStatuses: List<CustomHomeworkStatus>
+        customHomeworkStatuses: List<CustomHomeworkStatus>,
+        context: FormattingContext
     ) {
         val sheet = workbook.createSheet(sheetName)
-        val boldFont = workbook.createFont().apply { bold = true }
-        val headerStyle = workbook.createCellStyle().apply {
-            setFont(boldFont)
-            alignment = HorizontalAlignment.CENTER
-            verticalAlignment = VerticalAlignment.CENTER
-        }
-        val rightAlignmentStyle = workbook.createCellStyle().apply {
-            alignment = HorizontalAlignment.RIGHT
-        }
-        val leftAlignmentStyle = workbook.createCellStyle().apply {
-            alignment = HorizontalAlignment.LEFT
-        }
 
         sheet.createFreezePane(0, 1)
 
@@ -195,8 +215,7 @@ class Exporter(
             relevantLogs.flatMap { log ->
                  try {
                      log.marksData?.let { 
-                        val type = object : TypeToken<Map<String, Any>>() {}.type
-                        Gson().fromJson<Map<String, Any>>(it, type).keys 
+                        gson.fromJson<Map<String, Any>>(it, mapType).keys
                      } ?: emptySet()
                  } catch (e: Exception) {
                      emptySet()
@@ -243,8 +262,20 @@ class Exporter(
         headers.forEachIndexed { index, header ->
             val cell = headerRow.createCell(index)
             cell.setCellValue(header)
-            cell.cellStyle = headerStyle
+            cell.cellStyle = context.headerStyle
         }
+
+        // Cache indices
+        val behaviorCol = headers.indexOf("Behavior")
+        val quizNameCol = headers.indexOf("Quiz Name")
+        val itemNameCol = headers.indexOf("Item Name")
+        val numQuestionsCol = headers.indexOf("Num Questions")
+        val quizScoreCol = headers.indexOf("Quiz Score (%)")
+        val commentCol = headers.indexOf("Comment")
+        val homeworkTypeCol = headers.indexOf("Homework Type/Session Name")
+        val homeworkScoreCol = headers.indexOf("Homework Score (Total Pts)")
+        val homeworkEffortCol = headers.indexOf("Homework Effort")
+        val markTypeIndices = quizMarkTypes.associate { it.name to headers.indexOf(it.name) }
 
         data.forEachIndexed { index, item ->
             val row = sheet.createRow(index + 1)
@@ -265,18 +296,18 @@ class Exporter(
 
             val date = Date(timestamp)
             var col = 0
-            row.createCell(col++).setCellValue(SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(date))
+            row.createCell(col++).setCellValue(context.fullDateFormat.format(date))
             row.createCell(col).apply {
-                setCellValue(SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(date))
-                cellStyle = rightAlignmentStyle
+                setCellValue(context.dateFormat.format(date))
+                cellStyle = context.rightAlignmentStyle
             }
             col++
             row.createCell(col).apply {
-                setCellValue(SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(date))
-                cellStyle = rightAlignmentStyle
+                setCellValue(context.timeFormat.format(date))
+                cellStyle = context.rightAlignmentStyle
             }
             col++
-            row.createCell(col++).setCellValue(SimpleDateFormat("EEEE", Locale.getDefault()).format(date))
+            row.createCell(col++).setCellValue(context.dayFormat.format(date))
             row.createCell(col++).setCellValue(student?.firstName ?: "Unknown")
             row.createCell(col++).setCellValue(student?.lastName ?: "")
 
@@ -293,34 +324,31 @@ class Exporter(
 
             when (item) {
                 is BehaviorEvent -> {
-                    val behaviorCol = headers.indexOf("Behavior")
-                    val targetCol = if (behaviorCol != -1) behaviorCol else headers.indexOf("Item Name")
+                    val targetCol = if (behaviorCol != -1) behaviorCol else itemNameCol
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(item.type)
                     }
-                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
-                        row.createCell(it).apply {
+                    if (commentCol != -1) {
+                        row.createCell(commentCol).apply {
                             setCellValue(item.comment ?: "")
-                            cellStyle = leftAlignmentStyle
+                            cellStyle = context.leftAlignmentStyle
                         }
                     }
                 }
                 is QuizLog -> {
-                    val quizCol = headers.indexOf("Quiz Name")
-                    val targetCol = if (quizCol != -1) quizCol else headers.indexOf("Item Name")
+                    val targetCol = if (quizNameCol != -1) quizNameCol else itemNameCol
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(item.quizName)
                     }
-                    headers.indexOf("Num Questions").takeIf { it != -1 }?.let {
-                        row.createCell(it).apply {
+                    if (numQuestionsCol != -1) {
+                        row.createCell(numQuestionsCol).apply {
                             setCellValue(item.numQuestions.toDouble())
-                            cellStyle = rightAlignmentStyle
+                            cellStyle = context.rightAlignmentStyle
                         }
                     }
 
                     val marksData = try {
-                        val type = object : TypeToken<Map<String, Any>>() {}.type
-                        Gson().fromJson<Map<String, Any>>(item.marksData, type)
+                        gson.fromJson<Map<String, Any>>(item.marksData, mapType)
                     } catch (e: Exception) {
                         emptyMap()
                     }
@@ -331,10 +359,10 @@ class Exporter(
                     quizMarkTypes.forEach { markType ->
                         val rawValue = marksData[markType.name]
                         val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
-                        val markIndex = headers.indexOf(markType.name)
+                        val markIndex = markTypeIndices[markType.name] ?: -1
                         if (markIndex != -1) row.createCell(markIndex).apply {
                             setCellValue(markCount.toDouble())
-                            cellStyle = rightAlignmentStyle
+                            cellStyle = context.rightAlignmentStyle
                         }
 
                         if (markType.contributesToTotal) {
@@ -344,28 +372,26 @@ class Exporter(
                     }
 
                     val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
-                    headers.indexOf("Quiz Score (%)").takeIf { it != -1 }?.let {
-                        row.createCell(it).apply {
+                    if (quizScoreCol != -1) {
+                        row.createCell(quizScoreCol).apply {
                             setCellValue(scorePercent)
-                            cellStyle = rightAlignmentStyle
+                            cellStyle = context.rightAlignmentStyle
                         }
                     }
-                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
-                        row.createCell(it).apply {
+                    if (commentCol != -1) {
+                        row.createCell(commentCol).apply {
                             setCellValue(item.comment ?: "")
-                            cellStyle = leftAlignmentStyle
+                            cellStyle = context.leftAlignmentStyle
                         }
                     }
                 }
                 is HomeworkLog -> {
-                    val homeworkCol = headers.indexOf("Homework Type/Session Name")
-                    val targetCol = if (homeworkCol != -1) homeworkCol else headers.indexOf("Item Name")
+                    val targetCol = if (homeworkTypeCol != -1) homeworkTypeCol else itemNameCol
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(item.assignmentName)
                     }
                     val marksData = try {
-                        val type = object : TypeToken<Map<String, Any>>() {}.type
-                        item.marksData?.let { Gson().fromJson<Map<String, Any>>(it, type) }
+                        item.marksData?.let { gson.fromJson<Map<String, Any>>(it, mapType) }
                     } catch (e: Exception) {
                         null
                     }
@@ -382,7 +408,7 @@ class Exporter(
                                 val stringValue = value.toString()
                                 row.createCell(index).apply {
                                     setCellValue(stringValue)
-                                    cellStyle = rightAlignmentStyle
+                                    cellStyle = context.rightAlignmentStyle
                                 }
                                 val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
                                 if (doubleValue != null) {
@@ -400,23 +426,23 @@ class Exporter(
                             }
                         }
 
-                        headers.indexOf("Homework Score (Total Pts)").takeIf { it != -1 }?.let {
-                            row.createCell(it).apply {
+                        if (homeworkScoreCol != -1) {
+                            row.createCell(homeworkScoreCol).apply {
                                 setCellValue(totalPoints)
-                                cellStyle = rightAlignmentStyle
+                                cellStyle = context.rightAlignmentStyle
                             }
                         }
-                        headers.indexOf("Homework Effort").takeIf { it != -1 }?.let {
-                            row.createCell(it).apply {
+                        if (homeworkEffortCol != -1) {
+                            row.createCell(homeworkEffortCol).apply {
                                 setCellValue(effort)
-                                cellStyle = rightAlignmentStyle
+                                cellStyle = context.rightAlignmentStyle
                             }
                         }
                     }
-                    headers.indexOf("Comment").takeIf { it != -1 }?.let {
-                        row.createCell(it).apply {
+                    if (commentCol != -1) {
+                        row.createCell(commentCol).apply {
                             setCellValue(item.comment ?: "")
-                            cellStyle = leftAlignmentStyle
+                            cellStyle = context.leftAlignmentStyle
                         }
                     }
                 }
@@ -441,10 +467,10 @@ class Exporter(
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
-        customHomeworkStatuses: List<CustomHomeworkStatus>
+        customHomeworkStatuses: List<CustomHomeworkStatus>,
+        context: FormattingContext
     ) {
         val sheet = workbook.createSheet("Summary")
-        val boldFont = workbook.createFont().apply { bold = true }
         var currentRow = 0
 
         // Behavior Summary
@@ -452,7 +478,7 @@ class Exporter(
         if (behaviorLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Behavior Summary by Student")
-            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+            cell.cellStyle = context.headerStyle
 
             val behaviorHeaders = listOf("Student", "Behavior", "Count")
             val headerRow = sheet.createRow(currentRow++)
@@ -481,7 +507,7 @@ class Exporter(
         if (quizLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Quiz Averages by Student")
-            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+            cell.cellStyle = context.headerStyle
 
             val quizHeaders = listOf("Student", "Quiz Name", "Avg Score (%)", "Times Taken")
             val headerRow = sheet.createRow(currentRow++)
@@ -495,8 +521,7 @@ class Exporter(
                 val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
                 // Simplified score calculation
                 val marksData = try { 
-                    val type = object : TypeToken<Map<String, Any>>() {}.type
-                    Gson().fromJson<Map<String, Any>>(log.marksData, type)
+                    gson.fromJson<Map<String, Any>>(log.marksData, mapType)
                 } catch (e: Exception) { emptyMap() }
                 var totalScore = 0.0
                 var totalPossible = 0.0
@@ -532,7 +557,7 @@ class Exporter(
         if (homeworkLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Homework Completion by Student")
-            cell.cellStyle = workbook.createCellStyle().apply { setFont(boldFont) }
+            cell.cellStyle = context.headerStyle
 
             val homeworkHeaders = listOf("Student", "Homework Type/Session", "Count", "Total Points (if applicable)")
             val headerRow = sheet.createRow(currentRow++)
@@ -547,8 +572,7 @@ class Exporter(
                 var points = 0.0
                 log.marksData?.let {
                     val marks = try { 
-                        val type = object : TypeToken<Map<String, Any>>() {}.type
-                        Gson().fromJson<Map<String, Any>>(it, type)
+                        gson.fromJson<Map<String, Any>>(it, mapType)
                     } catch (e: Exception) { emptyMap() }
                     marks.values.forEach { value ->
                          val doubleVal = if (value is Number) value.toDouble() else value.toString().toDoubleOrNull()
@@ -586,7 +610,8 @@ class Exporter(
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
-        customHomeworkStatuses: List<CustomHomeworkStatus>
+        customHomeworkStatuses: List<CustomHomeworkStatus>,
+        context: FormattingContext
     ) {
         val studentsWithLogs = data.map {
             when (it) {
@@ -609,7 +634,7 @@ class Exporter(
                         else -> false
                     }
                 }
-                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses)
+                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context)
             }
         }
     }
