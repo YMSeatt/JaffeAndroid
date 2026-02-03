@@ -76,6 +76,7 @@ import com.example.myapplication.ui.model.toUiItem
 import com.example.myapplication.util.CollisionDetector
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.EmailWorker
+import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.util.SecurityUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -1202,6 +1203,38 @@ class SeatingChartViewModel @Inject constructor(
             val updatedStudent = student.copy(temporaryTask = null)
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
+        }
+    }
+
+    fun runCognitiveOptimization() {
+        viewModelScope.launch {
+            val students = allStudents.value ?: return@launch
+            val behaviorLogs = allBehaviorEvents.value ?: emptyList()
+
+            val optimizedPoints = withContext(Dispatchers.Default) {
+                GhostCognitiveEngine.optimizeLayout(students, behaviorLogs, 4000, 4000)
+            }
+
+            val moves = students.mapNotNull { student ->
+                val newPoint = optimizedPoints[student.id] ?: return@mapNotNull null
+                if (student.xPosition != newPoint.x || student.yPosition != newPoint.y) {
+                    ItemMove(
+                        id = student.id,
+                        itemType = ItemType.STUDENT,
+                        oldX = student.xPosition,
+                        oldY = student.yPosition,
+                        newX = newPoint.x,
+                        newY = newPoint.y,
+                        student = student
+                    )
+                } else {
+                    null
+                }
+            }
+
+            if (moves.isNotEmpty()) {
+                executeCommand(MoveItemsCommand(this@SeatingChartViewModel, moves))
+            }
         }
     }
 

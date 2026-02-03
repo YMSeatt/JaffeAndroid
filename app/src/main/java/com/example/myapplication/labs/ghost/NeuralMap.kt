@@ -12,11 +12,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
+import kotlin.math.min
 
 @Composable
 fun NeuralMapLayer(
     students: List<StudentUiItem>,
+    behaviorLogs: List<BehaviorEvent>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -38,7 +41,32 @@ fun NeuralMapLayer(
         students.filter { it.groupId != null }.groupBy { it.groupId }
     }
 
+    val negativeLogsByStudent = remember(behaviorLogs) {
+        behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
+            .groupBy { it.studentId }
+    }
+
     Canvas(modifier = modifier.fillMaxSize()) {
+        // Draw Cognitive Auras for students with many negative logs
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
+            students.forEach { student ->
+                val negativeCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
+                if (negativeCount > 2) {
+                    val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
+                    val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
+
+                    val shader = RuntimeShader(GhostShader.COGNITIVE_AURA)
+                    shader.setFloatUniform("iResolution", size.width, size.height)
+                    shader.setFloatUniform("iTime", time)
+                    shader.setFloatUniform("iCenter", centerX, centerY)
+                    shader.setFloatUniform("iColor", 1.0f, 0.2f, 0.1f) // Reddish aura
+                    shader.setFloatUniform("iIntensity", min(negativeCount / 5f, 1.0f))
+
+                    drawRect(brush = ShaderBrush(shader))
+                }
+            }
+        }
+
         groupedStudents.forEach { (_, groupMembers) ->
             if (groupMembers.size < 2) return@forEach
 
