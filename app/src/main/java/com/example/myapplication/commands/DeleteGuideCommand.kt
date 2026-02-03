@@ -4,8 +4,11 @@ import com.example.myapplication.data.Guide
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 
 /**
- * Command to delete a guide.
- * Ports logic from Python's DeleteGuideCommand.
+ * Command to remove an alignment guide from the seating chart.
+ * Reversing this command re-inserts the guide back into the database.
+ *
+ * @param viewModel The ViewModel to perform the database operations.
+ * @param guide The [Guide] entity to be deleted.
  */
 class DeleteGuideCommand(
     private val viewModel: SeatingChartViewModel,

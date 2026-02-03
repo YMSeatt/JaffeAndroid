@@ -2,6 +2,17 @@ package com.example.myapplication.commands
 
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 
+/**
+ * Command to move a furniture item to a new position on the seating chart.
+ * Captures both the old and new coordinates to support full undo/redo of movement.
+ *
+ * @param viewModel The ViewModel to perform the database operations.
+ * @param furnitureId The unique ID of the furniture item being moved.
+ * @param oldX The horizontal position before the move.
+ * @param oldY The vertical position before the move.
+ * @param newX The horizontal position after the move.
+ * @param newY The vertical position after the move.
+ */
 class MoveFurnitureCommand(
     private val viewModel: SeatingChartViewModel,
     private val furnitureId: Int,
