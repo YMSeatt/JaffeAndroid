@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
@@ -308,6 +309,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED) {
                 NeuralMapLayer(
                     students = students,
+                    behaviorLogs = allBehaviorEvents,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
@@ -858,6 +860,16 @@ fun SeatingChartTopAppBar(
                 }
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text("Neural Optimize 👻") },
+                            onClick = {
+                                seatingChartViewModel.runCognitiveOptimization()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Psychology, null, tint = MaterialTheme.colorScheme.tertiary) }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Undo History") },
                         onClick = {

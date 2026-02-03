@@ -44,4 +44,27 @@ object GhostShader {
             return float4(finalColor, 0.9);
         }
     """
+
+    @Language("AGSL")
+    const val COGNITIVE_AURA = """
+        uniform float2 iResolution;
+        uniform float iTime;
+        uniform float2 iCenter;
+        uniform float3 iColor;
+        uniform float iIntensity;
+
+        float4 main(float2 fragCoord) {
+            float2 uv = fragCoord / iResolution.xy;
+            float2 center = iCenter / iResolution.xy;
+
+            float d = distance(uv, center);
+            float aura = 0.05 / (d + 0.01);
+
+            // Pulsate
+            aura *= (sin(iTime * 5.0 - d * 20.0) * 0.2 + 0.8);
+
+            float3 color = iColor * aura * iIntensity;
+            return float4(color, color.r * 0.5);
+        }
+    """
 }
