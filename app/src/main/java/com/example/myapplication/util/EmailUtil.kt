@@ -28,6 +28,7 @@ import javax.mail.internet.MimeMultipart
 class EmailUtil(private val context: Context) {
 
     private val workManager = WorkManager.getInstance(context)
+    private val securityUtil = SecurityUtil(context)
 
     private fun isValidEmail(email: String): Boolean {
         return EMAIL_ADDRESS_PATTERN.matcher(email).matches()
@@ -51,9 +52,9 @@ class EmailUtil(private val context: Context) {
         val data = Data.Builder()
             .putString("request_type", "send_email")
             .putString("from", from)
-            .putString("to", to)
-            .putString("subject", subject)
-            .putString("body", body)
+            .putString("to", securityUtil.encrypt(to))
+            .putString("subject", securityUtil.encrypt(subject))
+            .putString("body", securityUtil.encrypt(body))
             .putString("attachment_path", attachmentPath)
             .putString("smtp_settings", kotlinx.serialization.json.Json.encodeToString(SmtpSettings.serializer(), smtpSettings))
             .build()

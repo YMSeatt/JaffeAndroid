@@ -65,6 +65,8 @@ class SeatingChartViewModelTest {
     @MockK(relaxed = true)
     lateinit var appPreferencesRepository: AppPreferencesRepository
     @MockK(relaxed = true)
+    lateinit var securityUtil: com.example.myapplication.util.SecurityUtil
+    @MockK(relaxed = true)
     lateinit var application: Application
 
     private lateinit var viewModel: SeatingChartViewModel
@@ -139,6 +141,7 @@ class SeatingChartViewModelTest {
             systemBehaviorDao,
             guideDao,
             appPreferencesRepository,
+            securityUtil,
             application
         )
     }

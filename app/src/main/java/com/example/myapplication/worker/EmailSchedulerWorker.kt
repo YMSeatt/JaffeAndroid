@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
@@ -19,6 +20,7 @@ class EmailSchedulerWorker(
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(applicationContext)
         val emailScheduleDao = db.emailScheduleDao()
+        val securityUtil = SecurityUtil(applicationContext)
 
         val schedules = emailScheduleDao.getAllSchedulesList()
         val calendar = Calendar.getInstance()
@@ -35,10 +37,10 @@ class EmailSchedulerWorker(
                         .setInputData(
                             workDataOf(
                                 "request_type" to "daily_report",
-                                "email_address" to schedule.recipientEmail,
-                                "subject" to schedule.subject,
-                                "body" to schedule.body,
-                                "export_options" to schedule.exportOptionsJson
+                                "email_address" to securityUtil.encrypt(schedule.recipientEmail),
+                                "subject" to securityUtil.encrypt(schedule.subject),
+                                "body" to securityUtil.encrypt(schedule.body),
+                                "export_options" to (schedule.exportOptionsJson?.let { securityUtil.encrypt(it) } ?: "")
                             )
                         )
                         .build()

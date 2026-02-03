@@ -63,11 +63,12 @@ class EmailWorker(
                 val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
                 val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
-                val subject = inputData.getString("subject") ?: "Daily Report - ${dateFormat.format(Date())}"
-                val body = inputData.getString("body") ?: "Please find the daily report attached."
+                val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: "Daily Report - ${dateFormat.format(Date())}"
+                val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: "Please find the daily report attached."
                 val options = inputData.getString("export_options")?.let {
                     try {
-                        Json.decodeFromString<ExportOptions>(it)
+                        val decrypted = securityUtil.decryptSafe(it)
+                        Json.decodeFromString<ExportOptions>(decrypted)
                     } catch (e: Exception) {
                         ExportOptions()
                     }
@@ -107,7 +108,7 @@ class EmailWorker(
                     encrypt = finalOptions.encrypt
                 )
 
-                val to = inputData.getString("email_address") ?: from
+                val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: from
                 if (to.isBlank()) {
                     return@withContext Result.failure()
                 }
@@ -123,9 +124,9 @@ class EmailWorker(
                 )
             }
             "send_email" -> {
-                val to = inputData.getString("to") ?: return@withContext Result.failure()
-                val subject = inputData.getString("subject") ?: return@withContext Result.failure()
-                val body = inputData.getString("body") ?: return@withContext Result.failure()
+                val to = inputData.getString("to")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                 val attachmentPath = inputData.getString("attachment_path")
                 val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
                     try {
@@ -160,8 +161,8 @@ class EmailWorker(
                 }
             }
             "on_stop_export" -> {
-                val to = inputData.getString("email_address") ?: return@withContext Result.failure()
-                val exportOptionsJson = inputData.getString("export_options") ?: return@withContext Result.failure()
+                val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                 val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
                 val file = File(applicationContext.cacheDir, "on_stop_export.xlsx")
                 val uri = FileProvider.getUriForFile(

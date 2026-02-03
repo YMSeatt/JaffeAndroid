@@ -171,12 +171,13 @@ class AppPreferencesRepository @Inject constructor(
     }
     val lastExportPathFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.LAST_EXPORT_PATH]
+            preferences[PreferencesKeys.LAST_EXPORT_PATH]?.let { securityUtil.decryptSafe(it) }
         }
 
     suspend fun updateLastExportPath(path: String) {
+        val encryptedPath = securityUtil.encrypt(path)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.LAST_EXPORT_PATH] = path
+            settings[PreferencesKeys.LAST_EXPORT_PATH] = encryptedPath
         }
     }
 
@@ -707,12 +708,14 @@ class AppPreferencesRepository @Inject constructor(
 
     val defaultEmailAddressFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: "behaviorlogger@gmail.com"
+            val value = preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: "behaviorlogger@gmail.com"
+            securityUtil.decryptSafe(value)
         }
 
     suspend fun updateDefaultEmailAddress(email: String) {
+        val encryptedEmail = securityUtil.encrypt(email)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] = email
+            settings[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] = encryptedEmail
         }
     }
 
