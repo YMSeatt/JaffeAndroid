@@ -1145,7 +1145,7 @@ class SeatingChartViewModel @Inject constructor(
 
             Log.d(
                 "SeatingChartViewModel",
-                "Quiz log added/updated in session for student ${quizLog.studentId}."
+                "Quiz log added/updated in session for student ${quizLog.studentId.toString().takeLast(4)}."
             )
         } else {
             // If not in a session, save directly to the database
@@ -1177,7 +1177,7 @@ class SeatingChartViewModel @Inject constructor(
 
             Log.d(
                 "SeatingChartViewModel",
-                "Homework log added/updated in session for student ${homeworkLog.studentId}."
+                "Homework log added/updated in session for student ${homeworkLog.studentId.toString().takeLast(4)}."
             )
         } else {
             addHomeworkLog(homeworkLog)
