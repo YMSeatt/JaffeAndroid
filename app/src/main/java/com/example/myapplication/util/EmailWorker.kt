@@ -127,10 +127,11 @@ class EmailWorker(
                 val to = inputData.getString("to")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                 val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                 val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
-                val attachmentPath = inputData.getString("attachment_path")
+                val attachmentPath = inputData.getString("attachment_path")?.let { securityUtil.decryptSafe(it) }
                 val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
                     try {
-                        Json.decodeFromString<SmtpSettings>(it)
+                        val decrypted = securityUtil.decryptSafe(it)
+                        Json.decodeFromString<SmtpSettings>(decrypted)
                     } catch (e: Exception) {
                         smtpSettings
                     }

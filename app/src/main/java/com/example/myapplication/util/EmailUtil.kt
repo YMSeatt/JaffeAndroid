@@ -51,12 +51,11 @@ class EmailUtil(private val context: Context) {
         }
         val data = Data.Builder()
             .putString("request_type", "send_email")
-            .putString("from", from)
             .putString("to", securityUtil.encrypt(to))
             .putString("subject", securityUtil.encrypt(subject))
             .putString("body", securityUtil.encrypt(body))
-            .putString("attachment_path", attachmentPath)
-            .putString("smtp_settings", kotlinx.serialization.json.Json.encodeToString(SmtpSettings.serializer(), smtpSettings))
+            .putString("attachment_path", attachmentPath?.let { securityUtil.encrypt(it) })
+            .putString("smtp_settings", securityUtil.encrypt(kotlinx.serialization.json.Json.encodeToString(SmtpSettings.serializer(), smtpSettings)))
             .build()
 
         val constraints = Constraints.Builder()

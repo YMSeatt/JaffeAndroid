@@ -824,7 +824,8 @@ class AppPreferencesRepository @Inject constructor(
         .map { preferences ->
             preferences[PreferencesKeys.SMTP_SETTINGS]?.let {
                 try {
-                    Json.decodeFromString<SmtpSettings>(it)
+                    val decrypted = securityUtil.decryptSafe(it)
+                    Json.decodeFromString<SmtpSettings>(decrypted)
                 } catch (e: Exception) {
                     SmtpSettings()
                 }
@@ -832,8 +833,10 @@ class AppPreferencesRepository @Inject constructor(
         }
 
     suspend fun updateSmtpSettings(smtpSettings: SmtpSettings) {
+        val json = Json.encodeToString(smtpSettings)
+        val encrypted = securityUtil.encrypt(json)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.SMTP_SETTINGS] = Json.encodeToString(smtpSettings)
+            settings[PreferencesKeys.SMTP_SETTINGS] = encrypted
         }
     }
 
