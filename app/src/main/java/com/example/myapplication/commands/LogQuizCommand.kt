@@ -14,12 +14,15 @@ class LogQuizCommand(
     private val viewModel: SeatingChartViewModel,
     private val log: QuizLog
 ) : Command {
+    private var generatedId: Long = log.id
+
     override suspend fun execute() {
-        viewModel.internalSaveQuizLog(log)
+        val logToInsert = if (generatedId != 0L) log.copy(id = generatedId) else log
+        generatedId = viewModel.internalSaveQuizLog(logToInsert)
     }
 
     override suspend fun undo() {
-        viewModel.deleteQuizLog(log)
+        viewModel.deleteQuizLog(log.copy(id = generatedId))
     }
 
     override fun getDescription(): String = "Log quiz: ${log.quizName}"

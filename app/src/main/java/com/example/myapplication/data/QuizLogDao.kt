@@ -11,10 +11,10 @@ import androidx.room.Update
 @Dao
 interface QuizLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(log: QuizLog)
+    suspend fun insert(log: QuizLog): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(logs: List<QuizLog>)
+    suspend fun insertAll(logs: List<QuizLog>): List<Long>
 
     @Update
     suspend fun updateQuizLog(log: QuizLog)

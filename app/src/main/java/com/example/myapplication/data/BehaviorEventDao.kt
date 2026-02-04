@@ -10,7 +10,7 @@ import androidx.room.Update
 @Dao
 interface BehaviorEventDao {
     @Insert
-    suspend fun insert(event: BehaviorEvent)
+    suspend fun insert(event: BehaviorEvent): Long
 
     @Delete
     suspend fun delete(event: BehaviorEvent)

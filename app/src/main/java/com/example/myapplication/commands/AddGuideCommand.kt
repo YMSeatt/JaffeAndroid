@@ -14,17 +14,15 @@ class AddGuideCommand(
     private val viewModel: SeatingChartViewModel,
     private val guide: Guide
 ) : Command {
-    private var insertedGuide: Guide? = null
+    private var generatedId: Long = guide.id
 
     override suspend fun execute() {
-        val id = viewModel.internalAddGuide(guide)
-        insertedGuide = guide.copy(id = id)
+        val guideToInsert = if (generatedId != 0L) guide.copy(id = generatedId) else guide
+        generatedId = viewModel.internalAddGuide(guideToInsert)
     }
 
     override suspend fun undo() {
-        insertedGuide?.let {
-            viewModel.internalDeleteGuide(it)
-        }
+        viewModel.internalDeleteGuide(guide.copy(id = generatedId))
     }
 
     override fun getDescription(): String = "Add ${guide.type.name.lowercase()} guide at ${guide.position}"

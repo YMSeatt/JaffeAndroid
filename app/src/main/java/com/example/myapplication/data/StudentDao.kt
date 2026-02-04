@@ -14,11 +14,17 @@ interface StudentDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(student: Student): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(students: List<Student>): List<Long>
+
     @Update
     suspend fun updateStudent(student: Student)
 
     @Delete
     suspend fun deleteStudent(student: Student)
+
+    @Delete
+    suspend fun deleteAll(students: List<Student>)
 
     @Query("SELECT * FROM students")
     fun getAllStudents(): LiveData<List<Student>>

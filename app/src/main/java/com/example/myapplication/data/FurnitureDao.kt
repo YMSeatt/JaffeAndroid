@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FurnitureDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(furniture: Furniture)
+    suspend fun insert(furniture: Furniture): Long
 
     @Update
     suspend fun update(furniture: Furniture)
