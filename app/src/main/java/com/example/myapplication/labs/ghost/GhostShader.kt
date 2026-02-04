@@ -67,4 +67,31 @@ object GhostShader {
             return float4(color, color.r * 0.5);
         }
     """
+
+    @Language("AGSL")
+    const val VOICE_WAVEFORM = """
+        uniform float2 iResolution;
+        uniform float iTime;
+        uniform float iAmplitude;
+        uniform float3 iColor;
+
+        float4 main(float2 fragCoord) {
+            float2 uv = fragCoord / iResolution.xy;
+            float y = uv.y * 2.0 - 1.0;
+
+            // Multiple sine waves for a "neural" feel
+            float wave = sin(uv.x * 10.0 + iTime * 5.0) * iAmplitude;
+            wave += sin(uv.x * 25.0 - iTime * 3.0) * iAmplitude * 0.5;
+            wave += sin(uv.x * 5.0 + iTime * 2.0) * iAmplitude * 0.2;
+
+            float dist = abs(y - wave);
+            float intensity = 0.015 / (dist + 0.005);
+
+            // Fade out at edges
+            intensity *= sin(uv.x * 3.14159);
+
+            float3 color = iColor * intensity;
+            return float4(color, intensity * 0.8);
+        }
+    """
 }
