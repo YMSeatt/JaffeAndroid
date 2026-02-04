@@ -58,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -79,12 +80,20 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.lifecycleScope
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.core.content.ContextCompat
 import com.example.myapplication.MainActivity
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostInsight
 import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
+import com.example.myapplication.labs.ghost.GhostVoiceAssistant
+import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
 import com.example.myapplication.preferences.AppTheme
@@ -177,6 +186,39 @@ fun SeatingChartScreen(
     val userPreferences by seatingChartViewModel.userPreferences.collectAsState()
     val behaviorTypes by settingsViewModel.customBehaviors.observeAsState(initial = emptyList())
     val behaviorTypeNames = remember(behaviorTypes) { behaviorTypes.map { it.name } }
+
+    // Ghost Voice Assistant State
+    var isGhostListening by remember { mutableStateOf(false) }
+    var ghostAmplitude by remember { mutableFloatStateOf(0f) }
+    var ghostCurrentText by remember { mutableStateOf("") }
+
+    val ghostVoiceAssistant = remember(behaviorTypeNames) {
+        GhostVoiceAssistant(
+            context = context,
+            viewModel = seatingChartViewModel,
+            onAmplitudeChange = { ghostAmplitude = it },
+            onListeningStateChange = { isGhostListening = it },
+            onResult = { ghostCurrentText = it },
+            customBehaviors = behaviorTypeNames
+        )
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            ghostVoiceAssistant.destroy()
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            ghostVoiceAssistant.startListening()
+        } else {
+            Toast.makeText(context, "Voice Assistant requires microphone permission", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
     val editModeEnabled = userPreferences?.editModeEnabled ?: false
@@ -272,8 +314,35 @@ fun SeatingChartScreen(
             )
         },
         floatingActionButton = {
-            if (editModeEnabled) {
-                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VOICE_ASSISTANT_ENABLED) {
+                    FloatingActionButton(
+                        onClick = { /* Handle tap if needed, or just rely on long press */ },
+                        containerColor = if (isGhostListening) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.pointerInput(Unit) {
+                            detectTapGestures(
+                                onLongPress = {
+                                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                                        ghostVoiceAssistant.startListening()
+                                    } else {
+                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                    }
+                                },
+                                onTap = {
+                                    if (isGhostListening) {
+                                        ghostVoiceAssistant.stopListening()
+                                    } else {
+                                        Toast.makeText(context, "Hold to speak commands", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    ) {
+                        Icon(Icons.Default.Psychology, contentDescription = "Ghost Voice Assistant")
+                    }
+                }
+
+                if (editModeEnabled) {
                     AnimatedVisibility(visible = isFabMenuOpen) {
                         FloatingActionButton(onClick = { editingStudent = null; showAddEditStudentDialog = true; isFabMenuOpen = false }) {
                             Icon(Icons.Default.Person, contentDescription = "Add Student")
@@ -702,6 +771,14 @@ fun SeatingChartScreen(
                         onDismiss = { showGhostInsightDialog = false }
                     )
                 }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VOICE_ASSISTANT_ENABLED) {
+                GhostVoiceVisualizer(
+                    amplitude = ghostAmplitude,
+                    isListening = isGhostListening,
+                    currentText = ghostCurrentText
+                )
             }
         }
     }
