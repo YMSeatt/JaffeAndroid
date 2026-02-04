@@ -14,12 +14,15 @@ class LogBehaviorCommand(
     private val viewModel: SeatingChartViewModel,
     private val event: BehaviorEvent
 ) : Command {
+    private var generatedId: Int = event.id
+
     override suspend fun execute() {
-        viewModel.internalAddBehaviorEvent(event)
+        val eventToInsert = if (generatedId != 0) event.copy(id = generatedId) else event
+        generatedId = viewModel.internalAddBehaviorEvent(eventToInsert).toInt()
     }
 
     override suspend fun undo() {
-        viewModel.deleteBehaviorEvent(event)
+        viewModel.deleteBehaviorEvent(event.copy(id = generatedId))
     }
 
     override fun getDescription(): String = "Log behavior: ${event.type}"

@@ -154,13 +154,15 @@ class SeatingChartViewModelTest {
     @Test
     fun `addStudent inserts student via repository`() = runTest {
         val student = Student(id = 1, firstName = "Test", lastName = "Student", stringId = "1")
+        coEvery { repository.insertStudent(any()) } returns 1L
         
         // Mock CollisionDetector resolution if needed, or assume it returns valid coordinates
         // Since CollisionDetector is an object, we might want to mock it or rely on its logic. 
         // For now, let's assume it works or we rely on the internalAddStudent which is what command calls.
         
-        viewModel.internalAddStudent(student)
+        val id = viewModel.internalAddStudent(student)
         
+        assertEquals(1L, id)
         coVerify { repository.insertStudent(student) }
     }
 

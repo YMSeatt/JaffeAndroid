@@ -14,12 +14,15 @@ class AddStudentCommand(
     private val viewModel: SeatingChartViewModel,
     private val student: Student
 ) : Command {
+    private var generatedId: Long = student.id
+
     override suspend fun execute() {
-        viewModel.internalAddStudent(student)
+        val studentToInsert = if (generatedId != 0L) student.copy(id = generatedId) else student
+        generatedId = viewModel.internalAddStudent(studentToInsert)
     }
 
     override suspend fun undo() {
-        viewModel.internalDeleteStudent(student)
+        viewModel.internalDeleteStudent(student.copy(id = generatedId))
     }
 
     override fun getDescription(): String = "Add student: ${student.firstName} ${student.lastName}"

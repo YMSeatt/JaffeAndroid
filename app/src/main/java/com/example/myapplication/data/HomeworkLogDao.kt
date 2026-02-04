@@ -11,10 +11,10 @@ import androidx.room.Update
 @Dao
 interface HomeworkLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(homeworkLog: HomeworkLog)
+    suspend fun insert(homeworkLog: HomeworkLog): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(homeworkLogs: List<HomeworkLog>)
+    suspend fun insertAll(homeworkLogs: List<HomeworkLog>): List<Long>
 
     @Update
     suspend fun updateHomeworkLog(homeworkLog: HomeworkLog)

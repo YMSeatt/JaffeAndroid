@@ -19,6 +19,7 @@ import androidx.work.workDataOf
 import com.example.myapplication.commands.AddFurnitureCommand
 import com.example.myapplication.commands.AddGuideCommand
 import com.example.myapplication.commands.AddStudentCommand
+import com.example.myapplication.commands.CompositeCommand
 import com.example.myapplication.commands.Command
 import com.example.myapplication.commands.DeleteGuideCommand
 import com.example.myapplication.commands.DeleteStudentCommand
@@ -586,8 +587,8 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    suspend fun internalAddStudent(student: Student) {
-        withContext(Dispatchers.IO) {
+    suspend fun internalAddStudent(student: Student): Long {
+        return withContext(Dispatchers.IO) {
             repository.insertStudent(student)
         }
     }
@@ -626,10 +627,11 @@ class SeatingChartViewModel @Inject constructor(
     fun deleteStudents(studentIds: Set<Int>) {
         viewModelScope.launch {
             val studentsToDelete = allStudents.value?.filter { studentIds.contains(it.id.toInt()) }
-            studentsToDelete?.forEach {
-                val command = DeleteStudentCommand(this@SeatingChartViewModel, it)
-                executeCommand(command)
-            }
+            if (studentsToDelete.isNullOrEmpty()) return@launch
+
+            val commands = studentsToDelete.map { DeleteStudentCommand(this@SeatingChartViewModel, it) }
+            val compositeCommand = CompositeCommand(commands, "Delete ${studentsToDelete.size} student(s)")
+            executeCommand(compositeCommand)
         }
     }
 
@@ -835,8 +837,8 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    suspend fun internalAddFurniture(furniture: Furniture) {
-        withContext(Dispatchers.IO) {
+    suspend fun internalAddFurniture(furniture: Furniture): Long {
+        return withContext(Dispatchers.IO) {
             repository.insertFurniture(furniture)
         }
     }
@@ -1020,12 +1022,13 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun internalAddBehaviorEvent(event: BehaviorEvent) {
-        viewModelScope.launch(Dispatchers.IO) {
-            repository.insertBehaviorEvent(event)
+    suspend fun internalAddBehaviorEvent(event: BehaviorEvent): Long {
+        return withContext(Dispatchers.IO) {
+            val id = repository.insertBehaviorEvent(event)
             withContext(Dispatchers.Main) {
                 updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
+            id
         }
     }
 
@@ -1053,8 +1056,8 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun internalSaveQuizLog(log: QuizLog) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun internalSaveQuizLog(log: QuizLog): Long {
+        return withContext(Dispatchers.IO) {
             repository.insertQuizLog(log)
         }
     }
@@ -1071,8 +1074,8 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun internalAddHomeworkLog(log: HomeworkLog) {
-        viewModelScope.launch(Dispatchers.IO) {
+    suspend fun internalAddHomeworkLog(log: HomeworkLog): Long {
+        return withContext(Dispatchers.IO) {
             repository.insertHomeworkLog(log)
         }
     }

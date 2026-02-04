@@ -21,8 +21,8 @@ class StudentRepository(
         return homeworkLogDao.getHomeworkLogsForStudent(studentId)
     }
 
-    suspend fun insertHomeworkLog(homeworkLog: HomeworkLog) {
-        homeworkLogDao.insert(homeworkLog)
+    suspend fun insertHomeworkLog(homeworkLog: HomeworkLog): Long {
+        return homeworkLogDao.insert(homeworkLog)
     }
 
     suspend fun deleteHomeworkLogById(logId: Long) {
@@ -41,8 +41,12 @@ class StudentRepository(
         return quizMarkTypeDao.getAllQuizMarkTypes()
     }
 
-    suspend fun insertStudent(student: Student) {
-        studentDao.insert(student)
+    suspend fun insertStudent(student: Student): Long {
+        return studentDao.insert(student)
+    }
+
+    suspend fun insertStudents(students: List<Student>): List<Long> {
+        return studentDao.insertAll(students)
     }
 
     suspend fun updateStudent(student: Student) {
@@ -53,6 +57,10 @@ class StudentRepository(
         studentDao.deleteStudent(student)
     }
 
+    suspend fun deleteStudents(students: List<Student>) {
+        studentDao.deleteAll(students)
+    }
+
     suspend fun getStudentById(studentId: Long): Student? {
         return studentDao.getStudentByIdNonLiveData(studentId)
     }
@@ -61,8 +69,8 @@ class StudentRepository(
         return studentDao.studentExists(firstName, lastName)
     }
 
-    suspend fun insertFurniture(furniture: Furniture) {
-        furnitureDao.insert(furniture)
+    suspend fun insertFurniture(furniture: Furniture): Long {
+        return furnitureDao.insert(furniture)
     }
 
     suspend fun updateFurniture(furniture: Furniture) {
@@ -85,12 +93,12 @@ class StudentRepository(
         layoutTemplateDao.deleteLayoutTemplate(layout)
     }
 
-    suspend fun insertBehaviorEvent(event: BehaviorEvent) {
-        behaviorEventDao.insert(event)
+    suspend fun insertBehaviorEvent(event: BehaviorEvent): Long {
+        return behaviorEventDao.insert(event)
     }
 
-    suspend fun insertQuizLog(log: QuizLog) {
-        quizLogDao.insert(log)
+    suspend fun insertQuizLog(log: QuizLog): Long {
+        return quizLogDao.insert(log)
     }
 
     suspend fun deleteQuizLog(log: QuizLog) {
