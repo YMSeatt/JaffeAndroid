@@ -191,6 +191,9 @@ class SeatingChartViewModel @Inject constructor(
         selectedStudentIds.value = emptySet()
     }
 
+    private val allGroups: StateFlow<List<com.example.myapplication.data.StudentGroup>> = studentGroupDao.getAllStudentGroups()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     init {
         allStudents = repository.allStudents
         allStudentsForDisplay = studentDao.getStudentsForDisplay()
@@ -209,7 +212,7 @@ class SeatingChartViewModel @Inject constructor(
 
         studentsForDisplay.addSource(allStudents) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allStudentsForDisplay) { updateTrigger.tryEmit(Unit) }
-        studentsForDisplay.addSource(studentGroupDao.getAllStudentGroups().asLiveData()) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(allGroups.asLiveData()) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(sessionQuizLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(sessionHomeworkLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(isSessionActive) { updateTrigger.tryEmit(Unit) }
@@ -242,8 +245,6 @@ class SeatingChartViewModel @Inject constructor(
             }
         }
     }
-
-    private val allGroups = studentGroupDao.getAllStudentGroups().asLiveData()
 
     private fun updateStudentsForDisplay(students: List<Student>) {
         val prefs = _userPreferences.value ?: return

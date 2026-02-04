@@ -68,28 +68,39 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
                 MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), expectedHash.toByteArray(Charsets.UTF_8))
             } else {
                 when (storedHash.length) {
-                    128 -> { // Legacy SHA-512
-                        val actualHash = hashPasswordUnsalted(password, "SHA-512")
-                        MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))
+                    128 -> { // Legacy SHA-512 or SHA3-512 (Python compatibility)
+                        val sha512 = hashPasswordUnsalted(password, "SHA-512")
+                        if (sha512 != null && MessageDigest.isEqual(sha512.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))) {
+                            return true
+                        }
+                        val sha3 = hashPasswordUnsalted(password, "SHA3-512")
+                        if (sha3 != null && MessageDigest.isEqual(sha3.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))) {
+                            return true
+                        }
+                        false
                     }
                     64 -> { // Legacy SHA-256
                         val actualHash = hashPasswordUnsalted(password, "SHA-256")
-                        MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))
+                        actualHash != null && MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), storedHash.toByteArray(Charsets.UTF_8))
                     }
                     else -> false
                 }
             }
         }
 
-        private fun hashPasswordUnsalted(password: String, algorithm: String): String {
-            val md = MessageDigest.getInstance(algorithm)
-            val digest = md.digest(password.toByteArray(Charsets.UTF_8))
-            return digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+        private fun hashPasswordUnsalted(password: String, algorithm: String): String? {
+            return try {
+                val md = MessageDigest.getInstance(algorithm)
+                val digest = md.digest(password.toByteArray(Charsets.UTF_8))
+                digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+            } catch (e: Exception) {
+                null
+            }
         }
 
         @Deprecated("Use hashPassword(String) for new passwords and verifyPassword for checking.")
         fun hashPassword(password: String, algorithm: String): String {
-            return hashPasswordUnsalted(password, algorithm)
+            return hashPasswordUnsalted(password, algorithm) ?: ""
         }
     }
 

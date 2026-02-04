@@ -116,4 +116,14 @@ class SecurityUtilTest {
         val verifyWrong = SecurityUtil.verifyPassword("wrong", legacy256)
         assertFalse("Should fail verification with wrong password for legacy hash", verifyWrong)
     }
+
+    @Test
+    fun `test sha3-512 legacy verification from python`() {
+        val pass = "password123"
+        // SHA3-512 hash of "password123" from Python
+        val legacySha3 = "4ad2c01fc6007f58720b00fc99b978c2a17c577859d31fdbba4b3a749de9383ac4b0738aeaf0b13337db8bfeaf9d8f87faa236fc3c8a68fbf23eb6862fadb86e"
+
+        assertTrue("Should verify legacy SHA3-512 hash from Python", SecurityUtil.verifyPassword(pass, legacySha3))
+        assertFalse("Should fail for wrong password with SHA3-512", SecurityUtil.verifyPassword("wrong", legacySha3))
+    }
 }
