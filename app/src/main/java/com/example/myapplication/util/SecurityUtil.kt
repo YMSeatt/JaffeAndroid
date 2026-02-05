@@ -42,11 +42,11 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
         fun hashPassword(password: String): String {
             val salt = ByteArray(16)
             SecureRandom().nextBytes(salt)
-            val saltHex = salt.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+            val saltHex = salt.toHex()
 
             val md = MessageDigest.getInstance("SHA-512")
             val digest = md.digest((saltHex + password).toByteArray(Charsets.UTF_8))
-            val hashHex = digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+            val hashHex = digest.toHex()
 
             return "$saltHex:$hashHex"
         }
@@ -64,7 +64,7 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
                 val md = MessageDigest.getInstance("SHA-512")
                 val digest = md.digest((salt + password).toByteArray(Charsets.UTF_8))
-                val actualHash = digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+                val actualHash = digest.toHex()
                 MessageDigest.isEqual(actualHash.toByteArray(Charsets.UTF_8), expectedHash.toByteArray(Charsets.UTF_8))
             } else {
                 when (storedHash.length) {
@@ -92,7 +92,7 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
             return try {
                 val md = MessageDigest.getInstance(algorithm)
                 val digest = md.digest(password.toByteArray(Charsets.UTF_8))
-                digest.joinToString("") { "%02x".format(java.util.Locale.US, it) }
+                digest.toHex()
             } catch (e: Exception) {
                 null
             }

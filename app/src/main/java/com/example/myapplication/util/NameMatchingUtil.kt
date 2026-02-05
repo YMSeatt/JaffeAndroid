@@ -17,8 +17,8 @@ object NameMatchingUtil {
             return s1.length
         }
         var previousRow = IntArray(s2.length + 1) { it }
+        var currentRow = IntArray(s2.length + 1)
         for (i in s1.indices) {
-            val currentRow = IntArray(s2.length + 1)
             currentRow[0] = i + 1
             for (j in s2.indices) {
                 val insertions = previousRow[j + 1] + 1
@@ -26,7 +26,9 @@ object NameMatchingUtil {
                 val substitutions = previousRow[j] + if (s1[i] != s2[j]) 1 else 0
                 currentRow[j + 1] = min(min(insertions, deletions), substitutions)
             }
+            val temp = previousRow
             previousRow = currentRow
+            currentRow = temp
         }
         return previousRow[s2.length]
     }
