@@ -16,6 +16,21 @@ import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.min
 
+/**
+ * NeuralMapLayer: A Composable that renders a data-driven visualization layer over the seating chart.
+ *
+ * It uses AGSL shaders to visualize:
+ * 1. **Group Connections**: Animated lines connecting students belonging to the same group.
+ * 2. **Cognitive Auras**: Pulsating red glows around students with more than 2 negative behavior logs.
+ *
+ * This layer is only rendered if `GhostConfig.GHOST_MODE_ENABLED` is true and the device
+ * supports AGSL (API 33+).
+ *
+ * @param students The list of students to visualize.
+ * @param behaviorLogs Historical behavior data used to determine aura intensity.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan position of the seating chart.
+ */
 @Composable
 fun NeuralMapLayer(
     students: List<StudentUiItem>,

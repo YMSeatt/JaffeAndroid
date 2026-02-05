@@ -11,11 +11,38 @@ data class GhostInsight(
     val status: InsightStatus
 )
 
+/**
+ * Represents the health status of a student's engagement and performance.
+ */
 enum class InsightStatus {
-    OPTIMAL, IMPROVING, CONCERNING, UNKNOWN
+    /** Excellent academic and behavioral standing. */
+    OPTIMAL,
+    /** Showing stable or slightly positive trends. */
+    IMPROVING,
+    /** Critical negative trends detected in behavior or grades. */
+    CONCERNING,
+    /** Insufficient data to determine status. */
+    UNKNOWN
 }
 
+/**
+ * GhostInsightEngine: A rule-based analysis engine that synthesizes student data into human-readable insights.
+ */
 object GhostInsightEngine {
+    /**
+     * Analyzes behavioral and academic logs to generate a comprehensive [GhostInsight].
+     *
+     * The engine evaluates:
+     * - Positive vs. Negative behavior ratios.
+     * - Quiz performance (normalized average).
+     * - Homework completion rates.
+     *
+     * @param studentName The display name of the student.
+     * @param behaviorLogs List of behavior events for the student.
+     * @param quizLogs List of quiz results for the student.
+     * @param homeworkLogs List of homework completion logs for the student.
+     * @return A [GhostInsight] containing a title, summary, recommendation, and status.
+     */
     fun generateInsight(
         studentName: String,
         behaviorLogs: List<BehaviorEvent>,

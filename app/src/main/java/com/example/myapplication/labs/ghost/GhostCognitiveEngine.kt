@@ -6,13 +6,40 @@ import kotlin.math.*
 
 data class Point(var x: Float, var y: Float)
 
+/**
+ * GhostCognitiveEngine: An automated seating chart optimizer using a force-directed graph algorithm.
+ *
+ * This engine simulates a physical system where students act as particles that exert forces on each other.
+ * It aims to find an optimal layout by balancing:
+ * 1. Global Repulsion: Keeping students from overlapping or being too close.
+ * 2. Targeted Repulsion: Increasing distance between students with high negative behavior logs.
+ * 3. Group Attraction: Pulling students in the same group (e.g., project teams) closer together.
+ */
 object GhostCognitiveEngine {
+    /** The base strength of the force that pushes all students away from each other. */
     private const val REPULSION_CONSTANT = 500000f
+
+    /** The base strength of the force that pulls group members toward each other. */
     private const val ATTRACTION_CONSTANT = 0.05f
+
+    /** Multiplier applied to the repulsion force when students have negative behavior records. */
     private const val NEGATIVE_BEHAVIOR_MULTIPLIER = 2.5f
+
+    /** The number of simulation steps to run; higher values lead to more stable layouts but take longer. */
     private const val ITERATIONS = 50
+
+    /** The energy loss per iteration to ensure the system eventually settles (reaches equilibrium). */
     private const val DAMPING = 0.9f
 
+    /**
+     * Executes the layout optimization simulation.
+     *
+     * @param students The list of students to arrange.
+     * @param behaviorLogs Historical behavior data used to calculate social "repulsion".
+     * @param canvasWidth The total width of the seating chart area in pixels.
+     * @param canvasHeight The total height of the seating chart area in pixels.
+     * @return A map of student IDs to their new suggested [Point] coordinates.
+     */
     fun optimizeLayout(
         students: List<Student>,
         behaviorLogs: List<BehaviorEvent>,
