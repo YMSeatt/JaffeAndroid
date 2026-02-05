@@ -750,4 +750,10 @@ class SettingsViewModel @Inject constructor(
             preferencesRepository.updateSmtpSettings(smtpSettings)
         }
     }
+
+    suspend fun importStudentsFromExcel(uri: Uri, studentRepository: com.example.myapplication.data.StudentRepository): Result<Int> {
+        return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(
+            uri, application, studentRepository, studentGroupDao
+        )
+    }
 }

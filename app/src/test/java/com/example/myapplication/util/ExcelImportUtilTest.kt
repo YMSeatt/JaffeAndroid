@@ -4,6 +4,8 @@ import android.content.Context
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
 import com.example.myapplication.data.Student
+import com.example.myapplication.data.StudentGroup
+import com.example.myapplication.data.StudentGroupDao
 import com.example.myapplication.data.StudentRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -25,6 +27,7 @@ class ExcelImportUtilTest {
 
     private lateinit var context: Context
     private val studentRepository: StudentRepository = mockk()
+    private val studentGroupDao: StudentGroupDao = mockk()
 
     @Before
     fun setup() {
@@ -53,7 +56,7 @@ class ExcelImportUtilTest {
 
             val uri = Uri.fromFile(file)
 
-            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository)
+            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository, studentGroupDao)
 
             assertTrue("Import should now succeed with numeric cells", result.isSuccess)
             assertEquals("One student should have been imported", 1, result.getOrNull())
@@ -61,6 +64,108 @@ class ExcelImportUtilTest {
             val studentSlot = slot<Student>()
             coVerify { studentRepository.insertStudent(capture(studentSlot)) }
             assertEquals("123", studentSlot.captured.firstName)
+
+            file.delete()
+        }
+    }
+
+    @Test
+    fun testImportWithDynamicHeaders() {
+        runBlocking {
+            coEvery { studentRepository.insertStudent(any()) } returns 1L
+
+            val file = File(context.cacheDir, "test_dynamic_headers.xlsx")
+            val workbook = XSSFWorkbook()
+            val sheet = workbook.createSheet("Students")
+            val headerRow = sheet.createRow(0)
+            headerRow.createCell(0).setCellValue("First")
+            headerRow.createCell(1).setCellValue("Surname")
+            headerRow.createCell(2).setCellValue("Nick")
+
+            val dataRow = sheet.createRow(1)
+            dataRow.createCell(0).setCellValue("John")
+            dataRow.createCell(1).setCellValue("Doe")
+            dataRow.createCell(2).setCellValue("Johnny")
+
+            FileOutputStream(file).use { workbook.write(it) }
+            workbook.close()
+
+            val uri = Uri.fromFile(file)
+            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository, studentGroupDao)
+
+            assertTrue(result.isSuccess)
+            assertEquals(1, result.getOrNull())
+
+            val studentSlot = slot<Student>()
+            coVerify { studentRepository.insertStudent(capture(studentSlot)) }
+            assertEquals("John", studentSlot.captured.firstName)
+            assertEquals("Doe", studentSlot.captured.lastName)
+            assertEquals("Johnny", studentSlot.captured.nickname)
+
+            file.delete()
+        }
+    }
+
+    @Test
+    fun testImportWithFullNameComma() {
+        runBlocking {
+            coEvery { studentRepository.insertStudent(any()) } returns 1L
+
+            val file = File(context.cacheDir, "test_full_name_comma.xlsx")
+            val workbook = XSSFWorkbook()
+            val sheet = workbook.createSheet("Students")
+            val headerRow = sheet.createRow(0)
+            headerRow.createCell(0).setCellValue("Student Name")
+
+            val dataRow = sheet.createRow(1)
+            dataRow.createCell(0).setCellValue("Doe, John")
+
+            FileOutputStream(file).use { workbook.write(it) }
+            workbook.close()
+
+            val uri = Uri.fromFile(file)
+            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository, studentGroupDao)
+
+            assertTrue(result.isSuccess)
+            val studentSlot = slot<Student>()
+            coVerify { studentRepository.insertStudent(capture(studentSlot)) }
+            assertEquals("John", studentSlot.captured.firstName)
+            assertEquals("Doe", studentSlot.captured.lastName)
+
+            file.delete()
+        }
+    }
+
+    @Test
+    fun testImportWithGroupNameMatching() {
+        runBlocking {
+            coEvery { studentRepository.insertStudent(any()) } returns 1L
+            coEvery { studentGroupDao.getGroupByName("Math Group") } returns StudentGroup(id = 101, name = "Math Group", color = "#FF0000")
+
+            val file = File(context.cacheDir, "test_group_matching.xlsx")
+            val workbook = XSSFWorkbook()
+            val sheet = workbook.createSheet("Students")
+            val headerRow = sheet.createRow(0)
+            headerRow.createCell(0).setCellValue("First Name")
+            headerRow.createCell(1).setCellValue("Last Name")
+            headerRow.createCell(2).setCellValue("Group")
+
+            val dataRow = sheet.createRow(1)
+            dataRow.createCell(0).setCellValue("Alice")
+            dataRow.createCell(1).setCellValue("Smith")
+            dataRow.createCell(2).setCellValue("Math Group")
+
+            FileOutputStream(file).use { workbook.write(it) }
+            workbook.close()
+
+            val uri = Uri.fromFile(file)
+            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository, studentGroupDao)
+
+            assertTrue(result.isSuccess)
+            val studentSlot = slot<Student>()
+            coVerify { studentRepository.insertStudent(capture(studentSlot)) }
+            assertEquals("Alice", studentSlot.captured.firstName)
+            assertEquals(101L, studentSlot.captured.groupId)
 
             file.delete()
         }
@@ -98,7 +203,7 @@ class ExcelImportUtilTest {
             workbook.close()
 
             val uri = Uri.fromFile(file)
-            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository)
+            val result = ExcelImportUtil.importStudentsFromExcel(uri, context, studentRepository, studentGroupDao)
 
             assertTrue("Import should succeed overall even if one row fails", result.isSuccess)
             assertEquals("Two students should have been successfully imported", 2, result.getOrNull())
