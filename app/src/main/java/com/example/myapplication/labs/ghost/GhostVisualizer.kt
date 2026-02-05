@@ -17,7 +17,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 
 /**
- * GhostVoiceVisualizer: Renders a neural waveform reactive to voice amplitude.
+ * GhostVoiceVisualizer: Renders a reactive neural waveform in response to voice input.
+ *
+ * This Composable uses the [GhostShader.VOICE_WAVEFORM] to draw an animated sine wave
+ * whose height (amplitude) is driven by real-time voice levels captured by the [GhostVoiceAssistant].
+ *
+ * @param amplitude The current volume level (0.0 to 1.0) used to drive the shader height.
+ * @param isListening Whether the voice assistant is currently active.
+ * @param currentText The partial or final text recognized by the speech engine.
  */
 @Composable
 fun GhostVoiceVisualizer(

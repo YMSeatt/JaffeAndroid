@@ -13,7 +13,17 @@ import java.util.*
 
 /**
  * GhostVoiceAssistant: A Proof of Concept for Voice-Activated Classroom Management.
- * It uses Android's SpeechRecognizer to listen for commands and translate them into actions.
+ *
+ * This class leverages Android's [SpeechRecognizer] to provide a hands-free experience for
+ * teachers. It parses spoken language into specific classroom actions like logging behavior,
+ * starting/ending sessions, or triggering layout optimizations.
+ *
+ * @param context Android context for initializing the speech engine.
+ * @param viewModel The shared ViewModel used to execute commands.
+ * @param onAmplitudeChange Callback for real-time volume updates (used for visualization).
+ * @param onListeningStateChange Callback to notify UI when the microphone is active.
+ * @param onResult Callback to provide the recognized text back to the UI.
+ * @param customBehaviors Optional list of user-defined behavior names to improve parsing accuracy.
  */
 class GhostVoiceAssistant(
     private val context: Context,
@@ -117,6 +127,18 @@ class GhostVoiceAssistant(
 
     override fun onEvent(eventType: Int, params: Bundle?) {}
 
+    /**
+     * Parses the recognized text into structured commands.
+     *
+     * Supported phrases:
+     * - "Undo" / "Redo": Reverses or reapplies the last action.
+     * - "Start Session" / "Begin Session": Triggers the live class session.
+     * - "End Session" / "Stop Session": Finalizes the current session.
+     * - "Log [behavior] for [student]": Logs a specific behavior event.
+     * - "Optimize" / "Rearrange": Triggers the [GhostCognitiveEngine] layout optimization.
+     *
+     * @param text The raw string recognized by the speech engine.
+     */
     private fun parseAndExecuteCommand(text: String) {
         val command = text.lowercase(Locale.getDefault())
         Log.d("GhostVoice", "Parsing command: $command")
@@ -135,6 +157,15 @@ class GhostVoiceAssistant(
         }
     }
 
+    /**
+     * Specifically handles behavioral logging via voice.
+     *
+     * It attempts to extract:
+     * 1. **Behavior Type**: Matches against [customBehaviors] or falls back to keywords (positive, negative, question).
+     * 2. **Student Identity**: Scans the command for student full names or nicknames.
+     *
+     * @param command The recognized command string.
+     */
     private fun handleLogCommand(command: String) {
         val students = viewModel.studentsForDisplay.value ?: emptyList()
 

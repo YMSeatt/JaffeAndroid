@@ -17,6 +17,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
+/**
+ * GhostInsightDialog: A stylized UI component for displaying AI-generated student insights.
+ *
+ * It features a neural background pulse (via [GhostShader.NEURAL_PULSE]) and organized
+ * sections for analysis summaries and teacher recommendations.
+ *
+ * @param insight The [GhostInsight] data to display.
+ * @param onDismiss Callback to close the dialog.
+ */
 @Composable
 fun GhostInsightDialog(
     insight: GhostInsight,

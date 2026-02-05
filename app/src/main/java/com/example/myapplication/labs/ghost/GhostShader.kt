@@ -2,7 +2,21 @@ package com.example.myapplication.labs.ghost
 
 import org.intellij.lang.annotations.Language
 
+/**
+ * GhostShader: Central repository for AGSL (Android Graphics Shading Language) scripts.
+ *
+ * These shaders are used by the Neural Map and Voice Assistant to provide high-performance,
+ * GPU-accelerated visual effects. Requires Android 13 (API 33) or higher.
+ */
 object GhostShader {
+    /**
+     * A pulsating background effect for dialogs and insights.
+     *
+     * Uniforms:
+     * - [iResolution]: The dimensions of the canvas (width, height).
+     * - [iTime]: Elapsed time in seconds for animation.
+     * - [iColor]: The base color for the pulse effect.
+     */
     @Language("AGSL")
     const val NEURAL_PULSE = """
         uniform float2 iResolution;
@@ -25,6 +39,14 @@ object GhostShader {
         }
     """
 
+    /**
+     * An animated, pulsating line shader for connecting student group members.
+     *
+     * Uniforms:
+     * - [iTime]: Elapsed time in seconds.
+     * - [iColor]: Color of the line.
+     * - [iResolution]: Dimensions of the canvas.
+     */
     @Language("AGSL")
     const val NEURAL_LINE = """
         uniform float iTime;
@@ -45,6 +67,17 @@ object GhostShader {
         }
     """
 
+    /**
+     * A localized glow effect centered on a specific student. Used to highlight
+     * behavioral "hotspots".
+     *
+     * Uniforms:
+     * - [iResolution]: Dimensions of the canvas.
+     * - [iTime]: Elapsed time in seconds.
+     * - [iCenter]: The center coordinate of the aura (relative to the canvas).
+     * - [iColor]: The color of the aura (typically red for negative behavior).
+     * - [iIntensity]: The brightness/scaling of the aura (0.0 to 1.0).
+     */
     @Language("AGSL")
     const val COGNITIVE_AURA = """
         uniform float2 iResolution;
@@ -68,6 +101,15 @@ object GhostShader {
         }
     """
 
+    /**
+     * A multi-frequency sine wave visualizer that reacts to voice input.
+     *
+     * Uniforms:
+     * - [iResolution]: Dimensions of the canvas.
+     * - [iTime]: Elapsed time in seconds.
+     * - [iAmplitude]: The current volume/amplitude of the voice (0.0 to 1.0).
+     * - [iColor]: The color of the waveform.
+     */
     @Language("AGSL")
     const val VOICE_WAVEFORM = """
         uniform float2 iResolution;
