@@ -2,14 +2,18 @@ package com.example.myapplication.util
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.io.InputStream
 
 object ExcelImportUtil {
+    private const val TAG = "ExcelImportUtil"
+
     suspend fun importStudentsFromExcel(
         uri: Uri,
         context: Context,
@@ -28,25 +32,30 @@ object ExcelImportUtil {
                     rows.next()
                 }
 
+                val formatter = DataFormatter()
                 while (rows.hasNext()) {
-                    val row = rows.next()
-                    val firstName = row.getCell(0)?.stringCellValue ?: ""
-                    val lastName = row.getCell(1)?.stringCellValue ?: ""
-                    val nickname = row.getCell(2)?.stringCellValue ?: ""
-                    val gender = row.getCell(3)?.stringCellValue ?: ""
+                    try {
+                        val row = rows.next()
+                        val firstName = row.getCell(0)?.let { formatter.formatCellValue(it) } ?: ""
+                        val lastName = row.getCell(1)?.let { formatter.formatCellValue(it) } ?: ""
+                        val nickname = row.getCell(2)?.let { formatter.formatCellValue(it) } ?: ""
+                        val gender = row.getCell(3)?.let { formatter.formatCellValue(it) } ?: ""
 
-                    if (firstName.isNotBlank() && lastName.isNotBlank()) {
-                        val student = Student(
-                            firstName = firstName,
-                            lastName = lastName,
-                            nickname = nickname,
-                            gender = gender,
-                            stringId = "",
-                            xPosition = 0f,
-                            yPosition = 0f
-                        )
-                        studentRepository.insertStudent(student)
-                        importedCount++
+                        if (firstName.isNotBlank() && lastName.isNotBlank()) {
+                            val student = Student(
+                                firstName = firstName,
+                                lastName = lastName,
+                                nickname = nickname,
+                                gender = gender,
+                                stringId = "",
+                                xPosition = 0f,
+                                yPosition = 0f
+                            )
+                            studentRepository.insertStudent(student)
+                            importedCount++
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error importing student row", e)
                     }
                 }
             }
