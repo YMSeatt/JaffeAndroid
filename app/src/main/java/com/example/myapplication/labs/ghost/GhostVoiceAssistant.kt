@@ -141,7 +141,7 @@ class GhostVoiceAssistant(
      */
     private fun parseAndExecuteCommand(text: String) {
         val command = text.lowercase(Locale.getDefault())
-        Log.d("GhostVoice", "Parsing command: $command")
+        Log.d("GhostVoice", "Parsing voice command (length: ${command.length})")
 
         when {
             command.contains("undo") -> viewModel.undo()
@@ -196,7 +196,7 @@ class GhostVoiceAssistant(
                     comment = null
                 )
             )
-            Log.d("GhostVoice", "Successfully logged $behaviorType for ${student.fullName}")
-        } ?: Log.w("GhostVoice", "Could not identify student in command: $command")
+            Log.d("GhostVoice", "Successfully logged $behaviorType for student with initials ${student.initials}")
+        } ?: Log.w("GhostVoice", "Could not identify student in log command.")
     }
 }
