@@ -9,36 +9,17 @@ data class Point(var x: Float, var y: Float)
 /**
  * GhostCognitiveEngine: An automated seating chart optimizer using a force-directed graph algorithm.
  *
- * This engine simulates a physical system where students act as particles that exert forces on each other.
- * It aims to find an optimal layout by balancing:
- * 1. Global Repulsion: Keeping students from overlapping or being too close.
- * 2. Targeted Repulsion: Increasing distance between students with high negative behavior logs.
- * 3. Group Attraction: Pulling students in the same group (e.g., project teams) closer together.
+ * Optimized version: uses primitive arrays and avoids Map lookups/object allocations in loops.
  */
 object GhostCognitiveEngine {
-    /** The base strength of the force that pushes all students away from each other. */
     private const val REPULSION_CONSTANT = 500000f
-
-    /** The base strength of the force that pulls group members toward each other. */
     private const val ATTRACTION_CONSTANT = 0.05f
-
-    /** Multiplier applied to the repulsion force when students have negative behavior records. */
     private const val NEGATIVE_BEHAVIOR_MULTIPLIER = 2.5f
-
-    /** The number of simulation steps to run; higher values lead to more stable layouts but take longer. */
     private const val ITERATIONS = 50
-
-    /** The energy loss per iteration to ensure the system eventually settles (reaches equilibrium). */
     private const val DAMPING = 0.9f
 
     /**
      * Executes the layout optimization simulation.
-     *
-     * @param students The list of students to arrange.
-     * @param behaviorLogs Historical behavior data used to calculate social "repulsion".
-     * @param canvasWidth The total width of the seating chart area in pixels.
-     * @param canvasHeight The total height of the seating chart area in pixels.
-     * @return A map of student IDs to their new suggested [Point] coordinates.
      */
     fun optimizeLayout(
         students: List<Student>,
@@ -46,98 +27,125 @@ object GhostCognitiveEngine {
         canvasWidth: Int = 4000,
         canvasHeight: Int = 4000
     ): Map<Long, Point> {
-        val studentPoints = students.associate { it.id to Point(it.xPosition, it.yPosition) }.toMutableMap()
-        val velocities = students.associate { it.id to Point(0f, 0f) }.toMutableMap()
+        val n = students.size
+        if (n == 0) return emptyMap()
+
+        // State arrays for performance
+        val studentIds = LongArray(n)
+        val posX = FloatArray(n)
+        val posY = FloatArray(n)
+        val velX = FloatArray(n)
+        val velY = FloatArray(n)
+        val forceX = FloatArray(n)
+        val forceY = FloatArray(n)
+        val negScores = FloatArray(n)
 
         // Pre-calculate behavioral "toxicity" scores
-        val negativeScores = behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
+        val negativeScoresMap = behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
             .groupBy { it.studentId }
             .mapValues { it.value.size.toFloat() }
 
+        for (i in 0 until n) {
+            val student = students[i]
+            studentIds[i] = student.id
+            posX[i] = student.xPosition
+            posY[i] = student.yPosition
+            negScores[i] = negativeScoresMap[student.id] ?: 0f
+        }
+
+        // Pre-calculate group indices to avoid groupBy in the iteration loop
+        val groupIndicesList = students.withIndex()
+            .filter { it.value.groupId != null }
+            .groupBy { it.value.groupId!! }
+            .map { it.value.map { indexedStudent -> indexedStudent.index }.toIntArray() }
+
+        val canvasW = canvasWidth.toFloat()
+        val canvasH = canvasHeight.toFloat()
+
         repeat(ITERATIONS) {
-            val forces = students.associate { it.id to Point(0f, 0f) }.toMutableMap()
+            // Reset forces for current iteration
+            forceX.fill(0f)
+            forceY.fill(0f)
 
-            // 1. Repulsion between all pairs
-            for (i in students.indices) {
-                for (j in i + 1 until students.size) {
-                    val s1 = students[i]
-                    val s2 = students[j]
-                    val p1 = studentPoints[s1.id]!!
-                    val p2 = studentPoints[s2.id]!!
+            // 1. Repulsion between all pairs - O(N^2)
+            for (i in 0 until n) {
+                val p1x = posX[i]
+                val p1y = posY[i]
+                val score1 = negScores[i]
 
-                    val dx = p1.x - p2.x
-                    val dy = p1.y - p2.y
+                for (j in i + 1 until n) {
+                    val dx = p1x - posX[j]
+                    val dy = p1y - posY[j]
                     val distanceSq = dx * dx + dy * dy + 0.01f
-                    val distance = sqrt(distanceSq)
 
                     var repulsion = REPULSION_CONSTANT / distanceSq
 
-                    // Extra repulsion for negative behavior
-                    val score1 = negativeScores[s1.id] ?: 0f
-                    val score2 = negativeScores[s2.id] ?: 0f
+                    // Extra repulsion for students with negative behavior records
+                    val score2 = negScores[j]
                     if (score1 > 0 || score2 > 0) {
                         repulsion *= (1f + (score1 + score2) * NEGATIVE_BEHAVIOR_MULTIPLIER)
                     }
 
+                    val distance = sqrt(distanceSq)
                     val fx = (dx / distance) * repulsion
                     val fy = (dy / distance) * repulsion
 
-                    forces[s1.id]!!.x += fx
-                    forces[s1.id]!!.y += fy
-                    forces[s2.id]!!.x -= fx
-                    forces[s2.id]!!.y -= fy
+                    forceX[i] += fx
+                    forceY[i] += fy
+                    forceX[j] -= fx
+                    forceY[j] -= fy
                 }
             }
 
             // 2. Attraction for group members
-            val groupMap = students.filter { it.groupId != null }.groupBy { it.groupId }
-            groupMap.forEach { (_, members) ->
-                for (i in members.indices) {
-                    for (j in i + 1 until members.size) {
-                        val s1 = members[i]
-                        val s2 = members[j]
-                        val p1 = studentPoints[s1.id]!!
-                        val p2 = studentPoints[s2.id]!!
+            for (indices in groupIndicesList) {
+                for (i in indices.indices) {
+                    val idx1 = indices[i]
+                    val p1x = posX[idx1]
+                    val p1y = posY[idx1]
 
-                        val dx = p1.x - p2.x
-                        val dy = p1.y - p2.y
+                    for (j in i + 1 until indices.size) {
+                        val idx2 = indices[j]
+                        val dx = p1x - posX[idx2]
+                        val dy = p1y - posY[idx2]
 
                         val fx = dx * ATTRACTION_CONSTANT
                         val fy = dy * ATTRACTION_CONSTANT
 
-                        forces[s1.id]!!.x -= fx
-                        forces[s1.id]!!.y -= fy
-                        forces[s2.id]!!.x += fx
-                        forces[s2.id]!!.y += fy
+                        forceX[idx1] -= fx
+                        forceY[idx1] -= fy
+                        forceX[idx2] += fx
+                        forceY[idx2] += fy
                     }
                 }
             }
 
             // 3. Apply forces and update positions
-            students.forEach { s ->
-                val f = forces[s.id]!!
-                val v = velocities[s.id]!!
-                val p = studentPoints[s.id]!!
+            for (i in 0 until n) {
+                var vx = (velX[i] + forceX[i]) * DAMPING
+                var vy = (velY[i] + forceY[i]) * DAMPING
 
-                v.x = (v.x + f.x) * DAMPING
-                v.y = (v.y + f.y) * DAMPING
-
-                // Cap velocity
-                val speed = sqrt(v.x * v.x + v.y * v.y)
-                if (speed > 50f) {
-                    v.x = (v.x / speed) * 50f
-                    v.y = (v.y / speed) * 50f
+                // Cap velocity to prevent extreme jumps
+                val speedSq = vx * vx + vy * vy
+                if (speedSq > 2500f) { // 50.0^2
+                    val invSpeed = 50f / sqrt(speedSq)
+                    vx *= invSpeed
+                    vy *= invSpeed
                 }
 
-                p.x += v.x
-                p.y += v.y
+                velX[i] = vx
+                velY[i] = vy
 
-                // Constrain to canvas
-                p.x = p.x.coerceIn(0f, canvasWidth.toFloat() - 100f)
-                p.y = p.y.coerceIn(0f, canvasHeight.toFloat() - 100f)
+                posX[i] = (posX[i] + vx).coerceIn(0f, canvasW - 100f)
+                posY[i] = (posY[i] + vy).coerceIn(0f, canvasH - 100f)
             }
         }
 
-        return studentPoints
+        // Return the final positions mapped by student ID
+        val results = mutableMapOf<Long, Point>()
+        for (i in 0 until n) {
+            results[studentIds[i]] = Point(posX[i], posY[i])
+        }
+        return results
     }
 }
