@@ -545,7 +545,7 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     suspend fun importStudentsFromExcel(context: Context, uri: Uri): Result<Int> {
-        return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, context, repository)
+        return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, context, repository, studentGroupDao)
     }
 
     fun importData(context: Context, uri: Uri) {
