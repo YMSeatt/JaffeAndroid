@@ -265,17 +265,18 @@ class Exporter(
             cell.cellStyle = context.headerStyle
         }
 
-        // Cache indices
-        val behaviorCol = headers.indexOf("Behavior")
-        val quizNameCol = headers.indexOf("Quiz Name")
-        val itemNameCol = headers.indexOf("Item Name")
-        val numQuestionsCol = headers.indexOf("Num Questions")
-        val quizScoreCol = headers.indexOf("Quiz Score (%)")
-        val commentCol = headers.indexOf("Comment")
-        val homeworkTypeCol = headers.indexOf("Homework Type/Session Name")
-        val homeworkScoreCol = headers.indexOf("Homework Score (Total Pts)")
-        val homeworkEffortCol = headers.indexOf("Homework Effort")
-        val markTypeIndices = quizMarkTypes.associate { it.name to headers.indexOf(it.name) }
+        // Cache indices in a Map for O(1) lookup
+        val headerIndices = headers.withIndex().associate { it.value to it.index }
+        val behaviorCol = headerIndices["Behavior"] ?: -1
+        val quizNameCol = headerIndices["Quiz Name"] ?: -1
+        val itemNameCol = headerIndices["Item Name"] ?: -1
+        val numQuestionsCol = headerIndices["Num Questions"] ?: -1
+        val quizScoreCol = headerIndices["Quiz Score (%)"] ?: -1
+        val commentCol = headerIndices["Comment"] ?: -1
+        val homeworkTypeCol = headerIndices["Homework Type/Session Name"] ?: -1
+        val homeworkScoreCol = headerIndices["Homework Score (Total Pts)"] ?: -1
+        val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
+        val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
 
         data.forEachIndexed { index, item ->
             val row = sheet.createRow(index + 1)
@@ -403,7 +404,7 @@ class Exporter(
                         // Populate values for all known headers (Custom Types, Statuses, and Dynamic Keys)
                         // We iterate the map entries to find matching headers
                         marksData.forEach { (key, value) ->
-                            val index = headers.indexOf(key)
+                            val index = headerIndices[key] ?: -1
                             if (index != -1) {
                                 val stringValue = value.toString()
                                 row.createCell(index).apply {
@@ -603,6 +604,7 @@ class Exporter(
 
     /**
      * Creates a separate worksheet for each student that has associated log entries.
+     * Optimized: groups logs by student ID once to avoid O(N*M) filtering.
      */
     private suspend fun createIndividualStudentSheets(
         workbook: Workbook,
@@ -613,27 +615,19 @@ class Exporter(
         customHomeworkStatuses: List<CustomHomeworkStatus>,
         context: FormattingContext
     ) {
-        val studentsWithLogs = data.map {
+        val logsByStudent = data.groupBy {
             when (it) {
                 is BehaviorEvent -> it.studentId
                 is HomeworkLog -> it.studentId
                 is QuizLog -> it.studentId
-                else -> 0
+                else -> 0L
             }
-        }.distinct()
+        }
 
-        studentsWithLogs.forEach { studentId ->
+        logsByStudent.forEach { (studentId, studentLogs) ->
             val student = students[studentId]
             if (student != null) {
                 val studentSheetName = "${student.firstName}_${student.lastName}".replace(Regex("[^a-zA-Z0-9_]"), "_").take(31)
-                val studentLogs = data.filter {
-                    when (it) {
-                        is BehaviorEvent -> it.studentId == studentId
-                        is HomeworkLog -> it.studentId == studentId
-                        is QuizLog -> it.studentId == studentId
-                        else -> false
-                    }
-                }
                 createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context)
             }
         }
