@@ -60,7 +60,9 @@ data class UserPreferences(
     val editModeEnabled: Boolean,
     val gridSnapEnabled: Boolean,
     val gridSize: Int,
-    val noAnimations: Boolean
+    val noAnimations: Boolean,
+    val passwordAutoLockEnabled: Boolean,
+    val passwordAutoLockTimeoutMinutes: Int
 )
 
 class AppPreferencesRepository @Inject constructor(
@@ -140,6 +142,30 @@ class AppPreferencesRepository @Inject constructor(
         val LIVE_HOMEWORK_SESSION_MODE = stringPreferencesKey("live_homework_session_mode") // "Yes/No" or "Select"
         val LIVE_HOMEWORK_SELECT_OPTIONS = stringPreferencesKey("live_homework_select_options") // JSON or delimited string
         val SMTP_SETTINGS = stringPreferencesKey("smtp_settings")
+        val PASSWORD_AUTO_LOCK_ENABLED = booleanPreferencesKey("password_auto_lock_enabled")
+        val PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES = intPreferencesKey("password_auto_lock_timeout_minutes")
+    }
+
+    val passwordAutoLockEnabledFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PASSWORD_AUTO_LOCK_ENABLED] ?: false
+        }
+
+    suspend fun updatePasswordAutoLockEnabled(enabled: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.PASSWORD_AUTO_LOCK_ENABLED] = enabled
+        }
+    }
+
+    val passwordAutoLockTimeoutMinutesFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES] ?: 15
+        }
+
+    suspend fun updatePasswordAutoLockTimeoutMinutes(minutes: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES] = minutes
+        }
     }
 
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
@@ -860,7 +886,9 @@ class AppPreferencesRepository @Inject constructor(
         editModeEnabledFlow,
         gridSnapEnabledFlow,
         gridSizeFlow,
-        noAnimationsFlow
+        noAnimationsFlow,
+        passwordAutoLockEnabledFlow,
+        passwordAutoLockTimeoutMinutesFlow
     ) { args ->
         UserPreferences(
             recentBehaviorIncidentsLimit = args[0] as Int,
@@ -882,7 +910,9 @@ class AppPreferencesRepository @Inject constructor(
             editModeEnabled = args[16] as Boolean,
             gridSnapEnabled = args[17] as Boolean,
             gridSize = args[18] as Int,
-            noAnimations = args[19] as Boolean
+            noAnimations = args[19] as Boolean,
+            passwordAutoLockEnabled = args[20] as Boolean,
+            passwordAutoLockTimeoutMinutes = args[21] as Int
         )
     }
 }
