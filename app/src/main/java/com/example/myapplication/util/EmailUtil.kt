@@ -85,11 +85,13 @@ class EmailUtil(private val context: Context) {
                 put("mail.smtp.host", smtpSettings.host)
                 put("mail.smtp.port", smtpSettings.port.toString())
                 put("mail.smtp.auth", "true")
+                put("mail.smtp.ssl.checkserveridentity", "true") // HARDEN: Prevent MITM with mismatched certs
                 if (smtpSettings.useSsl) {
                     put("mail.smtp.socketFactory.port", smtpSettings.port.toString())
                     put("mail.smtp.socketFactory.class", "javax.net.ssl.SSLSocketFactory")
                 } else {
                     put("mail.smtp.starttls.enable", "true")
+                    put("mail.smtp.starttls.required", "true") // HARDEN: Prevent downgrade attacks
                 }
             }
 
