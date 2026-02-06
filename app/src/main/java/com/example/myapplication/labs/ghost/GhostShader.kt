@@ -136,4 +136,43 @@ object GhostShader {
             return float4(color, intensity * 0.8);
         }
     """
+
+    /**
+     * A futuristic hologram overlay effect with scanlines and flicker.
+     *
+     * Uniforms:
+     * - [iResolution]: Dimensions of the canvas.
+     * - [iTime]: Elapsed time in seconds.
+     * - [iColor]: The base hologram color (e.g., Cyan).
+     */
+    @Language("AGSL")
+    const val HOLOGRAM_OVERLAY = """
+        uniform float2 iResolution;
+        uniform float iTime;
+        uniform float3 iColor;
+
+        float4 main(float2 fragCoord) {
+            float2 uv = fragCoord / iResolution.xy;
+
+            // Scanlines
+            float scanline = sin(uv.y * 800.0 + iTime * 10.0) * 0.04;
+
+            // Flickering
+            float flicker = sin(iTime * 50.0) * 0.02 + 0.98;
+
+            // Vignette
+            float vignette = distance(uv, float2(0.5, 0.5));
+            vignette = 1.0 - vignette * 1.5;
+
+            float3 color = iColor * (flicker + scanline);
+            color *= vignette;
+
+            // Horizontal glitch
+            if (sin(iTime * 2.0 + uv.y * 10.0) > 0.99) {
+                color += 0.2;
+            }
+
+            return float4(color, 0.15 * vignette);
+        }
+    """
 }
