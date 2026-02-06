@@ -8,9 +8,9 @@ import androidx.compose.ui.unit.dp
 
 data class StudentUiItem(
     val id: Int,
-    val fullName: String,
-    val nickname: String?,
-    val initials: String,
+    val fullName: MutableState<String>,
+    val nickname: MutableState<String?>,
+    val initials: MutableState<String>,
     val xPosition: MutableState<Float>,
     val yPosition: MutableState<Float>,
     val displayWidth: MutableState<Dp>,
@@ -24,11 +24,11 @@ data class StudentUiItem(
     val fontFamily: MutableState<String>,
     val fontSize: MutableState<Int>,
     val fontColor: MutableState<Color>,
-    val recentBehaviorDescription: List<String>,
-    val recentHomeworkDescription: List<String>,
-    val recentQuizDescription: List<String>,
-    val groupColor: Color?,
-    val groupId: Long?,
-    val sessionLogText: List<String> = emptyList(),
-    val temporaryTask: String?
+    val recentBehaviorDescription: MutableState<List<String>>,
+    val recentHomeworkDescription: MutableState<List<String>>,
+    val recentQuizDescription: MutableState<List<String>>,
+    val groupColor: MutableState<Color?>,
+    val groupId: MutableState<Long?>,
+    val sessionLogText: MutableState<List<String>>,
+    val temporaryTask: MutableState<String?>
 )

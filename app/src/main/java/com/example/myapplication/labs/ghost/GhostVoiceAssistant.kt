@@ -183,8 +183,8 @@ class GhostVoiceAssistant(
 
         // Find student name in command
         val targetStudent = students.find { student ->
-            command.contains(student.fullName.lowercase()) ||
-            (student.nickname?.lowercase()?.let { command.contains(it) } ?: false)
+            command.contains(student.fullName.value.lowercase()) ||
+            (student.nickname.value?.lowercase()?.let { command.contains(it) } ?: false)
         }
 
         targetStudent?.let { student ->
@@ -196,7 +196,7 @@ class GhostVoiceAssistant(
                     comment = null
                 )
             )
-            Log.d("GhostVoice", "Successfully logged $behaviorType for student with initials ${student.initials}")
+            Log.d("GhostVoice", "Successfully logged $behaviorType for student with initials ${student.initials.value}")
         } ?: Log.w("GhostVoice", "Could not identify student in log command.")
     }
 }
