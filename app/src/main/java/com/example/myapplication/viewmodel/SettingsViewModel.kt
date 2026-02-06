@@ -404,6 +404,24 @@ class SettingsViewModel @Inject constructor(
     val passwordEnabled: StateFlow<Boolean> = preferencesRepository.passwordEnabledFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, false)
 
+    val passwordAutoLockEnabled: StateFlow<Boolean> = preferencesRepository.passwordAutoLockEnabledFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    fun updatePasswordAutoLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updatePasswordAutoLockEnabled(enabled)
+        }
+    }
+
+    val passwordAutoLockTimeoutMinutes: StateFlow<Int> = preferencesRepository.passwordAutoLockTimeoutMinutesFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 15)
+
+    fun updatePasswordAutoLockTimeoutMinutes(minutes: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updatePasswordAutoLockTimeoutMinutes(minutes)
+        }
+    }
+
     fun updatePasswordEnabled(enabled: Boolean) {
         viewModelScope.launch {
             preferencesRepository.updatePasswordEnabled(enabled)

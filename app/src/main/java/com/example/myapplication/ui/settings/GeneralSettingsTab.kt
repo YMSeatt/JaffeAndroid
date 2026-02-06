@@ -31,6 +31,8 @@ fun GeneralSettingsTab(
 ) {
     val appTheme by settingsViewModel.appTheme.collectAsStateWithLifecycle()
     val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
+    val autoLockEnabled by settingsViewModel.passwordAutoLockEnabled.collectAsState()
+    val autoLockTimeoutMinutes by settingsViewModel.passwordAutoLockTimeoutMinutes.collectAsState()
     val noAnimations by settingsViewModel.noAnimations.collectAsState()
     val autosaveInterval by settingsViewModel.autosaveInterval.collectAsState()
     val gridSnapEnabled by settingsViewModel.gridSnapEnabled.collectAsState()
@@ -57,6 +59,30 @@ fun GeneralSettingsTab(
         item {
             Button(onClick = onShowChangePasswordDialog, enabled = passwordEnabled) {
                 Text("Change Password")
+            }
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Enable Password Auto-Lock", modifier = Modifier.weight(1f))
+                Switch(checked = autoLockEnabled, onCheckedChange = {
+                    settingsViewModel.updatePasswordAutoLockEnabled(it)
+                })
+            }
+        }
+        item {
+            Text("Auto-Lock Timeout (minutes):", style = MaterialTheme.typography.titleMedium)
+        }
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Slider(
+                    value = autoLockTimeoutMinutes.toFloat(),
+                    onValueChange = { settingsViewModel.updatePasswordAutoLockTimeoutMinutes(it.toInt()) },
+                    valueRange = 1f..60f,
+                    steps = 58,
+                    modifier = Modifier.weight(1f),
+                    enabled = autoLockEnabled
+                )
+                Text(autoLockTimeoutMinutes.toString())
             }
         }
         item {

@@ -34,8 +34,20 @@ import kotlinx.coroutines.launch
 import android.content.Context
 import androidx.activity.result.ActivityResultLauncher
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.delay
+
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private var lastActivityTime by mutableStateOf(System.currentTimeMillis())
+
+    override fun onUserInteraction() {
+        super.onUserInteraction()
+        lastActivityTime = System.currentTimeMillis()
+    }
+
     private val seatingChartViewModel: SeatingChartViewModel by viewModels()
     private val settingsViewModel: SettingsViewModel by viewModels()
     private val studentGroupsViewModel: StudentGroupsViewModel by viewModels()
@@ -116,6 +128,16 @@ class MainActivity : ComponentActivity() {
 
             val noAnimations by settingsViewModel.noAnimations.collectAsState()
             val useBoldFont by settingsViewModel.useBoldFont.collectAsState()
+
+            val autoLockEnabled by settingsViewModel.passwordAutoLockEnabled.collectAsState()
+            val autoLockTimeoutMinutes by settingsViewModel.passwordAutoLockTimeoutMinutes.collectAsState()
+
+            LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTime) {
+                if (autoLockEnabled && unlocked && autoLockTimeoutMinutes > 0) {
+                    delay(autoLockTimeoutMinutes * 60 * 1000L)
+                    unlocked = false
+                }
+            }
 
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
