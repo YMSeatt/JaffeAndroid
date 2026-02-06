@@ -92,6 +92,8 @@ import com.example.myapplication.labs.ghost.GhostInsight
 import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
+import com.example.myapplication.labs.ghost.GhostOracle
+import com.example.myapplication.labs.ghost.GhostOracleDialog
 import com.example.myapplication.labs.ghost.GhostVoiceAssistant
 import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
 import com.example.myapplication.data.BehaviorEvent
@@ -154,6 +156,8 @@ fun SeatingChartScreen(
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
+    var showGhostOracleDialog by remember { mutableStateOf(false) }
+    var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -310,7 +314,11 @@ fun SeatingChartScreen(
                     }
                 },
                 lastExportPath = lastExportPath,
-                selectedStudentUiItemForAction = selectedStudentUiItemForAction
+                selectedStudentUiItemForAction = selectedStudentUiItemForAction,
+                onNeuralOracleClick = {
+                    currentProphecies = GhostOracle.consult(students, allBehaviorEvents)
+                    showGhostOracleDialog = true
+                }
             )
         },
         floatingActionButton = {
@@ -773,6 +781,13 @@ fun SeatingChartScreen(
                 }
             }
 
+            if (showGhostOracleDialog) {
+                GhostOracleDialog(
+                    prophecies = currentProphecies,
+                    onDismiss = { showGhostOracleDialog = false }
+                )
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VOICE_ASSISTANT_ENABLED) {
                 GhostVoiceVisualizer(
                     amplitude = ghostAmplitude,
@@ -821,7 +836,8 @@ fun SeatingChartTopAppBar(
     onOpenAppDataFolder: () -> Unit,
     onShareDatabase: () -> Unit,
     lastExportPath: String?,
-    selectedStudentUiItemForAction: StudentUiItem?
+    selectedStudentUiItemForAction: StudentUiItem?,
+    onNeuralOracleClick: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var showLayoutSubMenu by remember { mutableStateOf(false) }
@@ -945,6 +961,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Psychology, null, tint = MaterialTheme.colorScheme.tertiary) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Neural Oracle 👻") },
+                            onClick = {
+                                onNeuralOracleClick()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     DropdownMenuItem(
