@@ -10,7 +10,10 @@ class StringExtensionsTest {
         assertEquals("Hello", "hello".toTitleCase())
         assertEquals("World", "WORLD".toTitleCase())
         assertEquals("Test", "tEsT".toTitleCase())
-        assertEquals("This is a test", "this is a test".toTitleCase())
+        assertEquals("This Is A Test", "this is a test".toTitleCase())
+        assertEquals("Quiz Log", "QUIZ_LOG".toTitleCase())
+        assertEquals("John Doe", "john-doe".toTitleCase())
+        assertEquals("Multiple Spaces", "multiple  spaces".toTitleCase())
     }
 
     @Test

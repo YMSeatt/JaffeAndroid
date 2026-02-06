@@ -2,10 +2,20 @@ package com.example.myapplication.util
 
 import java.util.Locale
 
+/**
+ * Converts a string to Title Case, handling multiple words and common delimiters
+ * like spaces, underscores, and hyphens.
+ * e.g., "QUIZ_LOG" becomes "Quiz Log", "john-doe" becomes "John Doe".
+ */
 fun String.toTitleCase(): String {
-    return this.lowercase(Locale.getDefault()).replaceFirstChar {
-        if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-    }
+    if (this.isBlank()) return this
+    return this.split(Regex("[\\s_\\-]+"))
+        .filter { it.isNotEmpty() }
+        .joinToString(" ") { word ->
+            word.lowercase(Locale.getDefault()).replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+            }
+        }
 }
 
 private val HEX_CHARS = "0123456789abcdef".toCharArray()
