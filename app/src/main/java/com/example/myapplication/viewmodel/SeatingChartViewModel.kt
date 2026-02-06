@@ -73,9 +73,11 @@ import com.example.myapplication.preferences.UserPreferences
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
+import com.example.myapplication.ui.model.updateStudentUiItem
 import com.example.myapplication.ui.model.toUiItem
 import com.example.myapplication.util.CollisionDetector
 import com.example.myapplication.util.ConditionalFormattingEngine
+import com.example.myapplication.util.DecodedConditionalFormattingRule
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.util.SecurityUtil
@@ -173,6 +175,30 @@ class SeatingChartViewModel @Inject constructor(
     private val pendingStudentPositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
     private val pendingFurniturePositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
 
+    // Memoization caches
+    private var memoizedBehaviorEvents: List<BehaviorEvent>? = null
+    private var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
+
+    private var memoizedHomeworkLogs: List<HomeworkLog>? = null
+    private var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
+
+    private var memoizedQuizLogs: List<QuizLog>? = null
+    private var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
+
+    private var memoizedRules: List<ConditionalFormattingRule>? = null
+    private var decodedRulesCache: List<DecodedConditionalFormattingRule> = emptyList()
+
+    private var memoizedBehaviorInitials: String? = null
+    private var behaviorInitialsMapCache: Map<String, String> = emptyMap()
+
+    private var memoizedHomeworkInitials: String? = null
+    private var homeworkInitialsMapCache: Map<String, String> = emptyMap()
+
+    private var memoizedQuizInitials: String? = null
+    private var quizInitialsMapCache: Map<String, String> = emptyMap()
+
+    private val studentUiItemCache = ConcurrentHashMap<Int, StudentUiItem>()
+
     // In-memory session data
     private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
     private val sessionHomeworkLogs = MutableLiveData<List<HomeworkLog>>(emptyList())
@@ -254,9 +280,27 @@ class SeatingChartViewModel @Inject constructor(
                 val studentsForDisplayData = allStudentsForDisplay.value ?: return@withContext
                 val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
 
-                val behaviorLogsByStudent = allBehaviorEvents.value?.groupBy { it.studentId } ?: emptyMap()
-                val homeworkLogsByStudent = allHomeworkLogs.value?.groupBy { it.studentId } ?: emptyMap()
-                val quizLogsByStudent = allQuizLogs.value?.groupBy { it.studentId } ?: emptyMap()
+                // Memoized grouping
+                val behaviorEvents = allBehaviorEvents.value ?: emptyList()
+                if (behaviorEvents !== memoizedBehaviorEvents) {
+                    behaviorLogsByStudentCache = behaviorEvents.groupBy { it.studentId }
+                    memoizedBehaviorEvents = behaviorEvents
+                }
+                val behaviorLogsByStudent = behaviorLogsByStudentCache
+
+                val homeworkLogs = allHomeworkLogs.value ?: emptyList()
+                if (homeworkLogs !== memoizedHomeworkLogs) {
+                    homeworkLogsByStudentCache = homeworkLogs.groupBy { it.studentId }
+                    memoizedHomeworkLogs = homeworkLogs
+                }
+                val homeworkLogsByStudent = homeworkLogsByStudentCache
+
+                val quizLogs = allQuizLogs.value ?: emptyList()
+                if (quizLogs !== memoizedQuizLogs) {
+                    quizLogsByStudentCache = quizLogs.groupBy { it.studentId }
+                    memoizedQuizLogs = quizLogs
+                }
+                val quizLogsByStudent = quizLogsByStudentCache
 
                 val groups = allGroups.value ?: emptyList()
                 val behaviorLimit = prefs.recentBehaviorIncidentsLimit
@@ -266,9 +310,26 @@ class SeatingChartViewModel @Inject constructor(
                 val useInitialsForBehavior = prefs.useInitialsForBehavior
                 val useInitialsForHomework = prefs.useInitialsForHomework
                 val useInitialsForQuiz = prefs.useInitialsForQuiz
-                val behaviorInitialsMap = parseKeyValueString(prefs.behaviorInitialsMap)
-                val homeworkInitialsMap = parseKeyValueString(prefs.homeworkInitialsMap)
-                val quizInitialsMap = parseKeyValueString(prefs.quizInitialsMap)
+
+                // Memoized preference parsing
+                if (prefs.behaviorInitialsMap != memoizedBehaviorInitials) {
+                    behaviorInitialsMapCache = parseKeyValueString(prefs.behaviorInitialsMap)
+                    memoizedBehaviorInitials = prefs.behaviorInitialsMap
+                }
+                val behaviorInitialsMap = behaviorInitialsMapCache
+
+                if (prefs.homeworkInitialsMap != memoizedHomeworkInitials) {
+                    homeworkInitialsMapCache = parseKeyValueString(prefs.homeworkInitialsMap)
+                    memoizedHomeworkInitials = prefs.homeworkInitialsMap
+                }
+                val homeworkInitialsMap = homeworkInitialsMapCache
+
+                if (prefs.quizInitialsMap != memoizedQuizInitials) {
+                    quizInitialsMapCache = parseKeyValueString(prefs.quizInitialsMap)
+                    memoizedQuizInitials = prefs.quizInitialsMap
+                }
+                val quizInitialsMap = quizInitialsMapCache
+
                 val lastClearedTimestamps = prefs.studentLogsLastCleared
 
                 val behaviorDisplayTimeout = prefs.behaviorDisplayTimeout
@@ -277,31 +338,21 @@ class SeatingChartViewModel @Inject constructor(
                 val currentTime = System.currentTimeMillis()
                 val calendar = java.util.Calendar.getInstance()
 
-                val decodedRules = ConditionalFormattingEngine.decodeRules(allRules.value ?: emptyList())
+                // Memoized rule decoding
+                val rules = allRules.value ?: emptyList()
+                if (rules !== memoizedRules) {
+                    decodedRulesCache = ConditionalFormattingEngine.decodeRules(rules)
+                    memoizedRules = rules
+                }
+                val decodedRules = decodedRulesCache
 
                 val defaultStyle = prefs.defaultStudentStyle
 
-                val studentsWithBehavior = students.map { student ->
-                    val studentDetails = studentDetailsMap[student.id] ?: return@map student.toStudentUiItem(
-                        recentBehaviorDescription = emptyList(),
-                        recentHomeworkDescription = emptyList(),
-                        recentQuizDescription = emptyList(),
-                        sessionLogText = emptyList(),
-                        groupColor = null,
-                        conditionalFormattingResult = emptyList(),
-                        defaultWidth = defaultStyle.width,
-                        defaultHeight = defaultStyle.height,
-                        defaultBackgroundColor = defaultStyle.backgroundColor,
-                        defaultOutlineColor = defaultStyle.outlineColor,
-                        defaultTextColor = defaultStyle.textColor,
-                        defaultOutlineThickness = defaultStyle.outlineThickness,
-                        defaultCornerRadius = defaultStyle.cornerRadius,
-                        defaultPadding = defaultStyle.padding,
-                        defaultFontFamily = defaultStyle.fontFamily,
-                        defaultFontSize = defaultStyle.fontSize,
-                        defaultFontColor = defaultStyle.fontColor
-                    )
+                // Clean up cache for deleted students
+                val currentStudentIds = students.map { it.id.toInt() }.toSet()
+                studentUiItemCache.keys.retainAll { it in currentStudentIds }
 
+                val studentsWithBehavior = students.map { student ->
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                     val recentEvents = if (student.showLogs) {
                         behaviorLogsByStudent[student.id]?.filter {
@@ -362,20 +413,25 @@ class SeatingChartViewModel @Inject constructor(
                         emptyList()
                     }
 
-                    val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
-                        student = studentDetails,
-                        rules = decodedRules,
-                        behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
-                        quizLog = quizLogsByStudent[student.id] ?: emptyList(),
-                        homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
-                        isLiveQuizActive = isSessionActive.value ?: false,
-                        liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                        isLiveHomeworkActive = isSessionActive.value ?: false,
-                        liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                        currentMode = currentMode.value ?: "behavior",
-                        currentTimeMillis = currentTime,
-                        calendar = calendar
-                    )
+                    val studentDetails = studentDetailsMap[student.id]
+                    val conditionalFormattingResult = if (studentDetails != null) {
+                        ConditionalFormattingEngine.applyConditionalFormattingDecoded(
+                            student = studentDetails,
+                            rules = decodedRules,
+                            behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
+                            quizLog = quizLogsByStudent[student.id] ?: emptyList(),
+                            homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
+                            isLiveQuizActive = isSessionActive.value ?: false,
+                            liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                            isLiveHomeworkActive = isSessionActive.value ?: false,
+                            liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                            currentMode = currentMode.value ?: "behavior",
+                            currentTimeMillis = currentTime,
+                            calendar = calendar
+                        )
+                    } else {
+                        emptyList()
+                    }
 
                     // Apply pending position if available
                     val pendingPos = pendingStudentPositions[student.id.toInt()]
@@ -388,25 +444,52 @@ class SeatingChartViewModel @Inject constructor(
                         }
                     }
 
-                    studentForUi.toStudentUiItem(
-                        recentBehaviorDescription = behaviorDescription,
-                        recentHomeworkDescription = homeworkDescription,
-                        recentQuizDescription = quizDescription,
-                        sessionLogText = sessionLogs,
-                        groupColor = groups.find { group -> group.id == student.groupId }?.color,
-                        conditionalFormattingResult = conditionalFormattingResult,
-                        defaultWidth = defaultStyle.width,
-                        defaultHeight = defaultStyle.height,
-                        defaultBackgroundColor = defaultStyle.backgroundColor,
-                        defaultOutlineColor = defaultStyle.outlineColor,
-                        defaultTextColor = defaultStyle.textColor,
-                        defaultOutlineThickness = defaultStyle.outlineThickness,
-                        defaultCornerRadius = defaultStyle.cornerRadius,
-                        defaultPadding = defaultStyle.padding,
-                        defaultFontFamily = defaultStyle.fontFamily,
-                        defaultFontSize = defaultStyle.fontSize,
-                        defaultFontColor = defaultStyle.fontColor
-                    )
+                    val existingItem = studentUiItemCache[student.id.toInt()]
+                    if (existingItem != null) {
+                        studentForUi.updateStudentUiItem(
+                            item = existingItem,
+                            recentBehaviorDescription = behaviorDescription,
+                            recentHomeworkDescription = homeworkDescription,
+                            recentQuizDescription = quizDescription,
+                            sessionLogText = sessionLogs,
+                            groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                            conditionalFormattingResult = conditionalFormattingResult,
+                            defaultWidth = defaultStyle.width,
+                            defaultHeight = defaultStyle.height,
+                            defaultBackgroundColor = defaultStyle.backgroundColor,
+                            defaultOutlineColor = defaultStyle.outlineColor,
+                            defaultTextColor = defaultStyle.textColor,
+                            defaultOutlineThickness = defaultStyle.outlineThickness,
+                            defaultCornerRadius = defaultStyle.cornerRadius,
+                            defaultPadding = defaultStyle.padding,
+                            defaultFontFamily = defaultStyle.fontFamily,
+                            defaultFontSize = defaultStyle.fontSize,
+                            defaultFontColor = defaultStyle.fontColor
+                        )
+                        existingItem
+                    } else {
+                        val newItem = studentForUi.toStudentUiItem(
+                            recentBehaviorDescription = behaviorDescription,
+                            recentHomeworkDescription = homeworkDescription,
+                            recentQuizDescription = quizDescription,
+                            sessionLogText = sessionLogs,
+                            groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                            conditionalFormattingResult = conditionalFormattingResult,
+                            defaultWidth = defaultStyle.width,
+                            defaultHeight = defaultStyle.height,
+                            defaultBackgroundColor = defaultStyle.backgroundColor,
+                            defaultOutlineColor = defaultStyle.outlineColor,
+                            defaultTextColor = defaultStyle.textColor,
+                            defaultOutlineThickness = defaultStyle.outlineThickness,
+                            defaultCornerRadius = defaultStyle.cornerRadius,
+                            defaultPadding = defaultStyle.padding,
+                            defaultFontFamily = defaultStyle.fontFamily,
+                            defaultFontSize = defaultStyle.fontSize,
+                            defaultFontColor = defaultStyle.fontColor
+                        )
+                        studentUiItemCache[student.id.toInt()] = newItem
+                        newItem
+                    }
                 }
                 studentsForDisplay.postValue(studentsWithBehavior)
             }

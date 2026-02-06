@@ -19,9 +19,9 @@ class CollisionDetectorTest {
     ): StudentUiItem {
         return StudentUiItem(
             id = id,
-            fullName = "Student $id",
-            nickname = null,
-            initials = "S$id",
+            fullName = mutableStateOf("Student $id"),
+            nickname = mutableStateOf(null),
+            initials = mutableStateOf("S$id"),
             xPosition = mutableStateOf(x),
             yPosition = mutableStateOf(y),
             displayWidth = mutableStateOf(width.dp),
@@ -35,12 +35,13 @@ class CollisionDetectorTest {
             fontFamily = mutableStateOf("Arial"),
             fontSize = mutableStateOf(12),
             fontColor = mutableStateOf(Color.Black),
-            recentBehaviorDescription = emptyList(),
-            recentHomeworkDescription = emptyList(),
-            recentQuizDescription = emptyList(),
-            groupColor = null,
-            groupId = null,
-            temporaryTask = null
+            recentBehaviorDescription = mutableStateOf(emptyList()),
+            recentHomeworkDescription = mutableStateOf(emptyList()),
+            recentQuizDescription = mutableStateOf(emptyList()),
+            groupColor = mutableStateOf(null),
+            groupId = mutableStateOf(null),
+            sessionLogText = mutableStateOf(emptyList()),
+            temporaryTask = mutableStateOf(null)
         )
     }
 

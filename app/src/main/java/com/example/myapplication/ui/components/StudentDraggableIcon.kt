@@ -219,7 +219,7 @@ fun StudentDraggableIcon(
                             }
                         }
                     }
-                    if (studentUiItem.temporaryTask != null) {
+                    if (studentUiItem.temporaryTask.value != null) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Assignment,
                             contentDescription = "Assigned Task",
@@ -230,7 +230,7 @@ fun StudentDraggableIcon(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val nameParts = studentUiItem.fullName.split(" ")
+                        val nameParts = studentUiItem.fullName.value.split(" ")
                         val firstName = nameParts.firstOrNull() ?: ""
                         val lastName = if (nameParts.size > 1) nameParts.last() else ""
                         Text(
@@ -252,10 +252,10 @@ fun StudentDraggableIcon(
                             )
                         )
                         if (showBehavior) {
-                            val behaviorLogs = studentUiItem.recentBehaviorDescription
-                            val quizLogs = studentUiItem.recentQuizDescription
-                            val homeworkLogs = studentUiItem.recentHomeworkDescription
-                            val sessionLogs = studentUiItem.sessionLogText
+                            val behaviorLogs = studentUiItem.recentBehaviorDescription.value
+                            val quizLogs = studentUiItem.recentQuizDescription.value
+                            val homeworkLogs = studentUiItem.recentHomeworkDescription.value
+                            val sessionLogs = studentUiItem.sessionLogText.value
 
                             if (behaviorLogs.isNotEmpty()) {
                                 Spacer(modifier = Modifier.height(4.dp))

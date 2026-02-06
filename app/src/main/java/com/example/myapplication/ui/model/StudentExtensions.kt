@@ -1,5 +1,6 @@
 package com.example.myapplication.ui.model
 
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,118 @@ fun Student.toStudentUiItem(
     defaultFontSize: Int,
     defaultFontColor: String
 ): StudentUiItem {
+    val styles = calculateStyles(
+        groupColor,
+        conditionalFormattingResult,
+        defaultBackgroundColor,
+        defaultOutlineColor,
+        defaultTextColor,
+        defaultFontColor
+    )
+
+    return StudentUiItem(
+        id = this.id.toInt(),
+        fullName = mutableStateOf("$firstName $lastName"),
+        nickname = mutableStateOf(nickname),
+        initials = mutableStateOf("${firstName.first()}${lastName.first()}"),
+        xPosition = mutableStateOf(xPosition),
+        yPosition = mutableStateOf(yPosition),
+        displayWidth = mutableStateOf((customWidth ?: defaultWidth).dp),
+        displayHeight = mutableStateOf((customHeight ?: defaultHeight).dp),
+        displayBackgroundColor = mutableStateOf(styles.backgroundColors),
+        displayOutlineColor = mutableStateOf(styles.outlineColors),
+        displayTextColor = mutableStateOf(styles.textColor),
+        displayOutlineThickness = mutableStateOf((customOutlineThickness ?: defaultOutlineThickness).dp),
+        displayCornerRadius = mutableStateOf((customCornerRadius ?: defaultCornerRadius).dp),
+        displayPadding = mutableStateOf((customPadding ?: defaultPadding).dp),
+        recentBehaviorDescription = mutableStateOf(recentBehaviorDescription),
+        recentHomeworkDescription = mutableStateOf(recentHomeworkDescription),
+        recentQuizDescription = mutableStateOf(recentQuizDescription),
+        sessionLogText = mutableStateOf(sessionLogText),
+        groupColor = mutableStateOf(groupColor?.let { safeParseColor(it) }),
+        groupId = mutableStateOf(groupId),
+        fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
+        fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
+        fontColor = mutableStateOf(styles.fontColor),
+        temporaryTask = mutableStateOf(temporaryTask)
+    )
+}
+
+fun Student.updateStudentUiItem(
+    item: StudentUiItem,
+    recentBehaviorDescription: List<String>,
+    recentHomeworkDescription: List<String>,
+    recentQuizDescription: List<String>,
+    sessionLogText: List<String>,
+    groupColor: String?,
+    conditionalFormattingResult: List<Pair<String?, String?>>,
+    defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
+    defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
+    defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
+    defaultOutlineColor: String = DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX,
+    defaultTextColor: String = DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
+    defaultOutlineThickness: Int = DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP,
+    defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
+    defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
+    defaultFontFamily: String,
+    defaultFontSize: Int,
+    defaultFontColor: String
+) {
+    val styles = calculateStyles(
+        groupColor,
+        conditionalFormattingResult,
+        defaultBackgroundColor,
+        defaultOutlineColor,
+        defaultTextColor,
+        defaultFontColor
+    )
+
+    updateIfChanged(item.fullName, "$firstName $lastName")
+    updateIfChanged(item.nickname, nickname)
+    updateIfChanged(item.initials, "${firstName.first()}${lastName.first()}")
+    updateIfChanged(item.xPosition, xPosition)
+    updateIfChanged(item.yPosition, yPosition)
+    updateIfChanged(item.displayWidth, (customWidth ?: defaultWidth).dp)
+    updateIfChanged(item.displayHeight, (customHeight ?: defaultHeight).dp)
+    updateIfChanged(item.displayBackgroundColor, styles.backgroundColors)
+    updateIfChanged(item.displayOutlineColor, styles.outlineColors)
+    updateIfChanged(item.displayTextColor, styles.textColor)
+    updateIfChanged(item.displayOutlineThickness, (customOutlineThickness ?: defaultOutlineThickness).dp)
+    updateIfChanged(item.displayCornerRadius, (customCornerRadius ?: defaultCornerRadius).dp)
+    updateIfChanged(item.displayPadding, (customPadding ?: defaultPadding).dp)
+    updateIfChanged(item.recentBehaviorDescription, recentBehaviorDescription)
+    updateIfChanged(item.recentHomeworkDescription, recentHomeworkDescription)
+    updateIfChanged(item.recentQuizDescription, recentQuizDescription)
+    updateIfChanged(item.sessionLogText, sessionLogText)
+    updateIfChanged(item.groupColor, groupColor?.let { safeParseColor(it) })
+    updateIfChanged(item.groupId, groupId)
+    updateIfChanged(item.fontFamily, customFontFamily ?: defaultFontFamily)
+    updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
+    updateIfChanged(item.fontColor, styles.fontColor)
+    updateIfChanged(item.temporaryTask, temporaryTask)
+}
+
+private fun <T> updateIfChanged(state: MutableState<T>, newValue: T) {
+    if (state.value != newValue) {
+        state.value = newValue
+    }
+}
+
+private data class StudentStyles(
+    val backgroundColors: List<Color>,
+    val outlineColors: List<Color>,
+    val textColor: Color,
+    val fontColor: Color
+)
+
+private fun Student.calculateStyles(
+    groupColor: String?,
+    conditionalFormattingResult: List<Pair<String?, String?>>,
+    defaultBackgroundColor: String,
+    defaultOutlineColor: String,
+    defaultTextColor: String,
+    defaultFontColor: String
+): StudentStyles {
     val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
     val customTextColor = customTextColor?.let { safeParseColor(it) }
 
@@ -63,34 +176,7 @@ fun Student.toStudentUiItem(
     }
 
     val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
-    val fontFamily = customFontFamily ?: defaultFontFamily
-    val fontSize = customFontSize ?: defaultFontSize
     val fontColor = customFontColor?.let { safeParseColor(it) } ?: safeParseColor(defaultFontColor) ?: Color.Black
 
-    return StudentUiItem(
-        id = this.id.toInt(),
-        fullName = "$firstName $lastName",
-        nickname = nickname,
-        initials = "${firstName.first()}${lastName.first()}",
-        xPosition = mutableStateOf(xPosition.toFloat()),
-        yPosition = mutableStateOf(yPosition.toFloat()),
-        displayWidth = mutableStateOf((customWidth ?: defaultWidth).dp),
-        displayHeight = mutableStateOf((customHeight ?: defaultHeight).dp),
-        displayBackgroundColor = mutableStateOf(backgroundColors),
-        displayOutlineColor = mutableStateOf(outlineColors),
-        displayTextColor = mutableStateOf(textColor),
-        displayOutlineThickness = mutableStateOf((customOutlineThickness ?: defaultOutlineThickness).dp),
-        displayCornerRadius = mutableStateOf((customCornerRadius ?: defaultCornerRadius).dp),
-        displayPadding = mutableStateOf((customPadding ?: defaultPadding).dp),
-        recentBehaviorDescription = recentBehaviorDescription,
-        recentHomeworkDescription = recentHomeworkDescription,
-        recentQuizDescription = recentQuizDescription,
-        sessionLogText = sessionLogText,
-        groupColor = groupColor?.let { safeParseColor(it) },
-        groupId = groupId,
-        fontFamily = mutableStateOf(fontFamily),
-        fontSize = mutableStateOf(fontSize),
-        fontColor = mutableStateOf(fontColor),
-        temporaryTask = temporaryTask
-    )
+    return StudentStyles(backgroundColors, outlineColors, textColor, fontColor)
 }

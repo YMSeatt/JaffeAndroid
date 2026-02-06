@@ -53,7 +53,7 @@ fun NeuralMapLayer(
     )
 
     val groupedStudents = remember(students) {
-        students.filter { it.groupId != null }.groupBy { it.groupId }
+        students.filter { it.groupId.value != null }.groupBy { it.groupId.value }
     }
 
     val negativeLogsByStudent = remember(behaviorLogs) {
@@ -85,7 +85,7 @@ fun NeuralMapLayer(
         groupedStudents.forEach { (_, groupMembers) ->
             if (groupMembers.size < 2) return@forEach
 
-            val groupColor = groupMembers.first().groupColor ?: Color.Cyan
+            val groupColor = groupMembers.first().groupColor.value ?: Color.Cyan
 
             // Calculate centers in the canvas coordinate system
             val centers = groupMembers.map { student ->

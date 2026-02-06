@@ -497,7 +497,7 @@ fun SeatingChartScreen(
                                     val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
 
                                     currentGhostInsight = GhostInsightEngine.generateInsight(
-                                        student.fullName, behavior, quiz, homework
+                                        student.fullName.value, behavior, quiz, homework
                                     )
                                     showGhostInsightDialog = true
                                     showStudentActionMenu = false
@@ -569,7 +569,7 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("Assign to Group") },
                             onClick = { showGroupMenu = true })
-                        if (student.groupId != null) {
+                        if (student.groupId.value != null) {
                             DropdownMenuItem(text = { Text("Remove from Group") }, onClick = {
                                 seatingChartViewModel.removeStudentFromGroup(student.id.toLong())
                                 showStudentActionMenu = false
