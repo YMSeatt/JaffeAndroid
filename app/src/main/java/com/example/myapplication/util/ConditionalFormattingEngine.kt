@@ -2,6 +2,7 @@
 package com.example.myapplication.util
 
 import android.util.Log
+import android.util.LruCache
 import com.example.myapplication.data.StudentDetailsForDisplay
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.BehaviorEvent
@@ -110,6 +111,12 @@ data class DecodedConditionalFormattingRule(
 object ConditionalFormattingEngine {
 
     private val json = Json { ignoreUnknownKeys = true }
+
+    /**
+     * Cache for decoded marks data JSON strings to avoid redundant deserialization.
+     * The key is the raw JSON string from [QuizLog.marksData].
+     */
+    private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
 
     /**
      * Deserializes a list of [ConditionalFormattingRule] entities into [DecodedConditionalFormattingRule] objects.
@@ -379,7 +386,9 @@ object ConditionalFormattingEngine {
                 quizLog.any { log ->
                     if (log.studentId != student.id.toLong()) return@any false
                     try {
-                        val marksData = json.decodeFromString<Map<String, Int>>(log.marksData)
+                        val marksData = decodedMarksCache.get(log.marksData) ?: json.decodeFromString<Map<String, Int>>(log.marksData).also {
+                            decodedMarksCache.put(log.marksData, it)
+                        }
                         val count = marksData[markTypeId] ?: 0
                         when (operator) {
                             ">=" -> count >= countThreshold
