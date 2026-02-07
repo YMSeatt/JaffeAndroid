@@ -574,12 +574,13 @@ class AppPreferencesRepository @Inject constructor(
 
     val passwordHashFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.PASSWORD_HASH]
+            preferences[PreferencesKeys.PASSWORD_HASH]?.let { securityUtil.decryptSafe(it) }
         }
 
     suspend fun updatePasswordHash(hash: String) {
+        val encryptedHash = securityUtil.encrypt(hash)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.PASSWORD_HASH] = hash
+            settings[PreferencesKeys.PASSWORD_HASH] = encryptedHash
         }
     }
 

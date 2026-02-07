@@ -5,6 +5,7 @@ import androidx.core.content.FileProvider
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.EmailRepository
 import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
@@ -148,7 +149,8 @@ class EmailWorker(
                 )
             }
             "process_pending_emails" -> {
-                val pendingEmails = pendingEmailDao.getAll()
+                val emailRepository = EmailRepository(db.emailScheduleDao(), pendingEmailDao, securityUtil)
+                val pendingEmails = emailRepository.getAllPendingEmails()
                 pendingEmails.forEach { email ->
                     EmailUtil(applicationContext).sendEmail(
                         from = from,
@@ -158,7 +160,7 @@ class EmailWorker(
                         body = email.body,
                         smtpSettings = smtpSettings
                     )
-                    pendingEmailDao.delete(email.id)
+                    emailRepository.deletePendingEmail(email.id)
                 }
             }
             "on_stop_export" -> {
