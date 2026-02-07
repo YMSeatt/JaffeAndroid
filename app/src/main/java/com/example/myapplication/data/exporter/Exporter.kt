@@ -20,6 +20,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -159,6 +160,9 @@ class Exporter(
             createStudentInfoSheet(workbook, students, studentGroupMap)
         }
 
+        if (options.includeAttendanceSheet) {
+            createAttendanceSheet(workbook, students, behaviorEvents, homeworkLogs, quizLogs, options, formattingContext)
+        }
 
         // Write to file
         val byteArrayOutputStream = ByteArrayOutputStream()
@@ -652,6 +656,109 @@ class Exporter(
             row.createCell(3).setCellValue(student.gender)
             val group = student.groupId?.let { studentGroups[it] }
             row.createCell(4).setCellValue(group?.name ?: "")
+        }
+    }
+
+    /**
+     * Creates an 'Attendance Report' sheet showing student presence based on logged activities.
+     * Ported from Python's generate_attendance_data and export_attendance_to_excel.
+     */
+    private fun createAttendanceSheet(
+        workbook: Workbook,
+        students: List<Student>,
+        behaviorEvents: List<BehaviorEvent>,
+        homeworkLogs: List<HomeworkLog>,
+        quizLogs: List<QuizLog>,
+        options: ExportOptions,
+        context: FormattingContext
+    ) {
+        val sheet = workbook.createSheet("Attendance Report")
+        sheet.createFreezePane(1, 1)
+
+        val cal = Calendar.getInstance()
+
+        // Determine date range from options or fallback to log boundaries
+        val startMillis = options.startDate ?: (behaviorEvents.map { it.timestamp } +
+                homeworkLogs.map { it.loggedAt } +
+                quizLogs.map { it.loggedAt }).minOrNull() ?: System.currentTimeMillis()
+        val endMillis = options.endDate ?: System.currentTimeMillis()
+
+        cal.timeInMillis = startMillis
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val reportStart = cal.timeInMillis
+
+        cal.timeInMillis = endMillis
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        val reportEnd = cal.timeInMillis
+
+        // Generate list of days in the range
+        val dates = mutableListOf<Long>()
+        cal.timeInMillis = reportStart
+        while (cal.timeInMillis <= reportEnd) {
+            dates.add(cal.timeInMillis)
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            if (dates.size > 366) break // Safety break for large ranges
+        }
+
+        val headers = mutableListOf("Student Name")
+        val attendanceDateFormat = SimpleDateFormat("yyyy-MM-dd (EEE)", Locale.getDefault())
+        dates.forEach { headers.add(attendanceDateFormat.format(Date(it))) }
+        headers.add("Total Present")
+        headers.add("Total Absent")
+
+        val headerRow = sheet.createRow(0)
+        headers.forEachIndexed { index, header ->
+            val cell = headerRow.createCell(index)
+            cell.setCellValue(header)
+            cell.cellStyle = context.headerStyle
+        }
+
+        val filteredStudents = if (options.studentIds != null) {
+            students.filter { options.studentIds.contains(it.id) }
+        } else {
+            students
+        }.sortedBy { "${it.lastName} ${it.firstName}" }
+
+        val centerStyle = workbook.createCellStyle().apply {
+            alignment = HorizontalAlignment.CENTER
+        }
+
+        filteredStudents.forEachIndexed { rowIndex, student ->
+            val row = sheet.createRow(rowIndex + 1)
+            row.createCell(0).setCellValue("${student.firstName} ${student.lastName}")
+
+            var totalPresent = 0
+            var totalAbsent = 0
+
+            dates.forEachIndexed { dateIndex, dateMillis ->
+                val dayEndMillis = dateMillis + 24 * 60 * 60 * 1000
+
+                // Presence check: ANY log entry for this student on this day counts as "Present"
+                val isPresent = behaviorEvents.any { it.studentId == student.id && it.timestamp >= dateMillis && it.timestamp < dayEndMillis } ||
+                        homeworkLogs.any { it.studentId == student.id && it.loggedAt >= dateMillis && it.loggedAt < dayEndMillis } ||
+                        quizLogs.any { it.studentId == student.id && it.loggedAt >= dateMillis && it.loggedAt < dayEndMillis }
+
+                val cell = row.createCell(dateIndex + 1)
+                cell.setCellValue(if (isPresent) "P" else "A")
+                cell.cellStyle = centerStyle
+
+                if (isPresent) totalPresent++ else totalAbsent++
+            }
+
+            row.createCell(dates.size + 1).apply {
+                setCellValue(totalPresent.toDouble())
+                cellStyle = context.rightAlignmentStyle
+            }
+            row.createCell(dates.size + 2).apply {
+                setCellValue(totalAbsent.toDouble())
+                cellStyle = context.rightAlignmentStyle
+            }
         }
     }
 }

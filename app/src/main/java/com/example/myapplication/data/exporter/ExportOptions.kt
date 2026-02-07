@@ -18,5 +18,6 @@ data class ExportOptions(
     val homeworkTypes: List<String>? = null,
     val includeIndividualStudentSheets: Boolean = false,
     val includeStudentInfoSheet: Boolean = false,
+    val includeAttendanceSheet: Boolean = false,
     val encrypt: Boolean = false
 )
