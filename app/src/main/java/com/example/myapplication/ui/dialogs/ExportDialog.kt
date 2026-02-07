@@ -51,6 +51,7 @@ fun ExportDialog(
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
     var includeIndividualStudentSheets by remember { mutableStateOf(true) }
+    var includeAttendanceSheet by remember { mutableStateOf(false) }
 
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
@@ -220,6 +221,10 @@ fun ExportDialog(
                     Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
                     Text("Individual Student Sheets")
                 }
+                Row {
+                    Checkbox(checked = includeAttendanceSheet, onCheckedChange = { includeAttendanceSheet = it })
+                    Text("Attendance Sheet")
+                }
             }
         },
         confirmButton = {
@@ -238,7 +243,8 @@ fun ExportDialog(
                             includeSummarySheet = includeSummarySheet,
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
-                            includeIndividualStudentSheets = includeIndividualStudentSheets
+                            includeIndividualStudentSheets = includeIndividualStudentSheets,
+                            includeAttendanceSheet = includeAttendanceSheet
                         )
                         onExport(options, false)
                     }
@@ -260,7 +266,8 @@ fun ExportDialog(
                             includeSummarySheet = includeSummarySheet,
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
-                            includeIndividualStudentSheets = includeIndividualStudentSheets
+                            includeIndividualStudentSheets = includeIndividualStudentSheets,
+                            includeAttendanceSheet = includeAttendanceSheet
                         )
                         onExport(options, true)
                     }

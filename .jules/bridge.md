@@ -25,3 +25,7 @@ LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTi
 ## 2025-01-24 - Security Parity vs Safety
 **Discrepancy:** The Python prototype includes a hardcoded master recovery password hash.
 **Adaptation:** While porting for parity, it was decided (after review) to omit the master recovery password hash in the Android implementation to avoid introducing a security backdoor, prioritizing platform security best practices over strict logical parity for sensitive features.
+
+## 2026-02-07 - Attendance Report Feature Port
+**Discrepancy:** The Python application uses a separate logic block and dialog for generating attendance reports, inferring presence from log activity. The Android application had Excel export but lacked this specific "inferred attendance" logic.
+**Adaptation:** Integrated the attendance report generation directly into the existing `Exporter` infrastructure in Android. Added `includeAttendanceSheet` to `ExportOptions` and implemented `createAttendanceSheet` in `Exporter.kt`, using Kotlin's `any` for efficient presence checks across multiple log types.
