@@ -45,9 +45,9 @@ class GhostOracleTest {
     private fun createMockStudent(id: Int, name: String, x: Float, y: Float): StudentUiItem {
         return StudentUiItem(
             id = id,
-            fullName = name,
-            nickname = null,
-            initials = name.take(2),
+            fullName = mutableStateOf(name),
+            nickname = mutableStateOf(null),
+            initials = mutableStateOf(name.take(2)),
             xPosition = mutableStateOf(x),
             yPosition = mutableStateOf(y),
             displayWidth = mutableStateOf(100.dp),
@@ -61,12 +61,13 @@ class GhostOracleTest {
             fontFamily = mutableStateOf("sans-serif"),
             fontSize = mutableStateOf(14),
             fontColor = mutableStateOf(Color.Black),
-            recentBehaviorDescription = emptyList(),
-            recentHomeworkDescription = emptyList(),
-            recentQuizDescription = emptyList(),
-            groupColor = null,
-            groupId = null,
-            temporaryTask = null
+            recentBehaviorDescription = mutableStateOf(emptyList()),
+            recentHomeworkDescription = mutableStateOf(emptyList()),
+            recentQuizDescription = mutableStateOf(emptyList()),
+            groupColor = mutableStateOf(null),
+            groupId = mutableStateOf(null),
+            sessionLogText = mutableStateOf(emptyList()),
+            temporaryTask = mutableStateOf(null)
         )
     }
 }

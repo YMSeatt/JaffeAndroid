@@ -15,6 +15,21 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
 import com.example.myapplication.util.safeParseColor
 
+/**
+ * Creates a new [StudentUiItem] from a [Student] entity and associated context data.
+ *
+ * This function initializes all [MutableState] fields of the UI item.
+ *
+ * @param recentBehaviorDescription Formatted list of recent behavior events.
+ * @param recentHomeworkDescription Formatted list of recent homework logs.
+ * @param recentQuizDescription Formatted list of recent quiz logs.
+ * @param sessionLogText Combined history of events for the current session.
+ * @param groupColor The Hex color of the student's group, if any.
+ * @param conditionalFormattingResult List of active color/outline pairs from the formatting engine.
+ * @param defaultFontFamily Global default font family from user preferences.
+ * @param defaultFontSize Global default font size from user preferences.
+ * @param defaultFontColor Global default font color from user preferences.
+ */
 fun Student.toStudentUiItem(
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
@@ -71,6 +86,13 @@ fun Student.toStudentUiItem(
     )
 }
 
+/**
+ * Updates an existing [StudentUiItem] with fresh data from a [Student] entity.
+ *
+ * This method uses [updateIfChanged] to perform differential updates on the [MutableState] fields.
+ * This ensures that Compose only recomposes the specific parts of the UI that have actually
+ * changed, maximizing performance during high-frequency updates.
+ */
 fun Student.updateStudentUiItem(
     item: StudentUiItem,
     recentBehaviorDescription: List<String>,
@@ -125,6 +147,10 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.temporaryTask, temporaryTask)
 }
 
+/**
+ * Helper to update a [MutableState] only if the new value differs from the current one.
+ * This prevents unnecessary recomposition triggers in Jetpack Compose.
+ */
 private fun <T> updateIfChanged(state: MutableState<T>, newValue: T) {
     if (state.value != newValue) {
         state.value = newValue
@@ -138,6 +164,18 @@ private data class StudentStyles(
     val fontColor: Color
 )
 
+/**
+ * Resolves the visual styling for a student based on a hierarchy of priorities.
+ *
+ * The styling precedence is as follows (highest to lowest):
+ * 1. **Conditional Formatting**: Dynamic rules (e.g., "Score < 50%") override all other styles.
+ *    Multiple matching rules result in a list of colors (often rendered as a gradient or border).
+ * 2. **User Overrides**: Manual customizations set by the teacher on an individual student.
+ * 3. **Group Settings**: Styles inherited from the student's assigned group (e.g., "Blue Group").
+ * 4. **Defaults**: Global application defaults for students.
+ *
+ * @return A [StudentStyles] object containing the resolved colors.
+ */
 private fun Student.calculateStyles(
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,

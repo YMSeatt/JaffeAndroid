@@ -6,6 +6,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+/**
+ * A UI-optimized representation of a Student.
+ *
+ * Unlike the Room entity [com.example.myapplication.data.Student], this class uses [MutableState]
+ * for its properties. This architectural choice enables:
+ * 1. **Fine-grained Recomposition**: Compose can observe and react to changes in individual fields
+ *    (e.g., just the position or just a color) without recomposing the entire seating chart or
+ *    even the entire student icon if not necessary.
+ * 2. **Instance Reuse**: The [com.example.myapplication.viewmodel.SeatingChartViewModel] maintains
+ *    a cache of these items, updating their internal state via [updateStudentUiItem] rather than
+ *    recreating objects. This significantly reduces memory pressure and GC overhead during
+ *    frequent updates (like during a drag operation or live quiz session).
+ */
 data class StudentUiItem(
     val id: Int,
     val fullName: MutableState<String>,
