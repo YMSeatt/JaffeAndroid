@@ -93,9 +93,12 @@ import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.labs.ghost.GhostOracle
+import com.example.myapplication.labs.ghost.GhostHUDLayer
+import com.example.myapplication.labs.ghost.GhostHUDViewModel
 import com.example.myapplication.labs.ghost.GhostOracleDialog
 import com.example.myapplication.labs.ghost.GhostVoiceAssistant
 import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
 import com.example.myapplication.preferences.AppTheme
@@ -158,6 +161,8 @@ fun SeatingChartScreen(
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
     var showGhostOracleDialog by remember { mutableStateOf(false) }
     var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
+    var isHudActive by remember { mutableStateOf(false) }
+    val hudViewModel: GhostHUDViewModel = viewModel()
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -234,6 +239,14 @@ fun SeatingChartScreen(
 
     LaunchedEffect(canvasSize.height) {
         seatingChartViewModel.canvasHeight = canvasSize.height
+    }
+
+    LaunchedEffect(isHudActive) {
+        if (isHudActive) {
+            hudViewModel.startTracking()
+        } else {
+            hudViewModel.stopTracking()
+        }
     }
 
     var isFabMenuOpen by remember { mutableStateOf(false) }
@@ -318,7 +331,9 @@ fun SeatingChartScreen(
                 onNeuralOracleClick = {
                     currentProphecies = GhostOracle.consult(students, allBehaviorEvents)
                     showGhostOracleDialog = true
-                }
+                },
+                isHudActive = isHudActive,
+                onToggleHud = { isHudActive = !isHudActive }
             )
         },
         floatingActionButton = {
@@ -390,6 +405,14 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+
+                if (isHudActive) {
+                    GhostHUDLayer(
+                        hudViewModel = hudViewModel,
+                        students = students,
+                        prophecies = GhostOracle.consult(students, allBehaviorEvents)
+                    )
+                }
             }
 
             Box(
@@ -837,7 +860,9 @@ fun SeatingChartTopAppBar(
     onShareDatabase: () -> Unit,
     lastExportPath: String?,
     selectedStudentUiItemForAction: StudentUiItem?,
-    onNeuralOracleClick: () -> Unit
+    onNeuralOracleClick: () -> Unit,
+    isHudActive: Boolean,
+    onToggleHud: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var showLayoutSubMenu by remember { mutableStateOf(false) }
@@ -940,6 +965,17 @@ fun SeatingChartTopAppBar(
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("Backup Database (Share)") }, onClick = { onShareDatabase(); showDataAndExportDropdown = false })
                     DropdownMenuItem(text = { Text("Open App Data Folder") }, onClick = { onOpenAppDataFolder(); showDataAndExportDropdown = false })
+                }
+            }
+
+            // Tactical HUD Toggle
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HUD_MODE_ENABLED) {
+                IconButton(onClick = onToggleHud) {
+                    Icon(
+                        Icons.Default.AutoFixHigh,
+                        contentDescription = "Tactical HUD",
+                        tint = if (isHudActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                    )
                 }
             }
 
