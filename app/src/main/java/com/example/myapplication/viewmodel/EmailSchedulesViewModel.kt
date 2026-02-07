@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.example.myapplication.data.EmailRepository
 import com.example.myapplication.data.EmailSchedule
-import com.example.myapplication.data.EmailScheduleDao
 import com.example.myapplication.worker.EmailSchedulerWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,32 +19,32 @@ import javax.inject.Inject
 
 @HiltViewModel
 class EmailSchedulesViewModel @Inject constructor(
-    private val emailScheduleDao: EmailScheduleDao,
+    private val emailRepository: EmailRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val workManager = WorkManager.getInstance(context)
 
-    val schedules = emailScheduleDao.getAllSchedules()
+    val schedules = emailRepository.getAllSchedules()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun addSchedule(schedule: EmailSchedule) {
         viewModelScope.launch {
-            emailScheduleDao.insert(schedule)
+            emailRepository.insertSchedule(schedule)
             scheduleNext()
         }
     }
 
     fun updateSchedule(schedule: EmailSchedule) {
         viewModelScope.launch {
-            emailScheduleDao.update(schedule)
+            emailRepository.updateSchedule(schedule)
             scheduleNext()
         }
     }
 
     fun deleteSchedule(schedule: EmailSchedule) {
         viewModelScope.launch {
-            emailScheduleDao.delete(schedule)
+            emailRepository.deleteSchedule(schedule)
             scheduleNext()
         }
     }

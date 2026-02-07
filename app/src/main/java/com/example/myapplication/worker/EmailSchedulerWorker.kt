@@ -7,6 +7,7 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.myapplication.data.AppDatabase
+import com.example.myapplication.data.EmailRepository
 import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -19,10 +20,10 @@ class EmailSchedulerWorker(
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(applicationContext)
-        val emailScheduleDao = db.emailScheduleDao()
         val securityUtil = SecurityUtil(applicationContext)
+        val emailRepository = EmailRepository(db.emailScheduleDao(), db.pendingEmailDao(), securityUtil)
 
-        val schedules = emailScheduleDao.getAllSchedulesList()
+        val schedules = emailRepository.getAllSchedulesList()
         val calendar = Calendar.getInstance()
         val dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK)
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
