@@ -5,4 +5,5 @@ object GhostConfig {
     const val COGNITIVE_ENGINE_ENABLED = true
     const val VOICE_ASSISTANT_ENABLED = true
     const val HUD_MODE_ENABLED = true
+    const val ECHO_MODE_ENABLED = true
 }
