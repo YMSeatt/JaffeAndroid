@@ -660,8 +660,24 @@ class Exporter(
     }
 
     /**
+     * Normalizes a timestamp to the beginning of its day (00:00:00.000).
+     * Reuses the provided [Calendar] instance for performance.
+     */
+    private fun truncateToDay(timestamp: Long, cal: Calendar): Long {
+        cal.timeInMillis = timestamp
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    /**
      * Creates an 'Attendance Report' sheet showing student presence based on logged activities.
      * Ported from Python's generate_attendance_data and export_attendance_to_excel.
+     *
+     * Optimized: Uses a pre-calculated Map of active student-days to achieve O(N) complexity,
+     * replacing the original O(S*D*(B+H+Q)) nested loops.
      */
     private fun createAttendanceSheet(
         workbook: Workbook,
@@ -677,33 +693,44 @@ class Exporter(
 
         val cal = Calendar.getInstance()
 
-        // Determine date range from options or fallback to log boundaries
-        val startMillis = options.startDate ?: (behaviorEvents.map { it.timestamp } +
-                homeworkLogs.map { it.loggedAt } +
-                quizLogs.map { it.loggedAt }).minOrNull() ?: System.currentTimeMillis()
+        // Determine date range from options or fallback to log boundaries.
+        // Optimized: Uses minOfOrNull on individual lists to avoid massive intermediate list allocations.
+        val startMillis = options.startDate ?: listOfNotNull(
+            behaviorEvents.minOfOrNull { it.timestamp },
+            homeworkLogs.minOfOrNull { it.loggedAt },
+            quizLogs.minOfOrNull { it.loggedAt }
+        ).minOrNull() ?: System.currentTimeMillis()
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
-        cal.timeInMillis = startMillis
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        val reportStart = cal.timeInMillis
-
-        cal.timeInMillis = endMillis
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        val reportEnd = cal.timeInMillis
+        val reportStart = truncateToDay(startMillis, cal)
+        val reportEnd = truncateToDay(endMillis, cal)
 
         // Generate list of days in the range
         val dates = mutableListOf<Long>()
         cal.timeInMillis = reportStart
         while (cal.timeInMillis <= reportEnd) {
-            dates.add(cal.timeInMillis)
+            // Re-normalizing each day ensures that dateMillis matches the keys in studentActiveDays
+            // even if Calendar.add is affected by DST transitions (e.g. midnight becoming 01:00).
+            val currentDayStart = truncateToDay(cal.timeInMillis, cal)
+            dates.add(currentDayStart)
+            cal.timeInMillis = currentDayStart
             cal.add(Calendar.DAY_OF_YEAR, 1)
             if (dates.size > 366) break // Safety break for large ranges
+        }
+
+        // Pre-calculate active days for all students to enable O(1) presence checks.
+        // This is BOLT's primary optimization for this component.
+        // Optimized: Reuses the 'cal' instance to minimize object allocations and memory pressure.
+        val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
+
+        behaviorEvents.forEach { event ->
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(truncateToDay(event.timestamp, cal))
+        }
+        homeworkLogs.forEach { log ->
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+        }
+        quizLogs.forEach { log ->
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
         }
 
         val headers = mutableListOf("Student Name")
@@ -736,13 +763,11 @@ class Exporter(
             var totalPresent = 0
             var totalAbsent = 0
 
-            dates.forEachIndexed { dateIndex, dateMillis ->
-                val dayEndMillis = dateMillis + 24 * 60 * 60 * 1000
+            val presentDays = studentActiveDays[student.id] ?: emptySet()
 
-                // Presence check: ANY log entry for this student on this day counts as "Present"
-                val isPresent = behaviorEvents.any { it.studentId == student.id && it.timestamp >= dateMillis && it.timestamp < dayEndMillis } ||
-                        homeworkLogs.any { it.studentId == student.id && it.loggedAt >= dateMillis && it.loggedAt < dayEndMillis } ||
-                        quizLogs.any { it.studentId == student.id && it.loggedAt >= dateMillis && it.loggedAt < dayEndMillis }
+            dates.forEachIndexed { dateIndex, dateMillis ->
+                // Presence check: O(1) Set lookup
+                val isPresent = presentDays.contains(dateMillis)
 
                 val cell = row.createCell(dateIndex + 1)
                 cell.setCellValue(if (isPresent) "P" else "A")
