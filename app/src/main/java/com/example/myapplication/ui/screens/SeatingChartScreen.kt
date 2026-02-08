@@ -89,6 +89,8 @@ import androidx.core.content.ContextCompat
 import com.example.myapplication.MainActivity
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostInsight
+import com.example.myapplication.labs.ghost.GhostEchoEngine
+import com.example.myapplication.labs.ghost.GhostEchoLayer
 import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
@@ -212,9 +214,17 @@ fun SeatingChartScreen(
         )
     }
 
+    val ghostEchoEngine = remember { GhostEchoEngine() }
+
     DisposableEffect(Unit) {
+        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ECHO_MODE_ENABLED) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                ghostEchoEngine.start()
+            }
+        }
         onDispose {
             ghostVoiceAssistant.destroy()
+            ghostEchoEngine.stop()
         }
     }
 
@@ -399,6 +409,10 @@ fun SeatingChartScreen(
                 .onSizeChanged { canvasSize = it }
 
         ) {
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ECHO_MODE_ENABLED) {
+                GhostEchoLayer(engine = ghostEchoEngine)
+            }
+
             GridAndRulers(
                 settingsViewModel = settingsViewModel,
                 seatingChartViewModel = seatingChartViewModel,
