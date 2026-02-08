@@ -18,3 +18,10 @@
     - Hardened `AppPreferencesRepository` to encrypt the `PASSWORD_HASH` in DataStore.
     - Updated `EmailSchedulesViewModel`, `EmailSchedulerWorker`, and `EmailWorker` to use the secure repository.
 - **Location:** `app/src/main/java/com/example/myapplication/data/EmailRepository.kt`, `app/src/main/java/com/example/myapplication/preferences/AppPreferencesRepository.kt`
+
+## 🛡️ Privacy Hardening: Screenshot PII Protection
+- **Vulnerability:** Seating chart screenshots containing student PII (names, layouts) were saved to the public `DIRECTORY_PICTURES` folder, making them accessible to any app with media permissions.
+- **Fix:**
+    - Redirected screenshot storage to the app's internal cache directory.
+    - Implemented secure sharing via `FileProvider` and `Intent.ACTION_SEND`, ensuring PII is only shared explicitly by the user.
+- **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`, `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
