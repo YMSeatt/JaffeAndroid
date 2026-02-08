@@ -9,17 +9,39 @@ data class Point(var x: Float, var y: Float)
 /**
  * GhostCognitiveEngine: An automated seating chart optimizer using a force-directed graph algorithm.
  *
- * Optimized version: uses primitive arrays and avoids Map lookups/object allocations in loops.
+ * This engine treats students as nodes and relationships as forces:
+ * - **Repulsion**: Every student pushes away every other student to ensure they don't overlap and
+ *   to fill the available space. The force follows an inverse-square law.
+ * - **Social Distance Repulsion**: Students with negative behavioral history exert a stronger
+ *   repulsion force (scaled by [NEGATIVE_BEHAVIOR_MULTIPLIER]), effectively suggesting they
+ *   be seated further apart from others.
+ * - **Group Attraction**: Students belonging to the same group exert an attractive force
+ *   on each other, pulling them together into clusters.
+ *
+ * Performance optimizations:
+ * - Uses primitive [FloatArray] and [LongArray] to avoid object allocation and boxing in the simulation loop.
+ * - Pre-calculates group indices and behavioral scores to minimize O(N) or O(log N) lookups inside the O(N^2) loop.
  */
 object GhostCognitiveEngine {
+    /** Base repulsion force. Calibrated for a 4000x4000 canvas. */
     private const val REPULSION_CONSTANT = 500000f
+    /** Percentage of distance covered per iteration for group attraction. */
     private const val ATTRACTION_CONSTANT = 0.05f
+    /** Scaling factor for repulsion when students have negative behavior records. */
     private const val NEGATIVE_BEHAVIOR_MULTIPLIER = 2.5f
+    /** Number of simulation steps to run per optimization call. */
     private const val ITERATIONS = 50
+    /** Velocity decay factor to ensure the simulation converges to equilibrium. */
     private const val DAMPING = 0.9f
 
     /**
      * Executes the layout optimization simulation.
+     *
+     * @param students List of students to position.
+     * @param behaviorLogs Historical logs used to calculate social repulsion forces.
+     * @param canvasWidth The logical width of the seating chart.
+     * @param canvasHeight The logical height of the seating chart.
+     * @return A map of student IDs to their new [Point] coordinates.
      */
     fun optimizeLayout(
         students: List<Student>,

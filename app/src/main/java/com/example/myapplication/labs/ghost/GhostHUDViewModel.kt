@@ -18,6 +18,11 @@ import kotlin.math.atan2
 
 /**
  * GhostHUDViewModel: Manages sensors and coordinate mapping for the Tactical HUD.
+ *
+ * This ViewModel handles:
+ * 1. **Sensor Integration**: Uses [Sensor.TYPE_ROTATION_VECTOR] to track device orientation (heading).
+ * 2. **Target Translation**: Maps student positions from the 2D seating chart coordinate system
+ *    to polar coordinates (angles) used by the radar shader.
  */
 class GhostHUDViewModel(application: Application) : AndroidViewModel(application), SensorEventListener {
 
@@ -66,6 +71,15 @@ class GhostHUDViewModel(application: Application) : AndroidViewModel(application
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
+    /**
+     * Updates the list of active radar targets based on current prophecies and student positions.
+     *
+     * Logic:
+     * - Filters students associated with active "Social Friction" or "Engagement Drop" prophecies.
+     * - Calculates the relative angle of each student from a "virtual observer" positioned at
+     *   the bottom-center of the 4000x4000 seating chart canvas (coordinates: 2000, 4000).
+     * - Caps the number of blips to 10 for shader performance.
+     */
     fun updateTargets(students: List<StudentUiItem>, prophecies: List<GhostOracle.Prophecy>) {
         viewModelScope.launch {
             val frictionStudents = prophecies.filter {
@@ -77,6 +91,7 @@ class GhostHUDViewModel(application: Application) : AndroidViewModel(application
             val scores = mutableListOf<Float>()
 
             students.filter { frictionStudents.contains(it.id.toLong()) }.take(10).forEach { student ->
+                // Observer is at (2000, 4000) - bottom center of the logical map
                 val dx = student.xPosition.value - 2000f
                 val dy = student.yPosition.value - 4000f
                 val angle = atan2(dy, dx)
