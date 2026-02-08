@@ -293,8 +293,17 @@ fun SeatingChartScreen(
                         val view = (context as Activity).window.decorView
                         val bitmap = captureComposable(view, (context as Activity).window)
                         if (bitmap != null) {
-                            settingsViewModel.saveScreenshot(bitmap)
-                            Toast.makeText(context, "Screenshot saved", Toast.LENGTH_SHORT).show()
+                            val uri = settingsViewModel.saveScreenshot(bitmap)
+                            if (uri != null) {
+                                val intent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "image/png"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Share Seating Chart Screenshot"))
+                            } else {
+                                Toast.makeText(context, "Failed to save screenshot", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 },

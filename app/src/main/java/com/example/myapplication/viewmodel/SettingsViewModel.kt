@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -645,26 +646,22 @@ class SettingsViewModel @Inject constructor(
     suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
         val context = application
         val filename = "screenshot_${System.currentTimeMillis()}.png"
-        val contentValues = android.content.ContentValues().apply {
-            put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename)
-            put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "image/png")
-            put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_PICTURES)
-        }
+        val cacheDir = context.cacheDir
+        val screenshotFile = File(cacheDir, filename)
 
-        val resolver = context.contentResolver
-        var uri: Uri? = null
         try {
-            uri = resolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            uri?.let {
-                resolver.openOutputStream(it)?.use { outputStream ->
-                    bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
-                }
+            FileOutputStream(screenshotFile).use { outputStream ->
+                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, outputStream)
             }
+            return@withContext androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "com.example.myapplication.fileprovider",
+                screenshotFile
+            )
         } catch (e: Exception) {
             e.printStackTrace()
-            uri = null
+            null
         }
-        uri
     }
 
     suspend fun exportDataFolder(directoryUri: Uri) = withContext(Dispatchers.IO) {
