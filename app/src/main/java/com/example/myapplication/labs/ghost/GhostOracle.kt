@@ -27,8 +27,19 @@ object GhostOracle {
     }
 
     /**
-     * Generates a list of prophecies based on current classroom state.
+     * Generates a list of prophecies based on current classroom state and behavioral history.
      * In a real implementation, this would call into the On-Device AI Core (Gemini Nano).
+     *
+     * Heuristics:
+     * 1. **Social Friction**: Identified when two or more students with multiple negative
+     *    behavior logs are positioned in close physical proximity (< 150 logical units).
+     * 2. **Engagement Drop**: Identified when a student has a history of logs but has not
+     *    received positive reinforcement (non-negative logs) within the last 7 days.
+     * 3. **Critical Intervention**: Flagged if a student has logs but zero positive baseline events.
+     *
+     * @param students Current UI state of all students.
+     * @param behaviorLogs Historical behavior events for all students.
+     * @return A list of unique [Prophecy] objects representing predicted classroom trends.
      */
     fun consult(
         students: List<StudentUiItem>,

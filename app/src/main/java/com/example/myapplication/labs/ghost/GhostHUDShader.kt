@@ -6,6 +6,26 @@ import org.intellij.lang.annotations.Language
  * GhostHUDShader: AGSL shaders for the Tactical HUD.
  */
 object GhostHUDShader {
+    /**
+     * TACTICAL_RADAR: A circular radar visualization shader.
+     *
+     * Features:
+     * - **Coordinate Mapping**: Translates normalized UV coordinates (0..1) to polar coordinates (angle/distance)
+     *   relative to the center of the viewport.
+     * - **Heading Integration**: Incorporates the device's physical orientation ([iHeading]) to rotate the radar
+     *   view, aligning virtual targets with their relative physical directions.
+     * - **Target Rendering**: Renders up to 10 "blips" for students/prophecies. The color (red for high-risk,
+     *   yellow for caution) and intensity of the blip depends on the [iTargetScores].
+     * - **Shader Effects**: Implements a rotating sweep beam (`beam`), pulsating rings (`rings`), and a peripheral vignette.
+     *
+     * Uniforms:
+     * - [iResolution]: Dimensions of the drawing area.
+     * - [iTime]: Elapsed time for animations.
+     * - [iHeading]: Physical device heading in radians.
+     * - [iTargets]: Array of angles (radians) for active blips.
+     * - [iTargetScores]: Severity/confidence scores (0..1) for active blips.
+     * - [iTargetCount]: Number of active targets to render.
+     */
     @Language("AGSL")
     const val TACTICAL_RADAR = """
         uniform float2 iResolution;
