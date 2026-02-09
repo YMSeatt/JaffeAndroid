@@ -25,3 +25,16 @@
     - Redirected screenshot storage to the app's internal cache directory.
     - Implemented secure sharing via `FileProvider` and `Intent.ACTION_SEND`, ensuring PII is only shared explicitly by the user.
 - **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`, `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
+
+## 🛡️ Network Hardening: Cleartext Traffic Disabled
+- **Vulnerability:** Cleartext (HTTP) traffic was not explicitly disabled, which could allow insecure network communication on older Android versions or if misconfigured.
+- **Fix:**
+    - Implemented `network_security_config.xml` with `cleartextTrafficPermitted="false"` for the entire application.
+    - Referenced the configuration in `AndroidManifest.xml`.
+- **Location:** `app/src/main/res/xml/network_security_config.xml`, `app/src/main/AndroidManifest.xml`
+
+## 🛡️ Observability and Security: Improved Error Logging
+- **Vulnerability:** Use of `e.printStackTrace()` in `SettingsViewModel.kt` could leak sensitive internal application state or paths to standard output/logs.
+- **Fix:**
+    - Replaced `e.printStackTrace()` with structured `Log.e` calls.
+- **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`
