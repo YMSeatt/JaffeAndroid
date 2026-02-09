@@ -47,6 +47,7 @@ fun SettingsScreen(
     onNavigateToQuizTemplates: () -> Unit,
     onNavigateToQuizMarkTypes: () -> Unit,
     onNavigateToHomeworkTemplates: () -> Unit,
+    onNavigateToManageInitials: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -148,7 +149,10 @@ fun SettingsScreen(
                         onShowSetPasswordDialog = { showSetPasswordDialog = true },
                         onShowChangePasswordDialog = { showChangePasswordDialog = true }
                     )
-                    1 -> DisplaySettingsTab(settingsViewModel = settingsViewModel)
+                    1 -> DisplaySettingsTab(
+                        settingsViewModel = settingsViewModel,
+                        onNavigateToManageInitials = onNavigateToManageInitials
+                    )
                     2 -> DataSettingsTab(
                         settingsViewModel = settingsViewModel,
                         studentRepository = studentRepository,
@@ -161,7 +165,8 @@ fun SettingsScreen(
                         onNavigateToEmailSchedules = onNavigateToEmailSchedules,
                         onNavigateToReminders = onNavigateToReminders,
                         onNavigateToQuizTemplates = onNavigateToQuizTemplates,
-                        onNavigateToQuizMarkTypes = onNavigateToQuizMarkTypes
+                        onNavigateToQuizMarkTypes = onNavigateToQuizMarkTypes,
+                        onNavigateToManageInitials = onNavigateToManageInitials
                     )
                     4 -> SmtpSettingsTab(viewModel = settingsViewModel)
                 }

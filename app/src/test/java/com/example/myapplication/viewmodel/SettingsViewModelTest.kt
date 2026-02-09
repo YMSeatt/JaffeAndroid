@@ -65,6 +65,8 @@ class SettingsViewModelTest {
     @MockK(relaxed = true)
     lateinit var homeworkTemplateDao: HomeworkTemplateDao
     @MockK(relaxed = true)
+    lateinit var systemBehaviorDao: SystemBehaviorDao
+    @MockK(relaxed = true)
     lateinit var behaviorEventDao: BehaviorEventDao
     @MockK(relaxed = true)
     lateinit var homeworkLogDao: HomeworkLogDao
@@ -73,6 +75,9 @@ class SettingsViewModelTest {
 
     private val autoSendEmailOnCloseFlow = MutableStateFlow(false)
     private val editModeEnabledFlow = MutableStateFlow(false)
+    private val behaviorInitialsMapFlow = MutableStateFlow("")
+    private val homeworkInitialsMapFlow = MutableStateFlow("")
+    private val quizInitialsMapFlow = MutableStateFlow("")
 
     @Before
     fun setup() {
@@ -117,8 +122,18 @@ class SettingsViewModelTest {
         every { preferencesRepository.defaultStudentBoxPaddingFlow } returns flowOf(4)
         every { preferencesRepository.stickyQuizNameDurationSecondsFlow } returns flowOf(0)
         every { preferencesRepository.stickyHomeworkNameDurationSecondsFlow } returns flowOf(0)
-        every { preferencesRepository.behaviorInitialsMapFlow } returns flowOf("")
-        every { preferencesRepository.lastQuizNameFlow } returns flowOf(null)
+        every { preferencesRepository.behaviorInitialsMapFlow } returns behaviorInitialsMapFlow
+        coEvery { preferencesRepository.updateBehaviorInitialsMap(any()) } answers {
+            behaviorInitialsMapFlow.value = it.invocation.args[0] as String
+        }
+        every { preferencesRepository.homeworkInitialsMapFlow } returns homeworkInitialsMapFlow
+        coEvery { preferencesRepository.updateHomeworkInitialsMap(any()) } answers {
+            homeworkInitialsMapFlow.value = it.invocation.args[0] as String
+        }
+        every { preferencesRepository.quizInitialsMapFlow } returns quizInitialsMapFlow
+        coEvery { preferencesRepository.updateQuizInitialsMap(any()) } answers {
+            quizInitialsMapFlow.value = it.invocation.args[0] as String
+        }
         every { preferencesRepository.lastQuizTimestampFlow } returns flowOf(null)
         every { preferencesRepository.lastHomeworkNameFlow } returns flowOf(null)
         every { preferencesRepository.lastHomeworkTimestampFlow } returns flowOf(null)
@@ -153,6 +168,7 @@ class SettingsViewModelTest {
             quizMarkTypeDao,
             quizTemplateDao,
             homeworkTemplateDao,
+            systemBehaviorDao,
             behaviorEventDao,
             homeworkLogDao
         )
@@ -191,5 +207,29 @@ class SettingsViewModelTest {
         // Then
         val updatedValue = viewModel.editModeEnabled.value
         assertTrue("Value should be true after update", updatedValue)
+    }
+
+    @Test
+    fun `behaviorInitialsMap should update correctly`() = runTest {
+        val testMap = "Talking:T,Fighting:F"
+        viewModel.updateBehaviorInitialsMap(testMap)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assert(viewModel.behaviorInitialsMap.value == testMap)
+    }
+
+    @Test
+    fun `homeworkInitialsMap should update correctly`() = runTest {
+        val testMap = "Reading:R,Math:M"
+        viewModel.updateHomeworkInitialsMap(testMap)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assert(viewModel.homeworkInitialsMap.value == testMap)
+    }
+
+    @Test
+    fun `quizInitialsMap should update correctly`() = runTest {
+        val testMap = "Pop Quiz:PQ,Final:F"
+        viewModel.updateQuizInitialsMap(testMap)
+        testDispatcher.scheduler.advanceUntilIdle()
+        assert(viewModel.quizInitialsMap.value == testMap)
     }
 }

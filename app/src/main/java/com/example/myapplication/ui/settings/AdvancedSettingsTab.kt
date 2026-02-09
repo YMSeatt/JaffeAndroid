@@ -20,7 +20,8 @@ fun AdvancedSettingsTab(
     onNavigateToEmailSchedules: () -> Unit,
     onNavigateToReminders: () -> Unit,
     onNavigateToQuizTemplates: () -> Unit,
-    onNavigateToQuizMarkTypes: () -> Unit
+    onNavigateToQuizMarkTypes: () -> Unit,
+    onNavigateToManageInitials: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.padding(16.dp),
@@ -80,6 +81,14 @@ fun AdvancedSettingsTab(
         item {
             Button(onClick = onNavigateToQuizMarkTypes, modifier = Modifier.fillMaxWidth()) {
                 Text("Manage Quiz Mark Types")
+            }
+        }
+        item {
+            Spacer(Modifier.height(8.dp))
+        }
+        item {
+            Button(onClick = onNavigateToManageInitials, modifier = Modifier.fillMaxWidth()) {
+                Text("Manage Initials")
             }
         }
     }

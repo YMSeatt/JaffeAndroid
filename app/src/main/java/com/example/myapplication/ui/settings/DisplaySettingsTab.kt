@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,7 +38,8 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 
 @Composable
 fun DisplaySettingsTab(
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    onNavigateToManageInitials: () -> Unit
 ) {
     var showColorPicker by remember { mutableStateOf(false) }
     var colorPickerTarget by remember { mutableStateOf("") }
@@ -148,6 +150,12 @@ fun DisplaySettingsTab(
                     checked = useInitialsForBehavior,
                     onCheckedChange = { settingsViewModel.updateUseInitialsForBehavior(it) }
                 )
+            }
+            Button(
+                onClick = onNavigateToManageInitials,
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                Text("Manage Initials")
             }
         }
         item {
