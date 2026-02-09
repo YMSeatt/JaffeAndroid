@@ -396,7 +396,21 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val quizLogsByStudent = quizLogsByStudentCache
 
+                val sessionActive = isSessionActive.value == true
+                val sessionQuizLogsGrouped = if (sessionActive) {
+                    sessionQuizLogs.value?.groupBy { it.studentId } ?: emptyMap()
+                } else {
+                    emptyMap()
+                }
+                val sessionHomeworkLogsGrouped = if (sessionActive) {
+                    sessionHomeworkLogs.value?.groupBy { it.studentId } ?: emptyMap()
+                } else {
+                    emptyMap()
+                }
+
                 val groups = allGroups.value ?: emptyList()
+                val groupColorMap = groups.associate { it.id to it.color }
+
                 val behaviorLimit = prefs.recentBehaviorIncidentsLimit
                 val homeworkLimit = prefs.recentHomeworkLogsLimit
                 val quizLimit = prefs.recentLogsLimit
@@ -505,10 +519,10 @@ class SeatingChartViewModel @Inject constructor(
                         }
                     }
 
-                    val sessionLogs = if (isSessionActive.value == true) {
-                        val quizLogs = sessionQuizLogs.value?.filter { it.studentId == student.id }?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                        val homeworkLogs = sessionHomeworkLogs.value?.filter { it.studentId == student.id }?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
-                        (quizLogs + homeworkLogs).take(maxLogsToDisplay)
+                    val sessionLogs = if (sessionActive) {
+                        val quizLogsSess = sessionQuizLogsGrouped[student.id]?.map { "Quiz: ${it.comment}" } ?: emptyList()
+                        val homeworkLogsSess = sessionHomeworkLogsGrouped[student.id]?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
+                        (quizLogsSess + homeworkLogsSess).take(maxLogsToDisplay)
                     } else {
                         emptyList()
                     }
@@ -523,9 +537,9 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
                             quizLog = quizLogsByStudent[student.id] ?: emptyList(),
                             homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
-                            isLiveQuizActive = isSessionActive.value ?: false,
+                            isLiveQuizActive = sessionActive,
                             liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                            isLiveHomeworkActive = isSessionActive.value ?: false,
+                            isLiveHomeworkActive = sessionActive,
                             liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
                             currentMode = currentMode.value ?: "behavior",
                             currentTimeMillis = currentTime,
@@ -561,7 +575,7 @@ class SeatingChartViewModel @Inject constructor(
                             recentHomeworkDescription = homeworkDescription,
                             recentQuizDescription = quizDescription,
                             sessionLogText = sessionLogs,
-                            groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                            groupColor = groupColorMap[student.groupId],
                             conditionalFormattingResult = conditionalFormattingResult,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,
@@ -582,7 +596,7 @@ class SeatingChartViewModel @Inject constructor(
                             recentHomeworkDescription = homeworkDescription,
                             recentQuizDescription = quizDescription,
                             sessionLogText = sessionLogs,
-                            groupColor = groups.find { group -> group.id == student.groupId }?.color,
+                            groupColor = groupColorMap[student.groupId],
                             conditionalFormattingResult = conditionalFormattingResult,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,

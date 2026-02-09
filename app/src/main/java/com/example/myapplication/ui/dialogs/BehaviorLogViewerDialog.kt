@@ -37,6 +37,8 @@ fun BehaviorLogViewerDialog(
     var selectedEvent by remember { mutableStateOf<BehaviorEvent?>(null) }
     var notes by remember { mutableStateOf("") }
 
+    val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Behavior Log") },
@@ -44,7 +46,6 @@ fun BehaviorLogViewerDialog(
             LazyColumn {
                 items(behaviorEvents.filter { it.studentId == studentId }) { event ->
                     Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-                        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
                         Text(
                             text = "${sdf.format(Date(event.timestamp))} - ${event.type}: ${event.comment ?: ""}",
                             modifier = Modifier.weight(1f)

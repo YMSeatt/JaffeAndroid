@@ -56,6 +56,7 @@ fun ExportDialog(
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
     val customHomeworkTypes by viewModel.allCustomHomeworkTypes.observeAsState(initial = emptyList())
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -69,8 +70,8 @@ fun ExportDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = { showEndDatePicker = true }) { Text("End Date") }
                 }
-                Text("Start: ${startDateState.selectedDateMillis?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } ?: "Not set"}")
-                Text("End: ${endDateState.selectedDateMillis?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } ?: "Not set"}")
+                Text("Start: ${startDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
+                Text("End: ${endDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
 
                 if (showStartDatePicker) {
                     DatePickerDialog(
