@@ -89,6 +89,7 @@ fun RemindersScreen(
     var showAddEditDialog by remember { mutableStateOf(false) }
     var editingReminder by remember { mutableStateOf<Reminder?>(null) }
     val reminders by viewModel.allReminders.observeAsState(initial = emptyList())
+    val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
     if (showPermissionDialog) {
         AlertDialog(
@@ -150,6 +151,7 @@ fun RemindersScreen(
             items(reminders) { reminder ->
                 ReminderItem(
                     reminder = reminder,
+                    sdf = sdf,
                     onEdit = {
                         editingReminder = it
                         showAddEditDialog = true
@@ -179,6 +181,7 @@ fun RemindersScreen(
 @Composable
 fun ReminderItem(
     reminder: Reminder,
+    sdf: SimpleDateFormat,
     onEdit: (Reminder) -> Unit,
     onDelete: (Reminder) -> Unit
 ) {
@@ -195,7 +198,7 @@ fun ReminderItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = reminder.title)
                 Text(text = reminder.description)
-                Text(text = "Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(reminder.timestamp))}")
+                Text(text = "Time: ${sdf.format(Date(reminder.timestamp))}")
             }
             IconButton(onClick = { onEdit(reminder) }) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Reminder")
@@ -219,6 +222,7 @@ fun AddEditReminderDialog(
 
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
     if (showDatePicker) {
         DatePickerDialog(
@@ -276,7 +280,7 @@ fun AddEditReminderDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { showDatePicker = true }) {
-                    Text("Select Date and Time: ${SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(timestamp))}")
+                    Text("Select Date and Time: ${sdf.format(Date(timestamp))}")
                 }
             }
         },

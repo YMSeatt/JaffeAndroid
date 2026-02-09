@@ -38,6 +38,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
     val quizSummary by viewModel.quizSummary.observeAsState(initial = emptyList())
     val homeworkSummary by viewModel.homeworkSummary.observeAsState(initial = emptyList())
 
+    val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+
     LaunchedEffect(
         startDateState.selectedDateMillis,
         endDateState.selectedDateMillis,
@@ -72,8 +74,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = { showEndDatePicker = true }) { Text("End Date") }
         }
-        Text("Start: ${startDateState.selectedDateMillis?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } ?: "Not set"}")
-        Text("End: ${endDateState.selectedDateMillis?.let { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date(it)) } ?: "Not set"}")
+        Text("Start: ${startDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
+        Text("End: ${endDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
 
         if (showStartDatePicker) {
             DatePickerDialog(

@@ -39,6 +39,7 @@ fun ExportFilterDialog(
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
 
+    val dateFormat = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
     // Initialize dates to a reasonable default (e.g., last 30 days)
     LaunchedEffect(Unit) {
@@ -47,7 +48,6 @@ fun ExportFilterDialog(
         calendar.add(Calendar.DAY_OF_YEAR, -30)
         val thirtyDaysAgo = calendar.timeInMillis
 
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         startDate = dateFormat.format(Date(thirtyDaysAgo))
         endDate = dateFormat.format(Date(today))
     }
@@ -182,7 +182,6 @@ fun ExportFilterDialog(
         },
         confirmButton = {
             Button(onClick = {
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                 val startMillis = try { dateFormat.parse(startDate)?.time } catch (e: Exception) { null }
                 val endMillis = try {
                     dateFormat.parse(endDate)?.let { date ->
