@@ -24,6 +24,7 @@ import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.LayoutTemplateDao
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.QuizMarkTypeDao
+import com.example.myapplication.data.QuizTemplate
 import com.example.myapplication.data.QuizTemplateDao
 import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.StudentDao
@@ -71,6 +72,7 @@ class SettingsViewModel @Inject constructor(
     private val quizMarkTypeDao: QuizMarkTypeDao,
     private val quizTemplateDao: QuizTemplateDao,
     private val homeworkTemplateDao: HomeworkTemplateDao,
+    private val systemBehaviorDao: com.example.myapplication.data.SystemBehaviorDao,
     private val behaviorEventDao: BehaviorEventDao,
     private val homeworkLogDao: HomeworkLogDao
 ) : ViewModel() {
@@ -192,7 +194,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val homeworkInitialsMap: StateFlow<String> = preferencesRepository.homeworkInitialsMapFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     fun updateHomeworkInitialsMap(map: String) {
         viewModelScope.launch {
@@ -201,7 +203,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val quizInitialsMap: StateFlow<String> = preferencesRepository.quizInitialsMapFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     fun updateQuizInitialsMap(map: String) {
         viewModelScope.launch {
@@ -309,6 +311,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
+    val allQuizTemplates: LiveData<List<QuizTemplate>> = quizTemplateDao.getAll().asLiveData()
+    val allSystemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>> = systemBehaviorDao.getAllSystemBehaviors().asLiveData()
+
     fun addQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.insert(quizMarkType)
     }
@@ -510,7 +515,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val behaviorInitialsMap: StateFlow<String> = preferencesRepository.behaviorInitialsMapFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "")
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
 
     fun updateBehaviorInitialsMap(map: String) {
         viewModelScope.launch {

@@ -267,31 +267,6 @@ fun DataSettingsTab(
         }
 
         item {
-            Text("Manage Behavior Initials", style = MaterialTheme.typography.titleMedium)
-        }
-        items(behaviorTypesList) { type ->
-            var initial by remember {
-                mutableStateOf(
-                    settingsViewModel.behaviorInitialsMap.value.split(",").find { it.startsWith(type.name + ":") }?.substringAfter(":") ?: ""
-                )
-            }
-            OutlinedTextField(
-                value = initial,
-                onValueChange = {
-                    initial = it
-                    val currentMap = settingsViewModel.behaviorInitialsMap.value.split(",").toMutableList()
-                    currentMap.removeAll { it.startsWith(type.name + ":") }
-                    if (it.isNotBlank()) {
-                        currentMap.add("${type.name}:$it")
-                    }
-                    settingsViewModel.updateBehaviorInitialsMap(currentMap.joinToString(","))
-                },
-                label = { Text("Initial for ${type.name}") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        item {
             Text("Manage Homework Assignment Names/Types", style = MaterialTheme.typography.titleMedium)
         }
         items(homeworkAssignmentTypesList) { type ->

@@ -44,6 +44,7 @@ fun SettingsNavHost(
                 onNavigateToQuizTemplates = { navController.navigate("quiz_templates") },
                 onNavigateToQuizMarkTypes = { navController.navigate("quiz_mark_types") },
                 onNavigateToHomeworkTemplates = { navController.navigate("homework_templates") },
+                onNavigateToManageInitials = { navController.navigate("manage_initials") },
                 onDismiss = onDismiss
             )
         }
@@ -87,6 +88,12 @@ fun SettingsNavHost(
         }
         composable("homework_templates") {
             HomeworkTemplateScreen(
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable("manage_initials") {
+            ManageInitialsScreen(
+                viewModel = settingsViewModel,
                 onDismiss = { navController.popBackStack() }
             )
         }
