@@ -109,6 +109,20 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.math.abs
 
+/**
+ * SeatingChartViewModel: The central architectural hub for the Seating Chart application.
+ *
+ * This ViewModel coordinates several complex subsystems:
+ * 1. **Reactive Data Pipeline**: Synchronizes state between the Room database (via DAOs),
+ *    User Preferences (via [AppPreferencesRepository] and DataStore), and in-memory session data.
+ * 2. **Undo/Redo System**: Implements the Command pattern to provide a robust, multi-step
+ *    history for all layout and logging actions.
+ * 3. **Ghost Lab Experiments**: Integrates advanced R&D features like the [GhostCognitiveEngine]
+ *    for automated layout optimization and Predictive HUD data generation.
+ * 4. **Display Optimization**: Manages a high-performance transformation of raw database entities
+ *    into [StudentUiItem]s, utilizing memoization and item-level caching to ensure a fluid 60fps
+ *    experience during seating chart interactions.
+ */
 @HiltViewModel
 class SeatingChartViewModel @Inject constructor(
     private val repository: StudentRepository,
@@ -142,7 +156,17 @@ class SeatingChartViewModel @Inject constructor(
     val allRules: LiveData<List<com.example.myapplication.data.ConditionalFormattingRule>>
     val allGuides: StateFlow<List<Guide>> = guideDao.getAllGuides()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * The primary observable state for the Seating Chart UI.
+     * This [MediatorLiveData] aggregates multiple data sources (students, logs, rules, sessions)
+     * and triggers a high-performance transformation via [updateTrigger].
+     */
     val studentsForDisplay = MediatorLiveData<List<StudentUiItem>>()
+
+    /**
+     * Observable state for furniture items, used to render desks and other classroom objects.
+     */
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
     val allHomeworkTemplates: LiveData<List<HomeworkTemplate>>
@@ -158,45 +182,90 @@ class SeatingChartViewModel @Inject constructor(
     val allSystemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>>
 
 
+    /**
+     * The history of executed commands.
+     * New commands are pushed onto this stack. [undo] pops from here.
+     */
     private val commandUndoStack = Stack<Command>()
+
+    /**
+     * The history of undone commands.
+     * Commands are pushed here during [undo]. [redo] pops from here and reapplies them.
+     */
     private val commandRedoStack = Stack<Command>()
+
     private val _undoStackState = MutableStateFlow<List<Command>>(emptyList())
+
+    /**
+     * Exposed state of the undo history, used by the UI to render the history list.
+     */
     val undoStackState: StateFlow<List<Command>> = _undoStackState.asStateFlow()
 
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
+    /**
+     * A coordination trigger used to synchronize UI updates.
+     * Multiple data sources (Room DAOs, DataStore preferences, and in-memory session changes)
+     * emit to this flow. It uses [debounce] to prevent redundant, expensive recalculations
+     * during rapid state changes.
+     */
     private val updateTrigger = MutableSharedFlow<Unit>(replay = 1)
     private var updateJob: Job? = null
 
     private fun updateUndoStackState() {
         _undoStackState.value = commandUndoStack.toList()
     }
+    /**
+     * Stores optimistic student positions during drag operations.
+     * Prevents UI jitter by prioritizing local state over database-roundtrip updates.
+     */
     private val pendingStudentPositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
+
+    /**
+     * Stores optimistic furniture positions.
+     */
     private val pendingFurniturePositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
 
-    // Memoization caches
+    // --- Memoization Caches ---
+    // These caches prevent redundant O(N log N) or O(N^2) operations during high-frequency
+    // UI updates (like dragging). They are invalidated only when their respective
+    // source data (LiveData/Flow) actually changes.
+
     private var memoizedBehaviorEvents: List<BehaviorEvent>? = null
+    /** Caches behavior logs grouped by student ID to avoid O(B) filtering inside student loops. */
     private var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
+    /** Caches homework logs grouped by student ID. */
     private var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
 
     private var memoizedQuizLogs: List<QuizLog>? = null
+    /** Caches quiz logs grouped by student ID. */
     private var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
 
     private var memoizedRules: List<ConditionalFormattingRule>? = null
+    /** Stores prioritized, decoded rule objects to avoid repetitive JSON parsing. */
     private var decodedRulesCache: List<DecodedConditionalFormattingRule> = emptyList()
 
     private var memoizedBehaviorInitials: String? = null
+    /** Caches the parsed initials mapping for behavior types. */
     private var behaviorInitialsMapCache: Map<String, String> = emptyMap()
 
     private var memoizedHomeworkInitials: String? = null
+    /** Caches the parsed initials mapping for homework assignments. */
     private var homeworkInitialsMapCache: Map<String, String> = emptyMap()
 
     private var memoizedQuizInitials: String? = null
+    /** Caches the parsed initials mapping for quizzes. */
     private var quizInitialsMapCache: Map<String, String> = emptyMap()
 
+    /**
+     * A persistent cache of [StudentUiItem] instances.
+     * Reusing these instances is CRITICAL for Compose performance, as it allows
+     * fine-grained updates to internal MutableState fields without triggering
+     * full-box recompositions or object allocations during scroll/drag.
+     */
     private val studentUiItemCache = ConcurrentHashMap<Int, StudentUiItem>()
 
     // In-memory session data
@@ -221,6 +290,7 @@ class SeatingChartViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
+        // Initialize basic LiveData streams from repositories
         allStudents = repository.allStudents
         allStudentsForDisplay = studentDao.getStudentsForDisplay()
         allFurniture = repository.getAllFurniture().asLiveData()
@@ -236,6 +306,8 @@ class SeatingChartViewModel @Inject constructor(
         allSystemBehaviors = systemBehaviorDao.getAllSystemBehaviors().asLiveData()
 
 
+        // Wire up MediatorLiveData sources.
+        // Any change in the underlying database or session state triggers the unified update pipeline.
         studentsForDisplay.addSource(allStudents) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allStudentsForDisplay) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allGroups.asLiveData()) { updateTrigger.tryEmit(Unit) }
@@ -247,6 +319,7 @@ class SeatingChartViewModel @Inject constructor(
         studentsForDisplay.addSource(allQuizLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allRules) { updateTrigger.tryEmit(Unit) }
 
+        // Sync user preferences from DataStore.
         viewModelScope.launch {
             appPreferencesRepository.userPreferencesFlow.collect {
                 _userPreferences.value = it
@@ -254,6 +327,8 @@ class SeatingChartViewModel @Inject constructor(
             }
         }
 
+        // The unified update loop.
+        // debounced to 100ms to ensure fluid UI even when multiple sources update simultaneously.
         viewModelScope.launch {
             updateTrigger.debounce(100).collect {
                 updateStudentsForDisplay(allStudents.value ?: emptyList())
@@ -272,6 +347,23 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The core transformation engine for student UI data.
+     *
+     * This method performs a multi-stage process to convert raw [Student] database entities
+     * into enriched [StudentUiItem]s. It runs on [Dispatchers.Default] to avoid blocking
+     * the main thread during complex calculations.
+     *
+     * Stages:
+     * 1. **Data Pre-processing**: Group logs by student ID and decode conditional rules once.
+     * 2. **Per-Student Transformation**:
+     *    - Filter logs by "last cleared" timestamps and configurable display timeouts.
+     *    - Generate human-readable descriptions (Behavior/Homework/Quiz).
+     *    - Evaluate prioritized Conditional Formatting rules.
+     *    - Reconcile optimistic drag positions ([pendingStudentPositions]).
+     * 3. **State Sync**: Update existing [StudentUiItem] instances in the cache to trigger
+     *    Compose recomposition, or create new ones if necessary.
+     */
     private fun updateStudentsForDisplay(students: List<Student>) {
         val prefs = _userPreferences.value ?: return
         updateJob?.cancel()
@@ -280,7 +372,9 @@ class SeatingChartViewModel @Inject constructor(
                 val studentsForDisplayData = allStudentsForDisplay.value ?: return@withContext
                 val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
 
-                // Memoized grouping
+                // --- Stage 1: Data Pre-processing (Memoized) ---
+
+                // Group flat behavior logs by student ID to optimize O(1) lookup in the student loop.
                 val behaviorEvents = allBehaviorEvents.value ?: emptyList()
                 if (behaviorEvents !== memoizedBehaviorEvents) {
                     behaviorLogsByStudentCache = behaviorEvents.groupBy { it.studentId }
@@ -348,11 +442,15 @@ class SeatingChartViewModel @Inject constructor(
 
                 val defaultStyle = prefs.defaultStudentStyle
 
-                // Clean up cache for deleted students
+                // Clean up UI item cache for deleted students.
                 val currentStudentIds = students.map { it.id.toInt() }.toSet()
                 studentUiItemCache.keys.retainAll { it in currentStudentIds }
 
+                // --- Stage 2: Per-Student Transformation ---
                 val studentsWithBehavior = students.map { student ->
+                    // 2a. Log Filtering:
+                    // Only show logs that haven't been "cleared" by the user and haven't exceeded
+                    // the display timeout defined in preferences.
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                     val recentEvents = if (student.showLogs) {
                         behaviorLogsByStudent[student.id]?.filter {
@@ -376,6 +474,8 @@ class SeatingChartViewModel @Inject constructor(
                         emptyList()
                     }
 
+                    // 2b. Description Generation:
+                    // Convert raw log entries into display strings, optionally using initials.
                     val behaviorDescription = recentEvents.map {
                         val description = if (useInitialsForBehavior) {
                             behaviorInitialsMap[it.type] ?: it.type.first().toString()
@@ -413,6 +513,8 @@ class SeatingChartViewModel @Inject constructor(
                         emptyList()
                     }
 
+                    // 2c. Conditional Formatting:
+                    // Evaluate the prioritized rule set against the student's current state and history.
                     val studentDetails = studentDetailsMap[student.id]
                     val conditionalFormattingResult = if (studentDetails != null) {
                         ConditionalFormattingEngine.applyConditionalFormattingDecoded(
@@ -433,7 +535,9 @@ class SeatingChartViewModel @Inject constructor(
                         emptyList()
                     }
 
-                    // Apply pending position if available
+                    // 2d. Optimistic Reconciliation:
+                    // If the student is currently being dragged, use the local "pending" position
+                    // to ensure immediate UI feedback before the database update completes.
                     val pendingPos = pendingStudentPositions[student.id.toInt()]
                     var studentForUi = student
                     if (pendingPos != null) {
@@ -444,6 +548,11 @@ class SeatingChartViewModel @Inject constructor(
                         }
                     }
 
+                    // --- Stage 3: State Sync ---
+
+                    // Reuse or create UI item instances.
+                    // Reusing instances allows Compose to perform optimized "diff-and-patch"
+                    // updates to individual fields.
                     val existingItem = studentUiItemCache[student.id.toInt()]
                     if (existingItem != null) {
                         studentForUi.updateStudentUiItem(
@@ -522,6 +631,10 @@ class SeatingChartViewModel @Inject constructor(
     }
 
 
+    /**
+     * Reverses the most recent action in the command history.
+     * The command is moved from [commandUndoStack] to [commandRedoStack].
+     */
     fun undo() {
         if (commandUndoStack.isNotEmpty()) {
             viewModelScope.launch {
@@ -533,6 +646,10 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Re-applies the most recently undone action.
+     * The command is moved from [commandRedoStack] back to [commandUndoStack].
+     */
     fun redo() {
         if (commandRedoStack.isNotEmpty()) {
             viewModelScope.launch {
@@ -544,11 +661,22 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Performs a non-linear history manipulation to "re-execute" or "undo" a specific
+     * action from the middle of the history stack.
+     *
+     * Note: This effectively "re-branches" history. All actions that occurred AFTER
+     * the target index are permanently discarded from the future history to ensure
+     * state consistency.
+     *
+     * @param targetIndex The index of the command in [commandUndoStack] to manipulate.
+     */
     fun selectiveUndo(targetIndex: Int) {
         if (targetIndex < 0 || targetIndex >= commandUndoStack.size) return
 
         viewModelScope.launch {
-            // 1. Undo actions that occurred after the target command
+            // 1. Undo all actions that occurred AFTER the target command.
+            // This brings the system back to the state immediately following the target action.
             val commandsToUndoCount = commandUndoStack.size - 1 - targetIndex
             for (i in 0 until commandsToUndoCount) {
                 if (commandUndoStack.isEmpty()) break
@@ -564,10 +692,10 @@ class SeatingChartViewModel @Inject constructor(
                 }
             }
 
-            // 2. The target command is now at the top. Pop it.
+            // 2. The target command is now at the top of the stack.
             val targetCommand = commandUndoStack.pop()
 
-            // 3. Undo the target command itself
+            // 3. Undo the target command itself.
             try {
                 targetCommand.undo()
             } catch (e: Exception) {
@@ -577,7 +705,9 @@ class SeatingChartViewModel @Inject constructor(
                 return@launch
             }
 
-            // 4. Re-execute the target command
+            // 4. Re-execute the target command.
+            // In some contexts, this might be a "toggle" or "edit", but standard implementation
+            // just reapplies it.
             try {
                 targetCommand.execute()
                 commandUndoStack.push(targetCommand)
@@ -587,7 +717,8 @@ class SeatingChartViewModel @Inject constructor(
                 return@launch
             }
 
-            // 5. Invalidate subsequent history
+            // 5. Invalidate all subsequent history.
+            // We cannot reliably "redo" actions that depended on the state we just modified.
             commandRedoStack.clear()
             updateUndoStackState()
 
