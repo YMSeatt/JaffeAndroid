@@ -91,6 +91,7 @@ import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostInsight
 import com.example.myapplication.labs.ghost.GhostEchoEngine
 import com.example.myapplication.labs.ghost.GhostEchoLayer
+import com.example.myapplication.labs.ghost.GhostChronosLayer
 import com.example.myapplication.labs.ghost.NeuralMapLayer
 import com.example.myapplication.labs.ghost.GhostInsightDialog
 import com.example.myapplication.labs.ghost.GhostInsightEngine
@@ -164,6 +165,7 @@ fun SeatingChartScreen(
     var showGhostOracleDialog by remember { mutableStateOf(false) }
     var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
     var isHudActive by remember { mutableStateOf(false) }
+    var isChronosActive by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
@@ -352,7 +354,9 @@ fun SeatingChartScreen(
                     showGhostOracleDialog = true
                 },
                 isHudActive = isHudActive,
-                onToggleHud = { isHudActive = !isHudActive }
+                onToggleHud = { isHudActive = !isHudActive },
+                isChronosActive = isChronosActive,
+                onToggleChronos = { isChronosActive = !isChronosActive }
             )
         },
         floatingActionButton = {
@@ -422,6 +426,15 @@ fun SeatingChartScreen(
             )
 
             if (GhostConfig.GHOST_MODE_ENABLED) {
+                if (GhostConfig.CHRONOS_MODE_ENABLED && isChronosActive) {
+                    GhostChronosLayer(
+                        students = students,
+                        events = allBehaviorEvents,
+                        canvasScale = scale,
+                        canvasOffset = offset
+                    )
+                }
+
                 NeuralMapLayer(
                     students = students,
                     behaviorLogs = allBehaviorEvents,
@@ -885,7 +898,9 @@ fun SeatingChartTopAppBar(
     selectedStudentUiItemForAction: StudentUiItem?,
     onNeuralOracleClick: () -> Unit,
     isHudActive: Boolean,
-    onToggleHud: () -> Unit
+    onToggleHud: () -> Unit,
+    isChronosActive: Boolean,
+    onToggleChronos: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var showLayoutSubMenu by remember { mutableStateOf(false) }
@@ -1028,6 +1043,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isChronosActive) "Disable Chronos 👻" else "Enable Chronos 👻") },
+                            onClick = {
+                                onToggleChronos()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
                         )
                     }
                     DropdownMenuItem(
