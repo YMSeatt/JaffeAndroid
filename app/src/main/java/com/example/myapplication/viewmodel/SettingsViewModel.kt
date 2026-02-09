@@ -50,6 +50,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import android.util.Log
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
@@ -659,7 +660,7 @@ class SettingsViewModel @Inject constructor(
                 screenshotFile
             )
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("SettingsViewModel", "Failed to save screenshot", e)
             null
         }
     }
