@@ -6,4 +6,5 @@ object GhostConfig {
     const val VOICE_ASSISTANT_ENABLED = true
     const val HUD_MODE_ENABLED = true
     const val ECHO_MODE_ENABLED = true
+    const val CHRONOS_MODE_ENABLED = true
 }

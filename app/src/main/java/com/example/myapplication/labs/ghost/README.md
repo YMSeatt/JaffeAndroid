@@ -19,18 +19,24 @@ Advanced visualization layers using **AGSL Shaders** (Android Graphics Shading L
 - **Neural Lines**: Visualize group connections using high-performance line shaders.
 - **Cognitive Auras**: Pulsating red glows around students requiring attention, rendered with procedural noise shaders.
 
-### 3. Ghost Oracle (`GhostOracle.kt`)
+### 3. Ghost Chronos (`GhostChronosLayer.kt`, `GhostChronosEngine.kt`, `GhostChronosShader.kt`)
+A temporal behavioral heatmap engine.
+- **Spatio-temporal Analysis**: Divides the classroom into a grid and calculates behavioral "intensity" over a time window.
+- **Dynamic Heatmap**: Renders a glowing floor layer using an AGSL shader. Positive behavior appears green; negative behavior appears red.
+- **Transformation-aware**: The heatmap aligns with the seating chart's zoom and pan states.
+
+### 4. Ghost Oracle (`GhostOracle.kt`)
 A predictive analysis engine (simulating on-device AI like Gemini Nano).
 - **Social Friction**: Predicts tension when high-risk students are seated together.
 - **Engagement Drop**: Flags students who haven't received positive feedback in over 7 days.
 - **Confidence Scores**: Each "prophecy" includes a confidence metric used by the HUD to scale visual intensity.
 
-### 4. Ghost Voice Assistant (`GhostVoiceAssistant.kt` & `GhostVisualizer.kt`)
+### 5. Ghost Voice Assistant (`GhostVoiceAssistant.kt` & `GhostVisualizer.kt`)
 A hands-free interface for classroom management.
 - **Command Parsing**: Translates speech (e.g., "Log positive participation for John Doe") into database actions.
 - **Neural Waveform**: A reactive shader-based visualizer that responds to voice amplitude in real-time.
 
-### 4. Insight Engine (`GhostInsightEngine.kt` & `GhostInsightDialog.kt`)
+### 6. Insight Engine (`GhostInsightEngine.kt` & `GhostInsightDialog.kt`)
 A data analysis tool that generates behavioral and academic "insights."
 - Categorizes students as **Peak Performers**, **Steady Progress**, or requiring **Attention/Academic Support** based on aggregated log data.
 
