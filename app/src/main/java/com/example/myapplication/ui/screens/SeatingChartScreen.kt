@@ -101,6 +101,8 @@ import com.example.myapplication.labs.ghost.GhostHUDViewModel
 import com.example.myapplication.labs.ghost.GhostOracleDialog
 import com.example.myapplication.labs.ghost.GhostVoiceAssistant
 import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
+import com.example.myapplication.labs.ghost.GhostHologramEngine
+import com.example.myapplication.labs.ghost.GhostHologramLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -168,6 +170,7 @@ fun SeatingChartScreen(
     var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
     var isHudActive by remember { mutableStateOf(false) }
     var isChronosActive by remember { mutableStateOf(false) }
+    var isHologramActive by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
@@ -214,21 +217,33 @@ fun SeatingChartScreen(
             onAmplitudeChange = { ghostAmplitude = it },
             onListeningStateChange = { isGhostListening = it },
             onResult = { ghostCurrentText = it },
-            customBehaviors = behaviorTypeNames
+            customBehaviors = behaviorTypeNames,
+            onCommand = { cmd ->
+                if (cmd == "toggle_hologram") {
+                    isHologramActive = !isHologramActive
+                }
+            }
         )
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostHologramEngine = remember { GhostHologramEngine(context) }
 
     DisposableEffect(Unit) {
-        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ECHO_MODE_ENABLED) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
-                ghostEchoEngine.start()
+        if (GhostConfig.GHOST_MODE_ENABLED) {
+            if (GhostConfig.ECHO_MODE_ENABLED) {
+                if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    ghostEchoEngine.start()
+                }
+            }
+            if (GhostConfig.HOLOGRAM_MODE_ENABLED) {
+                ghostHologramEngine.start()
             }
         }
         onDispose {
             ghostVoiceAssistant.destroy()
             ghostEchoEngine.stop()
+            ghostHologramEngine.stop()
         }
     }
 
@@ -358,7 +373,9 @@ fun SeatingChartScreen(
                 isHudActive = isHudActive,
                 onToggleHud = { isHudActive = !isHudActive },
                 isChronosActive = isChronosActive,
-                onToggleChronos = { isChronosActive = !isChronosActive }
+                onToggleChronos = { isChronosActive = !isChronosActive },
+                isHologramActive = isHologramActive,
+                onToggleHologram = { isHologramActive = !isHologramActive }
             )
         },
         floatingActionButton = {
@@ -408,6 +425,51 @@ fun SeatingChartScreen(
             }
         }
     ) { paddingValues ->
+        val onStudentClick: (StudentUiItem) -> Unit = { studentItem ->
+            if (selectMode) {
+                val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
+                val currentSelected = selectedItemIds.toMutableSet()
+                if (currentSelected.contains(itemId)) {
+                    currentSelected.remove(itemId)
+                } else {
+                    currentSelected.add(itemId)
+                }
+                seatingChartViewModel.selectedItemIds.value = currentSelected
+            } else {
+                selectedStudentUiItemForAction = studentItem
+                when (sessionType) {
+                    SessionType.BEHAVIOR -> showBehaviorDialog = true
+                    SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                    SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                }
+            }
+        }
+
+        val onStudentLongClick: (StudentUiItem) -> Unit = { studentItem ->
+            selectedStudentUiItemForAction = studentItem
+            showStudentActionMenu = true
+        }
+
+        val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
+            if (selectMode) {
+                val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
+                val currentSelected = selectedItemIds.toMutableSet()
+                if (currentSelected.contains(itemId)) {
+                    currentSelected.remove(itemId)
+                } else {
+                    currentSelected.add(itemId)
+                }
+                seatingChartViewModel.selectedItemIds.value = currentSelected
+            }
+        }
+
+        val onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
+            coroutineScope.launch {
+                editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                showAddEditFurnitureDialog = true
+            }
+        }
+
         Box(
             modifier = Modifier
                 .padding(paddingValues)
@@ -427,6 +489,38 @@ fun SeatingChartScreen(
                 canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
             )
 
+            // Main Content Rendering
+            val chartContent = @Composable {
+                SeatingChartContent(
+                    scale = scale,
+                    offset = offset,
+                    onTransformChange = { s, o -> scale = s; offset = o },
+                    canvasSize = canvasSize,
+                    students = students,
+                    furniture = furniture,
+                    selectedItemIds = selectedItemIds,
+                    selectMode = selectMode,
+                    sessionType = sessionType,
+                    editModeEnabled = editModeEnabled,
+                    userPreferences = userPreferences,
+                    showRecentBehavior = showRecentBehavior,
+                    onStudentClick = onStudentClick,
+                    onStudentLongClick = onStudentLongClick,
+                    onFurnitureClick = onFurnitureClick,
+                    onFurnitureLongClick = onFurnitureLongClick,
+                    seatingChartViewModel = seatingChartViewModel
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
+                GhostHologramLayer(engine = ghostHologramEngine) {
+                    chartContent()
+                }
+            } else {
+                chartContent()
+            }
+
+            // Ghost Overlays
             if (GhostConfig.GHOST_MODE_ENABLED) {
                 if (GhostConfig.CHRONOS_MODE_ENABLED && isChronosActive) {
                     GhostChronosLayer(
@@ -453,104 +547,6 @@ fun SeatingChartScreen(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectTransformGestures { centroid, pan, zoom, _ ->
-                            val oldScale = scale
-                            val newScale = (scale * zoom).coerceIn(0.5f, 5f)
-                            offset = (offset - centroid) * (newScale / oldScale) + centroid + pan
-                            scale = newScale
-                        }
-                    }
-                    .graphicsLayer(
-                        scaleX = scale,
-                        scaleY = scale,
-                        translationX = offset.x,
-                        translationY = offset.y
-                    )
-            ) {
-                Box(modifier = Modifier.size(4000.dp)) {
-                    val noAnimations = userPreferences?.noAnimations ?: false
-                    val gridSnapEnabled = userPreferences?.gridSnapEnabled ?: false
-                    val gridSize = userPreferences?.gridSize ?: 20
-                    val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
-
-                    students.forEach { studentItem ->
-                        StudentDraggableIcon(
-                            studentUiItem = studentItem,
-                            viewModel = seatingChartViewModel,
-                            showBehavior = showRecentBehavior,
-                            isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
-                            onClick = {
-                                if (selectMode) {
-                                    val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
-                                    val currentSelected = selectedItemIds.toMutableSet()
-                                    if (currentSelected.contains(itemId)) {
-                                        currentSelected.remove(itemId)
-                                    } else {
-                                        currentSelected.add(itemId)
-                                    }
-                                    seatingChartViewModel.selectedItemIds.value = currentSelected
-                                } else {
-                                    selectedStudentUiItemForAction = studentItem
-                                    when (sessionType) {
-                                        SessionType.BEHAVIOR -> showBehaviorDialog = true
-                                        SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
-                                        SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
-                                    }
-                                 }
-                            },
-                            onLongClick = {
-                                selectedStudentUiItemForAction = studentItem
-                                showStudentActionMenu = true
-                            },
-                            onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
-                            noAnimations = noAnimations,
-                            editModeEnabled = editModeEnabled,
-                            gridSnapEnabled = gridSnapEnabled,
-                            gridSize = gridSize,
-                            autoExpandEnabled = autoExpandEnabled,
-                            canvasSize = canvasSize,
-                            canvasScale = scale,
-                            canvasOffset = offset
-                        )
-                    }
-                    furniture.forEach { furnitureItem ->
-                        FurnitureDraggableIcon(
-                            furnitureUiItem = furnitureItem,
-                            viewModel = seatingChartViewModel,
-                            scale = scale,
-                            canvasOffset = offset,
-                            isSelected = selectedItemIds.any { it.id == furnitureItem.id && it.type == ItemType.FURNITURE },
-                            onClick = {
-                                if (selectMode) {
-                                    val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
-                                    val currentSelected = selectedItemIds.toMutableSet()
-                                    if (currentSelected.contains(itemId)) {
-                                        currentSelected.remove(itemId)
-                                    } else {
-                                        currentSelected.add(itemId)
-                                    }
-                                    seatingChartViewModel.selectedItemIds.value = currentSelected
-                                }
-                            },
-                            onLongClick = {
-                                coroutineScope.launch {
-                                    editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                                    showAddEditFurnitureDialog = true
-                                }
-                            },
-                            onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(furnitureItem.id, ItemType.FURNITURE)), w.toInt(), h.toInt()) },
-                            noAnimations = noAnimations,
-                            editModeEnabled = editModeEnabled,
-                            gridSnapEnabled = gridSnapEnabled,
-                            gridSize = gridSize
-                        )
-                    }
-                }
-            }
 
             if (showSaveLayoutDialog) {
                 SaveLayoutDialog(onDismiss = { showSaveLayoutDialog = false }, onSave = { name -> seatingChartViewModel.saveLayout(name); showSaveLayoutDialog = false })
@@ -875,6 +871,89 @@ fun SeatingChartScreen(
 }
 
 
+@Composable
+fun SeatingChartContent(
+    scale: Float,
+    offset: Offset,
+    onTransformChange: (Float, Offset) -> Unit,
+    canvasSize: IntSize,
+    students: List<StudentUiItem>,
+    furniture: List<com.example.myapplication.ui.model.FurnitureUiItem>,
+    selectedItemIds: Set<ChartItemId>,
+    selectMode: Boolean,
+    sessionType: SessionType,
+    editModeEnabled: Boolean,
+    userPreferences: com.example.myapplication.preferences.UserPreferences?,
+    showRecentBehavior: Boolean,
+    onStudentClick: (StudentUiItem) -> Unit,
+    onStudentLongClick: (StudentUiItem) -> Unit,
+    onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
+    onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
+    seatingChartViewModel: SeatingChartViewModel
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                detectTransformGestures { centroid, pan, zoom, _ ->
+                    val oldScale = scale
+                    val newScale = (scale * zoom).coerceIn(0.5f, 5f)
+                    val newOffset = (offset - centroid) * (newScale / oldScale) + centroid + pan
+                    onTransformChange(newScale, newOffset)
+                }
+            }
+            .graphicsLayer(
+                scaleX = scale,
+                scaleY = scale,
+                translationX = offset.x,
+                translationY = offset.y
+            )
+    ) {
+        Box(modifier = Modifier.size(4000.dp)) {
+            val noAnimations = userPreferences?.noAnimations ?: false
+            val gridSnapEnabled = userPreferences?.gridSnapEnabled ?: false
+            val gridSize = userPreferences?.gridSize ?: 20
+            val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
+
+            students.forEach { studentItem ->
+                StudentDraggableIcon(
+                    studentUiItem = studentItem,
+                    viewModel = seatingChartViewModel,
+                    showBehavior = showRecentBehavior,
+                    isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
+                    onClick = { onStudentClick(studentItem) },
+                    onLongClick = { onStudentLongClick(studentItem) },
+                    onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
+                    noAnimations = noAnimations,
+                    editModeEnabled = editModeEnabled,
+                    gridSnapEnabled = gridSnapEnabled,
+                    gridSize = gridSize,
+                    autoExpandEnabled = autoExpandEnabled,
+                    canvasSize = canvasSize,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+            furniture.forEach { furnitureItem ->
+                FurnitureDraggableIcon(
+                    furnitureUiItem = furnitureItem,
+                    viewModel = seatingChartViewModel,
+                    scale = scale,
+                    canvasOffset = offset,
+                    isSelected = selectedItemIds.any { it.id == furnitureItem.id && it.type == ItemType.FURNITURE },
+                    onClick = { onFurnitureClick(furnitureItem) },
+                    onLongClick = { onFurnitureLongClick(furnitureItem) },
+                    onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(furnitureItem.id, ItemType.FURNITURE)), w.toInt(), h.toInt()) },
+                    noAnimations = noAnimations,
+                    editModeEnabled = editModeEnabled,
+                    gridSnapEnabled = gridSnapEnabled,
+                    gridSize = gridSize
+                )
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SeatingChartTopAppBar(
@@ -916,7 +995,9 @@ fun SeatingChartTopAppBar(
     isHudActive: Boolean,
     onToggleHud: () -> Unit,
     isChronosActive: Boolean,
-    onToggleChronos: () -> Unit
+    onToggleChronos: () -> Unit,
+    isHologramActive: Boolean,
+    onToggleHologram: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var showLayoutSubMenu by remember { mutableStateOf(false) }
@@ -1067,6 +1148,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isHologramActive) "Disable Hologram 👻" else "Enable Hologram 👻") },
+                            onClick = {
+                                onToggleHologram()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     DropdownMenuItem(
