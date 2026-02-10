@@ -124,6 +124,8 @@ import com.example.myapplication.ui.dialogs.LogQuizScoreDialog
 import com.example.myapplication.ui.dialogs.SaveLayoutDialog
 import com.example.myapplication.ui.dialogs.StudentStyleScreen
 import com.example.myapplication.ui.dialogs.UndoHistoryDialog
+import com.example.myapplication.commands.ItemType
+import com.example.myapplication.ui.model.ChartItemId
 import com.example.myapplication.ui.model.SessionType
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.EmailException
@@ -155,7 +157,7 @@ fun SeatingChartScreen(
     val students by seatingChartViewModel.studentsForDisplay.observeAsState(initial = emptyList())
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
-    val selectedStudentIds by seatingChartViewModel.selectedStudentIds.observeAsState(initial = emptySet())
+    val selectedItemIds by seatingChartViewModel.selectedItemIds.observeAsState(initial = emptySet())
     val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
     val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
@@ -274,7 +276,7 @@ fun SeatingChartScreen(
                 sessionType = sessionType,
                 isSessionActive = isSessionActive,
                 selectMode = selectMode,
-                selectedStudentIds = selectedStudentIds,
+                selectedItemIds = selectedItemIds,
                 behaviorTypeNames = behaviorTypeNames,
                 onSessionTypeChange = { sessionType = it },
                 onToggleSession = { if (isSessionActive) seatingChartViewModel.endSession() else seatingChartViewModel.startSession() },
@@ -286,7 +288,7 @@ fun SeatingChartScreen(
                 onRedo = { seatingChartViewModel.redo() },
                 onShowUndoHistory = { showUndoHistoryDialog = true },
                 onBehaviorLog = { type ->
-                    val targets = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                    val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                     targets.forEach { id ->
                         seatingChartViewModel.addBehaviorEvent(BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null))
                     }
@@ -294,7 +296,7 @@ fun SeatingChartScreen(
                     coroutineScope.launch { snackbarHostState.showSnackbar("Logged $type for ${targets.size} student(s)") }
                 },
                 onLogQuiz = { showLogQuizScoreDialog = true },
-                onDeleteSelected = { seatingChartViewModel.deleteStudents(selectedStudentIds) },
+                onDeleteSelected = { seatingChartViewModel.deleteSelectedItems(selectedItemIds) },
                 onChangeBoxSize = { showChangeBoxSizeDialog = true },
                 onNavigateToSettings = onNavigateToSettings,
                 onNavigateToDataViewer = onNavigateToDataViewer,
@@ -480,16 +482,17 @@ fun SeatingChartScreen(
                             studentUiItem = studentItem,
                             viewModel = seatingChartViewModel,
                             showBehavior = showRecentBehavior,
-                            isSelected = selectedStudentIds.contains(studentItem.id),
+                            isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
                             onClick = {
                                 if (selectMode) {
-                                    val currentSelected = selectedStudentIds.toMutableSet()
-                                    if (currentSelected.contains(studentItem.id)) {
-                                        currentSelected.remove(studentItem.id)
+                                    val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
+                                    val currentSelected = selectedItemIds.toMutableSet()
+                                    if (currentSelected.contains(itemId)) {
+                                        currentSelected.remove(itemId)
                                     } else {
-                                        currentSelected.add(studentItem.id)
+                                        currentSelected.add(itemId)
                                     }
-                                    seatingChartViewModel.selectedStudentIds.value = currentSelected
+                                    seatingChartViewModel.selectedItemIds.value = currentSelected
                                 } else {
                                     selectedStudentUiItemForAction = studentItem
                                     when (sessionType) {
@@ -503,7 +506,7 @@ fun SeatingChartScreen(
                                 selectedStudentUiItemForAction = studentItem
                                 showStudentActionMenu = true
                             },
-                            onResize = { width, height -> seatingChartViewModel.changeBoxSize(setOf(studentItem.id), width.toInt(), height.toInt()) },
+                            onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
                             noAnimations = noAnimations,
                             editModeEnabled = editModeEnabled,
                             gridSnapEnabled = gridSnapEnabled,
@@ -520,13 +523,26 @@ fun SeatingChartScreen(
                             viewModel = seatingChartViewModel,
                             scale = scale,
                             canvasOffset = offset,
+                            isSelected = selectedItemIds.any { it.id == furnitureItem.id && it.type == ItemType.FURNITURE },
+                            onClick = {
+                                if (selectMode) {
+                                    val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
+                                    val currentSelected = selectedItemIds.toMutableSet()
+                                    if (currentSelected.contains(itemId)) {
+                                        currentSelected.remove(itemId)
+                                    } else {
+                                        currentSelected.add(itemId)
+                                    }
+                                    seatingChartViewModel.selectedItemIds.value = currentSelected
+                                }
+                            },
                             onLongClick = {
                                 coroutineScope.launch {
                                     editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
                                     showAddEditFurnitureDialog = true
                                 }
                             },
-                            onResize = { width, height -> seatingChartViewModel.changeFurnitureSize(furnitureItem.id, width.toInt(), height.toInt()) },
+                            onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(furnitureItem.id, ItemType.FURNITURE)), w.toInt(), h.toInt()) },
                             noAnimations = noAnimations,
                             editModeEnabled = editModeEnabled,
                             gridSnapEnabled = gridSnapEnabled,
@@ -582,7 +598,7 @@ fun SeatingChartScreen(
                         DropdownMenuItem(
                             text = { Text("Delete Student") },
                             onClick = {
-                                seatingChartViewModel.deleteStudents(setOf(student.id))
+                                seatingChartViewModel.deleteSelectedItems(setOf(ChartItemId(student.id, ItemType.STUDENT)))
                                 showStudentActionMenu = false
                             })
                         DropdownMenuItem(
@@ -668,7 +684,7 @@ fun SeatingChartScreen(
             }
 
             if (showBehaviorDialog) {
-                val studentIds = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                val studentIds = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                 BehaviorDialog(
                     studentIds = studentIds,
                     viewModel = seatingChartViewModel,
@@ -690,14 +706,14 @@ fun SeatingChartScreen(
             }
 
             if (showLogQuizScoreDialog) {
-                val studentIds = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                val studentIds = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                 LogQuizScoreDialog(studentIds = studentIds, viewModel = seatingChartViewModel, settingsViewModel = settingsViewModel, onDismissRequest = { showLogQuizScoreDialog = false; selectedStudentUiItemForAction = null }, onSave = { quizLogs ->
                     if (sessionType == SessionType.QUIZ) quizLogs.forEach { seatingChartViewModel.addQuizLogToSession(it) } else quizLogs.forEach { seatingChartViewModel.saveQuizLog(it) }
                 })
             }
 
             if (showAdvancedHomeworkLogDialog) {
-                val studentIds = if (selectMode) selectedStudentIds.map { it.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                val studentIds = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                 AdvancedHomeworkLogDialog(studentIds = studentIds, viewModel = seatingChartViewModel, settingsViewModel = settingsViewModel, onDismissRequest = { showAdvancedHomeworkLogDialog = false; selectedStudentUiItemForAction = null }, onSave = { homeworkLogs ->
                     if (sessionType == SessionType.HOMEWORK) homeworkLogs.forEach { seatingChartViewModel.addHomeworkLogToSession(it) } else homeworkLogs.forEach { seatingChartViewModel.addHomeworkLog(it) }
                 })
@@ -802,7 +818,7 @@ fun SeatingChartScreen(
             }
 
             if (showChangeBoxSizeDialog) {
-                ChangeBoxSizeDialog(onDismissRequest = { showChangeBoxSizeDialog = false }, onSave = { width, height -> seatingChartViewModel.changeBoxSize(selectedStudentIds, width, height); showChangeBoxSizeDialog = false })
+                ChangeBoxSizeDialog(onDismissRequest = { showChangeBoxSizeDialog = false }, onSave = { width, height -> seatingChartViewModel.changeBoxSize(selectedItemIds, width, height); showChangeBoxSizeDialog = false })
             }
 
             if (showStudentStyleDialog) {
@@ -865,7 +881,7 @@ fun SeatingChartTopAppBar(
     sessionType: SessionType,
     isSessionActive: Boolean,
     selectMode: Boolean,
-    selectedStudentIds: Set<Int>,
+    selectedItemIds: Set<ChartItemId>,
     behaviorTypeNames: List<String>,
     onSessionTypeChange: (SessionType) -> Unit,
     onToggleSession: () -> Unit,
@@ -926,7 +942,7 @@ fun SeatingChartTopAppBar(
             IconButton(onClick = onRedo) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
 
             // Behaviors Dropdown
-            val behaviorTargetCount = if (selectMode) selectedStudentIds.size else if (selectedStudentUiItemForAction != null) 1 else 0
+            val behaviorTargetCount = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.size else if (selectedStudentUiItemForAction != null) 1 else 0
             if (behaviorTargetCount > 0 && behaviorTypeNames.isNotEmpty()) {
                 var showQuickBehaviorMenu by remember { mutableStateOf(false) }
                 Box {
@@ -1095,6 +1111,8 @@ fun SeatingChartTopAppBar(
                     DropdownMenuItem(text = { Text("Align Bottom") }, onClick = { seatingChartViewModel.alignSelectedItems("bottom"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Align Left") }, onClick = { seatingChartViewModel.alignSelectedItems("left"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Align Right") }, onClick = { seatingChartViewModel.alignSelectedItems("right"); showAlignSubMenu = false })
+                    DropdownMenuItem(text = { Text("Center Horizontal") }, onClick = { seatingChartViewModel.alignSelectedItems("center_h"); showAlignSubMenu = false })
+                    DropdownMenuItem(text = { Text("Center Vertical") }, onClick = { seatingChartViewModel.alignSelectedItems("center_v"); showAlignSubMenu = false })
                     HorizontalDivider()
                     DropdownMenuItem(text = { Text("Distribute Horizontal") }, onClick = { seatingChartViewModel.distributeSelectedItems("horizontal"); showAlignSubMenu = false })
                     DropdownMenuItem(text = { Text("Distribute Vertical") }, onClick = { seatingChartViewModel.distributeSelectedItems("vertical"); showAlignSubMenu = false })

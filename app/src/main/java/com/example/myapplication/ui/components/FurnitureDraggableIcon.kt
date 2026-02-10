@@ -47,6 +47,8 @@ fun FurnitureDraggableIcon(
     viewModel: SeatingChartViewModel,
     scale: Float,
     canvasOffset: androidx.compose.ui.geometry.Offset,
+    isSelected: Boolean = false,
+    onClick: () -> Unit = {},
     onLongClick: () -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean,
@@ -111,13 +113,13 @@ fun FurnitureDraggableIcon(
                         )
                     }
                     .combinedClickable(
-                        onClick = { /* Furniture might not have a default click action */ },
+                        onClick = onClick,
                         onLongClick = onLongClick
                     )
                     .border(
                         BorderStroke(
-                            furnitureUiItem.displayOutlineThickness,
-                            furnitureUiItem.displayOutlineColor
+                            if (isSelected) 4.dp else furnitureUiItem.displayOutlineThickness,
+                            if (isSelected) MaterialTheme.colorScheme.primary else furnitureUiItem.displayOutlineColor
                         )
                     ),
                 colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
