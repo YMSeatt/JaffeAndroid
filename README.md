@@ -34,7 +34,7 @@ A comprehensive tool for teachers to manage seating charts and track student beh
     *   `src/main/java/.../data/`: Room entities, DAOs, and the `Exporter`.
     *   `src/main/java/.../ui/`: Jetpack Compose screens, dialogs, and themes.
     *   `src/main/java/.../viewmodel/`: Hilt-powered ViewModels for state management.
-*   `Python/`: Python source code for the desktop application.
+*   `Python/`: Python source code for the desktop application. See [Python/README.md](Python/README.md) for detailed architecture and setup.
 *   `gradle/` & `build.gradle.kts`: Android build configuration.
 *   `Setup.sh`: Script for setting up the Android SDK in a Linux environment.
 

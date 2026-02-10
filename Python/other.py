@@ -153,7 +153,7 @@ DEFAULT_HOMEWORK_MARK_TYPES = [ # New for homework marks
 
 MAX_CUSTOM_TYPES = 90 # Max for custom behaviors, homeworks, mark types
 
-MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292" # SHA256 of "RecoverMyData123!"
+MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292" # SHA3-512 of "RecoverMyData123!"
 #Recovery1Master2Password!Jaffe1
 
 
@@ -169,6 +169,12 @@ MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee
 
 # --- File Lock Manager ---
 class FileLockManager:
+    """
+    Manages a file-based lock to prevent multiple instances of the application
+    from running simultaneously and potentially corrupting data files.
+
+    Uses the 'portalocker' library for cross-platform advisory locking.
+    """
     def __init__(self, lock_file_path):
         self.lock_file_path = lock_file_path
         self.lock = None
@@ -224,6 +230,10 @@ class FileLockManager:
                     print(f"Warning: Could not delete lock file {self.lock_file_path}: {e}")
 # --- Password Management ---
 class PasswordManager:
+    """
+    Handles application-level security, including password hashing, verification,
+    and automatic UI locking based on inactivity.
+    """
     def __init__(self, app_settings):
         self.app_settings = app_settings
         self.is_locked = False
