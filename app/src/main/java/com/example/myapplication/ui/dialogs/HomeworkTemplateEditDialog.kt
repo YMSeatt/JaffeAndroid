@@ -175,7 +175,7 @@ fun AddStepDialog(
                         expanded = expanded,
                         onDismissRequest = { expanded = false },
                     ) {
-                        HomeworkMarkType.values().forEach { selectionOption ->
+                        HomeworkMarkType.entries.forEach { selectionOption ->
                             DropdownMenuItem(
                                 text = { Text(selectionOption.name) },
                                 onClick = {

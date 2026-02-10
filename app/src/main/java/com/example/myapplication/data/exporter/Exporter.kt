@@ -38,6 +38,22 @@ class Exporter(
     private val gson = Gson()
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
+    /**
+     * Cache for decoded marks data JSON strings to avoid redundant deserialization.
+     */
+    private val parsedMarksCache = mutableMapOf<String, Map<String, Any>>()
+
+    private fun parseMarksData(json: String?): Map<String, Any> {
+        if (json.isNullOrEmpty()) return emptyMap()
+        return parsedMarksCache.getOrPut(json) {
+            try {
+                gson.fromJson(json, mapType)
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
+    }
+
     private data class FormattingContext(
         val headerStyle: org.apache.poi.ss.usermodel.CellStyle,
         val rightAlignmentStyle: org.apache.poi.ss.usermodel.CellStyle,
@@ -45,7 +61,10 @@ class Exporter(
         val fullDateFormat: SimpleDateFormat,
         val dateFormat: SimpleDateFormat,
         val timeFormat: SimpleDateFormat,
-        val dayFormat: SimpleDateFormat
+        val dayFormat: SimpleDateFormat,
+        val attendanceDateFormat: SimpleDateFormat,
+        val calendar: Calendar,
+        val date: Date
     )
 
     /**
@@ -94,7 +113,10 @@ class Exporter(
             fullDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
             dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
             timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault()),
-            dayFormat = SimpleDateFormat("EEEE", Locale.getDefault())
+            dayFormat = SimpleDateFormat("EEEE", Locale.getDefault()),
+            attendanceDateFormat = SimpleDateFormat("yyyy-MM-dd (EEE)", Locale.getDefault()),
+            calendar = Calendar.getInstance(),
+            date = Date()
         )
 
         // Filter data
@@ -215,19 +237,14 @@ class Exporter(
 
         // Collect dynamic keys from Homework Logs if relevant
         val dynamicHomeworkKeys = if (sheetName == "Homework Log" || isMasterLog) {
-            val relevantLogs = data.filterIsInstance<HomeworkLog>()
-            relevantLogs.flatMap { log ->
-                 try {
-                     log.marksData?.let { 
-                        gson.fromJson<Map<String, Any>>(it, mapType).keys
-                     } ?: emptySet()
-                 } catch (e: Exception) {
-                     emptySet()
-                 }
-            }.distinct().filter { key ->
-                // Filter out keys already covered by Custom Types/Statuses
-                customHomeworkTypes.none { it.name == key } && customHomeworkStatuses.none { it.name == key }
-            }.sorted()
+            val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
+            val keys = mutableSetOf<String>()
+            data.filterIsInstance<HomeworkLog>().forEach { log ->
+                log.marksData?.let { json ->
+                    keys.addAll(parseMarksData(json).keys)
+                }
+            }
+            keys.filter { it !in knownHomeworkKeys }.sorted()
         } else {
             emptyList()
         }
@@ -299,20 +316,20 @@ class Exporter(
                 else -> 0
             }
 
-            val date = Date(timestamp)
+            context.date.time = timestamp
             var col = 0
-            row.createCell(col++).setCellValue(context.fullDateFormat.format(date))
+            row.createCell(col++).setCellValue(context.fullDateFormat.format(context.date))
             row.createCell(col).apply {
-                setCellValue(context.dateFormat.format(date))
+                setCellValue(context.dateFormat.format(context.date))
                 cellStyle = context.rightAlignmentStyle
             }
             col++
             row.createCell(col).apply {
-                setCellValue(context.timeFormat.format(date))
+                setCellValue(context.timeFormat.format(context.date))
                 cellStyle = context.rightAlignmentStyle
             }
             col++
-            row.createCell(col++).setCellValue(context.dayFormat.format(date))
+            row.createCell(col++).setCellValue(context.dayFormat.format(context.date))
             row.createCell(col++).setCellValue(student?.firstName ?: "Unknown")
             row.createCell(col++).setCellValue(student?.lastName ?: "")
 
@@ -352,11 +369,7 @@ class Exporter(
                         }
                     }
 
-                    val marksData = try {
-                        gson.fromJson<Map<String, Any>>(item.marksData, mapType)
-                    } catch (e: Exception) {
-                        emptyMap()
-                    }
+                    val marksData = parseMarksData(item.marksData)
 
                     var totalScore = 0.0
                     var totalPossible = 0.0
@@ -395,13 +408,9 @@ class Exporter(
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(item.assignmentName)
                     }
-                    val marksData = try {
-                        item.marksData?.let { gson.fromJson<Map<String, Any>>(it, mapType) }
-                    } catch (e: Exception) {
-                        null
-                    }
+                    val marksData = if (item.marksData != null) parseMarksData(item.marksData) else null
 
-                    if (marksData != null) {
+                    if (marksData != null && marksData.isNotEmpty()) {
                         var totalPoints = 0.0
                         var effort = ""
                         
@@ -525,9 +534,7 @@ class Exporter(
                 val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
                 val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
                 // Simplified score calculation
-                val marksData = try { 
-                    gson.fromJson<Map<String, Any>>(log.marksData, mapType)
-                } catch (e: Exception) { emptyMap() }
+                val marksData = parseMarksData(log.marksData)
                 var totalScore = 0.0
                 var totalPossible = 0.0
                 quizMarkTypes.forEach { markType ->
@@ -576,9 +583,7 @@ class Exporter(
                 val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
                 var points = 0.0
                 log.marksData?.let {
-                    val marks = try { 
-                        gson.fromJson<Map<String, Any>>(it, mapType)
-                    } catch (e: Exception) { emptyMap() }
+                    val marks = parseMarksData(it)
                     marks.values.forEach { value ->
                          val doubleVal = if (value is Number) value.toDouble() else value.toString().toDoubleOrNull()
                         doubleVal?.let { points += it }
@@ -691,7 +696,7 @@ class Exporter(
         val sheet = workbook.createSheet("Attendance Report")
         sheet.createFreezePane(1, 1)
 
-        val cal = Calendar.getInstance()
+        val cal = context.calendar
 
         // Determine date range from options or fallback to log boundaries.
         // Optimized: Uses minOfOrNull on individual lists to avoid massive intermediate list allocations.
@@ -734,8 +739,10 @@ class Exporter(
         }
 
         val headers = mutableListOf("Student Name")
-        val attendanceDateFormat = SimpleDateFormat("yyyy-MM-dd (EEE)", Locale.getDefault())
-        dates.forEach { headers.add(attendanceDateFormat.format(Date(it))) }
+        dates.forEach {
+            context.date.time = it
+            headers.add(context.attendanceDateFormat.format(context.date))
+        }
         headers.add("Total Present")
         headers.add("Total Absent")
 
