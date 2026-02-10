@@ -31,7 +31,8 @@ class GhostVoiceAssistant(
     private val onAmplitudeChange: (Float) -> Unit,
     private val onListeningStateChange: (Boolean) -> Unit,
     private val onResult: (String) -> Unit,
-    private val customBehaviors: List<String> = emptyList()
+    private val customBehaviors: List<String> = emptyList(),
+    private val onCommand: (String) -> Unit = {}
 ) : RecognitionListener {
 
     private var speechRecognizer: SpeechRecognizer? = null
@@ -153,6 +154,9 @@ class GhostVoiceAssistant(
                 if (GhostConfig.COGNITIVE_ENGINE_ENABLED) {
                     viewModel.runCognitiveOptimization()
                 }
+            }
+            command.contains("hologram") || command.contains("3d") || command.contains("dimension") -> {
+                onCommand("toggle_hologram")
             }
         }
     }
