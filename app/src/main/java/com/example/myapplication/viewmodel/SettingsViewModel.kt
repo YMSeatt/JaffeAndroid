@@ -445,8 +445,8 @@ class SettingsViewModel @Inject constructor(
         }
 
         if (SecurityUtil.verifyPassword(password, storedHash)) {
-            // If it matches but is in a legacy format (unsalted), upgrade it automatically
-            if (!storedHash.contains(":")) {
+            // If it matches but is in a legacy format (unsalted or old salted), upgrade it automatically
+            if (!storedHash.startsWith("pbkdf2:")) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
             }
             return true

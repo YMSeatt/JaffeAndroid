@@ -16,7 +16,9 @@ import java.time.Duration
 import java.util.function.Function
 import javax.crypto.Cipher
 import javax.crypto.Mac
+import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.IvParameterSpec
+import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
@@ -32,30 +34,63 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
         private const val KEY_FILE_NAME = "fernet.key"
         private const val TTL_SECONDS = 60L * 60 * 24 * 365 * 100 // 100 years
 
+        // PBKDF2 Configuration
+        private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
+        private const val PBKDF2_ITERATIONS = 100000
+        private const val PBKDF2_KEY_LENGTH = 256
+        private const val PBKDF2_PREFIX = "pbkdf2"
+
         // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
         /**
-         * Hashes a password using SHA-512 with a random salt.
-         * The result is in the format "salt:hash".
+         * Hashes a password using PBKDF2 with HMAC-SHA256.
+         * The result is in the format "pbkdf2:iterations:saltHex:hashHex".
          */
         fun hashPassword(password: String): String {
             val salt = ByteArray(16)
             SecureRandom().nextBytes(salt)
             val saltHex = salt.toHex()
 
-            val md = MessageDigest.getInstance("SHA-512")
-            val digest = md.digest((saltHex + password).toByteArray(Charsets.UTF_8))
-            val hashHex = digest.toHex()
+            val spec = PBEKeySpec(
+                password.toCharArray(),
+                salt,
+                PBKDF2_ITERATIONS,
+                PBKDF2_KEY_LENGTH
+            )
+            val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+            val hash = factory.generateSecret(spec).encoded
+            val hashHex = hash.toHex()
 
-            return "$saltHex:$hashHex"
+            return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
         }
 
         /**
          * Verifies a password against a stored hash.
-         * Supports the new salted format and legacy unsalted SHA-256/SHA-512 hashes.
+         * Supports PBKDF2, salted SHA-512, and legacy unsalted SHA-256/SHA-512 hashes.
          */
         fun verifyPassword(password: String, storedHash: String): Boolean {
+            if (storedHash.startsWith("$PBKDF2_PREFIX:")) {
+                val parts = storedHash.split(":")
+                if (parts.size != 4) return false
+                val iterations = parts[1].toIntOrNull() ?: return false
+                val saltHex = parts[2]
+                val expectedHashHex = parts[3]
+
+                val salt = saltHex.hexToByteArray()
+                val spec = PBEKeySpec(
+                    password.toCharArray(),
+                    salt,
+                    iterations,
+                    PBKDF2_KEY_LENGTH
+                )
+                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+                val actualHash = factory.generateSecret(spec).encoded
+                val expectedHash = expectedHashHex.hexToByteArray()
+
+                return MessageDigest.isEqual(actualHash, expectedHash)
+            }
+
             return if (storedHash.contains(":")) {
                 val parts = storedHash.split(":")
                 if (parts.size != 2) return false

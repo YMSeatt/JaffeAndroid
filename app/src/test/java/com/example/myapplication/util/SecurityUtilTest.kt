@@ -88,9 +88,22 @@ class SecurityUtilTest {
     fun `test password hashing and verification`() {
         val password = "password123"
         val hashedPassword = SecurityUtil.hashPassword(password)
-        assertTrue("Hashed password should contain a salt", hashedPassword.contains(":"))
+        assertTrue("Hashed password should start with pbkdf2 prefix", hashedPassword.startsWith("pbkdf2:"))
         assertTrue("Verification should succeed with correct password", SecurityUtil.verifyPassword(password, hashedPassword))
         assertFalse("Verification should fail with incorrect password", SecurityUtil.verifyPassword("wrongpassword", hashedPassword))
+    }
+
+    @Test
+    fun `test old salted password verification`() {
+        val password = "password123"
+        // Generate an old-style salted SHA-512 hash manually
+        val salt = "1234567890abcdef1234567890abcdef"
+        val md = java.security.MessageDigest.getInstance("SHA-512")
+        val digest = md.digest((salt + password).toByteArray(Charsets.UTF_8))
+        val hashHex = digest.joinToString("") { "%02x".format(it) }
+        val oldStyleHash = "$salt:$hashHex"
+
+        assertTrue("Should verify old salted SHA-512 hash", SecurityUtil.verifyPassword(password, oldStyleHash))
     }
 
     @Test
