@@ -153,9 +153,6 @@ DEFAULT_HOMEWORK_MARK_TYPES = [ # New for homework marks
 
 MAX_CUSTOM_TYPES = 90 # Max for custom behaviors, homeworks, mark types
 
-MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292" # SHA3-512 of "RecoverMyData123!"
-#Recovery1Master2Password!Jaffe1
-
 
 
 
@@ -254,9 +251,6 @@ class PasswordManager:
         if not stored_hash: return True
         return self._hash_password(password) == stored_hash
 
-    def check_recovery_password(self, recovery_password):
-        return self._hash_password(recovery_password) == MASTER_RECOVERY_PASSWORD_HASH
-
     def is_password_set(self):
         return bool(self.app_settings.get("app_password_hash"))
 
@@ -267,7 +261,7 @@ class PasswordManager:
         return False
 
     def unlock_application(self, password_attempt):
-        if self.check_password(password_attempt) or self.check_recovery_password(password_attempt):
+        if self.check_password(password_attempt):
             self.is_locked = False
             self.last_activity_time = datetime.now()
             return True
