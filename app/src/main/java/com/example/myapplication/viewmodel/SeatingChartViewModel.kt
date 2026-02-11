@@ -80,6 +80,7 @@ import com.example.myapplication.ui.model.toUiItem
 import com.example.myapplication.util.CollisionDetector
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.DecodedConditionalFormattingRule
+import com.example.myapplication.util.FormattingTimeContext
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.util.SecurityUtil
@@ -477,7 +478,21 @@ class SeatingChartViewModel @Inject constructor(
                 val homeworkDisplayTimeout = prefs.homeworkDisplayTimeout
                 val quizDisplayTimeout = prefs.quizDisplayTimeout
                 val currentTime = System.currentTimeMillis()
-                val calendar = java.util.Calendar.getInstance()
+                val calendar = java.util.Calendar.getInstance().apply { timeInMillis = currentTime }
+                val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
+                    java.util.Calendar.MONDAY -> 0
+                    java.util.Calendar.TUESDAY -> 1
+                    java.util.Calendar.WEDNESDAY -> 2
+                    java.util.Calendar.THURSDAY -> 3
+                    java.util.Calendar.FRIDAY -> 4
+                    java.util.Calendar.SATURDAY -> 5
+                    java.util.Calendar.SUNDAY -> 6
+                    else -> -1
+                }
+                val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+                val minute = calendar.get(java.util.Calendar.MINUTE)
+                val currentTimeString = "${if (hour < 10) "0$hour" else hour}:${if (minute < 10) "0$minute" else minute}"
+                val timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
 
                 // Memoized rule decoding
                 val rules = allRules.value ?: emptyList()
@@ -576,7 +591,7 @@ class SeatingChartViewModel @Inject constructor(
                             liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
                             currentMode = currentMode.value ?: "behavior",
                             currentTimeMillis = currentTime,
-                            calendar = calendar
+                            timeContext = timeContext
                         )
                     } else {
                         emptyList()
