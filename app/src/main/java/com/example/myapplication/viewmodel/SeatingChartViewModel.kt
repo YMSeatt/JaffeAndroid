@@ -148,14 +148,31 @@ class SeatingChartViewModel @Inject constructor(
     private val application: Application
 ) : ViewModel() {
 
+    /** Live stream of all students in the database. */
     val allStudents: LiveData<List<Student>>
+
+    /** Live stream of student details optimized for display (includes initials and aggregate counts). */
     val allStudentsForDisplay: LiveData<List<com.example.myapplication.data.StudentDetailsForDisplay>>
+
+    /** Live stream of all furniture items in the current layout. */
     val allFurniture: LiveData<List<Furniture>>
+
+    /** Live stream of all saved layout templates. */
     val allLayoutTemplates: LiveData<List<LayoutTemplate>>
+
+    /** Live stream of all historical behavior events. */
     val allBehaviorEvents: LiveData<List<BehaviorEvent>>
+
+    /** Live stream of all historical homework logs. */
     val allHomeworkLogs: LiveData<List<HomeworkLog>>
+
+    /** Live stream of all historical quiz logs. */
     val allQuizLogs: LiveData<List<QuizLog>>
+
+    /** Live stream of all active conditional formatting rules. */
     val allRules: LiveData<List<com.example.myapplication.data.ConditionalFormattingRule>>
+
+    /** Reactive stream of visual guides (horizontal/vertical) currently on the canvas. */
     val allGuides: StateFlow<List<Guide>> = guideDao.getAllGuides()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -171,16 +188,30 @@ class SeatingChartViewModel @Inject constructor(
      */
     val furnitureForDisplay = MediatorLiveData<List<FurnitureUiItem>>()
 
+    /** Live stream of all available homework templates. */
     val allHomeworkTemplates: LiveData<List<HomeworkTemplate>>
+
+    /** Stream of user-defined homework assignment types. */
     val customHomeworkTypes: Flow<List<String>> =
         appPreferencesRepository.homeworkAssignmentTypesListFlow.map { it.toList() }
+
+    /** Stream of user-defined homework status labels. */
     val customHomeworkStatuses: Flow<List<String>> =
         appPreferencesRepository.homeworkStatusesListFlow.map { it.toList() }
 
+    /** Live stream of all available quiz templates. */
     val allQuizTemplates: LiveData<List<QuizTemplate>> = quizTemplateDao.getAll().asLiveData()
+
+    /** Live stream of quiz mark types (e.g., "Correct", "Half Credit"). */
     val quizMarkTypes: LiveData<List<QuizMarkType>>
+
+    /** Live stream of user-defined behavior categories. */
     val allCustomBehaviors: LiveData<List<com.example.myapplication.data.CustomBehavior>>
+
+    /** Live stream of user-defined homework categories. */
     val allCustomHomeworkTypes: LiveData<List<com.example.myapplication.data.CustomHomeworkType>>
+
+    /** Live stream of built-in system behaviors. */
     val allSystemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>>
 
 
@@ -681,6 +712,16 @@ class SeatingChartViewModel @Inject constructor(
      * Performs a non-linear history manipulation to "re-execute" or "undo" a specific
      * action from the middle of the history stack.
      *
+     * **Selective Undo Algorithm:**
+     * 1. Temporarily pops and undos all commands from the top of the [commandUndoStack]
+     *    down to (but not including) the target index. This reverts the application
+     *    state to exactly how it was after the target command was first executed.
+     * 2. Pops and undos the target command itself.
+     * 3. Re-executes the target command (this essentially toggles or refreshes its
+     *    effect in the current context).
+     * 4. Clears the [commandRedoStack] because the historical "future" is no longer
+     *    valid following this state mutation.
+     *
      * Note: This effectively "re-branches" history. All actions that occurred AFTER
      * the target index are permanently discarded from the future history to ensure
      * state consistency.
@@ -743,6 +784,17 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Exports the current application data (students, logs, groups) to an Excel file.
+     *
+     * This method gathers data from all relevant Room DAOs and delegates the actual
+     * Excel generation to the [com.example.myapplication.data.exporter.Exporter] utility.
+     *
+     * @param context Application context.
+     * @param uri The URI where the generated file should be saved.
+     * @param options Configuration for what data to include (e.g., summary sheets, encryption).
+     * @return A [Result] indicating success or failure of the export operation.
+     */
     suspend fun exportData(
         context: Context,
         uri: Uri,
@@ -778,6 +830,12 @@ class SeatingChartViewModel @Inject constructor(
         return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(uri, context, repository, studentGroupDao)
     }
 
+    /**
+     * Imports classroom data from a JSON backup file.
+     *
+     * @param context Application context.
+     * @param uri The URI of the JSON backup file.
+     */
     fun importData(context: Context, uri: Uri) {
         viewModelScope.launch {
             Importer(
@@ -788,6 +846,12 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Special import task that loads initial classroom data from bundled assets.
+     * Primarily used to provide sample data or sync with the Python desktop application.
+     *
+     * @param context Application context.
+     */
     fun importFromPythonAssets(context: Context) {
         viewModelScope.launch {
             val importer = Importer(
@@ -967,6 +1031,15 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Aligns all currently selected students and furniture based on a specified anchor point.
+     *
+     * This method calculates the bounding box of all selected items and shifts their
+     * positions to match the specified edge (top, bottom, left, right) or center line.
+     * All movements are encapsulated into a single [MoveItemsCommand] for undo/redo support.
+     *
+     * @param alignment The alignment type: "top", "bottom", "left", "right", "center_h", or "center_v".
+     */
     fun alignSelectedItems(alignment: String) {
         viewModelScope.launch {
             val selectedIds = selectedItemIds.value ?: emptySet()
@@ -1086,6 +1159,16 @@ class SeatingChartViewModel @Inject constructor(
         val furniture: Furniture? = null
     )
 
+    /**
+     * Evenly distributes the currently selected items horizontally or vertically
+     * between the two outermost items in the selection.
+     *
+     * Items are sorted by their position along the chosen axis, and then moved
+     * so that the gap between each item (accounting for their individual widths/heights)
+     * is equal.
+     *
+     * @param distribution The direction of distribution: "horizontal" or "vertical".
+     */
     fun distributeSelectedItems(distribution: String) {
         viewModelScope.launch {
             val selectedIds = selectedItemIds.value ?: emptySet()
@@ -1526,6 +1609,14 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Triggers the [GhostCognitiveEngine] to automatically optimize the classroom layout.
+     *
+     * The engine uses a force-directed graph algorithm where student behavioral history
+     * (e.g., negative interactions) creates repulsion forces, and group membership
+     * creates attraction forces. The resulting layout is applied as a single
+     * [MoveItemsCommand], allowing the teacher to undo the entire reorganization if desired.
+     */
     fun runCognitiveOptimization() {
         viewModelScope.launch {
             val students = allStudents.value ?: return@launch
@@ -1558,6 +1649,15 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Handles application lifecycle termination logic, such as automatic data backup.
+     *
+     * If the "Auto-send email on close" preference is enabled, this method triggers
+     * a background [EmailWorker] to export the current session data and email it to
+     * the configured default address.
+     *
+     * @param context The application context required to enqueue WorkManager requests.
+     */
     fun handleOnStop(context: Context) {
         viewModelScope.launch {
             val autoSendOnClose: Boolean = appPreferencesRepository.autoSendEmailOnCloseFlow.first()
