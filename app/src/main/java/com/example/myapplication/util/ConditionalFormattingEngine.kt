@@ -91,14 +91,26 @@ data class Format(
  * @property priority The execution priority (lower numbers are processed first).
  * @property condition The deserialized condition criteria.
  * @property format The deserialized visual format.
- * @property behaviorNamesList A pre-split list of behavior names derived from [Condition.behaviorNames].
+ * @property behaviorNamesSet A pre-split set of lowercase behavior names derived from [Condition.behaviorNames] for O(1) matching.
  */
 data class DecodedConditionalFormattingRule(
     val id: Int,
     val priority: Int,
     val condition: Condition,
     val format: Format,
-    val behaviorNamesList: List<String> = emptyList()
+    val behaviorNamesSet: Set<String> = emptySet()
+)
+
+/**
+ * Pre-calculated time values used to optimize conditional formatting evaluations
+ * during high-frequency UI updates.
+ *
+ * @property dayOfWeek The day of the week (0=Monday, 6=Sunday).
+ * @property currentTimeString The current time in "HH:mm" format.
+ */
+data class FormattingTimeContext(
+    val dayOfWeek: Int,
+    val currentTimeString: String
 )
 
 /**
@@ -130,8 +142,8 @@ object ConditionalFormattingEngine {
             try {
                 val condition = json.decodeFromString<Condition>(rule.conditionJson)
                 val format = json.decodeFromString<Format>(rule.formatJson)
-                val behaviorNamesList = condition.behaviorNames?.split(',')?.map { it.trim() } ?: emptyList()
-                DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format, behaviorNamesList)
+                val behaviorNamesSet = condition.behaviorNames?.split(',')?.map { it.trim().lowercase() }?.toSet() ?: emptySet()
+                DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format, behaviorNamesSet)
             } catch (e: Exception) {
                 Log.e("ConditionalFormattingEngine", "Error decoding rule ${rule.id}: ${e.message}")
                 null
@@ -168,6 +180,21 @@ object ConditionalFormattingEngine {
         currentMode: String
     ): List<Pair<String?, String?>> {
         val decodedRules = decodeRules(rules)
+        val calendar = java.util.Calendar.getInstance()
+        val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
+            java.util.Calendar.MONDAY -> 0
+            java.util.Calendar.TUESDAY -> 1
+            java.util.Calendar.WEDNESDAY -> 2
+            java.util.Calendar.THURSDAY -> 3
+            java.util.Calendar.FRIDAY -> 4
+            java.util.Calendar.SATURDAY -> 5
+            java.util.Calendar.SUNDAY -> 6
+            else -> -1
+        }
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(java.util.Calendar.MINUTE)
+        val currentTimeString = "${if (hour < 10) "0$hour" else hour}:${if (minute < 10) "0$minute" else minute}"
+
         return applyConditionalFormattingDecoded(
             student = student,
             rules = decodedRules,
@@ -180,13 +207,13 @@ object ConditionalFormattingEngine {
             liveHomeworkScores = liveHomeworkScores,
             currentMode = currentMode,
             currentTimeMillis = System.currentTimeMillis(),
-            calendar = java.util.Calendar.getInstance()
+            timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
         )
     }
 
     /**
      * Evaluates a list of already-decoded rules for a student.
-     * Reuses time/calendar objects to optimize performance during high-frequency rendering.
+     * Reuses pre-calculated time context to optimize performance during high-frequency rendering.
      *
      * @param student The student UI data being rendered.
      * @param rules The list of pre-decoded rules to evaluate.
@@ -199,7 +226,7 @@ object ConditionalFormattingEngine {
      * @param liveHomeworkScores Map of student ID to their current session data.
      * @param currentMode The current UI mode.
      * @param currentTimeMillis The current system time (cached).
-     * @param calendar A [java.util.Calendar] instance (reused).
+     * @param timeContext Pre-calculated day and time strings.
      * @return A list of color/outline pairs representing all matching rule formats.
      */
     fun applyConditionalFormattingDecoded(
@@ -214,7 +241,7 @@ object ConditionalFormattingEngine {
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String,
         currentTimeMillis: Long,
-        calendar: java.util.Calendar
+        timeContext: FormattingTimeContext
     ): List<Pair<String?, String?>> {
         val matchingFormats = mutableListOf<Pair<String?, String?>>()
 
@@ -231,7 +258,7 @@ object ConditionalFormattingEngine {
                     liveHomeworkScores,
                     currentMode,
                     currentTimeMillis,
-                    calendar
+                    timeContext
                 )
             ) {
                 matchingFormats.add(Pair(rule.format.color, rule.format.outline))
@@ -258,7 +285,7 @@ object ConditionalFormattingEngine {
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String,
         currentTimeMillis: Long,
-        calendar: java.util.Calendar
+        timeContext: FormattingTimeContext
     ): Boolean {
         val condition = rule.condition
 
@@ -274,26 +301,15 @@ object ConditionalFormattingEngine {
         // Allows rules to be restricted to specific times of day or days of the week.
         condition.activeTimes?.let { activeTimes ->
             if (activeTimes.isNotEmpty()) {
-                val dayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK) // Sunday = 1, Saturday = 7
-                val currentTimeString = String.format("%02d:%02d", calendar.get(java.util.Calendar.HOUR_OF_DAY), calendar.get(java.util.Calendar.MINUTE))
+                val dayOfWeek = timeContext.dayOfWeek
+                val currentTimeString = timeContext.currentTimeString
 
                 val isTimeValid = activeTimes.any { activeTime ->
                     val start = activeTime.startTime
                     val end = activeTime.endTime
                     val days = activeTime.daysOfWeek
 
-                    val calendarDayOfWeek = when (dayOfWeek) {
-                        java.util.Calendar.MONDAY -> 0
-                        java.util.Calendar.TUESDAY -> 1
-                        java.util.Calendar.WEDNESDAY -> 2
-                        java.util.Calendar.THURSDAY -> 3
-                        java.util.Calendar.FRIDAY -> 4
-                        java.util.Calendar.SATURDAY -> 5
-                        java.util.Calendar.SUNDAY -> 6
-                        else -> -1 // Should not happen
-                    }
-
-                    currentTimeString in start..end && calendarDayOfWeek in days
+                    currentTimeString in start..end && dayOfWeek in days
                 }
 
                 if (!isTimeValid) {
@@ -309,15 +325,13 @@ object ConditionalFormattingEngine {
 
             // Counts specific behavior events within a sliding time window.
             "behavior_count" -> {
-                val behaviorNames = rule.behaviorNamesList
+                val behaviorNames = rule.behaviorNamesSet
                 val countThreshold = condition.countThreshold ?: return false
                 val timeWindowHours = condition.timeWindowHours ?: 24
                 val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 60 * 60 * 1000
 
                 val count = behaviorLog.count {
-                    it.studentId == student.id.toLong() &&
-                    behaviorNames.any { name -> it.type.equals(name, ignoreCase = true) } &&
-                    it.timestamp >= cutoffTime
+                    it.timestamp >= cutoffTime && behaviorNames.contains(it.type.lowercase())
                 }
                 count >= countThreshold
             }

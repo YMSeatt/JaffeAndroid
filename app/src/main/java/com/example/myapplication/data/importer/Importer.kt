@@ -15,8 +15,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Locale
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 class Importer(
     private val context: Context,
@@ -30,19 +31,17 @@ class Importer(
         coerceInputValues = true
     }
     private val securityUtil = SecurityUtil(context)
+    private val timestampFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
     private fun parseTimestamp(timestamp: String): Long {
-        // Handle different fractional second formats
-        val trimmedTimestamp = if (timestamp.contains(".")) {
-            val parts = timestamp.split(".")
-            val wholePart = parts[0]
-            val fractionalPart = parts[1].take(6).padEnd(6, '0')
-            "$wholePart.$fractionalPart"
-        } else {
-            timestamp
+        return try {
+            LocalDateTime.parse(timestamp, timestampFormatter)
+                .atZone(ZoneId.systemDefault())
+                .toInstant()
+                .toEpochMilli()
+        } catch (e: Exception) {
+            throw IllegalArgumentException("Invalid timestamp format: $timestamp", e)
         }
-        val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", Locale.getDefault())
-        return format.parse(trimmedTimestamp)?.time ?: throw IllegalArgumentException("Invalid timestamp format: $timestamp")
     }
 
     suspend fun importFromAssets() {
