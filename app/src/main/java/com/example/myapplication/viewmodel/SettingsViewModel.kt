@@ -670,6 +670,27 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    suspend fun saveBlueprint(svgContent: String): Uri? = withContext(Dispatchers.IO) {
+        val context = application
+        val filename = "blueprint_${System.currentTimeMillis()}.svg"
+        val cacheDir = context.cacheDir
+        val blueprintFile = File(cacheDir, filename)
+
+        try {
+            FileOutputStream(blueprintFile).use { outputStream ->
+                outputStream.write(svgContent.toByteArray())
+            }
+            return@withContext androidx.core.content.FileProvider.getUriForFile(
+                context,
+                "com.example.myapplication.fileprovider",
+                blueprintFile
+            )
+        } catch (e: Exception) {
+            Log.e("SettingsViewModel", "Failed to save blueprint SVG", e)
+            null
+        }
+    }
+
     suspend fun exportDataFolder(directoryUri: Uri) = withContext(Dispatchers.IO) {
         val context = application
         val contentResolver = context.contentResolver
