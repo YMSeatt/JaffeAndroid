@@ -931,8 +931,6 @@ class SettingsDialog(simpledialog.Dialog):
         ttk.Spinbox(auto_lock_frame, from_=1, to=120, textvariable=self.pw_auto_lock_timeout_var, width=4).pack(side=tk.LEFT, padx=2)
         ttk.Label(auto_lock_frame, text="minutes").pack(side=tk.LEFT)
 
-        ttk.Label(lf_pw_options, text="For the Master Recovery Password, ask Yaakov Maimon (see Help)", foreground="blue", wraplength=420).pack(anchor=tk.W, padx=5, pady=5)
-
         lf_encryption = ttk.LabelFrame(tab_frame, text="Data Encryption", padding=10)
         lf_encryption.pack(fill=tk.X, pady=5)
         self.encrypt_data_var = tk.BooleanVar(value=self.settings.get("encrypt_data_files", True), name='encrypt_data_var')

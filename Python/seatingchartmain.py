@@ -189,7 +189,6 @@ DEFAULT_HOMEWORK_MARK_TYPES = [ # New for homework marks
 
 MAX_CUSTOM_TYPES = 90 # Max for custom behaviors, homeworks, mark types
 
-MASTER_RECOVERY_PASSWORD_HASH = "5bf881cb69863167a3172fda5c552694a3328548a43c7ee258d6d7553fc0e1a1a8bad378fb131fbe10e37efbd9e285b22c29b75d27dcc2283d48d8edf8063292" # SHA256 of "RecoverMyData123!" # It's actually SHA3_512 or something else, which only Yaakov Maimon (me) has, although you can add your own if you like
 
 def levenshtein_distance(s1, s2):
     if len(s1) < len(s2):

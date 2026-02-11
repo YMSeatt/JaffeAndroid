@@ -1,2 +1,1 @@
 encryption_key = b'7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=' # This is NEVER to be uploaded to GitHub!!!!
-master_recovery_pwd = 'Recovery1Master2Password!1Jaffe3' # This is NEVER to be uploaded to GitHub!!!!
