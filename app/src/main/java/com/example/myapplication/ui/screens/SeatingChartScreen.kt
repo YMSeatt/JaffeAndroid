@@ -103,6 +103,7 @@ import com.example.myapplication.labs.ghost.GhostVoiceAssistant
 import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
 import com.example.myapplication.labs.ghost.GhostHologramEngine
 import com.example.myapplication.labs.ghost.GhostHologramLayer
+import com.example.myapplication.labs.ghost.GhostBlueprintEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -375,7 +376,23 @@ fun SeatingChartScreen(
                 isChronosActive = isChronosActive,
                 onToggleChronos = { isChronosActive = !isChronosActive },
                 isHologramActive = isHologramActive,
-                onToggleHologram = { isHologramActive = !isHologramActive }
+                onToggleHologram = { isHologramActive = !isHologramActive },
+                onExportBlueprint = {
+                    coroutineScope.launch {
+                        val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
+                        val uri = settingsViewModel.saveBlueprint(svgContent)
+                        if (uri != null) {
+                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                type = "image/svg+xml"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(intent, "Share Blueprint SVG"))
+                        } else {
+                            Toast.makeText(context, "Failed to generate blueprint", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -997,7 +1014,8 @@ fun SeatingChartTopAppBar(
     isChronosActive: Boolean,
     onToggleChronos: () -> Unit,
     isHologramActive: Boolean,
-    onToggleHologram: () -> Unit
+    onToggleHologram: () -> Unit,
+    onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
     var showLayoutSubMenu by remember { mutableStateOf(false) }
@@ -1090,6 +1108,11 @@ fun SeatingChartTopAppBar(
                         text = { Text("Export to Excel") },
                         onClick = { onShowExport(); showDataAndExportDropdown = false },
                         leadingIcon = { Icon(Icons.Default.CloudUpload, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Export Blueprint (SVG) 👻") },
+                        onClick = { onExportBlueprint(); showDataAndExportDropdown = false },
+                        leadingIcon = { Icon(Icons.Default.Layers, null) }
                     )
                     DropdownMenuItem(text = { Text("Open Last Export Folder") }, enabled = lastExportPath?.isNotBlank() == true, onClick = {
                         lastExportPath?.let { path ->
