@@ -104,6 +104,7 @@ import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
 import com.example.myapplication.labs.ghost.GhostHologramEngine
 import com.example.myapplication.labs.ghost.GhostHologramLayer
 import com.example.myapplication.labs.ghost.GhostBlueprintEngine
+import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -166,6 +167,7 @@ fun SeatingChartScreen(
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
+    var showGhostSynapseDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
     var showGhostOracleDialog by remember { mutableStateOf(false) }
     var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
@@ -564,6 +566,22 @@ fun SeatingChartScreen(
                 }
             }
 
+            if (showGhostSynapseDialog) {
+                selectedStudentUiItemForAction?.let { student ->
+                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
+                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+
+                    GhostSynapseDialog(
+                        studentName = student.fullName.value,
+                        behaviorLogs = behavior,
+                        quizLogs = quiz,
+                        homeworkLogs = homework,
+                        onDismiss = { showGhostSynapseDialog = false }
+                    )
+                }
+            }
+
 
             if (showSaveLayoutDialog) {
                 SaveLayoutDialog(onDismiss = { showSaveLayoutDialog = false }, onSave = { name -> seatingChartViewModel.saveLayout(name); showSaveLayoutDialog = false })
@@ -596,6 +614,15 @@ fun SeatingChartScreen(
                                         student.fullName.value, behavior, quiz, homework
                                     )
                                     showGhostInsightDialog = true
+                                    showStudentActionMenu = false
+                                }
+                            )
+                        }
+                        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SYNAPSE_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Neural Synapse 🧠") },
+                                onClick = {
+                                    showGhostSynapseDialog = true
                                     showStudentActionMenu = false
                                 }
                             )

@@ -8,4 +8,5 @@ object GhostConfig {
     const val ECHO_MODE_ENABLED = true
     const val CHRONOS_MODE_ENABLED = true
     const val HOLOGRAM_MODE_ENABLED = true
+    const val SYNAPSE_MODE_ENABLED = true
 }
