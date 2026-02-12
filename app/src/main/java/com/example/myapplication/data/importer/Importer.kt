@@ -19,6 +19,21 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
+/**
+ * Importer handles the migration and ingestion of classroom data from external sources.
+ *
+ * It primarily bridges the gap between the Python desktop application (which generates JSON data)
+ * and the Android application's Room database. It manages:
+ * 1. **Schema Mapping**: Converting Python-style DTOs ([ClassroomDataDto]) into Android entities.
+ * 2. **Security**: Handling Fernet-encrypted or plaintext data files automatically.
+ * 3. **ID Resolution**: Mapping string-based student IDs from the desktop app to auto-incrementing
+ *    Long IDs in the local SQLite database.
+ * 4. **Asset & URI Support**: Importing data from bundled assets or user-selected files.
+ *
+ * @param context Application context.
+ * @param db The [AppDatabase] instance for persistence.
+ * @param encryptDataFilesFlow A stream indicating whether data files are expected to be encrypted.
+ */
 class Importer(
     private val context: Context,
     private val db: AppDatabase,
@@ -33,6 +48,10 @@ class Importer(
     private val securityUtil = SecurityUtil(context)
     private val timestampFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
 
+    /**
+     * Converts an ISO-8601 timestamp string into epoch milliseconds.
+     * Used to normalize dates between Python's datetime and Android's Long timestamps.
+     */
     private fun parseTimestamp(timestamp: String): Long {
         return try {
             LocalDateTime.parse(timestamp, timestampFormatter)
@@ -44,6 +63,10 @@ class Importer(
         }
     }
 
+    /**
+     * Triggers a bulk import from a pre-defined asset file (`classroom_data_v10.json`).
+     * Primarily used for initial setup or sample data ingestion.
+     */
     suspend fun importFromAssets() {
         withContext(Dispatchers.IO) {
             try {
@@ -55,16 +78,26 @@ class Importer(
         }
     }
 
+    /**
+     * Reads and processes a specific JSON file from the application's assets.
+     */
     private suspend fun importClassroomData(fileName: String) {
         val jsonString = readAssetFile(fileName) ?: return
         importClassroomDataFromJson(jsonString)
     }
 
+    /**
+     * Look up the internal Long database ID for a student using their string-based UUID.
+     */
     private suspend fun getStudentDbId(stringId: String): Long {
         return db.studentDao().getStudentByStringId(stringId)?.id
             ?: throw IllegalArgumentException("Student with stringId $stringId not found")
     }
 
+    /**
+     * Utility to read asset files, handling decryption automatically if required.
+     * Falls back to plaintext if decryption fails, allowing for a mix of secure and insecure sources.
+     */
     private suspend fun readAssetFile(fileName: String): String? {
         return try {
             val bytes = context.assets.open(fileName).use { it.readBytes() }
@@ -85,6 +118,10 @@ class Importer(
         }
     }
 
+    /**
+     * Imports classroom data from a user-provided [android.net.Uri].
+     * Handles file I/O and decryption on [Dispatchers.IO].
+     */
     suspend fun importData(uri: android.net.Uri) {
         withContext(Dispatchers.IO) {
             try {
@@ -109,10 +146,16 @@ class Importer(
         }
     }
 
+    /**
+     * The core processing logic that maps a deserialized [ClassroomDataDto] into Room entities.
+     * This method performs a multi-pass import to ensure referential integrity (e.g. students
+     * must be imported before their behavior logs can be linked).
+     */
     private suspend fun importClassroomDataFromJson(jsonString: String) {
         val classroomData = json.decodeFromString<ClassroomDataDto>(jsonString)
 
-        // Import Students
+        // Pass 1: Import Students
+        // We use stringId to maintain a link to the original Python-generated identifier.
         val studentDao = db.studentDao()
         classroomData.students.values.forEach { studentDto ->
             val student = Student(
@@ -131,7 +174,7 @@ class Importer(
         }
         Log.d("Importer", "${classroomData.students.size} students imported.")
 
-        // Import Furniture
+        // Pass 2: Import Furniture
         val furnitureDao = db.furnitureDao()
         classroomData.furniture.values.forEach { furnitureDto ->
             val furniture = Furniture(
@@ -149,7 +192,8 @@ class Importer(
         }
         Log.d("Importer", "${classroomData.furniture.size} furniture items imported.")
 
-        // Import Behavior Log
+        // Pass 3: Import Behavior and Quiz Logs
+        // Python combines these in behaviorLog; we split them based on the 'type' field.
         withContext(Dispatchers.IO) {
             val behaviorEventDao = db.behaviorEventDao()
             classroomData.behaviorLog.forEach { logEntry ->
@@ -183,7 +227,7 @@ class Importer(
             Log.d("Importer", "${classroomData.behaviorLog.size} behavior/quiz log entries imported.")
         }
 
-        // Import Homework Log
+        // Pass 4: Import Homework Logs
         withContext(Dispatchers.IO) {
             val homeworkLogDao = db.homeworkLogDao()
             classroomData.homeworkLog.forEach { hwLogEntry ->
