@@ -6,7 +6,10 @@ import kotlinx.serialization.Serializable
 data class StudentLayout(
     val id: Long,
     val x: Float,
-    val y: Float
+    val y: Float,
+    val firstName: String = "",
+    val lastName: String = "",
+    val nickname: String = ""
 )
 
 @Serializable

@@ -82,6 +82,7 @@ import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.DecodedConditionalFormattingRule
 import com.example.myapplication.util.FormattingTimeContext
 import com.example.myapplication.util.EmailWorker
+import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.util.SecurityUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -1366,7 +1367,14 @@ class SeatingChartViewModel @Inject constructor(
     // Layout operations
     fun saveLayout(name: String) = viewModelScope.launch(Dispatchers.IO) {
         val studentLayouts = allStudents.value?.map { student ->
-            StudentLayout(id = student.id, x = student.xPosition, y = student.yPosition)
+            StudentLayout(
+                id = student.id,
+                x = student.xPosition,
+                y = student.yPosition,
+                firstName = student.firstName,
+                lastName = student.lastName,
+                nickname = student.nickname ?: ""
+            )
         } ?: emptyList()
 
         val furnitureLayouts = allFurniture.value?.map { furniture ->
@@ -1391,24 +1399,75 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     suspend fun internalLoadLayout(layout: LayoutTemplate) = withContext(Dispatchers.IO) {
+        val currentStudents = studentDao.getAllStudentsNonLiveData()
+        val matchedStudentIds = mutableSetOf<Long>()
+
         try {
             val layoutData = Json.decodeFromString<LayoutData>(layout.layoutDataJson)
 
             layoutData.students.forEach { studentLayout ->
-                studentDao.updatePosition(studentLayout.id, studentLayout.x, studentLayout.y)
+                var targetStudentId: Long? = null
+
+                // Stage 1: ID Match
+                val idMatch = currentStudents.find { it.id == studentLayout.id }
+                if (idMatch != null) {
+                    targetStudentId = idMatch.id
+                }
+
+                // Stage 2: Exact Name Match (if ID fails)
+                if (targetStudentId == null && studentLayout.firstName.isNotEmpty()) {
+                    val nameMatch = currentStudents.find {
+                        it.firstName.equals(studentLayout.firstName, ignoreCase = true) &&
+                                it.lastName.equals(studentLayout.lastName, ignoreCase = true) &&
+                                !matchedStudentIds.contains(it.id)
+                    }
+                    if (nameMatch != null) {
+                        targetStudentId = nameMatch.id
+                    }
+                }
+
+                // Stage 3: Fuzzy Name Match (threshold >= 0.85)
+                if (targetStudentId == null && studentLayout.firstName.isNotEmpty()) {
+                    val templateFullName = "${studentLayout.firstName} ${studentLayout.lastName}".trim()
+                    val fuzzyMatch = currentStudents
+                        .filter { !matchedStudentIds.contains(it.id) }
+                        .map { student ->
+                            val currentFullName = "${student.firstName} ${student.lastName}".trim()
+                            val similarity = StringSimilarity.nameSimilarityRatio(templateFullName, currentFullName)
+                            student to similarity
+                        }
+                        .filter { it.second >= 0.85f }
+                        .maxByOrNull { it.second }
+                        ?.first
+
+                    if (fuzzyMatch != null) {
+                        targetStudentId = fuzzyMatch.id
+                    }
+                }
+
+                if (targetStudentId != null) {
+                    studentDao.updatePosition(targetStudentId, studentLayout.x, studentLayout.y)
+                    matchedStudentIds.add(targetStudentId)
+                }
             }
 
             layoutData.furniture.forEach { furnitureLayout ->
                 furnitureDao.updatePosition(furnitureLayout.id.toLong(), furnitureLayout.x, furnitureLayout.y)
             }
         } catch (e: Exception) {
+            // Fallback for older JSON format or parsing errors
             val layoutData = JSONObject(layout.layoutDataJson)
             val studentPositions = JSONArray(layoutData.getString("students"))
             for (i in 0 until studentPositions.length()) {
                 val pos = studentPositions.getJSONObject(i)
+                val id = pos.getLong("id")
                 val x = pos.getDouble("x").toFloat()
                 val y = pos.getDouble("y").toFloat()
-                studentDao.updatePosition(pos.getLong("id"), x, y)
+
+                // For legacy format, we only have ID
+                if (currentStudents.any { it.id == id }) {
+                    studentDao.updatePosition(id, x, y)
+                }
             }
 
             val furniturePositions = JSONArray(layoutData.getString("furniture"))
