@@ -34,9 +34,10 @@ fun StatsScreen(viewModel: StatsViewModel) {
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
     val customHomeworkTypes by viewModel.allCustomHomeworkTypes.observeAsState(initial = emptyList())
 
-    val behaviorSummary by viewModel.behaviorSummary.observeAsState(initial = emptyList())
-    val quizSummary by viewModel.quizSummary.observeAsState(initial = emptyList())
-    val homeworkSummary by viewModel.homeworkSummary.observeAsState(initial = emptyList())
+    val statsData by viewModel.statsData.observeAsState(com.example.myapplication.viewmodel.StatsData())
+    val behaviorSummary = statsData.behaviorSummary
+    val quizSummary = statsData.quizSummary
+    val homeworkSummary = statsData.homeworkSummary
 
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
