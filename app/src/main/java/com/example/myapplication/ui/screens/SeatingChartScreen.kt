@@ -104,6 +104,8 @@ import com.example.myapplication.labs.ghost.GhostVoiceVisualizer
 import com.example.myapplication.labs.ghost.GhostHologramEngine
 import com.example.myapplication.labs.ghost.GhostHologramLayer
 import com.example.myapplication.labs.ghost.GhostBlueprintEngine
+import com.example.myapplication.labs.ghost.GhostPhantasmLayer
+import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
@@ -174,6 +176,8 @@ fun SeatingChartScreen(
     var isHudActive by remember { mutableStateOf(false) }
     var isChronosActive by remember { mutableStateOf(false) }
     var isHologramActive by remember { mutableStateOf(false) }
+    var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
+    var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
@@ -231,8 +235,14 @@ fun SeatingChartScreen(
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
+    val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
 
     DisposableEffect(Unit) {
+        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
+            ghostPhantasmEngine.observeScreenRecording(context.mainExecutor) { recording ->
+                isScreenRecording = recording
+            }
+        }
         if (GhostConfig.GHOST_MODE_ENABLED) {
             if (GhostConfig.ECHO_MODE_ENABLED) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -247,6 +257,7 @@ fun SeatingChartScreen(
             ghostVoiceAssistant.destroy()
             ghostEchoEngine.stop()
             ghostHologramEngine.stop()
+            ghostPhantasmEngine.stopObservingScreenRecording()
         }
     }
 
@@ -278,6 +289,23 @@ fun SeatingChartScreen(
             hudViewModel.startTracking()
         } else {
             hudViewModel.stopTracking()
+        }
+    }
+
+    // Phantasm Heartbeat Effect
+    LaunchedEffect(isPhantasmActive, allBehaviorEvents) {
+        if (isPhantasmActive) {
+            val agitation = if (allBehaviorEvents.isEmpty()) 0.2f
+            else {
+                val negativeCount = allBehaviorEvents.count { it.type.contains("Negative", ignoreCase = true) }
+                (negativeCount.toFloat() / allBehaviorEvents.size.coerceAtLeast(1) + 0.1f).coerceAtMost(1.0f)
+            }
+
+            while (true) {
+                ghostPhantasmEngine.triggerHeartbeat(agitation)
+                val delayTime = (2000 - (agitation * 1500)).toLong().coerceAtLeast(500)
+                kotlinx.coroutines.delay(delayTime)
+            }
         }
     }
 
@@ -379,6 +407,8 @@ fun SeatingChartScreen(
                 onToggleChronos = { isChronosActive = !isChronosActive },
                 isHologramActive = isHologramActive,
                 onToggleHologram = { isHologramActive = !isHologramActive },
+                isPhantasmActive = isPhantasmActive,
+                onTogglePhantasm = { isPhantasmActive = !isPhantasmActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -496,6 +526,16 @@ fun SeatingChartScreen(
                 .onSizeChanged { canvasSize = it }
 
         ) {
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED && isPhantasmActive) {
+                GhostPhantasmLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isRecording = isScreenRecording
+                )
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ECHO_MODE_ENABLED) {
                 GhostEchoLayer(engine = ghostEchoEngine)
             }
@@ -1042,6 +1082,8 @@ fun SeatingChartTopAppBar(
     onToggleChronos: () -> Unit,
     isHologramActive: Boolean,
     onToggleHologram: () -> Unit,
+    isPhantasmActive: Boolean,
+    onTogglePhantasm: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1206,6 +1248,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isPhantasmActive) "Disable Phantasm 👻" else "Enable Phantasm 👻") },
+                            onClick = {
+                                onTogglePhantasm()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                         )
                     }
                     DropdownMenuItem(
