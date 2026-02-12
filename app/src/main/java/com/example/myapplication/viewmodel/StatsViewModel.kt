@@ -1,10 +1,13 @@
 package com.example.myapplication.viewmodel
 
+import android.util.LruCache
 import androidx.lifecycle.*
 import com.example.myapplication.data.*
 import com.example.myapplication.data.exporter.ExportOptions
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -13,6 +16,15 @@ import javax.inject.Inject
 data class BehaviorSummary(val studentName: String, val behavior: String, val count: Int)
 data class QuizSummary(val studentName: String, val quizName: String, val averageScore: Double, val timesTaken: Int)
 data class HomeworkSummary(val studentName: String, val assignmentName: String, val count: Int, val totalPoints: Double)
+
+/**
+ * Consolidated statistics data to reduce UI recomposition triggers.
+ */
+data class StatsData(
+    val behaviorSummary: List<BehaviorSummary> = emptyList(),
+    val quizSummary: List<QuizSummary> = emptyList(),
+    val homeworkSummary: List<HomeworkSummary> = emptyList()
+)
 
 @HiltViewModel
 class StatsViewModel @Inject constructor(
@@ -25,19 +37,22 @@ class StatsViewModel @Inject constructor(
     private val customHomeworkTypeDao: CustomHomeworkTypeDao
 ) : ViewModel() {
 
-    private val _behaviorSummary = MutableLiveData<List<BehaviorSummary>>(emptyList())
-    val behaviorSummary: LiveData<List<BehaviorSummary>> = _behaviorSummary
+    private val _statsData = MutableLiveData<StatsData>(StatsData())
+    val statsData: LiveData<StatsData> = _statsData
 
-    private val _quizSummary = MutableLiveData<List<QuizSummary>>(emptyList())
-    val quizSummary: LiveData<List<QuizSummary>> = _quizSummary
-
-    private val _homeworkSummary = MutableLiveData<List<HomeworkSummary>>(emptyList())
-    val homeworkSummary: LiveData<List<HomeworkSummary>> = _homeworkSummary
+    /** Legacy LiveData for backward compatibility or simple observers. */
+    val behaviorSummary: LiveData<List<BehaviorSummary>> = _statsData.map { it.behaviorSummary }
+    val quizSummary: LiveData<List<QuizSummary>> = _statsData.map { it.quizSummary }
+    val homeworkSummary: LiveData<List<HomeworkSummary>> = _statsData.map { it.homeworkSummary }
 
     val allStudents: LiveData<List<Student>> = studentDao.getAllStudents()
     val allCustomBehaviors: LiveData<List<CustomBehavior>> = customBehaviorDao.getAllCustomBehaviors()
     val allCustomHomeworkTypes: LiveData<List<CustomHomeworkType>> = customHomeworkTypeDao.getAllCustomHomeworkTypes()
 
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
+    private val decodedHomeworkMarksCache = LruCache<String, Map<String, String>>(1000)
 
     init {
         // Load initial data with default options
@@ -46,43 +61,53 @@ class StatsViewModel @Inject constructor(
 
     fun updateStats(options: ExportOptions) {
         viewModelScope.launch {
-            val students = studentDao.getAllStudentsNonLiveData()
-            val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-            val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-            val quizLogs = quizLogDao.getAllQuizLogsList()
-            val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+            withContext(Dispatchers.Default) {
+                val students = studentDao.getAllStudentsNonLiveData()
+                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+                val quizLogs = quizLogDao.getAllQuizLogsList()
+                val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
 
-            // Filter data based on options
-            val filteredBehaviorEvents = behaviorEvents.filter { event ->
-                (options.startDate == null || event.timestamp >= options.startDate) &&
-                        (options.endDate == null || event.timestamp <= options.endDate) &&
-                        (options.studentIds == null || options.studentIds.contains(event.studentId)) &&
-                        (options.behaviorTypes == null || options.behaviorTypes.contains(event.type))
+                // Filter data based on options
+                val filteredBehaviorEvents = behaviorEvents.filter { event ->
+                    (options.startDate == null || event.timestamp >= options.startDate) &&
+                            (options.endDate == null || event.timestamp <= options.endDate) &&
+                            (options.studentIds == null || options.studentIds.contains(event.studentId)) &&
+                            (options.behaviorTypes == null || options.behaviorTypes.contains(event.type))
+                }
+
+                val filteredHomeworkLogs = homeworkLogs.filter { log ->
+                    (options.startDate == null || log.loggedAt >= options.startDate) &&
+                            (options.endDate == null || log.loggedAt <= options.endDate) &&
+                            (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
+                            (options.homeworkTypes == null || options.homeworkTypes.contains(log.assignmentName))
+                }
+
+                val filteredQuizLogs = quizLogs.filter { log ->
+                    (options.startDate == null || log.loggedAt >= options.startDate) &&
+                            (options.endDate == null || log.loggedAt <= options.endDate) &&
+                            (options.studentIds == null || options.studentIds.contains(log.studentId))
+                }
+
+                val studentMap = students.associateBy { it.id }
+
+                // Calculate summaries
+                val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, studentMap)
+                val quizSummaryList = calculateQuizSummary(filteredQuizLogs, studentMap, quizMarkTypes)
+                val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, studentMap)
+
+                _statsData.postValue(
+                    StatsData(
+                        behaviorSummary = behaviorSummaryList,
+                        quizSummary = quizSummaryList,
+                        homeworkSummary = homeworkSummaryList
+                    )
+                )
             }
-
-            val filteredHomeworkLogs = homeworkLogs.filter { log ->
-                (options.startDate == null || log.loggedAt >= options.startDate) &&
-                        (options.endDate == null || log.loggedAt <= options.endDate) &&
-                        (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
-                        (options.homeworkTypes == null || options.homeworkTypes.contains(log.assignmentName))
-            }
-
-            val filteredQuizLogs = quizLogs.filter { log ->
-                (options.startDate == null || log.loggedAt >= options.startDate) &&
-                        (options.endDate == null || log.loggedAt <= options.endDate) &&
-                        (options.studentIds == null || options.studentIds.contains(log.studentId))
-            }
-
-            val studentMap = students.associateBy { it.id }
-
-            // Calculate summaries
-            calculateBehaviorSummary(filteredBehaviorEvents, studentMap)
-            calculateQuizSummary(filteredQuizLogs, studentMap, quizMarkTypes)
-            calculateHomeworkSummary(filteredHomeworkLogs, studentMap)
         }
     }
 
-    private fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>) {
+    private fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
         val behaviorCounts = behaviorEvents.groupBy { it.studentId }
             .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
 
@@ -100,24 +125,39 @@ class StatsViewModel @Inject constructor(
                 )
             }
         }
-        _behaviorSummary.postValue(summaryList)
+        return summaryList
     }
 
-    private fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>) {
+    private fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
         val quizScores = mutableMapOf<Long, MutableMap<String, MutableList<Double>>>()
+
+        // --- Optimization: Pre-calculate mark type lookups and points ---
+        val markTypeMapByName = quizMarkTypes.associateBy { it.name }
+        val markTypeMapById = quizMarkTypes.associateBy { it.id.toString() }
+        val sumDefaultPointsContributing = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+
         quizLogs.forEach { log ->
             val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
             val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
-            val marksData = try { Json.decodeFromString<Map<String, Int>>(log.marksData) } catch (e: Exception) { emptyMap() }
-            var totalScore = 0.0
-            var totalPossible = 0.0
-            quizMarkTypes.forEach { markType ->
-                val markCount = marksData[markType.id.toString()] ?: 0
-                if (markType.contributesToTotal) {
-                    totalPossible += log.numQuestions * markType.defaultPoints
+
+            // Optimization: LruCache for JSON parsing
+            val marksData = decodedMarksCache.get(log.marksData) ?: try {
+                json.decodeFromString<Map<String, Int>>(log.marksData).also {
+                    decodedMarksCache.put(log.marksData, it)
                 }
-                totalScore += markCount * markType.defaultPoints
+            } catch (e: Exception) { emptyMap() }
+
+            var totalScore = 0.0
+            val totalPossible = log.numQuestions * sumDefaultPointsContributing
+
+            // Optimization: Iterate over recorded marks instead of all possible mark types (O(M_recorded) vs O(M_all))
+            marksData.forEach { (key, markCount) ->
+                val markType = markTypeMapByName[key] ?: markTypeMapById[key]
+                if (markType != null) {
+                    totalScore += markCount * markType.defaultPoints
+                }
             }
+
             val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
             quizScoresList.add(scorePercent)
         }
@@ -138,17 +178,23 @@ class StatsViewModel @Inject constructor(
                 )
             }
         }
-        _quizSummary.postValue(summaryList)
+        return summaryList
     }
 
-    private fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>) {
+    private fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>): List<HomeworkSummary> {
         val homeworkSummaryMap = mutableMapOf<Long, MutableMap<String, Pair<Int, Double>>>()
         homeworkLogs.forEach { log ->
             val studentSummary = homeworkSummaryMap.getOrPut(log.studentId) { mutableMapOf() }
             val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
             var points = 0.0
-            log.marksData?.let {
-                val marks = try { Json.decodeFromString<Map<String, String>>(it) } catch (e: Exception) { emptyMap() }
+            log.marksData?.let { jsonStr ->
+                // Optimization: LruCache for JSON parsing
+                val marks = decodedHomeworkMarksCache.get(jsonStr) ?: try {
+                    json.decodeFromString<Map<String, String>>(jsonStr).also {
+                        decodedHomeworkMarksCache.put(jsonStr, it)
+                    }
+                } catch (e: Exception) { emptyMap() }
+
                 marks.values.forEach { value ->
                     value.toDoubleOrNull()?.let { points += it }
                 }
@@ -172,6 +218,6 @@ class StatsViewModel @Inject constructor(
                 )
             }
         }
-        _homeworkSummary.postValue(summaryList)
+        return summaryList
     }
 }
