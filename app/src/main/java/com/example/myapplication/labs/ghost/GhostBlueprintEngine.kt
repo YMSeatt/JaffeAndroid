@@ -42,7 +42,16 @@ object GhostBlueprintEngine {
 
         svg.append("\n  <!-- Student Nodes -->\n")
         students.forEach { student ->
-            // Scaling Logic: (pos / 4) + offset to fit 4000x4000 logical units into 1200x800 SVG
+            /**
+             * Scaling Logic:
+             * Normalizes Android's 4000x4000 logical coordinate system into the
+             * blueprint's 1200x800 SVG canvas.
+             *
+             * Formula: (pos / 4) + offset
+             * - pos / 4: Reduces 4000 units to 1000 units.
+             * - +200/+100: Offsets the layout to center it within the 1200x800 frame,
+             *   providing a 100-200 unit margin.
+             */
             val x = (student.xPosition.value / 4f) + 200f
             val y = (student.yPosition.value / 4f) + 100f
             val name = student.fullName.value

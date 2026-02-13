@@ -56,5 +56,21 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   Encryption logic is centralized in `SecurityUtil.kt`.
 *   The `Command` pattern is used for the Undo/Redo system.
 
+## 🏗️ Technical Architecture & Data Parity
+
+This project maintains strict data parity between the Android and Python applications, allowing for seamless data migration via JSON exports.
+
+### 📐 Coordinate Systems
+Both applications use a **logical coordinate system** for the seating chart canvas, which is independent of the physical screen resolution:
+*   **Python App**: Uses a **2000x1500** logical canvas.
+*   **Android App**: Uses a **4000x4000** logical canvas to support higher-density student arrangements and futuristic experimental layers.
+
+**Cross-Platform Mapping**: When importing Python data into Android, the coordinates are currently mapped 1:1, meaning Python layouts will appear in the top-left quadrant of the Android canvas. The "Ghost Lab" features (like the Blueprint Engine) apply a scaling factor of `/ 4` and a fixed offset to normalize these coordinates into a unified 1200x800 SVG space.
+
+### 🔄 Data Versioning
+The application uses a versioned JSON schema (currently **v10**).
+*   **Students & Furniture**: Managed via unique IDs (UUID strings in Python, mapped to auto-incrementing Longs in Android).
+*   **Behavior & Academic Logs**: Unified format for behavior, quiz, and homework events, supporting multi-pass ingestion to maintain referential integrity.
+
 ---
 *Documentation love letter from Scribe 📜*

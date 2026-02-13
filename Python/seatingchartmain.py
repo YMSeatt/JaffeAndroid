@@ -2366,8 +2366,13 @@ class SeatingChartApp:
 
     def world_to_canvas_coords(self, world_x, world_y):
         """
-        Converts world coordinates to the "infinite" virtual canvas coordinates
-        for drawing. This is the forward transformation.
+        Converts world (logical) coordinates to the virtual canvas coordinates for drawing.
+
+        Logical Scale:
+        - Python App: 2000x1500 logical units.
+        - Android App: 4000x4000 logical units.
+
+        This forward transformation applies the current zoom level and pan offsets.
         """
         canvas_x = (world_x * self.current_zoom_level) + self.pan_x
         canvas_y = (world_y * self.current_zoom_level) + self.pan_y
@@ -2375,8 +2380,7 @@ class SeatingChartApp:
     
     def world_to_canvas_coords_guides(self, world_x, world_y):
         """
-        Converts world coordinates to the "infinite" virtual canvas coordinates
-        for drawing. This is the forward transformation.
+        Duplicate of world_to_canvas_coords specifically for guide line calculations.
         """
         canvas_x = (world_x * self.current_zoom_level) + self.pan_x
         canvas_y = (world_y * self.current_zoom_level) + self.pan_y
@@ -2384,8 +2388,11 @@ class SeatingChartApp:
     
     def canvas_to_world_coords(self, screen_x, screen_y):
         """
-        Converts screen coordinates to world coordinates, accounting for
-        pan, zoom, and canvas scrolling.
+        Converts screen (pixel) coordinates back to logical world coordinates.
+
+        This inverse transformation is essential for mapping mouse clicks back to
+        the underlying 2000x1500 logical layout, accounting for canvas scrolling,
+        zoom level, and panning.
         """
         # Step 1: Account for canvas scrolling (if any)
         # This gives the coordinate on the "infinite" virtual canvas

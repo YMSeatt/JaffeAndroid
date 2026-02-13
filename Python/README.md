@@ -41,14 +41,17 @@ This directory contains the Python-based desktop implementation of the Seating C
 
 ## 🔐 Security & Persistence
 
-*   **Encryption**: Data is stored in encrypted JSON files (`classroom_data_v10.json`, etc.) using the Fernet (AES-128) specification.
-*   **Passwords**: User passwords are hashed using **SHA3-512** via `hashlib`.
-*   **Recovery**: A master recovery hash is provided in `other.py` as a fail-safe.
+*   **Encryption**: Data is stored in encrypted JSON files (`classroom_data_{version}.json`) using the Fernet (AES-128) specification.
+*   **Passwords**: User passwords are hashed using **SHA3-512** via `hashlib`. Note: The Android application uses PBKDF2-HMAC-SHA256 for enhanced security and can automatically migrate legacy hashes.
 *   **Locking**: The app uses `portalocker` to ensure only one instance of the application can access the data files at a time.
+*   **Hardened**: Previous versions contained a hardcoded master recovery password hash; this has been removed to ensure zero-backdoor security.
 
 ## 🔄 Logic Parity
 
-This application is designed to maintain logical parity with its [Android counterpart](../README.md). They share the same data structures for students, furniture, behavior logs, and complex conditional formatting rules, facilitating future cross-platform synchronization.
+This application is designed to maintain logical parity with its [Android counterpart](../README.md).
+*   **Data Structures**: Shared JSON schema for students, furniture, and logs.
+*   **Coordinate Parity**: While Python uses a **2000x1500** logical canvas and Android uses **4000x4000**, the data is import-compatible.
+*   **Feature Alignment**: Shared implementations of the Command pattern for Undo/Redo and complex conditional formatting rules.
 
 ---
 *Documentation love letter from Scribe 📜*
