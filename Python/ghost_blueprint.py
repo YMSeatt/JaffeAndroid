@@ -35,7 +35,10 @@ def generate_hologram_svg(students, output_path="hologram_blueprint.svg"):
 
     # Draw students as 'nodes'
     for student in students:
-        x = student.get('x', random.randint(100, 1100)) / 4 + 200 # Scale for SVG
+        # Scaling Logic: Normalizes logical coordinates into the 1200x800 SVG space.
+        # This implementation assumes the higher-density 4000x4000 logical scale
+        # (compatible with the Android application) to ensure centered results.
+        x = student.get('x', random.randint(100, 1100)) / 4 + 200
         y = student.get('y', random.randint(100, 700)) / 4 + 100
         name = student.get('name', 'Unknown')
         initials = "".join([n[0] for n in name.split()]).upper()
