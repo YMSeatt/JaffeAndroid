@@ -38,3 +38,12 @@
 - **Fix:**
     - Replaced `e.printStackTrace()` with structured `Log.e` calls.
 - **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`
+
+## 🛡️ Key Hardening: Android KeyStore Integration
+- **Vulnerability:** The core 32-byte Fernet encryption key was stored in plain text in the app's internal storage (`fernet.key`), making it extractable on rooted devices or via insecure backups.
+- **Fix:**
+    - Integrated `androidx.security:security-crypto` to leverage the `AndroidKeyStore`.
+    - Implemented `MasterKey` wrapping for the Fernet key, now stored in `fernet.key.v2` (encrypted with AES-GCM).
+    - Added an automatic migration path from the legacy plain-text key to the hardened format.
+    - Enforced KeyStore usage in production while allowing a safe, unencrypted fallback only in detected unit test environments (e.g., Robolectric).
+- **Location:** `app/src/main/java/com/example/myapplication/util/SecurityUtil.kt`

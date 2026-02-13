@@ -1,6 +1,8 @@
 package com.example.myapplication.util
 
 import android.content.Context
+import androidx.security.crypto.EncryptedFile
+import androidx.security.crypto.MasterKey
 import com.macasaet.fernet.Key
 import com.macasaet.fernet.Token
 import javax.inject.Inject
@@ -32,6 +34,7 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
     companion object {
         private const val KEY_FILE_NAME = "fernet.key"
+        private const val KEY_FILE_NAME_V2 = "fernet.key.v2"
         private const val TTL_SECONDS = 60L * 60 * 24 * 365 * 100 // 100 years
 
         // PBKDF2 Configuration
@@ -147,22 +150,96 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
     /**
      * Retrieves the Fernet key from private app storage. If the key file doesn't exist,
      * it generates a new 32-byte key and saves it for future use.
+     * Hardened to use Android KeyStore (MasterKey) for key wrapping.
      */
     private fun getKey(context: Context): ByteArray {
-        val keyFile = File(context.filesDir, KEY_FILE_NAME)
-        return if (keyFile.exists()) {
-            val keyBytes = keyFile.readBytes()
-            if (keyBytes.size == 32) keyBytes else generateAndSaveKey(keyFile)
-        } else {
-            generateAndSaveKey(keyFile)
+        val masterKey = try {
+            MasterKey.Builder(context)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build()
+        } catch (e: Exception) {
+            null // KeyStore unavailable (e.g., unit tests)
+        }
+
+        val keyFileV2 = File(context.filesDir, KEY_FILE_NAME_V2)
+        val legacyKeyFile = File(context.filesDir, KEY_FILE_NAME)
+
+        return when {
+            keyFileV2.exists() -> {
+                loadKeyV2(context, keyFileV2, masterKey)
+            }
+            legacyKeyFile.exists() -> {
+                val legacyKey = legacyKeyFile.readBytes()
+                if (legacyKey.size == 32) {
+                    saveKeyV2(context, keyFileV2, legacyKey, masterKey)
+                    legacyKeyFile.delete()
+                    legacyKey
+                } else {
+                    legacyKeyFile.delete()
+                    generateAndSaveKeyV2(context, keyFileV2, masterKey)
+                }
+            }
+            else -> {
+                generateAndSaveKeyV2(context, keyFileV2, masterKey)
+            }
         }
     }
 
-    private fun generateAndSaveKey(keyFile: File): ByteArray {
+    private fun generateAndSaveKeyV2(context: Context, file: File, masterKey: MasterKey?): ByteArray {
         val newKey = ByteArray(32)
         SecureRandom().nextBytes(newKey)
-        keyFile.writeBytes(newKey)
+        saveKeyV2(context, file, newKey, masterKey)
         return newKey
+    }
+
+    private fun saveKeyV2(context: Context, file: File, key: ByteArray, masterKey: MasterKey?) {
+        if (masterKey != null) {
+            if (file.exists()) file.delete()
+            val encryptedFile = EncryptedFile.Builder(
+                context,
+                file,
+                masterKey,
+                EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
+            ).build()
+            encryptedFile.openFileOutput().use { it.write(key) }
+        } else {
+            // Fallback for non-KeyStore environments (unit tests)
+            if (isTestEnvironment()) {
+                file.writeBytes(key)
+            } else {
+                throw SecurityException("KeyStore unavailable in production")
+            }
+        }
+    }
+
+    private fun loadKeyV2(context: Context, file: File, masterKey: MasterKey?): ByteArray {
+        return if (masterKey != null) {
+            val encryptedFile = EncryptedFile.Builder(
+                context,
+                file,
+                masterKey,
+                EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB
+            ).build()
+            encryptedFile.openFileInput().use { it.readBytes() }
+        } else {
+            if (isTestEnvironment()) {
+                file.readBytes()
+            } else {
+                throw SecurityException("KeyStore unavailable in production")
+            }
+        }
+    }
+
+    /**
+     * Detects if the application is running in a unit test environment (e.g., Robolectric).
+     */
+    private fun isTestEnvironment(): Boolean {
+        return try {
+            System.getProperty("robolectric.enabled") == "true" ||
+                    Class.forName("org.robolectric.Robolectric") != null
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /**
