@@ -13,6 +13,9 @@ interface FurnitureDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(furniture: Furniture): Long
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(furniture: List<Furniture>): List<Long>
+
     @Update
     suspend fun update(furniture: Furniture)
 
