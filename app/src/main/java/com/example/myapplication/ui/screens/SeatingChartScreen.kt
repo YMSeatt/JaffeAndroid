@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screens
 
 import android.app.Activity
+import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -8,6 +9,7 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +72,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -106,6 +112,7 @@ import com.example.myapplication.labs.ghost.GhostHologramLayer
 import com.example.myapplication.labs.ghost.GhostBlueprintEngine
 import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
+import com.example.myapplication.labs.ghost.GhostPortalLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
@@ -179,6 +186,46 @@ fun SeatingChartScreen(
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
+    val context = LocalContext.current
+
+    // Portal State
+    var isDraggingPortalActive by remember { mutableStateOf(false) }
+    var portalPosition by remember { mutableStateOf(Offset.Zero) }
+
+    val portalTarget = remember {
+        object : DragAndDropTarget {
+            override fun onStarted(event: DragAndDropEvent) {
+                isDraggingPortalActive = true
+            }
+
+            override fun onEntered(event: DragAndDropEvent) {
+                // Potential to change portal color or size
+            }
+
+            override fun onMoved(event: DragAndDropEvent) {
+                val dragEvent = event.toAndroidDragEvent()
+                portalPosition = Offset(dragEvent.x, dragEvent.y)
+            }
+
+            override fun onExited(event: DragAndDropEvent) {
+            }
+
+            override fun onDrop(event: DragAndDropEvent): Boolean {
+                isDraggingPortalActive = false
+                val dragEvent = event.toAndroidDragEvent()
+                val clipData = dragEvent.clipData
+                if (clipData.description.label == "student_data") {
+                    Toast.makeText(context, "Student teleported through Ghost Portal! 🌀", Toast.LENGTH_SHORT).show()
+                    return true
+                }
+                return false
+            }
+
+            override fun onEnded(event: DragAndDropEvent) {
+                isDraggingPortalActive = false
+            }
+        }
+    }
 
     var showBehaviorDialog by remember { mutableStateOf(false) }
     var showLogQuizScoreDialog by remember { mutableStateOf(false) }
@@ -205,7 +252,6 @@ fun SeatingChartScreen(
     var editingStudent by remember { mutableStateOf<com.example.myapplication.data.Student?>(null) }
     var showAddEditFurnitureDialog by remember { mutableStateOf(false) }
     var editingFurniture by remember { mutableStateOf<com.example.myapplication.data.Furniture?>(null) }
-    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
     val userPreferences by seatingChartViewModel.userPreferences.collectAsState()
@@ -524,8 +570,27 @@ fun SeatingChartScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
                 .onSizeChanged { canvasSize = it }
+                .then(
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
+                        Modifier.dragAndDropTarget(
+                            shouldStartDragAndDrop = { event ->
+                                event.mimeTypes().contains(ClipDescription.MIMETYPE_TEXT_PLAIN)
+                            },
+                            target = portalTarget
+                        )
+                    } else Modifier
+                )
 
         ) {
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
+                GhostPortalLayer(
+                    isDraggingActive = isDraggingPortalActive,
+                    portalPosition = if (portalPosition == Offset.Zero)
+                        Offset(canvasSize.width / 2f, canvasSize.height / 2f)
+                        else portalPosition
+                )
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED && isPhantasmActive) {
                 GhostPhantasmLayer(
                     students = students,
