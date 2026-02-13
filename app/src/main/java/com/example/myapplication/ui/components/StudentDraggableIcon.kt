@@ -3,12 +3,16 @@ package com.example.myapplication.ui.components
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import android.content.ClipData
+import android.content.ClipDescription
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -40,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -54,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -108,6 +114,24 @@ fun StudentDraggableIcon(
         label = "scale"
     )
 
+    val portalModifier = if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
+        Modifier.dragAndDropSource {
+            detectTapGestures(
+                onLongPress = {
+                    val studentJson = """{"id": ${studentUiItem.id}, "name": "${studentUiItem.fullName.value}"}"""
+                    startTransfer(
+                        DragAndDropTransferData(
+                            clipData = ClipData.newPlainText("student_data", studentJson),
+                            flags = android.view.View.DRAG_FLAG_GLOBAL
+                        )
+                    )
+                }
+            )
+        }
+    } else {
+        Modifier
+    }
+
     key(studentUiItem) {
         Box(
             modifier = Modifier
@@ -122,6 +146,7 @@ fun StudentDraggableIcon(
             Card(
                 modifier = Modifier
                     .onSizeChanged { cardSize = it }
+                    .then(portalModifier)
                     .pointerInput(studentUiItem.id) {
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
