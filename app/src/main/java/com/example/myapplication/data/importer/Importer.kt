@@ -2,6 +2,7 @@ package com.example.myapplication.data.importer
 
 import android.content.Context
 import android.util.Log
+import androidx.room.withTransaction
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.Furniture
@@ -87,14 +88,6 @@ class Importer(
     }
 
     /**
-     * Look up the internal Long database ID for a student using their string-based UUID.
-     */
-    private suspend fun getStudentDbId(stringId: String): Long {
-        return db.studentDao().getStudentByStringId(stringId)?.id
-            ?: throw IllegalArgumentException("Student with stringId $stringId not found")
-    }
-
-    /**
      * Utility to read asset files, handling decryption automatically if required.
      * Falls back to plaintext if decryption fails, allowing for a mix of secure and insecure sources.
      */
@@ -150,67 +143,70 @@ class Importer(
      * The core processing logic that maps a deserialized [ClassroomDataDto] into Room entities.
      * This method performs a multi-pass import to ensure referential integrity (e.g. students
      * must be imported before their behavior logs can be linked).
+     *
+     * Optimized for performance using Room transactions, bulk insertions, and in-memory ID caching.
      */
     private suspend fun importClassroomDataFromJson(jsonString: String) {
         val classroomData = json.decodeFromString<ClassroomDataDto>(jsonString)
 
-        // Pass 1: Import Students
-        // We use stringId to maintain a link to the original Python-generated identifier.
-        val studentDao = db.studentDao()
-        classroomData.students.values.forEach { studentDto ->
-            val student = Student(
-                stringId = studentDto.id,
-                firstName = studentDto.firstName,
-                lastName = studentDto.lastName,
-                nickname = studentDto.nickname,
-                gender = studentDto.gender,
-                xPosition = studentDto.x.toFloat(),
-                yPosition = studentDto.y.toFloat(),
-                customWidth = studentDto.width.toInt(),
-                customHeight = studentDto.height.toInt()
-                // groupId will be handled later if needed
-            )
-            studentDao.insert(student)
-        }
-        Log.d("Importer", "${classroomData.students.size} students imported.")
+        db.withTransaction {
+            // Pass 1: Import Students
+            val studentList = classroomData.students.values.toList()
+            val studentsToInsert = studentList.map { studentDto ->
+                Student(
+                    stringId = studentDto.id,
+                    firstName = studentDto.firstName,
+                    lastName = studentDto.lastName,
+                    nickname = studentDto.nickname,
+                    gender = studentDto.gender,
+                    xPosition = studentDto.x.toFloat(),
+                    yPosition = studentDto.y.toFloat(),
+                    customWidth = studentDto.width.toInt(),
+                    customHeight = studentDto.height.toInt()
+                )
+            }
+            val insertedStudentIds = db.studentDao().insertAll(studentsToInsert)
+            // Create a mapping from string UUID to local Long ID for O(1) resolution in subsequent passes.
+            val studentIdMap = studentList.zip(insertedStudentIds).associate { it.first.id to it.second }
+            Log.d("Importer", "${studentsToInsert.size} students imported.")
 
-        // Pass 2: Import Furniture
-        val furnitureDao = db.furnitureDao()
-        classroomData.furniture.values.forEach { furnitureDto ->
-            val furniture = Furniture(
-                stringId = furnitureDto.id,
-                name = furnitureDto.name,
-                type = furnitureDto.type,
-                xPosition = furnitureDto.x.toFloat(),
-                yPosition = furnitureDto.y.toFloat(),
-                width = furnitureDto.width.toInt(),
-                height = furnitureDto.height.toInt(),
-                fillColor = furnitureDto.fillColor,
-                outlineColor = furnitureDto.outlineColor
-            )
-            furnitureDao.insert(furniture)
-        }
-        Log.d("Importer", "${classroomData.furniture.size} furniture items imported.")
+            // Pass 2: Import Furniture
+            val furnitureToInsert = classroomData.furniture.values.map { furnitureDto ->
+                Furniture(
+                    stringId = furnitureDto.id,
+                    name = furnitureDto.name,
+                    type = furnitureDto.type,
+                    xPosition = furnitureDto.x.toFloat(),
+                    yPosition = furnitureDto.y.toFloat(),
+                    width = furnitureDto.width.toInt(),
+                    height = furnitureDto.height.toInt(),
+                    fillColor = furnitureDto.fillColor,
+                    outlineColor = furnitureDto.outlineColor
+                )
+            }
+            db.furnitureDao().insertAll(furnitureToInsert)
+            Log.d("Importer", "${furnitureToInsert.size} furniture items imported.")
 
-        // Pass 3: Import Behavior and Quiz Logs
-        // Python combines these in behaviorLog; we split them based on the 'type' field.
-        withContext(Dispatchers.IO) {
-            val behaviorEventDao = db.behaviorEventDao()
+            // Pass 3: Import Behavior and Quiz Logs
+            val behaviorEventsToInsert = mutableListOf<BehaviorEvent>()
+            val quizLogsToInsert = mutableListOf<QuizLog>()
+
             classroomData.behaviorLog.forEach { logEntry ->
+                val studentId = studentIdMap[logEntry.studentId]
+                    ?: throw IllegalArgumentException("Student with stringId ${logEntry.studentId} not found in cache")
+
                 when (logEntry.type) {
                     "behavior" -> {
-                        val behaviorEvent = BehaviorEvent(
-                            studentId = getStudentDbId(logEntry.studentId),
+                        behaviorEventsToInsert.add(BehaviorEvent(
+                            studentId = studentId,
                             timestamp = parseTimestamp(logEntry.timestamp),
                             type = logEntry.behavior,
                             comment = logEntry.comment
-                        )
-                        behaviorEventDao.insert(behaviorEvent)
+                        ))
                     }
                     "quiz" -> {
-                        val quizLogDao = db.quizLogDao()
-                        val quizLog = QuizLog(
-                            studentId = getStudentDbId(logEntry.studentId),
+                        quizLogsToInsert.add(QuizLog(
+                            studentId = studentId,
                             loggedAt = parseTimestamp(logEntry.timestamp),
                             quizName = logEntry.behavior,
                             comment = logEntry.comment,
@@ -219,28 +215,29 @@ class Importer(
                             markType = null,
                             marksData = "{}",
                             numQuestions = logEntry.scoreDetails?.totalAsked ?: 0
-                        )
-                        quizLogDao.insert(quizLog)
+                        ))
                     }
                 }
             }
-            Log.d("Importer", "${classroomData.behaviorLog.size} behavior/quiz log entries imported.")
-        }
+            db.behaviorEventDao().insertAll(behaviorEventsToInsert)
+            db.quizLogDao().insertAll(quizLogsToInsert)
+            Log.d("Importer", "${behaviorEventsToInsert.size} behavior events and ${quizLogsToInsert.size} quiz logs imported.")
 
-        // Pass 4: Import Homework Logs
-        withContext(Dispatchers.IO) {
-            val homeworkLogDao = db.homeworkLogDao()
-            classroomData.homeworkLog.forEach { hwLogEntry ->
-                val homeworkLog = HomeworkLog(
-                    studentId = getStudentDbId(hwLogEntry.studentId),
+            // Pass 4: Import Homework Logs
+            val homeworkLogsToInsert = classroomData.homeworkLog.map { hwLogEntry ->
+                val studentId = studentIdMap[hwLogEntry.studentId]
+                    ?: throw IllegalArgumentException("Student with stringId ${hwLogEntry.studentId} not found in cache")
+
+                HomeworkLog(
+                    studentId = studentId,
                     loggedAt = parseTimestamp(hwLogEntry.timestamp),
                     assignmentName = hwLogEntry.homeworkType ?: "",
                     status = hwLogEntry.homeworkStatus ?: hwLogEntry.behavior,
                     comment = hwLogEntry.comment
                 )
-                homeworkLogDao.insert(homeworkLog)
             }
-            Log.d("Importer", "${classroomData.homeworkLog.size} homework log entries imported.")
+            db.homeworkLogDao().insertAll(homeworkLogsToInsert)
+            Log.d("Importer", "${homeworkLogsToInsert.size} homework log entries imported.")
         }
     }
 }

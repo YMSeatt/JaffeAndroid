@@ -4,6 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
@@ -11,6 +12,9 @@ import androidx.room.Update
 interface BehaviorEventDao {
     @Insert
     suspend fun insert(event: BehaviorEvent): Long
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(events: List<BehaviorEvent>): List<Long>
 
     @Delete
     suspend fun delete(event: BehaviorEvent)
