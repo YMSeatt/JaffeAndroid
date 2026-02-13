@@ -118,6 +118,7 @@ dependencies {
 
     // Fernet
     implementation("com.macasaet.fernet:fernet-java8:1.5.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     // JavaMail
     implementation("com.sun.mail:android-mail:1.6.2")

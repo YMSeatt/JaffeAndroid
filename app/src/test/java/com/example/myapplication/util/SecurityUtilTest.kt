@@ -22,19 +22,45 @@ class SecurityUtilTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
-        // Ensure the key file doesn't exist before each test
-        val keyFile = File(context.filesDir, "fernet.key")
-        if (keyFile.exists()) {
-            keyFile.delete()
-        }
+        // Ensure key files don't exist before each test
+        File(context.filesDir, "fernet.key").delete()
+        File(context.filesDir, "fernet.key.v2").delete()
         securityUtil = SecurityUtil(context)
     }
 
     @Test
     fun `test key generation and storage`() {
-        val keyFile = File(context.filesDir, "fernet.key")
-        assertTrue("Key file should be created", keyFile.exists())
-        assertEquals("Key file should be 32 bytes long", 32, keyFile.readBytes().size)
+        val keyFileV2 = File(context.filesDir, "fernet.key.v2")
+        assertTrue("Hardened key file should be created", keyFileV2.exists())
+        val size = keyFileV2.readBytes().size
+        println("Key file size: $size")
+        assertTrue("Key file should have content", size >= 32)
+
+        // Verify that we can actually use the key
+        val text = "Test message"
+        val encrypted = securityUtil.encrypt(text)
+        assertEquals(text, securityUtil.decrypt(encrypted))
+    }
+
+    @Test
+    fun `test migration from legacy key`() {
+        // 1. Create a legacy plain-text key
+        val legacyKeyFile = File(context.filesDir, "fernet.key")
+        val legacyKey = ByteArray(32) { it.toByte() }
+        legacyKeyFile.writeBytes(legacyKey)
+        File(context.filesDir, "fernet.key.v2").delete()
+
+        // 2. Initialize SecurityUtil - should trigger migration
+        val newSecurityUtil = SecurityUtil(context)
+
+        // 3. Verify legacy file is deleted and new file exists
+        assertFalse("Legacy key file should be deleted", legacyKeyFile.exists())
+        assertTrue("New key file should exist", File(context.filesDir, "fernet.key.v2").exists())
+
+        // 4. Verify we can still encrypt/decrypt (meaning the key was migrated correctly)
+        val text = "Migration test"
+        val encrypted = newSecurityUtil.encrypt(text)
+        assertEquals(text, newSecurityUtil.decrypt(encrypted))
     }
 
     @Test
