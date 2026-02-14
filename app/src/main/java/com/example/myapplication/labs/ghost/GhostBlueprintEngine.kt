@@ -4,11 +4,11 @@ import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.FurnitureUiItem
 
 /**
- * GhostBlueprintEngine: Ported from Python/ghost_blueprint.py
+ * GhostBlueprintEngine: A report generation utility ported from the Python desktop application.
  *
- * This engine generates a futuristic SVG 'blueprint' of the classroom layout,
- * translating Android's logical coordinates to a fixed-size SVG canvas with
- * stylized nodes for students and furniture.
+ * This engine synthesizes a futuristic SVG "blueprint" of the classroom layout. It utilizes
+ * stylized vector graphics, Gaussian blur filters (glow), and a fixed-grid coordinate
+ * transformation to produce a high-fidelity visual summary suitable for sharing or archival.
  */
 object GhostBlueprintEngine {
     fun generateBlueprint(students: List<StudentUiItem>, furniture: List<FurnitureUiItem>): String {

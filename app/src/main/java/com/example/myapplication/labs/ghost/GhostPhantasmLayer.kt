@@ -14,17 +14,22 @@ import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.min
 
 /**
- * GhostPhantasmLayer: A futuristic background layer for the seating chart.
+ * GhostPhantasmLayer: A futuristic background layer that visualizes "Classroom Presence"
+ * using a high-performance Meta-ball algorithm implemented in AGSL.
  *
- * It visualizes the "Classroom Presence" using the Phantasm AGSL shader.
- * Students with more activity or behavioral "intensity" appear as larger,
- * more vibrant Meta-balls.
+ * **Conceptual Mechanics:**
+ * - **Presence Visualization**: Students are rendered as fluid, glowing cyan/red blobs
+ *   (Meta-balls) that dynamically merge and split as they move or interact.
+ * - **Behavioral Weighting**: The size and intensity of a student's blob are driven by
+ *   their behavioral log density. Students with higher "activity" appear more prominent.
+ * - **Privacy Shielding**: Integrates with Android 15's Screen Recording detection to
+ *   apply a "Privacy Glitch" noise overlay, obfuscating clear student positions during capture.
  *
- * @param students List of students to visualize.
- * @param behaviorLogs Historical logs to determine intensity.
- * @param canvasScale Current zoom level.
- * @param canvasOffset Current pan position.
- * @param isRecording True if screen recording is detected.
+ * @param students List of [StudentUiItem]s representing students currently on the canvas.
+ * @param behaviorLogs Historical [BehaviorEvent]s used to calculate student "agitation" and weighting.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan position (X/Y) of the seating chart.
+ * @param isRecording A boolean flag indicating if the screen is currently being recorded or cast.
  */
 @Composable
 fun GhostPhantasmLayer(
@@ -60,6 +65,12 @@ fun GhostPhantasmLayer(
             .groupBy { it.studentId }
     }
 
+    /**
+     * Agitation Calculation:
+     * Determines the global "tension" of the classroom.
+     * Formula: (Negative Logs / Total Logs) + 0.1 baseline.
+     * This value drives the 'turbulence' and 'flicker' uniforms in the PHANTASM_BLOBS shader.
+     */
     val agitationLevel = remember(behaviorLogs) {
         if (behaviorLogs.isEmpty()) 0.2f
         else {

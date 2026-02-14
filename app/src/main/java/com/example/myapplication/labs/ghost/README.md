@@ -1,6 +1,6 @@
 # 👻 Ghost Lab: Experimental Features
 
-This directory contains experimental, future-facing features for the Seating Chart & Behavior Logger. These "Ghost" features explore the intersection of data visualization, automated layout optimization, and natural user interfaces.
+This directory contains experimental, future-facing features for the Seating Chart & Behavior Logger. These "Ghost" features explore the intersection of data visualization, automated layout optimization, on-device AI synthesis, and natural user interfaces.
 
 ## 🛠️ Components
 
@@ -25,20 +25,56 @@ A temporal behavioral heatmap engine.
 - **Dynamic Heatmap**: Renders a glowing floor layer using an AGSL shader. Positive behavior appears green; negative behavior appears red.
 - **Transformation-aware**: The heatmap aligns with the seating chart's zoom and pan states.
 
-### 4. Ghost Oracle (`GhostOracle.kt`)
-A predictive analysis engine (simulating on-device AI like Gemini Nano).
+### 4. Ghost Synapse (`synapse/GhostSynapseEngine.kt`)
+A Proof of Concept for **On-Device AI Narrative Synthesis** (simulating Gemini Nano via AICore).
+- **Generative Insights**: Transforms raw behavioral and academic logs into cohesive high-fidelity "Neural Narratives".
+- **Student Synthesis**: Categorizes student state into stable signatures, behavioral turbulence, or peak cognitive performance.
+- **Background Visuals**: Uses a reactive `NEURAL_FLOW` AGSL shader to visualize the "thought process" during synthesis.
+
+### 5. Ghost Phantasm (`GhostPhantasmLayer.kt`, `GhostPhantasmShader.kt`)
+A presence-based visualization layer using **Meta-balls**.
+- **Classroom Presence**: Renders students as fluid, glowing blobs that merge and split based on their proximity and behavioral "agitation".
+- **Agitation Dynamics**: Scaling factors increase blob size and intensity for students with high log frequency (especially negative logs).
+- **Privacy Glitch**: Incorporates a "Privacy Glitch" mode triggered when screen recording is detected (using Android 15 APIs).
+
+### 6. Ghost Portal (`GhostPortalLayer.kt`, `GhostPortalShader.kt`)
+A visual experiment for **Inter-app Data Teleportation**.
+- **Wormhole Effect**: Renders a swirling AGSL wormhole shader during Drag & Drop operations.
+- **Android 15 Integration**: Leverages `Modifier.dragAndDropSource` and `Modifier.dragAndDropTarget` for seamless data transfer between compatible apps.
+
+### 7. Ghost Echo (`GhostEchoLayer.kt`, `GhostEchoEngine.kt`)
+A real-time **Auditory Atmosphere Monitor**.
+- **Acoustic Turbulence**: Visualizes classroom noise levels as ambient turbulence using a procedural noise shader.
+- **Reactive Engine**: Normalizes microphone amplitude data to drive shader uniforms.
+
+### 8. Ghost Hologram (`GhostHologramLayer.kt`, `GhostHologramEngine.kt`)
+A **3D Parallax & Holographic Overlay** for the seating chart.
+- **Motion-Sensing**: Uses the device's rotation vector sensor to apply 3D `graphicsLayer` transformations (pitch and roll).
+- **Holographic Glass**: Overlays a futuristic "scanning line" and flicker effect using an AGSL shader.
+
+### 9. Ghost Oracle (`GhostOracle.kt`)
+A predictive analysis engine.
 - **Social Friction**: Predicts tension when high-risk students are seated together.
 - **Engagement Drop**: Flags students who haven't received positive feedback in over 7 days.
 - **Confidence Scores**: Each "prophecy" includes a confidence metric used by the HUD to scale visual intensity.
 
-### 5. Ghost Voice Assistant (`GhostVoiceAssistant.kt` & `GhostVisualizer.kt`)
+### 10. Ghost Blueprint Engine (`GhostBlueprintEngine.kt`)
+Generates futuristic **SVG Classroom Blueprints**.
+- **SVG Generation**: Produces stylized 1200x800 vector representations of the classroom layout.
+- **Coordinate Mapping**: Implements a scaling formula `(pos / 4) + offset` to map Android's 4000x4000 logical canvas into the blueprint frame.
+- **Aesthetic**: Features cyan-glow students and dashed-line furniture items.
+
+### 11. Ghost Voice Assistant (`GhostVoiceAssistant.kt` & `GhostVisualizer.kt`)
 A hands-free interface for classroom management.
 - **Command Parsing**: Translates speech (e.g., "Log positive participation for John Doe") into database actions.
 - **Neural Waveform**: A reactive shader-based visualizer that responds to voice amplitude in real-time.
 
-### 6. Insight Engine (`GhostInsightEngine.kt` & `GhostInsightDialog.kt`)
+### 12. Insight Engine (`GhostInsightEngine.kt` & `GhostInsightDialog.kt`)
 A data analysis tool that generates behavioral and academic "insights."
 - Categorizes students as **Peak Performers**, **Steady Progress**, or requiring **Attention/Academic Support** based on aggregated log data.
 
 ## 🚧 Status: Experimental
-These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support). They are intended for research and development and may be subject to rapid changes.
+These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
+
+---
+*Documentation love letter from Scribe 📜*

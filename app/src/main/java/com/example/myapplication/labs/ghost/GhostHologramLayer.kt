@@ -13,11 +13,18 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.graphicsLayer
 
 /**
- * GhostHologramLayer: A Composable that applies a 3D parallax effect and holographic
- * shader overlay to its content.
+ * GhostHologramLayer: A high-fidelity UI wrapper that applies a 3D parallax effect and
+ * holographic AGSL shader overlay to its child content.
  *
- * @param engine The [GhostHologramEngine] providing sensor data.
- * @param content The UI content to be "hologramized".
+ * **Experimental Features:**
+ * - **Motion Parallax**: Uses the device's [Rotation Vector Sensor](https://developer.android.com/develop/sensors-proactive/motion#sensors-motion-rotate)
+ *   to apply real-time 3D rotation (pitch/roll) to the Composable's [graphicsLayer].
+ * - **Holographic Overlay**: Renders a "Scanning Line" and procedural flicker effect using
+ *   the HOLOGRAM_GLASS AGSL shader, simulating a futuristic translucent display.
+ *
+ * @param engine The [GhostHologramEngine] providing raw and smoothed tilt data from the device sensors.
+ * @param modifier Standard Compose [Modifier].
+ * @param content The @Composable content to be wrapped in the holographic environment.
  */
 @Composable
 fun GhostHologramLayer(
@@ -54,11 +61,13 @@ fun GhostHologramLayer(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
-                // Apply 3D rotation based on tilt
-                // Note: rotationX is tilt around the horizontal axis (pitch)
-                // rotationY is tilt around the vertical axis (roll)
+                // Parallax Calculation:
+                // Map the device pitch (X-axis tilt) to rotationX.
+                // Map the device roll (Y-axis tilt) to rotationY.
+                // Negative pitch is used to align the UI tilt with physical device movement.
                 rotationX = -animatedPitch
                 rotationY = animatedRoll
+                // Increased camera distance reduces perspective distortion (flattening the effect).
                 cameraDistance = 12f * density
             }
             .drawWithCache {
