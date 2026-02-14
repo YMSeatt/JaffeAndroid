@@ -10,14 +10,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ShaderBrush
 
 /**
- * GhostEchoLayer: A Jetpack Compose background layer that visualizes classroom noise levels.
+ * GhostEchoLayer: A real-time auditory atmosphere visualization layer.
  *
- * This component acts as a "Classroom Atmosphere Monitor," using a procedural AGSL shader
- * to represent auditory energy as ambient turbulence. It is designed to be placed
- * at the bottom of the seating chart's layer stack.
+ * This component acts as a "Classroom Pulse Monitor," using a procedural AGSL noise shader
+ * (ACOUSTIC_TURBULENCE) to transform microphone amplitude data into ambient visual energy.
  *
- * @param engine The [GhostEchoEngine] providing real-time normalized amplitude data.
- * @param modifier Modifier for the layout.
+ * **Visual Mechanics:**
+ * - **Auditory Turbulence**: Noise levels (volume) drive the 'iAmplitude' uniform of the shader,
+ *   which increases the distortion and velocity of the procedural waves.
+ * - **Atmospheric Calm**: In a quiet classroom, the layer settles into a stable, low-frequency
+ *   ambient flow.
+ *
+ * @param engine The [GhostEchoEngine] responsible for processing microphone input and providing
+ *   a reactive [StateFlow] of normalized auditory amplitude (0.0 to 1.0).
+ * @param modifier Standard Compose [Modifier] for layout configuration.
  */
 @Composable
 fun GhostEchoLayer(

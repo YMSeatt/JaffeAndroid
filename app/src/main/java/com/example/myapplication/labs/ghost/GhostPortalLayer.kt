@@ -13,11 +13,20 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 
 /**
- * GhostPortalLayer: Visualizes the "Portal" effect during Drag & Drop operations.
+ * GhostPortalLayer: A visual experiment exploring the future of "Inter-app Data Teleportation."
  *
- * @param isDraggingActive Whether a drag operation is currently in progress.
- * @param portalPosition The screen position of the portal (usually the drop target).
- * @param color The theme color of the portal.
+ * This layer renders a swirling AGSL wormhole shader that activates during Drag & Drop operations.
+ * It provides a natural, high-fidelity visual cue when student data is being moved or shared.
+ *
+ * **Android 15 Integration:**
+ * This component is designed to work in tandem with `Modifier.dragAndDropSource` and
+ * `Modifier.dragAndDropTarget`, simulating a spatial portal for data transfer.
+ *
+ * @param isDraggingActive A reactive boolean state indicating if an active drag operation
+ *   (e.g., student selection) is currently in progress.
+ * @param portalPosition The pixel coordinate (Offset) where the portal should be centered.
+ *   This typically follows the user's touch point or resides at a fixed drop target.
+ * @param color The base theme color for the portal's energy field.
  */
 @Composable
 fun GhostPortalLayer(
