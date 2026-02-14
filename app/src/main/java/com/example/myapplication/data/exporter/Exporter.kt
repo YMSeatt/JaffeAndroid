@@ -120,24 +120,29 @@ class Exporter(
         )
 
         // Filter data
+        // Optimization: Convert lists to sets for O(1) lookup during filtering
+        val studentIdsSet = options.studentIds?.toSet()
+        val behaviorTypesSet = options.behaviorTypes?.toSet()
+        val homeworkTypesSet = options.homeworkTypes?.toSet()
+
         val filteredBehaviorEvents = behaviorEvents.filter { event ->
             (options.startDate == null || event.timestamp >= options.startDate) &&
                     (options.endDate == null || event.timestamp <= options.endDate) &&
-                    (options.studentIds == null || options.studentIds.contains(event.studentId)) &&
-                    (options.behaviorTypes == null || options.behaviorTypes.contains(event.type))
+                    (studentIdsSet == null || studentIdsSet.contains(event.studentId)) &&
+                    (behaviorTypesSet == null || behaviorTypesSet.contains(event.type))
         }
 
         val filteredHomeworkLogs = homeworkLogs.filter { log ->
             (options.startDate == null || log.loggedAt >= options.startDate) &&
                     (options.endDate == null || log.loggedAt <= options.endDate) &&
-                    (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
-                    (options.homeworkTypes == null || options.homeworkTypes.contains(log.assignmentName))
+                    (studentIdsSet == null || studentIdsSet.contains(log.studentId)) &&
+                    (homeworkTypesSet == null || homeworkTypesSet.contains(log.assignmentName))
         }
 
         val filteredQuizLogs = quizLogs.filter { log ->
             (options.startDate == null || log.loggedAt >= options.startDate) &&
                     (options.endDate == null || log.loggedAt <= options.endDate) &&
-                    (options.studentIds == null || options.studentIds.contains(log.studentId))
+                    (studentIdsSet == null || studentIdsSet.contains(log.studentId))
         }
 
         val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
@@ -753,8 +758,10 @@ class Exporter(
             cell.cellStyle = context.headerStyle
         }
 
-        val filteredStudents = if (options.studentIds != null) {
-            students.filter { options.studentIds.contains(it.id) }
+        // Optimization: Use a Set for O(1) student ID lookup during student list filtering
+        val studentIdsFilterSet = options.studentIds?.toSet()
+        val filteredStudents = if (studentIdsFilterSet != null) {
+            students.filter { studentIdsFilterSet.contains(it.id) }
         } else {
             students
         }.sortedBy { "${it.lastName} ${it.firstName}" }
