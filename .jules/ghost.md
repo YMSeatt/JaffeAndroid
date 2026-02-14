@@ -8,21 +8,29 @@
 In 2027, the boundaries between applications will blur. "Ghost Portal" is a PoC for a future where classroom data is fluid. Teachers can "teleport" students between different classroom environments or external AI analyzers with a single gesture.
 
 ### 🛠️ The Tech
-- **Android 15 Drag & Drop:** Integrated `Modifier.dragAndDropSource` and `Modifier.dragAndDropTarget` into the Compose UI. This allows for system-level data transfer that works even between different app instances in multi-window mode.
-- **AGSL Shaders:** Created `GhostPortalShader` to provide a futuristic "Wormhole" effect, making the abstract concept of data transfer tangible and visually engaging.
-- **Inter-App Communication:** Used `ClipData` with JSON payloads to ensure compatibility with external tools.
+- **Android 15 Drag & Drop:** Integrated `Modifier.dragAndDropSource` and `Modifier.dragAndDropTarget` into the Compose UI.
+- **AGSL Shaders:** Created `GhostPortalShader` to provide a futuristic "Wormhole" effect.
+
+---
+
+## 🕸️ Experiment: Ghost Lattice (Social Graph Visualization)
+**Date:** 2026-05-20
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+Teachers often "feel" the social dynamics of a room but can't see them. "Ghost Lattice" makes the invisible visible. It visualizes student relationships as a glowing neural network, helping teachers identify social clusters, potential friction points, and isolated students at a glance.
+
+### 🛠️ The Tech
+- **AGSL Neural Shaders**: Implemented a specialized `NEURAL_LATTICE` shader that draws glowing, pulsing connections between student coordinates. It uses bounding-box optimization for efficient rendering of multiple lines.
+- **Social Inference Engine**: A local engine that analyzes physical proximity and behavioral history to determine "Collaboration" vs "Friction" links.
+- **Python Bridge**: `ghost_lattice.py` demonstrates how complex social graph metrics (cohesion, turbulence) can be computed from raw JSON exports.
 
 ### 🔦 The Discovery
-- **Android 15's Edge-to-Edge:** Apps targeting API 35 are edge-to-edge by default, which makes full-screen shader overlays (like the Portal Layer) look even more immersive.
-- **Compose Drag & Drop:** The new `dragAndDropSource` modifier is much more declarative than the legacy `View.startDragAndDrop` approach, allowing for seamless integration with Composable state.
+- **Shader Batching**: Drawing multiple lines with individual `RuntimeShader` instances is performant enough for a PoC (~30-50 edges), but a single multi-line shader using uniform arrays would be better for larger classes.
+- **Dynamic Recalculation**: By observing the `StudentUiItem` position states, the lattice updates in real-time as students are dragged, creating a "stretchy" social web effect.
 
 ### 💡 The "What if?"
-*What if we could "drag" a student into a virtual group, and the app automatically simulated the social outcome?*
-- The `Ghost Link` Python bridge demonstrates this by acting as an "External Neural Analyzer" that generates a predictive dossier from the portal payload.
-
-### 🚧 Limitations
-- System Drag & Drop requires a long-press gesture by default in this PoC to distinguish from standard pan/zoom gestures in the seating chart.
-- Multi-window support is essential to see the "portal" effect in action between two instances of the app.
+*What if the lattice could predict 'social contagion'—where a negative behavior from one node travels through the edges to affect others?*
 
 ---
 *Ghost - Rapid Prototyping for the Classroom of 2027*

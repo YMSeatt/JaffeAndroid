@@ -113,6 +113,7 @@ import com.example.myapplication.labs.ghost.GhostBlueprintEngine
 import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.GhostPortalLayer
+import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
@@ -598,6 +599,15 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset,
                     isRecording = isScreenRecording
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
+                GhostLatticeLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
                 )
             }
 
