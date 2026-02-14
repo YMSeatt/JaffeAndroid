@@ -69,24 +69,29 @@ class StatsViewModel @Inject constructor(
                 val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
 
                 // Filter data based on options
+                // Optimization: Convert lists to sets for O(1) lookup during filtering
+                val studentIdsSet = options.studentIds?.toSet()
+                val behaviorTypesSet = options.behaviorTypes?.toSet()
+                val homeworkTypesSet = options.homeworkTypes?.toSet()
+
                 val filteredBehaviorEvents = behaviorEvents.filter { event ->
                     (options.startDate == null || event.timestamp >= options.startDate) &&
                             (options.endDate == null || event.timestamp <= options.endDate) &&
-                            (options.studentIds == null || options.studentIds.contains(event.studentId)) &&
-                            (options.behaviorTypes == null || options.behaviorTypes.contains(event.type))
+                            (studentIdsSet == null || studentIdsSet.contains(event.studentId)) &&
+                            (behaviorTypesSet == null || behaviorTypesSet.contains(event.type))
                 }
 
                 val filteredHomeworkLogs = homeworkLogs.filter { log ->
                     (options.startDate == null || log.loggedAt >= options.startDate) &&
                             (options.endDate == null || log.loggedAt <= options.endDate) &&
-                            (options.studentIds == null || options.studentIds.contains(log.studentId)) &&
-                            (options.homeworkTypes == null || options.homeworkTypes.contains(log.assignmentName))
+                            (studentIdsSet == null || studentIdsSet.contains(log.studentId)) &&
+                            (homeworkTypesSet == null || homeworkTypesSet.contains(log.assignmentName))
                 }
 
                 val filteredQuizLogs = quizLogs.filter { log ->
                     (options.startDate == null || log.loggedAt >= options.startDate) &&
                             (options.endDate == null || log.loggedAt <= options.endDate) &&
-                            (options.studentIds == null || options.studentIds.contains(log.studentId))
+                            (studentIdsSet == null || studentIdsSet.contains(log.studentId))
                 }
 
                 val studentMap = students.associateBy { it.id }
@@ -108,8 +113,12 @@ class StatsViewModel @Inject constructor(
     }
 
     private fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
-        val behaviorCounts = behaviorEvents.groupBy { it.studentId }
-            .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
+        // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists
+        val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
+        for (event in behaviorEvents) {
+            val studentBehaviors = behaviorCounts.getOrPut(event.studentId) { mutableMapOf() }
+            studentBehaviors[event.type] = (studentBehaviors[event.type] ?: 0) + 1
+        }
 
         val summaryList = mutableListOf<BehaviorSummary>()
         behaviorCounts.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
@@ -129,16 +138,17 @@ class StatsViewModel @Inject constructor(
     }
 
     private fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
-        val quizScores = mutableMapOf<Long, MutableMap<String, MutableList<Double>>>()
+        // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
+        val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
 
         // --- Optimization: Pre-calculate mark type lookups and points ---
         val markTypeMapByName = quizMarkTypes.associateBy { it.name }
         val markTypeMapById = quizMarkTypes.associateBy { it.id.toString() }
         val sumDefaultPointsContributing = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
 
-        quizLogs.forEach { log ->
+        for (log in quizLogs) {
             val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
-            val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
+            val stats = studentScores.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
 
             // Optimization: LruCache for JSON parsing
             val marksData = decodedMarksCache.get(log.marksData) ?: try {
@@ -159,21 +169,22 @@ class StatsViewModel @Inject constructor(
             }
 
             val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
-            quizScoresList.add(scorePercent)
+            stats[0] += scorePercent
+            stats[1] += 1.0
         }
 
         val summaryList = mutableListOf<QuizSummary>()
         quizScores.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
             val studentQuizzes = quizScores[studentId]
             studentQuizzes?.keys?.sorted()?.forEach { quizName ->
-                val scores = studentQuizzes[quizName]!!
+                val stats = studentQuizzes[quizName]!!
                 val student = students[studentId]
                 summaryList.add(
                     QuizSummary(
                         studentName = if(student != null) "${student.firstName} ${student.lastName}" else "Unknown",
                         quizName = quizName,
-                        averageScore = scores.average(),
-                        timesTaken = scores.size
+                        averageScore = if (stats[1] > 0) stats[0] / stats[1] else 0.0,
+                        timesTaken = stats[1].toInt()
                     )
                 )
             }
@@ -182,10 +193,14 @@ class StatsViewModel @Inject constructor(
     }
 
     private fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>): List<HomeworkSummary> {
-        val homeworkSummaryMap = mutableMapOf<Long, MutableMap<String, Pair<Int, Double>>>()
-        homeworkLogs.forEach { log ->
-            val studentSummary = homeworkSummaryMap.getOrPut(log.studentId) { mutableMapOf() }
-            val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
+        // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop
+        val homeworkCountMap = mutableMapOf<Long, MutableMap<String, Int>>()
+        val homeworkPointsMap = mutableMapOf<Long, MutableMap<String, Double>>()
+
+        for (log in homeworkLogs) {
+            val studentCounts = homeworkCountMap.getOrPut(log.studentId) { mutableMapOf() }
+            studentCounts[log.assignmentName] = (studentCounts[log.assignmentName] ?: 0) + 1
+
             var points = 0.0
             log.marksData?.let { jsonStr ->
                 // Optimization: LruCache for JSON parsing
@@ -195,25 +210,29 @@ class StatsViewModel @Inject constructor(
                     }
                 } catch (e: Exception) { emptyMap() }
 
-                marks.values.forEach { value ->
+                for (value in marks.values) {
                     value.toDoubleOrNull()?.let { points += it }
                 }
             }
-            studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)
+            if (points != 0.0) {
+                val studentPoints = homeworkPointsMap.getOrPut(log.studentId) { mutableMapOf() }
+                studentPoints[log.assignmentName] = (studentPoints[log.assignmentName] ?: 0.0) + points
+            }
         }
 
         val summaryList = mutableListOf<HomeworkSummary>()
-        homeworkSummaryMap.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
-            val studentHomeworks = homeworkSummaryMap[studentId]
+        homeworkCountMap.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+            val studentHomeworks = homeworkCountMap[studentId]
             studentHomeworks?.keys?.sorted()?.forEach { assignmentName ->
-                val summary = studentHomeworks[assignmentName]!!
+                val count = studentHomeworks[assignmentName] ?: 0
+                val totalPoints = homeworkPointsMap[studentId]?.get(assignmentName) ?: 0.0
                 val student = students[studentId]
                 summaryList.add(
                     HomeworkSummary(
                         studentName = if(student != null) "${student.firstName} ${student.lastName}" else "Unknown",
                         assignmentName = assignmentName,
-                        count = summary.first,
-                        totalPoints = summary.second
+                        count = count,
+                        totalPoints = totalPoints
                     )
                 )
             }
