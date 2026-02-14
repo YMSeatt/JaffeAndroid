@@ -5,11 +5,13 @@
         <include domain="sharedpref" />
         <include domain="file" />
         <exclude domain="file" path="fernet.key" />
+        <exclude domain="file" path="fernet.key.v2" />
     </cloud-backup>
     <device-transfer>
         <include domain="database" />
         <include domain="sharedpref" />
         <include domain="file" />
         <exclude domain="file" path="fernet.key" />
+        <exclude domain="file" path="fernet.key.v2" />
     </device-transfer>
 </data-extraction-rules>

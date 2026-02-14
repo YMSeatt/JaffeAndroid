@@ -47,3 +47,16 @@
     - Added an automatic migration path from the legacy plain-text key to the hardened format.
     - Enforced KeyStore usage in production while allowing a safe, unencrypted fallback only in detected unit test environments (e.g., Robolectric).
 - **Location:** `app/src/main/java/com/example/myapplication/util/SecurityUtil.kt`
+
+## 🛡️ Data Hardening: Comprehensive DataStore Encryption
+- **Vulnerability:** Several fields containing student PII or potentially sensitive classroom information (e.g., `EMAIL_SCHEDULES`, `LAST_QUIZ_NAME`, `BEHAVIOR_INITIALS_MAP`) were stored in plain text in DataStore.
+- **Fix:**
+    - Hardened `AppPreferencesRepository.kt` by wrapping all sensitive fields in encryption/decryption logic.
+    - Utilized `securityUtil.decryptSafe()` to ensure zero-friction migration for existing unencrypted data.
+- **Location:** `app/src/main/java/com/example/myapplication/preferences/AppPreferencesRepository.kt`
+
+## 🛡️ Backup Hardening: Encryption Key Exclusion
+- **Vulnerability:** The hardened encryption key (`fernet.key.v2`) was not explicitly excluded from Android's auto-backup system, potentially allowing the key to be backed up to the cloud in an extractable state.
+- **Fix:**
+    - Updated `data_extraction_rules.xml` and `backup_rules.xml` to explicitly exclude both legacy and hardened key files from cloud backups and device transfers.
+- **Location:** `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/backup_rules.xml`

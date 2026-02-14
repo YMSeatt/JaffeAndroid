@@ -172,7 +172,8 @@ class AppPreferencesRepository @Inject constructor(
         .map { preferences ->
             (preferences[PreferencesKeys.EMAIL_SCHEDULES] ?: emptySet()).mapNotNull {
                 try {
-                    kotlinx.serialization.json.Json.decodeFromString<EmailSchedule>(it)
+                    val decrypted = securityUtil.decryptSafe(it)
+                    kotlinx.serialization.json.Json.decodeFromString<EmailSchedule>(decrypted)
                 } catch (e: Exception) {
                     null
                 }
@@ -181,7 +182,10 @@ class AppPreferencesRepository @Inject constructor(
 
     suspend fun updateEmailSchedules(schedules: List<EmailSchedule>) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map { kotlinx.serialization.json.Json.encodeToString(it) }.toSet()
+            settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map {
+                val json = kotlinx.serialization.json.Json.encodeToString(it)
+                securityUtil.encrypt(json)
+            }.toSet()
         }
     }
 
@@ -353,23 +357,27 @@ class AppPreferencesRepository @Inject constructor(
 
     val homeworkInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.HOMEWORK_INITIALS_MAP] ?: ""
+            val value = preferences[PreferencesKeys.HOMEWORK_INITIALS_MAP] ?: ""
+            securityUtil.decryptSafe(value)
         }
 
     suspend fun updateHomeworkInitialsMap(map: String) {
+        val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.HOMEWORK_INITIALS_MAP] = map
+            settings[PreferencesKeys.HOMEWORK_INITIALS_MAP] = encryptedMap
         }
     }
 
     val quizInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.QUIZ_INITIALS_MAP] ?: ""
+            val value = preferences[PreferencesKeys.QUIZ_INITIALS_MAP] ?: ""
+            securityUtil.decryptSafe(value)
         }
 
     suspend fun updateQuizInitialsMap(map: String) {
+        val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.QUIZ_INITIALS_MAP] = map
+            settings[PreferencesKeys.QUIZ_INITIALS_MAP] = encryptedMap
         }
     }
 
@@ -607,12 +615,13 @@ class AppPreferencesRepository @Inject constructor(
 
     val lastQuizNameFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.LAST_QUIZ_NAME]
+            preferences[PreferencesKeys.LAST_QUIZ_NAME]?.let { securityUtil.decryptSafe(it) }
         }
 
     suspend fun updateLastQuizName(name: String) {
+        val encryptedName = securityUtil.encrypt(name)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.LAST_QUIZ_NAME] = name
+            settings[PreferencesKeys.LAST_QUIZ_NAME] = encryptedName
             settings[PreferencesKeys.LAST_QUIZ_TIMESTAMP] = System.currentTimeMillis()
         }
     }
@@ -624,12 +633,13 @@ class AppPreferencesRepository @Inject constructor(
 
     val lastHomeworkNameFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.LAST_HOMEWORK_NAME]
+            preferences[PreferencesKeys.LAST_HOMEWORK_NAME]?.let { securityUtil.decryptSafe(it) }
         }
 
     suspend fun updateLastHomeworkName(name: String) {
+        val encryptedName = securityUtil.encrypt(name)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.LAST_HOMEWORK_NAME] = name
+            settings[PreferencesKeys.LAST_HOMEWORK_NAME] = encryptedName
             settings[PreferencesKeys.LAST_HOMEWORK_TIMESTAMP] = System.currentTimeMillis()
         }
     }
@@ -641,12 +651,14 @@ class AppPreferencesRepository @Inject constructor(
 
     val behaviorInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.BEHAVIOR_INITIALS_MAP] ?: ""
+            val value = preferences[PreferencesKeys.BEHAVIOR_INITIALS_MAP] ?: ""
+            securityUtil.decryptSafe(value)
         }
 
     suspend fun updateBehaviorInitialsMap(map: String) {
+        val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.BEHAVIOR_INITIALS_MAP] = map
+            settings[PreferencesKeys.BEHAVIOR_INITIALS_MAP] = encryptedMap
         }
     }
 

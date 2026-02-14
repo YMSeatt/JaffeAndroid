@@ -4,4 +4,5 @@
     <include domain="sharedpref" />
     <include domain="file" />
     <exclude domain="file" path="fernet.key" />
+    <exclude domain="file" path="fernet.key.v2" />
 </full-backup-content>
