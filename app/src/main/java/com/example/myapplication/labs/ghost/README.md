@@ -73,6 +73,12 @@ A hands-free interface for classroom management.
 A data analysis tool that generates behavioral and academic "insights."
 - Categorizes students as **Peak Performers**, **Steady Progress**, or requiring **Attention/Academic Support** based on aggregated log data.
 
+### 13. Ghost Lattice (`lattice/GhostLatticeLayer.kt`)
+A social dynamics visualizer that maps student relationships as a glowing **Neural Network**.
+- **Social Graph Inference**: Automatically builds a lattice of connections (Collaboration, Friction, Neutral) based on student proximity and behavioral history.
+- **Neural Shaders**: Renders connections using glowing AGSL line shaders that pulse with "social energy."
+- **Interactive Dynamics**: Connections dynamically stretch and pulse as students are moved on the chart.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
