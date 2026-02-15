@@ -13,6 +13,26 @@ import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.labs.ghost.GhostConfig
 
+/**
+ * GhostLatticeLayer: A futuristic visualization layer for classroom social dynamics.
+ *
+ * This component renders the student relationship graph (the "Social Lattice") inferred by the
+ * [GhostLatticeEngine]. It utilizes high-performance AGSL shaders to draw glowing, pulsing
+ * connections between student nodes.
+ *
+ * **Visual Dynamics:**
+ * - **Collaboration**: Glowing cyan/green lines indicate positive synergy.
+ * - **Friction**: Pulsing red lines with high-frequency interference indicate social tension.
+ * - **Neutral**: Deep blue lines represent standard proximity-based connections.
+ *
+ * The lattice dynamically adjusts as students are moved, with connection strength and
+ * visuals driven by real-time spatial data and historical logs.
+ *
+ * @param students The list of student UI items, providing current positions and dimensions.
+ * @param behaviorLogs Historical behavior logs used to categorize relationships.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ */
 @Composable
 fun GhostLatticeLayer(
     students: List<StudentUiItem>,
@@ -42,6 +62,7 @@ fun GhostLatticeLayer(
             val fromStudent = students.find { it.id.toLong() == edge.fromId }
             val toStudent = students.find { it.id.toLong() == edge.toId }
             if (fromStudent != null && toStudent != null) {
+                // Calculate pixel-perfect centers for connection endpoints, accounting for scale and offset.
                 val startX = (fromStudent.xPosition.value * canvasScale) + canvasOffset.x + (fromStudent.displayWidth.value.toPx() * canvasScale / 2f)
                 val startY = (fromStudent.yPosition.value * canvasScale) + canvasOffset.y + (fromStudent.displayHeight.value.toPx() * canvasScale / 2f)
                 val endX = (toStudent.xPosition.value * canvasScale) + canvasOffset.x + (toStudent.displayWidth.value.toPx() * canvasScale / 2f)
@@ -56,6 +77,7 @@ fun GhostLatticeLayer(
                 shader.setFloatUniform("iStrength", edge.strength)
                 shader.setFloatUniform("iType", edge.type.value)
 
+                // Optimized drawing: only draw the bounding box of the connection line to reduce fragment shader overhead.
                 val minX = minOf(startX, endX) - 50; val minY = minOf(startY, endY) - 50
                 val maxX = maxOf(startX, endX) + 50; val maxY = maxOf(startY, endY) + 50
                 drawRect(brush = ShaderBrush(shader), topLeft = Offset(minX, minY), size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY))
