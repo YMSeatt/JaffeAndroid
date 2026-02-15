@@ -114,6 +114,7 @@ import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.GhostPortalLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
+import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
@@ -184,6 +185,7 @@ fun SeatingChartScreen(
     var isHudActive by remember { mutableStateOf(false) }
     var isChronosActive by remember { mutableStateOf(false) }
     var isHologramActive by remember { mutableStateOf(false) }
+    var isVectorActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
@@ -456,6 +458,8 @@ fun SeatingChartScreen(
                 onToggleHologram = { isHologramActive = !isHologramActive },
                 isPhantasmActive = isPhantasmActive,
                 onTogglePhantasm = { isPhantasmActive = !isPhantasmActive },
+                isVectorActive = isVectorActive,
+                onToggleVector = { isVectorActive = !isVectorActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -604,6 +608,15 @@ fun SeatingChartScreen(
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
                 GhostLatticeLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED && isVectorActive) {
+                GhostVectorLayer(
                     students = students,
                     behaviorLogs = allBehaviorEvents,
                     canvasScale = scale,
@@ -1159,6 +1172,8 @@ fun SeatingChartTopAppBar(
     onToggleHologram: () -> Unit,
     isPhantasmActive: Boolean,
     onTogglePhantasm: () -> Unit,
+    isVectorActive: Boolean,
+    onToggleVector: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1331,6 +1346,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isVectorActive) "Disable Social Vector 👻" else "Enable Social Vector 👻") },
+                            onClick = {
+                                onToggleVector()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                         )
                     }
                     DropdownMenuItem(
