@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -153,6 +154,72 @@ fun DataSettingsTab(
 
     var showArchiveDialog by remember { mutableStateOf(false) }
     var showArchiveViewerDialog by remember { mutableStateOf(false) }
+    var showResetBehaviorsConfirm by remember { mutableStateOf(false) }
+    var showResetHomeworkTypesConfirm by remember { mutableStateOf(false) }
+    var showResetHomeworkStatusesConfirm by remember { mutableStateOf(false) }
+
+    if (showResetBehaviorsConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetBehaviorsConfirm = false },
+            title = { Text("Reset Behavior Types") },
+            text = { Text("Are you sure you want to reset all behavior types to application defaults? This will delete all custom behavior types.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetBehaviorsToDefaults()
+                    showResetBehaviorsConfirm = false
+                }) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetBehaviorsConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetHomeworkTypesConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetHomeworkTypesConfirm = false },
+            title = { Text("Reset Homework Assignment Types") },
+            text = { Text("Are you sure you want to reset all homework assignment types to application defaults? This will delete all custom assignment types.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetHomeworkAssignmentTypesToDefaults()
+                    showResetHomeworkTypesConfirm = false
+                }) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetHomeworkTypesConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetHomeworkStatusesConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetHomeworkStatusesConfirm = false },
+            title = { Text("Reset Homework Statuses") },
+            text = { Text("Are you sure you want to reset all homework statuses to application defaults? This will delete all custom statuses.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetHomeworkStatusesToDefaults()
+                    showResetHomeworkStatusesConfirm = false
+                }) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetHomeworkStatusesConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showArchiveDialog) {
         ArchiveConfirmationDialog(
@@ -216,7 +283,16 @@ fun DataSettingsTab(
         }
 
         item {
-            Text("Manage Behavior Types", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Manage Behavior Types", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showResetBehaviorsConfirm = true }) {
+                    Text("Reset to Defaults")
+                }
+            }
         }
         items(behaviorTypesList) { type ->
             Row(
@@ -258,7 +334,16 @@ fun DataSettingsTab(
         }
 
         item {
-            Text("Manage Homework Assignment Names/Types", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Manage Homework Assignment Names/Types", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showResetHomeworkTypesConfirm = true }) {
+                    Text("Reset to Defaults")
+                }
+            }
         }
         items(homeworkAssignmentTypesList) { type ->
             Row(
@@ -300,7 +385,16 @@ fun DataSettingsTab(
         }
 
         item {
-            Text("Manage Homework Statuses", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Manage Homework Statuses", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showResetHomeworkStatusesConfirm = true }) {
+                    Text("Reset to Defaults")
+                }
+            }
         }
         items(homeworkStatusesList) { status ->
             Row(

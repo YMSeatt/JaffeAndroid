@@ -10,6 +10,7 @@ import io.mockk.MockKAnnotations
 import io.mockk.impl.annotations.MockK
 import io.mockk.every
 import io.mockk.coEvery
+import io.mockk.coVerify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -231,5 +232,35 @@ class SettingsViewModelTest {
         viewModel.updateQuizInitialsMap(testMap)
         testDispatcher.scheduler.advanceUntilIdle()
         assert(viewModel.quizInitialsMap.value == testMap)
+    }
+
+    @Test
+    fun `resetBehaviorsToDefaults should call replaceAll on DAO`() = runTest {
+        // When
+        viewModel.resetBehaviorsToDefaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        coVerify { customBehaviorDao.replaceAll(any()) }
+    }
+
+    @Test
+    fun `resetHomeworkAssignmentTypesToDefaults should call replaceAll on DAO`() = runTest {
+        // When
+        viewModel.resetHomeworkAssignmentTypesToDefaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        coVerify { customHomeworkTypeDao.replaceAll(any()) }
+    }
+
+    @Test
+    fun `resetHomeworkStatusesToDefaults should call replaceAll on DAO`() = runTest {
+        // When
+        viewModel.resetHomeworkStatusesToDefaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        coVerify { customHomeworkStatusDao.replaceAll(any()) }
     }
 }

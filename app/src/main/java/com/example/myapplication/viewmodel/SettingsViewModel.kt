@@ -288,6 +288,14 @@ class SettingsViewModel @Inject constructor(
         customBehaviorDao.delete(customBehavior)
     }
 
+    fun resetBehaviorsToDefaults() = viewModelScope.launch {
+        val defaults = listOf(
+            "Talking", "Off Task", "Out of Seat", "Uneasy", "Placecheck",
+            "Great Participation", "Called On", "Complimented", "Fighting", "Other"
+        ).map { CustomBehavior(name = it) }
+        customBehaviorDao.replaceAll(defaults)
+    }
+
     val customHomeworkTypes: LiveData<List<CustomHomeworkType>> = customHomeworkTypeDao.getAllCustomHomeworkTypes()
     fun addCustomHomeworkType(name: String) = viewModelScope.launch {
         customHomeworkTypeDao.insert(CustomHomeworkType(name = name))
@@ -299,6 +307,13 @@ class SettingsViewModel @Inject constructor(
         customHomeworkTypeDao.delete(customHomeworkType)
     }
 
+    fun resetHomeworkAssignmentTypesToDefaults() = viewModelScope.launch {
+        val defaults = listOf(
+            "Reading Assignment", "Worksheet", "Math Problems", "Project Work", "Study for Test"
+        ).map { CustomHomeworkType(name = it) }
+        customHomeworkTypeDao.replaceAll(defaults)
+    }
+
     val customHomeworkStatuses: LiveData<List<CustomHomeworkStatus>> = customHomeworkStatusDao.getAllCustomHomeworkStatuses()
     fun addCustomHomeworkStatus(name: String) = viewModelScope.launch {
         customHomeworkStatusDao.insert(CustomHomeworkStatus(name = name))
@@ -308,6 +323,13 @@ class SettingsViewModel @Inject constructor(
     }
     fun deleteCustomHomeworkStatus(customHomeworkStatus: CustomHomeworkStatus) = viewModelScope.launch {
         customHomeworkStatusDao.delete(customHomeworkStatus)
+    }
+
+    fun resetHomeworkStatusesToDefaults() = viewModelScope.launch {
+        val defaults = listOf(
+            "Done", "Not Done", "Partially Done", "Signed", "Returned", "Late", "Excellent Work"
+        ).map { CustomHomeworkStatus(name = it) }
+        customHomeworkStatusDao.replaceAll(defaults)
     }
 
     val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
