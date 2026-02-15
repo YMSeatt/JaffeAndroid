@@ -214,15 +214,6 @@ fun DataSettingsTab(
             }
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
         }
-        item {
-            val emailPassword by settingsViewModel.emailPassword.collectAsState()
-            OutlinedTextField(
-                value = emailPassword,
-                onValueChange = { settingsViewModel.updateEmailPassword(it) },
-                label = { Text("Email Password") },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
 
         item {
             Text("Manage Behavior Types", style = MaterialTheme.typography.titleMedium)
