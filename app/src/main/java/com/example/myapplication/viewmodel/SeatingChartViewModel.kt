@@ -295,6 +295,29 @@ class SeatingChartViewModel @Inject constructor(
     /** Caches the parsed initials mapping for quizzes. */
     private var quizInitialsMapCache: Map<String, String> = emptyMap()
 
+    private data class StudentCacheKey(
+        val studentDataHash: Int,
+        val behaviorLogsIdentity: Int,
+        val homeworkLogsIdentity: Int,
+        val quizLogsIdentity: Int,
+        val rulesIdentity: Int,
+        val prefsHash: Int,
+        val sessionActive: Boolean,
+        val currentMode: String,
+        val timeKey: String,
+        val lastCleared: Long
+    )
+
+    private data class StudentDerivedData(
+        val behaviorDescription: List<String>,
+        val homeworkDescription: List<String>,
+        val quizDescription: List<String>,
+        val sessionLogs: List<String>,
+        val conditionalFormattingResult: List<Pair<String?, String?>>
+    )
+
+    private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
+
     /**
      * A persistent cache of [StudentUiItem] instances.
      * Reusing these instances is CRITICAL for Compose performance, as it allows
@@ -505,98 +528,139 @@ class SeatingChartViewModel @Inject constructor(
 
                 val defaultStyle = prefs.defaultStudentStyle
 
-                // Clean up UI item cache for deleted students.
-                val currentStudentIds = students.map { it.id.toInt() }.toSet()
-                studentUiItemCache.keys.retainAll { it in currentStudentIds }
+                // Clean up caches for deleted students.
+                val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
+                studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
+                studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
 
                 // --- Stage 2: Per-Student Transformation ---
                 val studentsWithBehavior = students.map { student ->
-                    // 2a. Log Filtering:
-                    // Only show logs that haven't been "cleared" by the user and haven't exceeded
-                    // the display timeout defined in preferences.
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
-                    val recentEvents = if (student.showLogs) {
-                        behaviorLogsByStudent[student.id]?.filter {
-                            it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
-                        }?.take(behaviorLimit) ?: emptyList()
+                    val studentDataHash = getStudentDataHash(student)
+                    val behaviorList = behaviorLogsByStudent[student.id]
+                    val homeworkList = homeworkLogsByStudent[student.id]
+                    val quizList = quizLogsByStudent[student.id]
+                    val currentModeValue = currentMode.value ?: "behavior"
+
+                    val cacheKey = StudentCacheKey(
+                        studentDataHash = studentDataHash,
+                        behaviorLogsIdentity = System.identityHashCode(behaviorList),
+                        homeworkLogsIdentity = System.identityHashCode(homeworkList),
+                        quizLogsIdentity = System.identityHashCode(quizList),
+                        rulesIdentity = System.identityHashCode(decodedRules),
+                        prefsHash = prefs.hashCode(),
+                        sessionActive = sessionActive,
+                        currentMode = currentModeValue,
+                        timeKey = currentTimeString,
+                        lastCleared = lastCleared
+                    )
+
+                    val cached = studentDerivedDataCache[student.id]
+                    val derivedData = if (cached != null && cached.first == cacheKey) {
+                        cached.second
                     } else {
-                        emptyList()
-                    }
-                    val recentHomework = if (student.showLogs) {
-                        homeworkLogsByStudent[student.id]?.filter {
-                            it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
-                        }?.take(homeworkLimit) ?: emptyList()
-                    } else {
-                        emptyList()
-                    }
-                    val recentQuizzes = if (student.showLogs) {
-                        quizLogsByStudent[student.id]?.filter {
-                            it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
-                        }?.take(quizLimit) ?: emptyList()
-                    } else {
-                        emptyList()
+                        // 2a. Log Filtering:
+                        // Only show logs that haven't been "cleared" by the user and haven't exceeded
+                        // the display timeout defined in preferences.
+                        val recentEvents = if (student.showLogs) {
+                            behaviorList?.filter {
+                                it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
+                            }?.take(behaviorLimit) ?: emptyList()
+                        } else {
+                            emptyList()
+                        }
+                        val recentHomework = if (student.showLogs) {
+                            homeworkList?.filter {
+                                it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
+                            }?.take(homeworkLimit) ?: emptyList()
+                        } else {
+                            emptyList()
+                        }
+                        val recentQuizzes = if (student.showLogs) {
+                            quizList?.filter {
+                                it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
+                            }?.take(quizLimit) ?: emptyList()
+                        } else {
+                            emptyList()
+                        }
+
+                        // 2b. Description Generation:
+                        // Convert raw log entries into display strings, optionally using initials.
+                        val behaviorDescription = recentEvents.map {
+                            val description = if (useInitialsForBehavior) {
+                                behaviorInitialsMap[it.type] ?: it.type.first().toString()
+                            } else {
+                                it.type
+                            }
+                            if (it.comment.isNullOrBlank()) {
+                                description
+                            } else {
+                                "$description: ${it.comment}"
+                            }
+                        }
+
+                        val homeworkDescription = recentHomework.map {
+                            val status = if (it.isComplete) "Done" else "Not Done"
+                            if (useInitialsForHomework) {
+                                (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
+                            } else {
+                                "${it.assignmentName}: $status"
+                            }
+                        }
+                        val quizDescription = recentQuizzes.map {
+                            if (useInitialsForQuiz) {
+                                quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
+                            } else {
+                                it.quizName
+                            }
+                        }
+
+                        val sessionLogs = if (sessionActive) {
+                            val quizLogsSess = sessionQuizLogsGrouped[student.id]?.map { "Quiz: ${it.comment}" } ?: emptyList()
+                            val homeworkLogsSess = sessionHomeworkLogsGrouped[student.id]?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
+                            (quizLogsSess + homeworkLogsSess).take(maxLogsToDisplay)
+                        } else {
+                            emptyList()
+                        }
+
+                        // 2c. Conditional Formatting:
+                        // Evaluate the prioritized rule set against the student's current state and history.
+                        val studentDetails = studentDetailsMap[student.id]
+                        val conditionalFormattingResult = if (studentDetails != null) {
+                            ConditionalFormattingEngine.applyConditionalFormattingDecoded(
+                                student = studentDetails,
+                                rules = decodedRules,
+                                behaviorLog = behaviorList ?: emptyList(),
+                                quizLog = quizList ?: emptyList(),
+                                homeworkLog = homeworkList ?: emptyList(),
+                                isLiveQuizActive = sessionActive,
+                                liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                                isLiveHomeworkActive = sessionActive,
+                                liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                                currentMode = currentModeValue,
+                                currentTimeMillis = currentTime,
+                                timeContext = timeContext
+                            )
+                        } else {
+                            emptyList()
+                        }
+
+                        StudentDerivedData(
+                            behaviorDescription,
+                            homeworkDescription,
+                            quizDescription,
+                            sessionLogs,
+                            conditionalFormattingResult
+                        ).also {
+                            studentDerivedDataCache[student.id] = cacheKey to it
+                        }
                     }
 
-                    // 2b. Description Generation:
-                    // Convert raw log entries into display strings, optionally using initials.
-                    val behaviorDescription = recentEvents.map {
-                        val description = if (useInitialsForBehavior) {
-                            behaviorInitialsMap[it.type] ?: it.type.first().toString()
-                        } else {
-                            it.type
-                        }
-                        if (it.comment.isNullOrBlank()) {
-                            description
-                        } else {
-                            "$description: ${it.comment}"
-                        }
-                    }
-
-                    val homeworkDescription = recentHomework.map {
-                        val status = if (it.isComplete) "Done" else "Not Done"
-                        if (useInitialsForHomework) {
-                            (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
-                        } else {
-                            "${it.assignmentName}: $status"
-                        }
-                    }
-                    val quizDescription = recentQuizzes.map {
-                        if (useInitialsForQuiz) {
-                            quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
-                        } else {
-                            it.quizName
-                        }
-                    }
-
-                    val sessionLogs = if (sessionActive) {
-                        val quizLogsSess = sessionQuizLogsGrouped[student.id]?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                        val homeworkLogsSess = sessionHomeworkLogsGrouped[student.id]?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
-                        (quizLogsSess + homeworkLogsSess).take(maxLogsToDisplay)
-                    } else {
-                        emptyList()
-                    }
-
-                    // 2c. Conditional Formatting:
-                    // Evaluate the prioritized rule set against the student's current state and history.
-                    val studentDetails = studentDetailsMap[student.id]
-                    val conditionalFormattingResult = if (studentDetails != null) {
-                        ConditionalFormattingEngine.applyConditionalFormattingDecoded(
-                            student = studentDetails,
-                            rules = decodedRules,
-                            behaviorLog = behaviorLogsByStudent[student.id] ?: emptyList(),
-                            quizLog = quizLogsByStudent[student.id] ?: emptyList(),
-                            homeworkLog = homeworkLogsByStudent[student.id] ?: emptyList(),
-                            isLiveQuizActive = sessionActive,
-                            liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                            isLiveHomeworkActive = sessionActive,
-                            liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                            currentMode = currentMode.value ?: "behavior",
-                            currentTimeMillis = currentTime,
-                            timeContext = timeContext
-                        )
-                    } else {
-                        emptyList()
-                    }
+                    val behaviorDescription = derivedData.behaviorDescription
+                    val homeworkDescription = derivedData.homeworkDescription
+                    val quizDescription = derivedData.quizDescription
+                    val sessionLogs = derivedData.sessionLogs
+                    val conditionalFormattingResult = derivedData.conditionalFormattingResult
 
                     // 2d. Optimistic Reconciliation:
                     // If the student is currently being dragged, use the local "pending" position
@@ -1753,5 +1817,33 @@ class SeatingChartViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Computes a stable hash code for a [Student] entity, excluding its volatile positioning fields.
+     * This is used to detect "real" data changes for caching purposes.
+     */
+    private fun getStudentDataHash(student: Student): Int {
+        var result = student.id.hashCode()
+        result = 31 * result + student.firstName.hashCode()
+        result = 31 * result + student.lastName.hashCode()
+        result = 31 * result + (student.nickname?.hashCode() ?: 0)
+        result = 31 * result + student.gender.hashCode()
+        result = 31 * result + (student.groupId?.hashCode() ?: 0)
+        result = 31 * result + (student.initials?.hashCode() ?: 0)
+        result = 31 * result + (student.customWidth ?: 0)
+        result = 31 * result + (student.customHeight ?: 0)
+        result = 31 * result + (student.customBackgroundColor?.hashCode() ?: 0)
+        result = 31 * result + (student.customOutlineColor?.hashCode() ?: 0)
+        result = 31 * result + (student.customTextColor?.hashCode() ?: 0)
+        result = 31 * result + (student.customOutlineThickness ?: 0)
+        result = 31 * result + (student.customCornerRadius ?: 0)
+        result = 31 * result + (student.customPadding ?: 0)
+        result = 31 * result + (student.customFontFamily?.hashCode() ?: 0)
+        result = 31 * result + (student.customFontSize ?: 0)
+        result = 31 * result + (student.customFontColor?.hashCode() ?: 0)
+        result = 31 * result + (student.temporaryTask?.hashCode() ?: 0)
+        result = 31 * result + student.showLogs.hashCode()
+        return result
     }
 }
