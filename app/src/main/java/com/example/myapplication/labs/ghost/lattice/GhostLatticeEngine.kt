@@ -5,7 +5,29 @@ import com.example.myapplication.data.BehaviorEvent
 import kotlin.math.sqrt
 import kotlin.random.Random
 
+/**
+ * GhostLatticeEngine: The social dynamics analysis core of the Ghost Lab.
+ *
+ * This engine is responsible for inferring student relationships by analyzing spatial
+ * proximity and behavioral log history. It generates a "Social Lattice"—a graph of
+ * connections that represent classroom dynamics such as collaboration, friction,
+ * or neutral social gravity.
+ *
+ * The lattice is used by the [GhostLatticeLayer] to provide a high-fidelity visual
+ * representation of the classroom's social fabric.
+ */
 class GhostLatticeEngine {
+
+    /**
+     * Represents a single connection between two students in the social lattice.
+     *
+     * @property fromId The database ID of the source student.
+     * @property toId The database ID of the target student.
+     * @property strength The relative intensity of the relationship (0.0 to 1.0),
+     *   calculated based on proximity and log frequency.
+     * @property type The classification of the relationship ([ConnectionType]).
+     * @property color The visual color assigned to the connection (e.g., Green for collaboration).
+     */
     data class Edge(
         val fromId: Long,
         val toId: Long,
@@ -13,22 +35,59 @@ class GhostLatticeEngine {
         val type: ConnectionType,
         val color: Color
     )
-    enum class ConnectionType(val value: Float) { COLLABORATION(0.0f), FRICTION(1.0f), NEUTRAL(2.0f) }
+
+    /**
+     * Classifies the nature of a social connection.
+     * The numeric [value] is passed as a uniform to the AGSL shader to drive visual effects.
+     */
+    enum class ConnectionType(val value: Float) {
+        /** Represents positive synergy and frequent collaborative interaction. */
+        COLLABORATION(0.0f),
+        /** Represents potential tension or historical negative interactions. */
+        FRICTION(1.0f),
+        /** Represents a standard, proximity-based social connection. */
+        NEUTRAL(2.0f)
+    }
+
+    /**
+     * A simplified spatial representation of a student used for lattice calculations.
+     */
     data class LatticeNode(val id: Long, val x: Float, val y: Float)
 
+    /**
+     * Computes the social lattice for a set of student nodes and behavior logs.
+     *
+     * This method employs a proximity-based heuristic to identify potential connections.
+     * Relationships are then categorized using a mock logic based on random seeding (for PoC)
+     * and historical log density.
+     *
+     * @param nodes The list of spatial student representations.
+     * @param events The historical behavior logs used to weight the relationships.
+     * @return A list of inferred [Edge] connections, capped at 50 for visual performance.
+     */
     fun computeLattice(nodes: List<LatticeNode>, events: List<BehaviorEvent>): List<Edge> {
         val edges = mutableListOf<Edge>()
         if (nodes.size < 2) return edges
-        val random = Random(42)
+        val random = Random(42) // Deterministic seeding for consistent visual results
         nodes.forEachIndexed { i, nodeA ->
             nodes.forEachIndexed { j, nodeB ->
                 if (i < j) {
                     val dist = calculateDistance(nodeA, nodeB)
+                    // Only students within 800 logical units are considered for lattice connections
                     if (dist < 800) {
                         val isPositive = random.nextFloat() > 0.7
                         val isNegative = !isPositive && random.nextFloat() > 0.8
-                        val type = when { isPositive -> ConnectionType.COLLABORATION; isNegative -> ConnectionType.FRICTION; else -> ConnectionType.NEUTRAL }
-                        val color = when (type) { ConnectionType.COLLABORATION -> Color(0xFF00FFCC); ConnectionType.FRICTION -> Color(0xFFFF3366); else -> Color(0xFF6699FF) }
+                        val type = when {
+                            isPositive -> ConnectionType.COLLABORATION
+                            isNegative -> ConnectionType.FRICTION
+                            else -> ConnectionType.NEUTRAL
+                        }
+                        val color = when (type) {
+                            ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
+                            ConnectionType.FRICTION -> Color(0xFFFF3366)      // Pulsing Red
+                            else -> Color(0xFF6699FF)                         // Deep Blue
+                        }
+                        // Strength decays as distance increases
                         val strength = (1.0f - (dist / 1200f)).coerceIn(0.1f, 1.0f)
                         edges.add(Edge(nodeA.id, nodeB.id, strength, type, color))
                     }
@@ -37,6 +96,10 @@ class GhostLatticeEngine {
         }
         return edges.take(50)
     }
+
+    /**
+     * Calculates the Euclidean distance between two lattice nodes.
+     */
     private fun calculateDistance(a: LatticeNode, b: LatticeNode): Float {
         val dx = (a.x - b.x); val dy = (a.y - b.y)
         return sqrt(dx * dx + dy * dy)

@@ -2,7 +2,29 @@ package com.example.myapplication.labs.ghost.lattice
 
 import org.intellij.lang.annotations.Language
 
+/**
+ * GhostLatticeShader: Contains the AGSL shader source for rendering the social lattice.
+ */
 object GhostLatticeShader {
+
+    /**
+     * NEURAL_LATTICE: A high-performance line shader designed to visualize student connections.
+     *
+     * **Visual Characteristics:**
+     * - **Glow**: Implements a distance-based glow effect using an inverse-square law fallback.
+     * - **Pulsing**: Features a moving "energy pulse" that travels along the line based on `iTime`.
+     * - **Interference**: If `iType` indicates FRICTION (1.0), it applies a high-frequency sine
+     *   wave interference to the alpha channel to simulate instability.
+     *
+     * **Uniforms:**
+     * - `iResolution`: The dimensions of the drawing area.
+     * - `iTime`: Accumulated time for animations.
+     * - `iStartPos`: Pixel coordinates for the connection start.
+     * - `iEndPos`: Pixel coordinates for the connection end.
+     * - `iColor`: Normalized RGB color for the connection.
+     * - `iStrength`: Intensity multiplier (0.0 to 1.0) derived from student proximity.
+     * - `iType`: Connection classification (0=Collaboration, 1=Friction, 2=Neutral).
+     */
     @Language("AGSL")
     const val NEURAL_LATTICE = """
         uniform float2 iResolution;
