@@ -33,4 +33,22 @@ Teachers often "feel" the social dynamics of a room but can't see them. "Ghost L
 *What if the lattice could predict 'social contagion'—where a negative behavior from one node travels through the edges to affect others?*
 
 ---
+
+## 🛰️ Experiment: Ghost Vector (Social Gravity Visualization)
+**Date:** 2026-08-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, social dynamics aren't just lines; they are vectors of influence. "Ghost Vector" translates the abstract social lattice into a concrete mathematical model of "Social Gravity." It helps teachers see the "pull" of collaborative groups and the "push" of social friction.
+
+### 🛠️ The Tech
+- **Vector Summation Engine**: Implemented `GhostVectorEngine` to calculate net social forces acting on students.
+- **AGSL Needle Shaders**: Created `GhostVectorShader` to render directional indicators that scale with force magnitude.
+- **Python Data Bridge**: `ghost_vector_analysis.py` provides a path for server-side or desktop-based deep analysis of classroom cohesion.
+
+### 🔦 The Discovery
+- **Emergent Hotspots**: By summing forces, we discovered that students positioned between two "Friction" clusters exhibit high vector magnitude and rapid color shifts (Cyan to Magenta), making them easy to identify as "at-risk" nodes even without looking at raw logs.
+- **Dynamic Feedback**: Real-time vector updates during student movement provide immediate feedback on how a seating change might alter the "Social Gravity" of the surrounding nodes.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*

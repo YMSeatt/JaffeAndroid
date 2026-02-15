@@ -12,4 +12,5 @@ object GhostConfig {
     const val PHANTASM_MODE_ENABLED = true
     const val PORTAL_MODE_ENABLED = true
     const val LATTICE_MODE_ENABLED = true
+    const val VECTOR_MODE_ENABLED = true
 }

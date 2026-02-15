@@ -79,6 +79,13 @@ A social dynamics visualizer that maps student relationships as a glowing **Neur
 - **Neural Shaders**: Renders connections using glowing AGSL line shaders that pulse with "social energy."
 - **Interactive Dynamics**: Connections dynamically stretch and pulse as students are moved on the chart.
 
+### 14. Ghost Vector (`vector/GhostVectorLayer.kt`)
+A physics-based visualization of **Social Gravity**.
+- **Net Force Calculation**: Sums the attraction (Collaboration) and repulsion (Friction) forces acting on each student to determine their net "Social Vector."
+- **Directional Needles**: Renders glowing AGSL-powered needles that point in the direction of the student's social momentum.
+- **Tension Detection**: Color shifts from Cyan to Magenta for students under high social tension or conflict.
+- **Python Analysis**: Integrated with `Python/ghost_vector_analysis.py` for calculating classroom-wide cohesion metrics.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
