@@ -89,9 +89,13 @@ fun Student.toStudentUiItem(
 /**
  * Updates an existing [StudentUiItem] with fresh data from a [Student] entity.
  *
- * This method uses [updateIfChanged] to perform differential updates on the [MutableState] fields.
- * This ensures that Compose only recomposes the specific parts of the UI that have actually
- * changed, maximizing performance during high-frequency updates.
+ * This method is the "Sync" stage of the performance pipeline. It uses [updateIfChanged]
+ * to perform differential updates on the [MutableState] fields.
+ *
+ * **Performance Note:** By updating the *existing* fields of a cached item instead of
+ * creating a new [StudentUiItem] instance, we maintain object identity across the
+ * seating chart. This allows Jetpack Compose to use its internal slot table optimizations
+ * to only recompose the specific UI nodes that depend on the modified fields.
  */
 fun Student.updateStudentUiItem(
     item: StudentUiItem,
@@ -149,7 +153,11 @@ fun Student.updateStudentUiItem(
 
 /**
  * Helper to update a [MutableState] only if the new value differs from the current one.
- * This prevents unnecessary recomposition triggers in Jetpack Compose.
+ *
+ * This is a critical optimization for the Fluid Interaction model. If the value hasn't
+ * changed (e.g., the student's name remains the same), setting the `state.value` would
+ * still trigger a potential recomposition cycle in Compose. This check prevents that
+ * overhead.
  */
 private fun <T> updateIfChanged(state: MutableState<T>, newValue: T) {
     if (state.value != newValue) {

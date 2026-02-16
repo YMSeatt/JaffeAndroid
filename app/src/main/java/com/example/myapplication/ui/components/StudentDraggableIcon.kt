@@ -65,6 +65,25 @@ import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import kotlin.math.roundToInt
 
+/**
+ * A draggable and interactive UI component representing a student on the seating chart.
+ *
+ * This component implements a high-performance "Fluid Interaction" model:
+ * 1. **Optimistic UI Updates**: During a drag gesture, it directly updates the [MutableState]
+ *    properties (`xPosition`, `yPosition`) of the provided [StudentUiItem]. This bypasses
+ *    the standard unidirectional data flow temporarily to ensure 60fps responsiveness.
+ * 2. **Gesture Coordination**: Drag movements are scaled by [canvasScale] and reconciled
+ *    with the [SeatingChartViewModel] via `updateStudentPosition` only when the gesture ends.
+ * 3. **Fine-grained Recomposition**: Because it uses [MutableState] for individual properties,
+ *    Compose only recomposes the specific parts of the icon (e.g., position or background)
+ *    that change, rather than the entire icon or the parent canvas.
+ *
+ * @param studentUiItem The UI-optimized state object for the student.
+ * @param viewModel The ViewModel for database synchronization.
+ * @param showBehavior Whether to display the recent behavior/quiz logs.
+ * @param canvasScale The current zoom level of the parent canvas, used to normalize drag amounts.
+ * @param canvasOffset The current pan offset of the parent canvas.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StudentDraggableIcon(
