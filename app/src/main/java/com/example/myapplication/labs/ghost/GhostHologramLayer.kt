@@ -71,11 +71,14 @@ fun GhostHologramLayer(
                 cameraDistance = 12f * density
             }
             .drawWithCache {
+                val shader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    RuntimeShader(GhostHologramShader.HOLOGRAM_GLASS)
+                } else null
+
                 onDrawWithContent {
                     drawContent()
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val shader = RuntimeShader(GhostHologramShader.HOLOGRAM_GLASS)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
                         shader.setFloatUniform("iResolution", size.width, size.height)
                         shader.setFloatUniform("iTime", time)
                         shader.setFloatUniform("iTilt", animatedRoll, animatedPitch)

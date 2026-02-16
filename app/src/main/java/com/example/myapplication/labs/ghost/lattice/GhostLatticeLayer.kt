@@ -57,10 +57,14 @@ fun GhostLatticeLayer(
         engine.computeLattice(nodes, behaviorLogs)
     }
 
+    val shader = remember { RuntimeShader(GhostLatticeShader.NEURAL_LATTICE) }
+    val brush = remember(shader) { ShaderBrush(shader) }
+    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         edges.forEach { edge ->
-            val fromStudent = students.find { it.id.toLong() == edge.fromId }
-            val toStudent = students.find { it.id.toLong() == edge.toId }
+            val fromStudent = studentMap[edge.fromId]
+            val toStudent = studentMap[edge.toId]
             if (fromStudent != null && toStudent != null) {
                 // Calculate pixel-perfect centers for connection endpoints, accounting for scale and offset.
                 val startX = (fromStudent.xPosition.value * canvasScale) + canvasOffset.x + (fromStudent.displayWidth.value.toPx() * canvasScale / 2f)
@@ -68,7 +72,6 @@ fun GhostLatticeLayer(
                 val endX = (toStudent.xPosition.value * canvasScale) + canvasOffset.x + (toStudent.displayWidth.value.toPx() * canvasScale / 2f)
                 val endY = (toStudent.yPosition.value * canvasScale) + canvasOffset.y + (toStudent.displayHeight.value.toPx() * canvasScale / 2f)
 
-                val shader = RuntimeShader(GhostLatticeShader.NEURAL_LATTICE)
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iStartPos", startX, startY)
@@ -80,7 +83,7 @@ fun GhostLatticeLayer(
                 // Optimized drawing: only draw the bounding box of the connection line to reduce fragment shader overhead.
                 val minX = minOf(startX, endX) - 50; val minY = minOf(startY, endY) - 50
                 val maxX = maxOf(startX, endX) + 50; val maxY = maxOf(startY, endY) + 50
-                drawRect(brush = ShaderBrush(shader), topLeft = Offset(minX, minY), size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY))
+                drawRect(brush = brush, topLeft = Offset(minX, minY), size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY))
             }
         }
     }

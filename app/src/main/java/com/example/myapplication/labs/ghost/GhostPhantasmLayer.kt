@@ -79,9 +79,9 @@ fun GhostPhantasmLayer(
         }
     }
 
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val shader = RuntimeShader(GhostPhantasmShader.PHANTASM_BLOBS)
+    val shader = remember { RuntimeShader(GhostPhantasmShader.PHANTASM_BLOBS) }
 
+    Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iAgitation", agitationLevel)
