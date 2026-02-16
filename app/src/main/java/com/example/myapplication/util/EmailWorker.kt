@@ -55,98 +55,111 @@ class EmailWorker(
         val requestType = inputData.getString("request_type")
         when (requestType) {
             "daily_report" -> {
-                val students = studentDao.getAllStudentsNonLiveData()
-                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-                val quizLogs = quizLogDao.getAllQuizLogsList()
-                val studentGroups = studentGroupDao.getAllStudentGroupsList()
-                val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-                val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
-                val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
-
-                val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: "Daily Report - ${dateFormat.format(Date())}"
-                val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: "Please find the daily report attached."
-                val options = inputData.getString("export_options")?.let {
-                    try {
-                        val decrypted = securityUtil.decryptSafe(it)
-                        Json.decodeFromString<ExportOptions>(decrypted)
-                    } catch (e: Exception) {
-                        ExportOptions()
-                    }
-                } ?: ExportOptions()
-
-                val finalOptions = options.relativeDateRange?.let { range ->
-                    val calendar = Calendar.getInstance()
-                    val endDate = calendar.timeInMillis
-                    when (range) {
-                        "Past 24 hours" -> calendar.add(Calendar.HOUR, -24)
-                        "Past 7 days" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
-                        "Past 30 days" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
-                        else -> null
-                    }?.let {
-                        options.copy(startDate = calendar.timeInMillis, endDate = endDate)
-                    }
-                } ?: options
-
                 val file = File(applicationContext.cacheDir, "daily_report.xlsx")
-                val uri = FileProvider.getUriForFile(
-                    applicationContext,
-                    "com.example.myapplication.fileprovider",
-                    file
-                )
+                try {
+                    val students = studentDao.getAllStudentsNonLiveData()
+                    val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+                    val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+                    val quizLogs = quizLogDao.getAllQuizLogsList()
+                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
-                exporter.export(
-                    uri = uri,
-                    options = finalOptions,
-                    students = students,
-                    behaviorEvents = behaviorEvents,
-                    homeworkLogs = homeworkLogs,
-                    quizLogs = quizLogs,
-                    studentGroups = studentGroups,
-                    quizMarkTypes = quizMarkTypes,
-                    customHomeworkTypes = customHomeworkTypes,
-                    customHomeworkStatuses = customHomeworkStatuses,
-                    encrypt = finalOptions.encrypt
-                )
+                    val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: "Daily Report - ${dateFormat.format(Date())}"
+                    val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: "Please find the daily report attached."
+                    val options = inputData.getString("export_options")?.let {
+                        try {
+                            val decrypted = securityUtil.decryptSafe(it)
+                            Json.decodeFromString<ExportOptions>(decrypted)
+                        } catch (e: Exception) {
+                            ExportOptions()
+                        }
+                    } ?: ExportOptions()
 
-                val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: from
-                if (to.isBlank()) {
-                    return@withContext Result.failure()
+                    val finalOptions = options.relativeDateRange?.let { range ->
+                        val calendar = Calendar.getInstance()
+                        val endDate = calendar.timeInMillis
+                        when (range) {
+                            "Past 24 hours" -> calendar.add(Calendar.HOUR, -24)
+                            "Past 7 days" -> calendar.add(Calendar.DAY_OF_YEAR, -7)
+                            "Past 30 days" -> calendar.add(Calendar.DAY_OF_YEAR, -30)
+                            else -> null
+                        }?.let {
+                            options.copy(startDate = calendar.timeInMillis, endDate = endDate)
+                        }
+                    } ?: options
+
+                    val uri = FileProvider.getUriForFile(
+                        applicationContext,
+                        "com.example.myapplication.fileprovider",
+                        file
+                    )
+
+                    exporter.export(
+                        uri = uri,
+                        options = finalOptions,
+                        students = students,
+                        behaviorEvents = behaviorEvents,
+                        homeworkLogs = homeworkLogs,
+                        quizLogs = quizLogs,
+                        studentGroups = studentGroups,
+                        quizMarkTypes = quizMarkTypes,
+                        customHomeworkTypes = customHomeworkTypes,
+                        customHomeworkStatuses = customHomeworkStatuses,
+                        encrypt = finalOptions.encrypt
+                    )
+
+                    val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: from
+                    if (to.isNotBlank()) {
+                        EmailUtil(applicationContext).sendEmail(
+                            from = from,
+                            password = password,
+                            to = to,
+                            subject = subject,
+                        body = body,
+                            attachmentPath = file.absolutePath,
+                            smtpSettings = smtpSettings
+                        )
+                    }
+                } finally {
+                    if (file.exists()) {
+                        file.delete()
+                    }
                 }
-
-                EmailUtil(applicationContext).sendEmail(
-                    from = from,
-                    password = password,
-                    to = to,
-                    subject = subject,
-                    body = "Please find the daily report attached.",
-                    attachmentPath = file.absolutePath,
-                    smtpSettings = smtpSettings
-                )
             }
             "send_email" -> {
-                val to = inputData.getString("to")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
-                val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
-                val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                 val attachmentPath = inputData.getString("attachment_path")?.let { securityUtil.decryptSafe(it) }
-                val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
-                    try {
-                        val decrypted = securityUtil.decryptSafe(it)
-                        Json.decodeFromString<SmtpSettings>(decrypted)
-                    } catch (e: Exception) {
-                        smtpSettings
-                    }
-                } ?: smtpSettings
+                try {
+                    val to = inputData.getString("to")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                    val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                    val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                    val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
+                        try {
+                            val decrypted = securityUtil.decryptSafe(it)
+                            Json.decodeFromString<SmtpSettings>(decrypted)
+                        } catch (e: Exception) {
+                            smtpSettings
+                        }
+                    } ?: smtpSettings
 
-                EmailUtil(applicationContext).sendEmail(
-                    from = from,
-                    password = password,
-                    to = to,
-                    subject = subject,
-                    body = body,
-                    attachmentPath = attachmentPath,
-                    smtpSettings = workerSmtpSettings
-                )
+                    EmailUtil(applicationContext).sendEmail(
+                        from = from,
+                        password = password,
+                        to = to,
+                        subject = subject,
+                        body = body,
+                        attachmentPath = attachmentPath,
+                        smtpSettings = workerSmtpSettings
+                    )
+                } finally {
+                    attachmentPath?.let { path ->
+                        val file = File(path)
+                        if (file.exists()) {
+                            file.delete()
+                        }
+                    }
+                }
             }
             "process_pending_emails" -> {
                 val emailRepository = EmailRepository(db.emailScheduleDao(), pendingEmailDao, securityUtil)
@@ -164,47 +177,53 @@ class EmailWorker(
                 }
             }
             "on_stop_export" -> {
-                val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
-                val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
-                val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
                 val file = File(applicationContext.cacheDir, "on_stop_export.xlsx")
-                val uri = FileProvider.getUriForFile(
-                    applicationContext,
-                    "com.example.myapplication.fileprovider",
-                    file
-                )
-                val students = studentDao.getAllStudentsNonLiveData()
-                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-                val quizLogs = quizLogDao.getAllQuizLogsList()
-                val studentGroups = studentGroupDao.getAllStudentGroupsList()
-                val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-                val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
-                val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+                try {
+                    val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                    val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                    val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
+                    val uri = FileProvider.getUriForFile(
+                        applicationContext,
+                        "com.example.myapplication.fileprovider",
+                        file
+                    )
+                    val students = studentDao.getAllStudentsNonLiveData()
+                    val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
+                    val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
+                    val quizLogs = quizLogDao.getAllQuizLogsList()
+                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
-                exporter.export(
-                    uri = uri,
-                    options = exportOptions,
-                    students = students,
-                    behaviorEvents = behaviorEvents,
-                    homeworkLogs = homeworkLogs,
-                    quizLogs = quizLogs,
-                    studentGroups = studentGroups,
-                    quizMarkTypes = quizMarkTypes,
-                    customHomeworkTypes = customHomeworkTypes,
-                    customHomeworkStatuses = customHomeworkStatuses,
-                    encrypt = exportOptions.encrypt
-                )
+                    exporter.export(
+                        uri = uri,
+                        options = exportOptions,
+                        students = students,
+                        behaviorEvents = behaviorEvents,
+                        homeworkLogs = homeworkLogs,
+                        quizLogs = quizLogs,
+                        studentGroups = studentGroups,
+                        quizMarkTypes = quizMarkTypes,
+                        customHomeworkTypes = customHomeworkTypes,
+                        customHomeworkStatuses = customHomeworkStatuses,
+                        encrypt = exportOptions.encrypt
+                    )
 
-                EmailUtil(applicationContext).sendEmail(
-                    from = from,
-                    password = password,
-                    to = to,
-                    subject = "Seating Chart Export",
-                    body = "Attached is your requested data export.",
-                    attachmentPath = file.absolutePath,
-                    smtpSettings = smtpSettings
-                )
+                    EmailUtil(applicationContext).sendEmail(
+                        from = from,
+                        password = password,
+                        to = to,
+                        subject = "Seating Chart Export",
+                        body = "Attached is your requested data export.",
+                        attachmentPath = file.absolutePath,
+                        smtpSettings = smtpSettings
+                    )
+                } finally {
+                    if (file.exists()) {
+                        file.delete()
+                    }
+                }
             }
             else -> return@withContext Result.failure()
         }

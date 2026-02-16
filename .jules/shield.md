@@ -60,3 +60,10 @@
 - **Fix:**
     - Updated `data_extraction_rules.xml` and `backup_rules.xml` to explicitly exclude both legacy and hardened key files from cloud backups and device transfers.
 - **Location:** `app/src/main/res/xml/data_extraction_rules.xml`, `app/src/main/res/xml/backup_rules.xml`
+
+## 🛡️ Privacy Hardening: Secure Cleanup of Exported Reports
+- **Vulnerability:** Temporary Excel files containing sensitive student PII (names, behavior logs, quiz scores) were left in the app's cache directory after being emailed, potentially allowing local data exposure.
+- **Fix:**
+    - Implemented `try-finally` blocks in `EmailWorker.kt` to ensure that any temporary report file created for emailing is deleted immediately after the email is sent or if the operation fails.
+    - Specifically targeted `daily_report.xlsx`, `on_stop_export.xlsx`, and general attachment paths passed from the UI.
+- **Location:** `app/src/main/java/com/example/myapplication/util/EmailWorker.kt`
