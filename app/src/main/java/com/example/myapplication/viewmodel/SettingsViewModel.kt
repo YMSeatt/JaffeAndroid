@@ -815,6 +815,69 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val liveQuizQuestionsGoal: StateFlow<Int> = preferencesRepository.liveQuizQuestionsGoalFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 5)
+
+    fun updateLiveQuizQuestionsGoal(goal: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateLiveQuizQuestionsGoal(goal)
+        }
+    }
+
+    val liveQuizInitialColor: StateFlow<String> = preferencesRepository.liveQuizInitialColorFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "#FFFF0000")
+
+    fun updateLiveQuizInitialColor(color: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLiveQuizInitialColor(color)
+        }
+    }
+
+    val liveQuizFinalColor: StateFlow<String> = preferencesRepository.liveQuizFinalColorFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "#FF00FF00")
+
+    fun updateLiveQuizFinalColor(color: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateLiveQuizFinalColor(color)
+        }
+    }
+
+    val quizLogFontColor: StateFlow<String> = preferencesRepository.quizLogFontColorFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "#FF006400")
+
+    fun updateQuizLogFontColor(color: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateQuizLogFontColor(color)
+        }
+    }
+
+    val homeworkLogFontColor: StateFlow<String> = preferencesRepository.homeworkLogFontColorFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, "#FF800080")
+
+    fun updateHomeworkLogFontColor(color: String) {
+        viewModelScope.launch {
+            preferencesRepository.updateHomeworkLogFontColor(color)
+        }
+    }
+
+    val quizLogFontBold: StateFlow<Boolean> = preferencesRepository.quizLogFontBoldFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
+
+    fun updateQuizLogFontBold(bold: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateQuizLogFontBold(bold)
+        }
+    }
+
+    val homeworkLogFontBold: StateFlow<Boolean> = preferencesRepository.homeworkLogFontBoldFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, true)
+
+    fun updateHomeworkLogFontBold(bold: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.updateHomeworkLogFontBold(bold)
+        }
+    }
+
     suspend fun importStudentsFromExcel(uri: Uri, studentRepository: com.example.myapplication.data.StudentRepository): Result<Int> {
         return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(
             uri, application, studentRepository, studentGroupDao

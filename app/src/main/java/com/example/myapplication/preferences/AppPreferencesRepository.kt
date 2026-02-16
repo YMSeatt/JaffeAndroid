@@ -62,7 +62,14 @@ data class UserPreferences(
     val gridSize: Int,
     val noAnimations: Boolean,
     val passwordAutoLockEnabled: Boolean,
-    val passwordAutoLockTimeoutMinutes: Int
+    val passwordAutoLockTimeoutMinutes: Int,
+    val liveQuizQuestionsGoal: Int,
+    val liveQuizInitialColor: String,
+    val liveQuizFinalColor: String,
+    val quizLogFontColor: String,
+    val homeworkLogFontColor: String,
+    val quizLogFontBold: Boolean,
+    val homeworkLogFontBold: Boolean
 )
 
 class AppPreferencesRepository @Inject constructor(
@@ -144,6 +151,91 @@ class AppPreferencesRepository @Inject constructor(
         val SMTP_SETTINGS = stringPreferencesKey("smtp_settings")
         val PASSWORD_AUTO_LOCK_ENABLED = booleanPreferencesKey("password_auto_lock_enabled")
         val PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES = intPreferencesKey("password_auto_lock_timeout_minutes")
+
+        val LIVE_QUIZ_QUESTIONS_GOAL = intPreferencesKey("live_quiz_questions_goal")
+        val LIVE_QUIZ_INITIAL_COLOR = stringPreferencesKey("live_quiz_initial_color")
+        val LIVE_QUIZ_FINAL_COLOR = stringPreferencesKey("live_quiz_final_color")
+        val QUIZ_LOG_FONT_COLOR = stringPreferencesKey("quiz_log_font_color")
+        val HOMEWORK_LOG_FONT_COLOR = stringPreferencesKey("homework_log_font_color")
+        val QUIZ_LOG_FONT_BOLD = booleanPreferencesKey("quiz_log_font_bold")
+        val HOMEWORK_LOG_FONT_BOLD = booleanPreferencesKey("homework_log_font_bold")
+    }
+
+    val liveQuizQuestionsGoalFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIVE_QUIZ_QUESTIONS_GOAL] ?: 5
+        }
+
+    suspend fun updateLiveQuizQuestionsGoal(goal: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LIVE_QUIZ_QUESTIONS_GOAL] = goal
+        }
+    }
+
+    val liveQuizInitialColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIVE_QUIZ_INITIAL_COLOR] ?: "#FFFF0000"
+        }
+
+    suspend fun updateLiveQuizInitialColor(color: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LIVE_QUIZ_INITIAL_COLOR] = color
+        }
+    }
+
+    val liveQuizFinalColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.LIVE_QUIZ_FINAL_COLOR] ?: "#FF00FF00"
+        }
+
+    suspend fun updateLiveQuizFinalColor(color: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.LIVE_QUIZ_FINAL_COLOR] = color
+        }
+    }
+
+    val quizLogFontColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.QUIZ_LOG_FONT_COLOR] ?: "#FF006400"
+        }
+
+    suspend fun updateQuizLogFontColor(color: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.QUIZ_LOG_FONT_COLOR] = color
+        }
+    }
+
+    val homeworkLogFontColorFlow: Flow<String> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.HOMEWORK_LOG_FONT_COLOR] ?: "#FF800080"
+        }
+
+    suspend fun updateHomeworkLogFontColor(color: String) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.HOMEWORK_LOG_FONT_COLOR] = color
+        }
+    }
+
+    val quizLogFontBoldFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.QUIZ_LOG_FONT_BOLD] ?: true
+        }
+
+    suspend fun updateQuizLogFontBold(bold: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.QUIZ_LOG_FONT_BOLD] = bold
+        }
+    }
+
+    val homeworkLogFontBoldFlow: Flow<Boolean> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.HOMEWORK_LOG_FONT_BOLD] ?: true
+        }
+
+    suspend fun updateHomeworkLogFontBold(bold: Boolean) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.HOMEWORK_LOG_FONT_BOLD] = bold
+        }
     }
 
     val passwordAutoLockEnabledFlow: Flow<Boolean> = context.dataStore.data
@@ -901,7 +993,14 @@ class AppPreferencesRepository @Inject constructor(
         gridSizeFlow,
         noAnimationsFlow,
         passwordAutoLockEnabledFlow,
-        passwordAutoLockTimeoutMinutesFlow
+        passwordAutoLockTimeoutMinutesFlow,
+        liveQuizQuestionsGoalFlow,
+        liveQuizInitialColorFlow,
+        liveQuizFinalColorFlow,
+        quizLogFontColorFlow,
+        homeworkLogFontColorFlow,
+        quizLogFontBoldFlow,
+        homeworkLogFontBoldFlow
     ) { args ->
         UserPreferences(
             recentBehaviorIncidentsLimit = args[0] as Int,
@@ -925,7 +1024,14 @@ class AppPreferencesRepository @Inject constructor(
             gridSize = args[18] as Int,
             noAnimations = args[19] as Boolean,
             passwordAutoLockEnabled = args[20] as Boolean,
-            passwordAutoLockTimeoutMinutes = args[21] as Int
+            passwordAutoLockTimeoutMinutes = args[21] as Int,
+            liveQuizQuestionsGoal = args[22] as Int,
+            liveQuizInitialColor = args[23] as String,
+            liveQuizFinalColor = args[24] as String,
+            quizLogFontColor = args[25] as String,
+            homeworkLogFontColor = args[26] as String,
+            quizLogFontBold = args[27] as Boolean,
+            homeworkLogFontBold = args[28] as Boolean
         )
     }
 }

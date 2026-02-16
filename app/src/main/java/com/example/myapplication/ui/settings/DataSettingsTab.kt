@@ -572,6 +572,80 @@ fun DataSettingsTab(
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }
+
+        item {
+            Text("Live Quiz & Log Styling", style = MaterialTheme.typography.titleMedium)
+        }
+
+        item {
+            val liveQuizGoal by settingsViewModel.liveQuizQuestionsGoal.collectAsState()
+            OutlinedTextField(
+                value = liveQuizGoal.toString(),
+                onValueChange = { if (it.all { char -> char.isDigit() }) settingsViewModel.updateLiveQuizQuestionsGoal(it.toIntOrNull() ?: 5) },
+                label = { Text("Live Quiz Progress Goal (Questions)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            val initialColor by settingsViewModel.liveQuizInitialColor.collectAsState()
+            OutlinedTextField(
+                value = initialColor,
+                onValueChange = { if (it.startsWith("#") && it.length <= 9) settingsViewModel.updateLiveQuizInitialColor(it) },
+                label = { Text("Live Quiz Progress Start Color (Hex, e.g. #FFFF0000)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            val finalColor by settingsViewModel.liveQuizFinalColor.collectAsState()
+            OutlinedTextField(
+                value = finalColor,
+                onValueChange = { if (it.startsWith("#") && it.length <= 9) settingsViewModel.updateLiveQuizFinalColor(it) },
+                label = { Text("Live Quiz Progress End Color (Hex, e.g. #FF00FF00)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            val quizColor by settingsViewModel.quizLogFontColor.collectAsState()
+            OutlinedTextField(
+                value = quizColor,
+                onValueChange = { if (it.startsWith("#") && it.length <= 9) settingsViewModel.updateQuizLogFontColor(it) },
+                label = { Text("Quiz Log Font Color (Hex)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            val quizBold by settingsViewModel.quizLogFontBold.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Bold Quiz Logs", modifier = Modifier.weight(1f))
+                Switch(checked = quizBold, onCheckedChange = { settingsViewModel.updateQuizLogFontBold(it) })
+            }
+        }
+
+        item {
+            val homeworkColor by settingsViewModel.homeworkLogFontColor.collectAsState()
+            OutlinedTextField(
+                value = homeworkColor,
+                onValueChange = { if (it.startsWith("#") && it.length <= 9) settingsViewModel.updateHomeworkLogFontColor(it) },
+                label = { Text("Homework Log Font Color (Hex)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        item {
+            val homeworkBold by settingsViewModel.homeworkLogFontBold.collectAsState()
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Bold Homework Logs", modifier = Modifier.weight(1f))
+                Switch(checked = homeworkBold, onCheckedChange = { settingsViewModel.updateHomeworkLogFontBold(it) })
+            }
+        }
+        item {
+            Spacer(Modifier.height(16.dp))
+        }
     }
 }
 
