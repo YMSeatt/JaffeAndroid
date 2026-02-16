@@ -253,7 +253,15 @@ class SeatingChartViewModel @Inject constructor(
     }
     /**
      * Stores optimistic student positions during drag operations.
-     * Prevents UI jitter by prioritizing local state over database-roundtrip updates.
+     *
+     * This cache is a critical part of the fluid interaction model. When a user drags
+     * a student icon, the UI updates its local state immediately. However, the database
+     * update is asynchronous. This cache ensures that if a global state update occurs
+     * *before* the database write finishes, the icon doesn't "snap back" to its old
+     * position.
+     *
+     * The reconciliation happens in [updateStudentsForDisplay], where student positions
+     * from the database are overwritten by these "in-flight" positions if they exist.
      */
     private val pendingStudentPositions = ConcurrentHashMap<Int, Pair<Float, Float>>()
 
@@ -406,21 +414,41 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     /**
-     * The core transformation engine for student UI data.
+     * The core transformation engine for student UI data, optimized for 60fps performance.
      *
      * This method performs a multi-stage process to convert raw [Student] database entities
      * into enriched [StudentUiItem]s. It runs on [Dispatchers.Default] to avoid blocking
      * the main thread during complex calculations.
      *
-     * Stages:
-     * 1. **Data Pre-processing**: Group logs by student ID and decode conditional rules once.
-     * 2. **Per-Student Transformation**:
-     *    - Filter logs by "last cleared" timestamps and configurable display timeouts.
-     *    - Generate human-readable descriptions (Behavior/Homework/Quiz).
-     *    - Evaluate prioritized Conditional Formatting rules.
-     *    - Reconcile optimistic drag positions ([pendingStudentPositions]).
-     * 3. **State Sync**: Update existing [StudentUiItem] instances in the cache to trigger
-     *    Compose recomposition, or create new ones if necessary.
+     * ### Pipeline Stages:
+     *
+     * #### Stage 1: Data Pre-processing (Memoized)
+     * Groups flat log lists by student ID and decodes conditional formatting rules.
+     * These operations are O(N) or O(N log N) but are performed only once per update cycle
+     * and are bypassed if the underlying data identities haven't changed.
+     *
+     * #### Stage 2: Per-Student Transformation (Memoized)
+     * For each student, this stage:
+     * - Filters logs based on "last cleared" timestamps and configurable display timeouts.
+     * - Generates human-readable descriptions (Behavior/Homework/Quiz), optionally using initials.
+     * - Evaluates the prioritized set of Conditional Formatting rules.
+     * - **Optimistic Reconciliation**: Reconciles positions with [pendingStudentPositions] to
+     *   ensure drag operations remain smooth.
+     *
+     * This entire stage is memoized using [studentDerivedDataCache] and a [StudentCacheKey].
+     * The cache key tracks student data hashes (excluding volatile positions) and log
+     * identities, ensuring that we only re-calculate descriptions or formatting when
+     * something "meaningful" has changed.
+     *
+     * #### Stage 3: State Sync & Identity Preservation
+     * Instead of creating new UI objects, the pipeline retrieves existing [StudentUiItem]s
+     * from [studentUiItemCache] and updates their internal [androidx.compose.runtime.MutableState]
+     * fields via [com.example.myapplication.ui.model.updateStudentUiItem].
+     *
+     * By preserving object identity, we allow Jetpack Compose to perform highly efficient
+     * "diff-and-patch" updates at the property level, minimizing recomposition scope.
+     *
+     * @param students The list of raw Student entities to transform.
      */
     private fun updateStudentsForDisplay(students: List<Student>) {
         val prefs = _userPreferences.value ?: return
@@ -792,19 +820,28 @@ class SeatingChartViewModel @Inject constructor(
      * Performs a non-linear history manipulation to "re-execute" or "undo" a specific
      * action from the middle of the history stack.
      *
-     * **Selective Undo Algorithm:**
-     * 1. Temporarily pops and undos all commands from the top of the [commandUndoStack]
-     *    down to (but not including) the target index. This reverts the application
-     *    state to exactly how it was after the target command was first executed.
-     * 2. Pops and undos the target command itself.
-     * 3. Re-executes the target command (this essentially toggles or refreshes its
-     *    effect in the current context).
-     * 4. Clears the [commandRedoStack] because the historical "future" is no longer
-     *    valid following this state mutation.
+     * Unlike a standard linear undo (which only affects the top of the stack), Selective Undo
+     * allows a user to "toggle" the effect of a historical action without losing their
+     * entire recent work. This is particularly useful for correcting a log entry made
+     * minutes ago without undoing subsequent layout changes.
      *
-     * Note: This effectively "re-branches" history. All actions that occurred AFTER
-     * the target index are permanently discarded from the future history to ensure
-     * state consistency.
+     * ### Selective Undo Algorithm:
+     *
+     * 1. **Rollback**: Temporarily pops and undos all commands from the top of the
+     *    [commandUndoStack] down to (but not including) the target index. This reverts
+     *    the application state to exactly how it was immediately after the target
+     *    command was first executed.
+     * 2. **Isolate**: Pops and undos the target command itself.
+     * 3. **Re-branch**: Re-executes the target command. This "refreshes" its effect
+     *    in the database. In future iterations, this step could be expanded to support
+     *    true "toggling" or "editing" of historical actions.
+     * 4. **Invalidate Future**: Clears the [commandRedoStack] because the historical
+     *    "future" (the commands we rolled back in step 1) may have depended on the
+     *    state we just mutated.
+     *
+     * **Note:** To maintain data integrity, all actions that occurred AFTER the target
+     * index are permanently discarded. This "re-branches" history from the point of
+     * the target action.
      *
      * @param targetIndex The index of the command in [commandUndoStack] to manipulate.
      */

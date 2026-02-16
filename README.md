@@ -72,5 +72,24 @@ The application uses a versioned JSON schema (currently **v10**).
 *   **Students & Furniture**: Managed via unique IDs (UUID strings in Python, mapped to auto-incrementing Longs in Android).
 *   **Behavior & Academic Logs**: Unified format for behavior, quiz, and homework events, supporting multi-pass ingestion to maintain referential integrity.
 
+## ⚡ Fluid Interaction & Performance Architecture
+
+To maintain a fluid 60fps experience during complex seating chart interactions (like dragging student groups or live session logging), the application utilizes a sophisticated performance pipeline.
+
+### 1. Optimistic UI & Local State
+The UI components ([`StudentDraggableIcon`](app/src/main/java/com/example/myapplication/ui/components/StudentDraggableIcon.kt)) directly update their local `MutableState` properties during gestures. This provides immediate visual feedback without waiting for database round-trips or global state reconciliation.
+
+### 2. The Pending State Cache
+A `ConcurrentHashMap` ([`pendingStudentPositions`](app/src/main/java/com/example/myapplication/viewmodel/SeatingChartViewModel.kt)) tracks items currently "in flight." When the global state updates from the database, the ViewModel reconciles it with this pending cache to ensure student icons don't "snap back" to old positions before an asynchronous update completes.
+
+### 3. Memoized Transformation Pipeline
+The [`SeatingChartViewModel.updateStudentsForDisplay`](app/src/main/java/com/example/myapplication/viewmodel/SeatingChartViewModel.kt) method implements a multi-stage transformation:
+- **Stage 1: Pre-processing**: Logs are grouped by student and configuration rules are decoded once per update cycle.
+- **Stage 2: Per-Student Transformation**: Student data is enriched with filtered logs and conditional formatting results. This stage is memoized using a [`StudentCacheKey`](app/src/main/java/com/example/myapplication/viewmodel/SeatingChartViewModel.kt) which tracks only relevant data hashes (excluding volatile positions).
+- **Stage 3: State Sync**: Instead of creating new UI objects, the pipeline updates the internal `MutableState` of cached [`StudentUiItem`](app/src/main/java/com/example/myapplication/ui/model/StudentUiItem.kt) instances.
+
+### 4. Object Identity Preservation
+By maintaining a persistent [`studentUiItemCache`](app/src/main/java/com/example/myapplication/viewmodel/SeatingChartViewModel.kt), the system ensures that Jetpack Compose can perform fine-grained "diff-and-patch" updates. Because the object instances remain the same, Compose only recomposes the specific properties (e.g., `xPosition`, `fontColor`) that changed, rather than re-rendering the entire seating chart.
+
 ---
 *Documentation love letter from Scribe 📜*
