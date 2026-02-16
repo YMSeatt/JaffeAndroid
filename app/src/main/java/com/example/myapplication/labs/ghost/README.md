@@ -86,6 +86,12 @@ A physics-based visualization of **Social Gravity**.
 - **Tension Detection**: Color shifts from Cyan to Magenta for students under high social tension or conflict.
 - **Python Analysis**: Integrated with `Python/ghost_vector_analysis.py` for calculating classroom-wide cohesion metrics.
 
+### 15. Ghost Spectra (`GhostSpectraLayer.kt`, `GhostSpectraShader.kt`, `GhostSpectraEngine.kt`)
+A data refraction layer using **Chromatic Dispersion**.
+- **Spectroscopic Visualization**: "Breaks" the UI into its constituent data components (Behavior, Participation, Academic) using an AGSL dispersive prism shader.
+- **Interactive Refraction**: Users drag a virtual prism across the screen to reveal hidden data "spectral signatures" under the student icons.
+- **Neural Signature Analysis**: Integrated with `Python/ghost_spectra_analyzer.py` to process classroom signatures and identify students in "Infrared" (at-risk) or "Ultraviolet" (high engagement) states.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

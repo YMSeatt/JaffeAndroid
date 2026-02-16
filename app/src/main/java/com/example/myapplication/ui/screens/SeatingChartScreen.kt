@@ -113,6 +113,7 @@ import com.example.myapplication.labs.ghost.GhostBlueprintEngine
 import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.GhostPortalLayer
+import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
@@ -186,6 +187,7 @@ fun SeatingChartScreen(
     var isChronosActive by remember { mutableStateOf(false) }
     var isHologramActive by remember { mutableStateOf(false) }
     var isVectorActive by remember { mutableStateOf(false) }
+    var isSpectraActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
@@ -472,6 +474,8 @@ fun SeatingChartScreen(
                 onTogglePhantasm = { isPhantasmActive = !isPhantasmActive },
                 isVectorActive = isVectorActive,
                 onToggleVector = { isVectorActive = !isVectorActive },
+                isSpectraActive = isSpectraActive,
+                onToggleSpectra = { isSpectraActive = !isSpectraActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -605,6 +609,12 @@ fun SeatingChartScreen(
                     portalPosition = if (portalPosition == Offset.Zero)
                         Offset(canvasSize.width / 2f, canvasSize.height / 2f)
                         else portalPosition
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
+                GhostSpectraLayer(
+                    behaviorLogs = allBehaviorEvents
                 )
             }
 
@@ -1198,6 +1208,8 @@ fun SeatingChartTopAppBar(
     onTogglePhantasm: () -> Unit,
     isVectorActive: Boolean,
     onToggleVector: () -> Unit,
+    isSpectraActive: Boolean,
+    onToggleSpectra: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1370,6 +1382,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isSpectraActive) "Disable Ghost Spectra 👻" else "Enable Ghost Spectra 👻") },
+                            onClick = {
+                                onToggleSpectra()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Palette, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED) {
