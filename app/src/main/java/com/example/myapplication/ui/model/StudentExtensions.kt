@@ -37,6 +37,7 @@ fun Student.toStudentUiItem(
     sessionLogText: List<String>,
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
+    liveQuizProgressColor: Color? = null,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
     defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
@@ -52,6 +53,7 @@ fun Student.toStudentUiItem(
     val styles = calculateStyles(
         groupColor,
         conditionalFormattingResult,
+        liveQuizProgressColor,
         defaultBackgroundColor,
         defaultOutlineColor,
         defaultTextColor,
@@ -105,6 +107,7 @@ fun Student.updateStudentUiItem(
     sessionLogText: List<String>,
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
+    liveQuizProgressColor: Color? = null,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
     defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
@@ -120,6 +123,7 @@ fun Student.updateStudentUiItem(
     val styles = calculateStyles(
         groupColor,
         conditionalFormattingResult,
+        liveQuizProgressColor,
         defaultBackgroundColor,
         defaultOutlineColor,
         defaultTextColor,
@@ -187,6 +191,7 @@ private data class StudentStyles(
 private fun Student.calculateStyles(
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
+    liveQuizProgressColor: Color?,
     defaultBackgroundColor: String,
     defaultOutlineColor: String,
     defaultTextColor: String,
@@ -196,7 +201,7 @@ private fun Student.calculateStyles(
     val customTextColor = customTextColor?.let { safeParseColor(it) }
 
     val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)).copy(alpha = 1f)
-    val baseOutlineColor = customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+    val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
 
     val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
         conditionalFormattingResult.mapNotNull {

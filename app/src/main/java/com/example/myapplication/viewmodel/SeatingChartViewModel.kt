@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.MediatorLiveData
@@ -321,7 +323,8 @@ class SeatingChartViewModel @Inject constructor(
         val homeworkDescription: List<String>,
         val quizDescription: List<String>,
         val sessionLogs: List<String>,
-        val conditionalFormattingResult: List<Pair<String?, String?>>
+        val conditionalFormattingResult: List<Pair<String?, String?>>,
+        val liveQuizProgressColor: Color?
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -384,6 +387,7 @@ class SeatingChartViewModel @Inject constructor(
         studentsForDisplay.addSource(allHomeworkLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allQuizLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allRules) { updateTrigger.tryEmit(Unit) }
+        studentsForDisplay.addSource(liveQuizScores) { updateTrigger.tryEmit(Unit) }
 
         // Sync user preferences from DataStore.
         viewModelScope.launch {
@@ -502,6 +506,14 @@ class SeatingChartViewModel @Inject constructor(
                 val quizLimit = prefs.recentLogsLimit
                 val maxLogsToDisplay = prefs.maxRecentLogsToDisplay
                 val useInitialsForBehavior = prefs.useInitialsForBehavior
+
+                // Get live quiz progress colors and goal (Ported from Python)
+                val liveQuizGoal = prefs.liveQuizQuestionsGoal
+                val liveQuizInitialColorStr = prefs.liveQuizInitialColor
+                val liveQuizFinalColorStr = prefs.liveQuizFinalColor
+
+                val liveQuizInitialColor = try { Color(android.graphics.Color.parseColor(liveQuizInitialColorStr)) } catch (e: Exception) { Color.Red }
+                val liveQuizFinalColor = try { Color(android.graphics.Color.parseColor(liveQuizFinalColorStr)) } catch (e: Exception) { Color.Green }
                 val useInitialsForHomework = prefs.useInitialsForHomework
                 val useInitialsForQuiz = prefs.useInitialsForQuiz
 
@@ -651,7 +663,22 @@ class SeatingChartViewModel @Inject constructor(
                             emptyList()
                         }
 
-                        // 2c. Conditional Formatting:
+                        // 2c. Live Quiz Progress Calculation (Ported from Python)
+                        val liveQuizProgressColor = if (sessionActive && currentModeValue == "quiz") {
+                            val studentLiveScore = liveQuizScores.value?.get(student.id)
+                            val questionsAnswered = studentLiveScore?.get("total_asked") as? Int ?: 0
+
+                            if (questionsAnswered > 0) {
+                                val progress = (questionsAnswered.toFloat() / liveQuizGoal.toFloat()).coerceIn(0f, 1f)
+                                lerp(liveQuizInitialColor, liveQuizFinalColor, progress)
+                            } else {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+
+                        // 2d. Conditional Formatting:
                         // Evaluate the prioritized rule set against the student's current state and history.
                         val studentDetails = studentDetailsMap[student.id]
                         val conditionalFormattingResult = if (studentDetails != null) {
@@ -678,7 +705,8 @@ class SeatingChartViewModel @Inject constructor(
                             homeworkDescription,
                             quizDescription,
                             sessionLogs,
-                            conditionalFormattingResult
+                            conditionalFormattingResult,
+                            liveQuizProgressColor
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -689,6 +717,7 @@ class SeatingChartViewModel @Inject constructor(
                     val quizDescription = derivedData.quizDescription
                     val sessionLogs = derivedData.sessionLogs
                     val conditionalFormattingResult = derivedData.conditionalFormattingResult
+                    val liveQuizProgressColor = derivedData.liveQuizProgressColor
 
                     // 2d. Optimistic Reconciliation:
                     // If the student is currently being dragged, use the local "pending" position
@@ -718,6 +747,7 @@ class SeatingChartViewModel @Inject constructor(
                             sessionLogText = sessionLogs,
                             groupColor = groupColorMap[student.groupId],
                             conditionalFormattingResult = conditionalFormattingResult,
+                            liveQuizProgressColor = liveQuizProgressColor,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,
                             defaultBackgroundColor = defaultStyle.backgroundColor,
@@ -739,6 +769,7 @@ class SeatingChartViewModel @Inject constructor(
                             sessionLogText = sessionLogs,
                             groupColor = groupColorMap[student.groupId],
                             conditionalFormattingResult = conditionalFormattingResult,
+                            liveQuizProgressColor = liveQuizProgressColor,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,
                             defaultBackgroundColor = defaultStyle.backgroundColor,
@@ -1693,6 +1724,16 @@ class SeatingChartViewModel @Inject constructor(
     }
 
 
+    /**
+     * Records a quiz result during an active session, aggregating performance data
+     * for real-time progress visualization.
+     *
+     * Ported logic from Python's MarkLiveQuizQuestionCommand:
+     * - Increments 'total_asked' for each mark.
+     * - Increments 'correct_count' if the mark is "Correct".
+     *
+     * @param quizLog The individual question mark log.
+     */
     fun addQuizLogToSession(quizLog: QuizLog) {
         if (isSessionActive.value == true) {
             val currentLogs = sessionQuizLogs.value.orEmpty().toMutableList()
@@ -1714,13 +1755,22 @@ class SeatingChartViewModel @Inject constructor(
             studentScores["max_mark_value"] = quizLog.maxMarkValue ?: 0
             studentScores["marks_data"] = quizLog.marksData
 
+            // Aggregate session progress (Ported from Python)
+            val totalAsked = (studentScores["total_asked"] as? Int ?: 0) + 1
+            studentScores["total_asked"] = totalAsked
+
+            if (quizLog.comment.equals("Correct", ignoreCase = true)) {
+                val correctCount = (studentScores["correct_count"] as? Int ?: 0) + 1
+                studentScores["correct_count"] = correctCount
+            }
+
             val allScores = liveQuizScores.value?.toMutableMap() ?: mutableMapOf()
             allScores[quizLog.studentId] = studentScores
             liveQuizScores.postValue(allScores)
 
             Log.d(
                 "SeatingChartViewModel",
-                "Quiz log added/updated in session for student ${quizLog.studentId.toString().takeLast(4)}."
+                "Quiz log added/updated in session for student ${quizLog.studentId.toString().takeLast(4)}. Progress: ${studentScores["correct_count"] ?: 0}/${studentScores["total_asked"]}"
             )
         } else {
             // If not in a session, save directly to the database

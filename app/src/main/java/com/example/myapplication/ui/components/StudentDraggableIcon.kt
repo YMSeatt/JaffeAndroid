@@ -101,7 +101,11 @@ fun StudentDraggableIcon(
     gridSize: Int,
     autoExpandEnabled: Boolean,
     canvasScale: Float,
-    canvasOffset: Offset
+    canvasOffset: Offset,
+    quizLogFontColor: Color = Color(0xFF006400),
+    homeworkLogFontColor: Color = Color(0xFF800080),
+    quizLogFontBold: Boolean = true,
+    homeworkLogFontBold: Boolean = true
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
@@ -322,11 +326,11 @@ fun StudentDraggableIcon(
                                     Text(
                                         text = text,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF006400), // Dark Green
+                                            color = quizLogFontColor,
                                             fontFamily = getFontFamily(studentUiItem.fontFamily.value),
                                             fontSize = studentUiItem.fontSize.value.sp,
                                             textAlign = TextAlign.Center,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = if (quizLogFontBold) FontWeight.Bold else FontWeight.Normal
                                         )
                                     )
                                 }
@@ -349,11 +353,11 @@ fun StudentDraggableIcon(
                                     Text(
                                         text = text,
                                         style = MaterialTheme.typography.bodySmall.copy(
-                                            color = Color(0xFF800080), // Purple
+                                            color = homeworkLogFontColor,
                                             fontFamily = getFontFamily(studentUiItem.fontFamily.value),
                                             fontSize = studentUiItem.fontSize.value.sp,
                                             textAlign = TextAlign.Center,
-                                            fontWeight = FontWeight.Bold
+                                            fontWeight = if (homeworkLogFontBold) FontWeight.Bold else FontWeight.Normal
                                         )
                                     )
                                 }

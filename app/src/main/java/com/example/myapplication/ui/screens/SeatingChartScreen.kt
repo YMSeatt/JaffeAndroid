@@ -321,6 +321,18 @@ fun SeatingChartScreen(
     }
 
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
+    val quizLogFontColorStr by settingsViewModel.quizLogFontColor.collectAsState()
+    val homeworkLogFontColorStr by settingsViewModel.homeworkLogFontColor.collectAsState()
+    val quizLogFontBold by settingsViewModel.quizLogFontBold.collectAsState()
+    val homeworkLogFontBold by settingsViewModel.homeworkLogFontBold.collectAsState()
+
+    val quizLogFontColor = remember(quizLogFontColorStr) {
+        try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(quizLogFontColorStr)) } catch (e: Exception) { androidx.compose.ui.graphics.Color(0xFF006400) }
+    }
+    val homeworkLogFontColor = remember(homeworkLogFontColorStr) {
+        try { androidx.compose.ui.graphics.Color(android.graphics.Color.parseColor(homeworkLogFontColorStr)) } catch (e: Exception) { androidx.compose.ui.graphics.Color(0xFF800080) }
+    }
+
     var sessionType by remember { mutableStateOf(SessionType.BEHAVIOR) }
     val editModeEnabled = userPreferences?.editModeEnabled ?: false
     var longPressPosition by remember { mutableStateOf(Offset.Zero) }
@@ -651,6 +663,10 @@ fun SeatingChartScreen(
                     editModeEnabled = editModeEnabled,
                     userPreferences = userPreferences,
                     showRecentBehavior = showRecentBehavior,
+                    quizLogFontColor = quizLogFontColor,
+                    homeworkLogFontColor = homeworkLogFontColor,
+                    quizLogFontBold = quizLogFontBold,
+                    homeworkLogFontBold = homeworkLogFontBold,
                     onStudentClick = onStudentClick,
                     onStudentLongClick = onStudentLongClick,
                     onFurnitureClick = onFurnitureClick,
@@ -1057,6 +1073,10 @@ fun SeatingChartContent(
     editModeEnabled: Boolean,
     userPreferences: com.example.myapplication.preferences.UserPreferences?,
     showRecentBehavior: Boolean,
+    quizLogFontColor: androidx.compose.ui.graphics.Color,
+    homeworkLogFontColor: androidx.compose.ui.graphics.Color,
+    quizLogFontBold: Boolean,
+    homeworkLogFontBold: Boolean,
     onStudentClick: (StudentUiItem) -> Unit,
     onStudentLongClick: (StudentUiItem) -> Unit,
     onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
@@ -1103,7 +1123,11 @@ fun SeatingChartContent(
                     autoExpandEnabled = autoExpandEnabled,
                     canvasSize = canvasSize,
                     canvasScale = scale,
-                    canvasOffset = offset
+                    canvasOffset = offset,
+                    quizLogFontColor = quizLogFontColor,
+                    homeworkLogFontColor = homeworkLogFontColor,
+                    quizLogFontBold = quizLogFontBold,
+                    homeworkLogFontBold = homeworkLogFontBold
                 )
             }
             furniture.forEach { furnitureItem ->
