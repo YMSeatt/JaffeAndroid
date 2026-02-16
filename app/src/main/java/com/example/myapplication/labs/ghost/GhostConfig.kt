@@ -13,4 +13,5 @@ object GhostConfig {
     const val PORTAL_MODE_ENABLED = true
     const val LATTICE_MODE_ENABLED = true
     const val VECTOR_MODE_ENABLED = true
+    const val SPECTRA_MODE_ENABLED = true
 }

@@ -51,4 +51,22 @@ In 2027, social dynamics aren't just lines; they are vectors of influence. "Ghos
 - **Dynamic Feedback**: Real-time vector updates during student movement provide immediate feedback on how a seating change might alter the "Social Gravity" of the surrounding nodes.
 
 ---
+
+## 🌈 Experiment: Ghost Spectra (Data Refraction)
+**Date:** 2026-11-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, "Data Transparency" is a literal concept. "Ghost Spectra" allows teachers to see through the surface of student icons into the "spectral data" underneath. By dragging a virtual prism, they reveal the hidden components of student engagement, behavior, and academic performance as a dispersive light effect.
+
+### 🛠️ The Tech
+- **AGSL Chromatic Dispersion**: Implemented `SPECTRA_PRISM` shader that simulates the refractive index of glass to create rainbow-like separation of data layers.
+- **Spectral Engine**: Calculates "Dispersion" and "Agitation" metrics from behavioral variance.
+- **Python Bridge**: `ghost_spectra_analyzer.py` provides offline spectroscopic analysis of exported classroom JSON data.
+
+### 🔦 The Discovery
+- **Refractive Index of Data**: We discovered that mapping "Behavioral Variance" to the dispersion uniform created a natural visual metaphor: "messy" data breaks more light, while "stable" data is clearer.
+- **Interactive Discovery**: The draggable prism encourages "exploratory debugging" of the classroom state rather than static report reading.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
