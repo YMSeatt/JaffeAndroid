@@ -57,9 +57,9 @@ fun GhostPortalLayer(
 
     if (intensity <= 0.01f) return
 
-    Canvas(modifier = modifier.fillMaxSize()) {
-        val shader = RuntimeShader(GhostPortalShader.PORTAL_WORMHOLE)
+    val shader = remember { RuntimeShader(GhostPortalShader.PORTAL_WORMHOLE) }
 
+    Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iPortalPos", portalPosition.x, portalPosition.y)

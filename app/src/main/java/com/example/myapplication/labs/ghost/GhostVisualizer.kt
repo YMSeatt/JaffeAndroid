@@ -55,8 +55,8 @@ fun GhostVoiceVisualizer(
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val color = MaterialTheme.colorScheme.tertiary
+            val shader = remember { RuntimeShader(GhostShader.VOICE_WAVEFORM) }
             Canvas(modifier = Modifier.fillMaxSize()) {
-                val shader = RuntimeShader(GhostShader.VOICE_WAVEFORM)
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iAmplitude", animatedAmplitude * 0.5f + 0.1f)

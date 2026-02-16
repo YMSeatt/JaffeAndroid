@@ -27,3 +27,11 @@
 - **Discovery:** `HomeworkTemplateEditDialog.kt` used `Enum.values()` inside a Compose loop, which allocates a new array on every call.
 - **Fix:** Switched to `Enum.entries` (Kotlin 1.9+).
 - **Impact:** Eliminated unnecessary allocations in UI code.
+
+## AGSL Shader Lifecycle & Spatial Lookup Optimizations
+- **Discovery:** Multiple experimental "Ghost" layers were re-instantiating `RuntimeShader` on every frame (or even inside loops, in the case of `GhostLatticeLayer`). Additionally, `GhostLatticeLayer` was performing $O(N)$ list searches inside a draw loop.
+- **Fix:**
+    - Wrapped `RuntimeShader` instantiation in `remember` blocks (or `drawWithCache` where appropriate) across all layers.
+    - Implemented a student ID-to-Item map (`associateBy`) in `GhostLatticeLayer` to transform O(E * S) lookups into O(E).
+    - Optimized `StringSimilarity.levenshteinDistance` to reuse two `IntArray` rows, eliminating per-row allocations.
+- **Impact:** Significant reduction in object churn and GC pressure, ensuring 60fps performance even when multiple experimental visualizers are active.

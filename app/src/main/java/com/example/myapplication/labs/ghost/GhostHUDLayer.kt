@@ -75,8 +75,9 @@ fun GhostHUDLayer(
         }
     }
 
+    val shader = remember { RuntimeShader(GhostHUDShader.TACTICAL_RADAR) }
+
     Canvas(modifier = modifier.fillMaxSize()) {
-        val shader = RuntimeShader(GhostHUDShader.TACTICAL_RADAR)
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iHeading", heading)
