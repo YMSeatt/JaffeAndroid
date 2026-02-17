@@ -86,10 +86,10 @@ class SeatingChartLayoutToolsTest {
             every { displayHeight } returns mutableStateOf(100.dp)
         }
         val furnitureUi = FurnitureUiItem(
-            id = 2, stringId = "2", name = "Desk", type = "desk",
-            xPosition = 200f, yPosition = 0f, displayWidth = 200.dp, displayHeight = 100.dp,
-            displayBackgroundColor = Color.Gray, displayOutlineColor = Color.Black,
-            displayTextColor = Color.White, displayOutlineThickness = 1.dp
+            id = 2, stringId = "2", name = mutableStateOf("Desk"), type = mutableStateOf("desk"),
+            xPosition = mutableStateOf(200f), yPosition = mutableStateOf(0f), displayWidth = mutableStateOf(200.dp), displayHeight = mutableStateOf(100.dp),
+            displayBackgroundColor = mutableStateOf(Color.Gray), displayOutlineColor = mutableStateOf(Color.Black),
+            displayTextColor = mutableStateOf(Color.White), displayOutlineThickness = mutableStateOf(1.dp)
         )
 
         viewModel.studentsForDisplay.value = listOf(studentUi)
@@ -112,15 +112,6 @@ class SeatingChartLayoutToolsTest {
 
         // Check if student position was updated in UI (optimistic)
         assertEquals(150f, studentUi.xPosition.value)
-
-        // Furniture doesn't have MutableState in FurnitureUiItem yet (as per my previous observation/impl)
-        // but we can verify if the command was executed by checking if dao was called.
-        // Wait, the command executes MoveItemsCommand which calls internalUpdateStudentPosition or internalUpdateFurniturePosition
-
-        // Actually, my MoveItemsCommand.execute calls viewModel methods.
-        // Let's verify MoveItemsCommand was executed.
-        // Since executeCommand is private, we check the side effects.
-
-        // coVerify { studentDao.updatePosition(1L, 150f, 0f) } // Fails because I didn't mock internalUpdateStudentPosition well
+        assertEquals(100f, furnitureUi.xPosition.value)
     }
 }

@@ -20,16 +20,16 @@ class GhostBlueprintEngineTest {
             FurnitureUiItem(
                 id = 1,
                 stringId = "f1",
-                name = "Desk",
-                type = "desk",
-                xPosition = 800f,
-                yPosition = 1200f,
-                displayWidth = 200.dp,
-                displayHeight = 100.dp,
-                displayBackgroundColor = Color.Gray,
-                displayOutlineColor = Color.Black,
-                displayTextColor = Color.White,
-                displayOutlineThickness = 2.dp
+                name = mutableStateOf("Desk"),
+                type = mutableStateOf("desk"),
+                xPosition = mutableStateOf(800f),
+                yPosition = mutableStateOf(1200f),
+                displayWidth = mutableStateOf(200.dp),
+                displayHeight = mutableStateOf(100.dp),
+                displayBackgroundColor = mutableStateOf(Color.Gray),
+                displayOutlineColor = mutableStateOf(Color.Black),
+                displayTextColor = mutableStateOf(Color.White),
+                displayOutlineThickness = mutableStateOf(2.dp)
             )
         )
 
