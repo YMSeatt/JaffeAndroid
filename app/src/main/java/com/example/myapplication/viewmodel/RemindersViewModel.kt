@@ -11,6 +11,13 @@ import com.example.myapplication.data.Reminder
 import com.example.myapplication.data.ReminderDao
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel for the Settings-based Reminders screen, utilizing the [AlarmScheduler].
+ *
+ * This ViewModel handles reminder persistence and scheduling specifically for the
+ * settings-integrated reminders view.
+ * Note: This class overlaps significantly with [ReminderViewModel].
+ */
 class RemindersViewModel(application: Application) : AndroidViewModel(application) {
 
     private val reminderDao: ReminderDao
@@ -22,8 +29,14 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         alarmScheduler = AlarmScheduler(application)
     }
 
+    /**
+     * Observable stream of all reminders.
+     */
     val allReminders: LiveData<List<Reminder>> = reminderDao.getAllReminders().asLiveData()
 
+    /**
+     * Adds a new reminder and schedules its alarm.
+     */
     fun addReminder(reminder: Reminder) {
         viewModelScope.launch {
             val id = reminderDao.insert(reminder)
@@ -32,6 +45,9 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Deletes a reminder and cancels its scheduled alarm.
+     */
     fun deleteReminder(reminder: Reminder) {
         viewModelScope.launch {
             reminderDao.delete(reminder.id)
@@ -39,6 +55,9 @@ class RemindersViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    /**
+     * Updates an existing reminder and reschedules its alarm.
+     */
     fun updateReminder(reminder: Reminder) {
         viewModelScope.launch {
             reminderDao.update(reminder)
