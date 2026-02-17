@@ -7,10 +7,22 @@ import android.content.Intent
 import com.example.myapplication.data.Reminder
 import java.util.Calendar
 
+/**
+ * Utility responsible for scheduling and canceling teacher reminders using [AlarmManager].
+ *
+ * This implementation is part of the 'alarm' package and works in conjunction with [AlarmReceiver].
+ * Note: This class provides functionality similar to [com.example.myapplication.util.ReminderManager]
+ * but uses different Intent extras and a separate receiver.
+ */
 class AlarmScheduler(private val context: Context) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    /**
+     * Schedules a [Reminder] using [AlarmManager.setExact].
+     *
+     * @param reminder The reminder to be scheduled.
+     */
     fun schedule(reminder: Reminder) {
         val intent = Intent(context, AlarmReceiver::class.java).apply {
             putExtra("REMINDER_ID", reminder.id)
@@ -36,6 +48,11 @@ class AlarmScheduler(private val context: Context) {
         )
     }
 
+    /**
+     * Cancels a previously scheduled reminder broadcast.
+     *
+     * @param reminder The reminder to cancel.
+     */
     fun cancel(reminder: Reminder) {
         val intent = Intent(context, AlarmReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(

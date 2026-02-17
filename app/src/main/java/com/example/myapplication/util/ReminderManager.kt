@@ -13,10 +13,24 @@ import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Manager responsible for scheduling and canceling teacher reminders using [AlarmManager].
+ *
+ * This utility handles the integration with Android's alarm system to ensure notifications
+ * are delivered at the correct time, even if the application is not running.
+ * It also manages modern Android requirements for exact alarm permissions (API 31+).
+ */
 @Singleton
 class ReminderManager @Inject constructor(@ApplicationContext private val context: Context) {
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    /**
+     * Checks if the application has permission to schedule exact alarms.
+     * On Android 12 (API 31) and above, this requires the [android.Manifest.permission.SCHEDULE_EXACT_ALARM]
+     * permission and user approval in system settings.
+     *
+     * @return True if exact alarms can be scheduled, false otherwise.
+     */
     fun canScheduleExactAlarms(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             alarmManager.canScheduleExactAlarms()
@@ -25,6 +39,12 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
         }
     }
 
+    /**
+     * Schedules a [Reminder] to trigger a notification at its specified timestamp.
+     * Uses [AlarmManager.setExact] to ensure precise delivery.
+     *
+     * @param reminder The reminder entity containing the title, description, and trigger time.
+     */
     fun scheduleReminder(reminder: Reminder) {
         if (!canScheduleExactAlarms()) {
             Log.d("ReminderManager", "Cannot schedule exact alarms. App needs permission.")
@@ -48,6 +68,11 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
         alarmManager.setExact(AlarmManager.RTC_WAKEUP, reminder.timestamp, pendingIntent)
     }
 
+    /**
+     * Cancels a previously scheduled reminder.
+     *
+     * @param reminderId The unique identifier of the reminder to cancel.
+     */
     fun cancelReminder(reminderId: Long) {
         val intent = Intent(context, ReminderReceiver::class.java)
         val pendingIntent = PendingIntent.getBroadcast(

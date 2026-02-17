@@ -11,6 +11,7 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   **Data Export**: Generate comprehensive Excel (`.xlsx`) reports with summaries and individual student sheets.
 *   **Encryption**: Secure your data with Fernet encryption and optional password protection.
 *   **Undo/Redo**: Full history support for all layout and logging actions.
+*   **Teacher Reminders**: Schedule and receive system notifications for important classroom tasks.
 
 ## 🛠️ Tech Stack
 
@@ -55,6 +56,7 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   Core logic in `Exporter.kt` handles the complex mapping between app data and Excel reports.
 *   Encryption logic is centralized in `SecurityUtil.kt`.
 *   The `Command` pattern is used for the Undo/Redo system.
+*   The **Reminder System** utilizes `android.app.AlarmManager` for precise scheduling and `BroadcastReceiver`s for triggering system notifications even when the app is backgrounded.
 
 ## 🏗️ Technical Architecture & Data Parity
 
