@@ -67,3 +67,13 @@
     - Implemented `try-finally` blocks in `EmailWorker.kt` to ensure that any temporary report file created for emailing is deleted immediately after the email is sent or if the operation fails.
     - Specifically targeted `daily_report.xlsx`, `on_stop_export.xlsx`, and general attachment paths passed from the UI.
 - **Location:** `app/src/main/java/com/example/myapplication/util/EmailWorker.kt`
+
+## 🛡️ Privacy Hardening: Restricted Drag-and-Drop PII
+- **Vulnerability:** The experimental "Ghost Portal" feature used `DRAG_FLAG_GLOBAL` when dragging student icons, allowing student names and IDs to be leaked to external applications.
+- **Fix:** Removed the `DRAG_FLAG_GLOBAL` flag in `StudentDraggableIcon.kt`, restricting drag data to the application's own process.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/components/StudentDraggableIcon.kt`
+
+## 🛡️ Privacy Hardening: Automated Cache Cleanup
+- **Vulnerability:** Temporary export files (`.xlsx`), screenshots (`.png`), and blueprints (`.svg`) containing student PII were stored in the app's cache directory and could persist indefinitely.
+- **Fix:** Implemented an automated cleanup routine in `MainActivity.kt` that purges these temporary file types from the cache directory on application startup.
+- **Location:** `app/src/main/java/com/example/myapplication/MainActivity.kt`

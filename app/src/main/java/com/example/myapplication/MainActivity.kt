@@ -31,6 +31,7 @@ import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import androidx.hilt.navigation.compose.hiltViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
 import android.content.Context
 import androidx.activity.result.ActivityResultLauncher
 
@@ -119,6 +120,22 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        // HARDEN: Cleanup temporary files on startup to protect privacy
+        lifecycleScope.launch(Dispatchers.IO) {
+            val cacheDir = applicationContext.cacheDir
+            val tempFiles = cacheDir.listFiles { _, name ->
+                name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg")
+            }
+            tempFiles?.forEach { file ->
+                try {
+                    file.delete()
+                } catch (e: Exception) {
+                    // Ignore deletion errors
+                }
+            }
+        }
+
         setContent {
             val currentAppThemeState by settingsViewModel.appTheme.collectAsState()
             val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
