@@ -145,7 +145,7 @@ fun StudentDraggableIcon(
                     startTransfer(
                         DragAndDropTransferData(
                             clipData = ClipData.newPlainText("student_data", studentJson),
-                            flags = android.view.View.DRAG_FLAG_GLOBAL
+                            flags = 0 // HARDEN: Removed DRAG_FLAG_GLOBAL to prevent PII leak outside the app
                         )
                     )
                 }
