@@ -332,6 +332,20 @@ class SettingsViewModel @Inject constructor(
         customHomeworkStatusDao.replaceAll(defaults)
     }
 
+    fun resetQuizMarkTypesToDefaults() = viewModelScope.launch {
+        val defaults = listOf(
+            QuizMarkType(name = "Correct", defaultPoints = 1.0, contributesToTotal = true, isExtraCredit = false),
+            QuizMarkType(name = "Incorrect", defaultPoints = 0.0, contributesToTotal = true, isExtraCredit = false),
+            QuizMarkType(name = "Partial Credit", defaultPoints = 0.5, contributesToTotal = true, isExtraCredit = false),
+            QuizMarkType(name = "Bonus", defaultPoints = 1.0, contributesToTotal = false, isExtraCredit = true)
+        )
+        quizMarkTypeDao.replaceAll(defaults)
+    }
+
+    fun resetLiveHomeworkSelectOptionsToDefaults() {
+        updateLiveHomeworkSelectOptions("Done,Not Done,Signed,Returned")
+    }
+
     val quizMarkTypes: LiveData<List<QuizMarkType>> = quizMarkTypeDao.getAllQuizMarkTypes().asLiveData()
     val allQuizTemplates: LiveData<List<QuizTemplate>> = quizTemplateDao.getAll().asLiveData()
     val allSystemBehaviors: LiveData<List<com.example.myapplication.data.SystemBehavior>> = systemBehaviorDao.getAllSystemBehaviors().asLiveData()

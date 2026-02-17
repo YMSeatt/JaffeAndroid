@@ -6,6 +6,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -31,4 +32,13 @@ interface QuizMarkTypeDao {
 
     @Query("DELETE FROM quiz_mark_types")
     suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(markTypes: List<QuizMarkType>)
+
+    @Transaction
+    suspend fun replaceAll(markTypes: List<QuizMarkType>) {
+        deleteAll()
+        insertAll(markTypes)
+    }
 }
