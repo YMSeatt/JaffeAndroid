@@ -42,7 +42,18 @@ fun ManageLiveHomeworkOptionsDialog(
         title = { Text("Manage Live Homework Options") },
         text = {
             Column {
-                Text("Add or remove options for the 'Select' mode.")
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Add or remove options for the 'Select' mode.", modifier = Modifier.weight(1f))
+                    TextButton(onClick = {
+                        optionsList = listOf("Done", "Not Done", "Signed", "Returned")
+                    }) {
+                        Text("Reset")
+                    }
+                }
                 HorizontalDivider(Modifier.padding(vertical = 8.dp))
                 
                 LazyColumn(

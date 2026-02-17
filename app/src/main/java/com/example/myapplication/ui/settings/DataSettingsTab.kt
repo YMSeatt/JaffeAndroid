@@ -157,6 +157,28 @@ fun DataSettingsTab(
     var showResetBehaviorsConfirm by remember { mutableStateOf(false) }
     var showResetHomeworkTypesConfirm by remember { mutableStateOf(false) }
     var showResetHomeworkStatusesConfirm by remember { mutableStateOf(false) }
+    var showResetQuizMarkTypesConfirm by remember { mutableStateOf(false) }
+
+    if (showResetQuizMarkTypesConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetQuizMarkTypesConfirm = false },
+            title = { Text("Reset Quiz Mark Types") },
+            text = { Text("Are you sure you want to reset all quiz mark types to application defaults? This will delete all custom mark types.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetQuizMarkTypesToDefaults()
+                    showResetQuizMarkTypesConfirm = false
+                }) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetQuizMarkTypesConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showResetBehaviorsConfirm) {
         AlertDialog(
@@ -436,7 +458,16 @@ fun DataSettingsTab(
         }
 
         item {
-            Text("Manage Quiz Mark Types", style = MaterialTheme.typography.titleMedium)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Manage Quiz Mark Types", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showResetQuizMarkTypesConfirm = true }) {
+                    Text("Reset to Defaults")
+                }
+            }
         }
         items(quizMarkTypesList) { markType ->
             Card(modifier = Modifier
