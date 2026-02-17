@@ -66,9 +66,9 @@ object GhostBlueprintEngine {
 
         svg.append("\n  <!-- Furniture Nodes (Adaptation for Android Reality) -->\n")
         furniture.forEach { item ->
-            val x = (item.xPosition / 4f) + 200f
-            val y = (item.yPosition / 4f) + 100f
-            val name = item.name
+            val x = (item.xPosition.value / 4f) + 200f
+            val y = (item.yPosition.value / 4f) + 100f
+            val name = item.name.value
 
             svg.append("  <g transform=\"translate($x,$y)\" filter=\"url(#glow)\">\n")
             svg.append("    <rect x=\"-25\" y=\"-25\" width=\"50\" height=\"50\" fill=\"none\" stroke=\"#00ffff\" stroke-width=\"1.5\" stroke-dasharray=\"5,5\" rx=\"3\" />\n")

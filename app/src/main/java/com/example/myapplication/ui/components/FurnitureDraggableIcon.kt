@@ -20,18 +20,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
@@ -40,6 +32,17 @@ import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import kotlin.math.roundToInt
 
+/**
+ * A draggable and interactive UI component representing furniture on the seating chart.
+ *
+ * This component utilizes the "Fluid Interaction" model:
+ * 1. **Direct State Observation**: Binds UI properties directly to [MutableState] fields
+ *    in the cached [FurnitureUiItem], ensuring high-performance updates.
+ * 2. **Optimistic Feedback**: Updates position and size states immediately during gestures
+ *    for 60fps responsiveness, while deferring database synchronization until the gesture ends.
+ * 3. **Minimal Recomposition**: Using [key] with the item ID and [MutableState] properties
+ *    allows Compose to update only the modified parts of the UI.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FurnitureDraggableIcon(
@@ -56,32 +59,17 @@ fun FurnitureDraggableIcon(
     gridSnapEnabled: Boolean,
     gridSize: Int
 ) {
-    var offsetX by remember { mutableFloatStateOf(furnitureUiItem.xPosition) }
-    var offsetY by remember { mutableFloatStateOf(furnitureUiItem.yPosition) }
-    var width by remember { mutableStateOf(furnitureUiItem.displayWidth) }
-    var height by remember { mutableStateOf(furnitureUiItem.displayHeight) }
-
-    LaunchedEffect(furnitureUiItem.xPosition, furnitureUiItem.yPosition) {
-        offsetX = furnitureUiItem.xPosition
-        offsetY = furnitureUiItem.yPosition
-    }
-
-    LaunchedEffect(furnitureUiItem.displayWidth, furnitureUiItem.displayHeight) {
-        width = furnitureUiItem.displayWidth
-        height = furnitureUiItem.displayHeight
-    }
-
-    key(furnitureUiItem) {
+    key(furnitureUiItem.id) {
         Box(
             modifier = Modifier
                 .offset {
                     IntOffset(
-                        x = ((offsetX * scale) + canvasOffset.x).roundToInt(),
-                        y = ((offsetY * scale) + canvasOffset.y).roundToInt()
+                        x = ((furnitureUiItem.xPosition.value * scale) + canvasOffset.x).roundToInt(),
+                        y = ((furnitureUiItem.yPosition.value * scale) + canvasOffset.y).roundToInt()
                     )
                 }
-                .width(width)
-                .height(height)
+                .width(furnitureUiItem.displayWidth.value)
+                .height(furnitureUiItem.displayHeight.value)
         ) {
             Card(
                 modifier = Modifier
@@ -90,24 +78,25 @@ fun FurnitureDraggableIcon(
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                offsetX += dragAmount.x / scale
-                                offsetY += dragAmount.y / scale
+                                // Update MutableState directly for optimistic feedback
+                                furnitureUiItem.xPosition.value += dragAmount.x / scale
+                                furnitureUiItem.yPosition.value += dragAmount.y / scale
                             },
                             onDragEnd = {
                                 val finalX = if (gridSnapEnabled) {
-                                    (offsetX / gridSize).roundToInt() * gridSize
+                                    (furnitureUiItem.xPosition.value / gridSize).roundToInt() * gridSize.toFloat()
                                 } else {
-                                    offsetX
+                                    furnitureUiItem.xPosition.value
                                 }
                                 val finalY = if (gridSnapEnabled) {
-                                    (offsetY / gridSize).roundToInt() * gridSize
+                                    (furnitureUiItem.yPosition.value / gridSize).roundToInt() * gridSize.toFloat()
                                 } else {
-                                    offsetY
+                                    furnitureUiItem.yPosition.value
                                 }
                                 viewModel.updateFurniturePosition(
                                     furnitureUiItem.id,
-                                    finalX.toFloat(),
-                                    finalY.toFloat()
+                                    finalX,
+                                    finalY
                                 )
                             }
                         )
@@ -118,11 +107,11 @@ fun FurnitureDraggableIcon(
                     )
                     .border(
                         BorderStroke(
-                            if (isSelected) 4.dp else furnitureUiItem.displayOutlineThickness,
-                            if (isSelected) MaterialTheme.colorScheme.primary else furnitureUiItem.displayOutlineColor
+                            if (isSelected) 4.dp else furnitureUiItem.displayOutlineThickness.value,
+                            if (isSelected) MaterialTheme.colorScheme.primary else furnitureUiItem.displayOutlineColor.value
                         )
                     ),
-                colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor),
+                colors = CardDefaults.cardColors(containerColor = furnitureUiItem.displayBackgroundColor.value),
                 elevation = if (noAnimations) CardDefaults.cardElevation(defaultElevation = 0.dp) else CardDefaults.cardElevation(
                     defaultElevation = 2.dp
                 )
@@ -134,8 +123,8 @@ fun FurnitureDraggableIcon(
                         .padding(4.dp)
                 ) {
                     Text(
-                        text = furnitureUiItem.name,
-                        color = furnitureUiItem.displayTextColor,
+                        text = furnitureUiItem.name.value,
+                        color = furnitureUiItem.displayTextColor.value,
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth()
@@ -151,9 +140,9 @@ fun FurnitureDraggableIcon(
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
-                                width += (dragAmount.x / scale).dp
-                                height += (dragAmount.y / scale).dp
-                                onResize(width.value, height.value)
+                                furnitureUiItem.displayWidth.value += (dragAmount.x / scale).dp
+                                furnitureUiItem.displayHeight.value += (dragAmount.y / scale).dp
+                                onResize(furnitureUiItem.displayWidth.value.value, furnitureUiItem.displayHeight.value.value)
                             }
                         }
                 )

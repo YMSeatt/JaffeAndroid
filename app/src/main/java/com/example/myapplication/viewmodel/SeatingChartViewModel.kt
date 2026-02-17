@@ -78,7 +78,8 @@ import com.example.myapplication.ui.model.ChartItemId
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.updateStudentUiItem
-import com.example.myapplication.ui.model.toUiItem
+import com.example.myapplication.ui.model.toFurnitureUiItem
+import com.example.myapplication.ui.model.updateFurnitureUiItem
 import com.example.myapplication.util.CollisionDetector
 import com.example.myapplication.util.ConditionalFormattingEngine
 import com.example.myapplication.util.DecodedConditionalFormattingRule
@@ -336,6 +337,11 @@ class SeatingChartViewModel @Inject constructor(
      * full-box recompositions or object allocations during scroll/drag.
      */
     private val studentUiItemCache = ConcurrentHashMap<Int, StudentUiItem>()
+
+    /**
+     * A persistent cache of [FurnitureUiItem] instances.
+     */
+    private val furnitureUiItemCache = ConcurrentHashMap<Int, FurnitureUiItem>()
 
     // In-memory session data
     private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
@@ -1204,7 +1210,7 @@ class SeatingChartViewModel @Inject constructor(
                 } else {
                     furnitureForDisplay.value?.find { it.id == itemId.id }?.let { ui ->
                         val furniture = allFurniture.value?.find { it.id == itemId.id }
-                        itemsToAlign.add(AlignmentItem(itemId.id.toLong(), ItemType.FURNITURE, ui.xPosition, ui.yPosition, ui.displayWidth.value, ui.displayHeight.value, furniture = furniture))
+                        itemsToAlign.add(AlignmentItem(itemId.id.toLong(), ItemType.FURNITURE, ui.xPosition.value, ui.yPosition.value, ui.displayWidth.value.value, ui.displayHeight.value.value, furniture = furniture))
                     }
                 }
             }
@@ -1291,8 +1297,10 @@ class SeatingChartViewModel @Inject constructor(
                 it.yPosition.value = newY
             }
         } else {
-            // Furniture positions in FurnitureUiItem are currently not MutableState, but we can update them in the LiveData if needed.
-            // However, the command will update the DB which will trigger a refresh.
+            furnitureForDisplay.value?.find { it.id == id.toInt() }?.let {
+                it.xPosition.value = newX
+                it.yPosition.value = newY
+            }
         }
     }
 
@@ -1332,7 +1340,7 @@ class SeatingChartViewModel @Inject constructor(
                 } else {
                     furnitureForDisplay.value?.find { it.id == itemId.id }?.let { ui ->
                         val furniture = allFurniture.value?.find { it.id == itemId.id }
-                        itemsToDistribute.add(AlignmentItem(itemId.id.toLong(), ItemType.FURNITURE, ui.xPosition, ui.yPosition, ui.displayWidth.value, ui.displayHeight.value, furniture = furniture))
+                        itemsToDistribute.add(AlignmentItem(itemId.id.toLong(), ItemType.FURNITURE, ui.xPosition.value, ui.yPosition.value, ui.displayWidth.value.value, ui.displayHeight.value.value, furniture = furniture))
                     }
                 }
             }
@@ -1435,17 +1443,31 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     private fun updateFurnitureForDisplay(furnitureList: List<Furniture>) {
+        // Clean up cache for deleted furniture
+        val currentFurnitureIds = furnitureList.map { it.id }.toSet()
+        furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
+
         val mappedList = furnitureList.map { furniture ->
             val pending = pendingFurniturePositions[furniture.id]
-            if (pending != null) {
+            val furnitureToSync = if (pending != null) {
                 if (abs(furniture.xPosition - pending.first) < 0.1f && abs(furniture.yPosition - pending.second) < 0.1f) {
                     pendingFurniturePositions.remove(furniture.id)
-                    furniture.toUiItem()
+                    furniture
                 } else {
-                    furniture.copy(xPosition = pending.first, yPosition = pending.second).toUiItem()
+                    furniture.copy(xPosition = pending.first, yPosition = pending.second)
                 }
             } else {
-                furniture.toUiItem()
+                furniture
+            }
+
+            val existingItem = furnitureUiItemCache[furniture.id]
+            if (existingItem != null) {
+                furnitureToSync.updateFurnitureUiItem(existingItem)
+                existingItem
+            } else {
+                val newItem = furnitureToSync.toFurnitureUiItem()
+                furnitureUiItemCache[furniture.id] = newItem
+                newItem
             }
         }
         furnitureForDisplay.postValue(mappedList)
