@@ -54,32 +54,41 @@ fun GhostPhantasmLayer(
         label = "time"
     )
 
-    // Calculate agitation and student data
+    // --- Phase 1: Memoized Data Processing ---
+
     val studentsToDisplay = remember(students) { students.take(20) }
-    val negativeLogsByStudent = remember(behaviorLogs) {
-        behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
-    }
-    val positiveLogsByStudent = remember(behaviorLogs) {
-        behaviorLogs.filter { !it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
+
+    // Consolidate log processing into a single pass for O(L) instead of O(3L)
+    val processedLogs = remember(behaviorLogs) {
+        val negativeMap = mutableMapOf<Long, MutableList<BehaviorEvent>>()
+        val positiveMap = mutableMapOf<Long, MutableList<BehaviorEvent>>()
+        var negativeCount = 0
+
+        behaviorLogs.forEach { event ->
+            if (event.type.contains("Negative", ignoreCase = true)) {
+                negativeMap.getOrPut(event.studentId) { mutableListOf() }.add(event)
+                negativeCount++
+            } else {
+                positiveMap.getOrPut(event.studentId) { mutableListOf() }.add(event)
+            }
+        }
+
+        val agitation = if (behaviorLogs.isEmpty()) 0.2f
+        else min(negativeCount.toFloat() / behaviorLogs.size.coerceAtLeast(1) + 0.1f, 1.0f)
+
+        Triple(negativeMap, positiveMap, agitation)
     }
 
-    /**
-     * Agitation Calculation:
-     * Determines the global "tension" of the classroom.
-     * Formula: (Negative Logs / Total Logs) + 0.1 baseline.
-     * This value drives the 'turbulence' and 'flicker' uniforms in the PHANTASM_BLOBS shader.
-     */
-    val agitationLevel = remember(behaviorLogs) {
-        if (behaviorLogs.isEmpty()) 0.2f
-        else {
-            val negativeCount = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
-            min(negativeCount.toFloat() / behaviorLogs.size.coerceAtLeast(1) + 0.1f, 1.0f)
-        }
-    }
+    val negativeLogsByStudent = processedLogs.first
+    val positiveLogsByStudent = processedLogs.second
+    val agitationLevel = processedLogs.third
 
     val shader = remember { RuntimeShader(GhostPhantasmShader.PHANTASM_BLOBS) }
+
+    // Pre-allocate arrays to avoid GC pressure during high-frequency Canvas drawing
+    val pointsArray = remember { FloatArray(40) }
+    val weightsArray = remember { FloatArray(20) }
+    val colorsArray = remember { FloatArray(60) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
@@ -88,38 +97,38 @@ fun GhostPhantasmLayer(
         shader.setFloatUniform("iIsRecording", if (isRecording) 1.0f else 0.0f)
         shader.setIntUniform("iNumPoints", studentsToDisplay.size)
 
-        // Flatten arrays for shader
-        val points = FloatArray(40)
-        val weights = FloatArray(20)
-        val colors = FloatArray(60)
+        // Clear arrays for reuse
+        pointsArray.fill(0f)
+        weightsArray.fill(0f)
+        colorsArray.fill(0f)
 
         studentsToDisplay.forEachIndexed { index, student ->
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-            points[index * 2] = centerX
-            points[index * 2 + 1] = centerY
+            pointsArray[index * 2] = centerX
+            pointsArray[index * 2 + 1] = centerY
 
             val negCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
             val posCount = positiveLogsByStudent[student.id.toLong()]?.size ?: 0
 
-            weights[index] = 1.0f + (negCount * 0.5f) + (posCount * 0.2f)
+            weightsArray[index] = 1.0f + (negCount * 0.5f) + (posCount * 0.2f)
 
             // Color: Reddish for negative, Cyan for positive/neutral
             if (negCount > posCount) {
-                colors[index * 3] = 1.0f // R
-                colors[index * 3 + 1] = 0.2f // G
-                colors[index * 3 + 2] = 0.1f // B
+                colorsArray[index * 3] = 1.0f // R
+                colorsArray[index * 3 + 1] = 0.2f // G
+                colorsArray[index * 3 + 2] = 0.1f // B
             } else {
-                colors[index * 3] = 0.0f // R
-                colors[index * 3 + 1] = 0.8f // G
-                colors[index * 3 + 2] = 1.0f // B
+                colorsArray[index * 3] = 0.0f // R
+                colorsArray[index * 3 + 1] = 0.8f // G
+                colorsArray[index * 3 + 2] = 1.0f // B
             }
         }
 
-        shader.setFloatUniform("iPoints", points)
-        shader.setFloatUniform("iWeights", weights)
-        shader.setFloatUniform("iColors", colors)
+        shader.setFloatUniform("iPoints", pointsArray)
+        shader.setFloatUniform("iWeights", weightsArray)
+        shader.setFloatUniform("iColors", colorsArray)
 
         drawRect(brush = ShaderBrush(shader))
     }

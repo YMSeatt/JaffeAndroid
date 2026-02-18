@@ -76,6 +76,11 @@ fun GhostFluxLayer(
     val shader = remember { RuntimeShader(GhostFluxShader.NEURAL_FLOW) }
     val studentsToDisplay = remember(students) { students.take(20) }
 
+    // Pre-calculate log counts to avoid O(S * L) in the Canvas draw loop
+    val logCountsByStudent = remember(behaviorLogs) {
+        behaviorLogs.groupingBy { it.studentId }.eachCount()
+    }
+
     // Pre-allocated arrays to avoid GC pressure during high-frequency Canvas drawing
     val points = remember { FloatArray(40) }
     val weights = remember { FloatArray(20) }
@@ -85,6 +90,10 @@ fun GhostFluxLayer(
         shader.setFloatUniform("iTime", time)
         shader.setIntUniform("iNumPoints", studentsToDisplay.size)
 
+        // Reset arrays for reuse
+        points.fill(0f)
+        weights.fill(0f)
+
         studentsToDisplay.forEachIndexed { index, student ->
             // Map logical student coordinates to screen space for the shader
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
@@ -93,8 +102,8 @@ fun GhostFluxLayer(
             points[index * 2] = centerX
             points[index * 2 + 1] = centerY
 
-            // Weighting student influence based on log density
-            val logCount = behaviorLogs.count { it.studentId == student.id.toLong() }
+            // Weighting student influence based on log density (O(1) lookup)
+            val logCount = logCountsByStudent[student.id.toLong()] ?: 0
             weights[index] = (logCount.toFloat() / 5f).coerceAtMost(2.0f)
         }
 

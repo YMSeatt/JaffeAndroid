@@ -77,16 +77,24 @@ fun GhostHUDLayer(
 
     val shader = remember { RuntimeShader(GhostHUDShader.TACTICAL_RADAR) }
 
+    // Pre-allocate arrays to avoid per-frame allocations
+    val targetArray = remember { FloatArray(10) }
+    val scoreArray = remember { FloatArray(10) }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iHeading", heading)
         shader.setIntUniform("iTargetCount", targetAngles.size)
 
-        val targetArray = FloatArray(10)
-        val scoreArray = FloatArray(10)
-        targetAngles.take(10).forEachIndexed { i, angle -> targetArray[i] = angle }
-        targetScores.take(10).forEachIndexed { i, score -> scoreArray[i] = score }
+        // Reuse pre-allocated arrays
+        targetArray.fill(0f)
+        scoreArray.fill(0f)
+        val numTargets = minOf(targetAngles.size, targetScores.size, 10)
+        for (i in 0 until numTargets) {
+            targetArray[i] = targetAngles[i]
+            scoreArray[i] = targetScores[i]
+        }
 
         shader.setFloatUniform("iTargets", targetArray)
         shader.setFloatUniform("iTargetScores", scoreArray)

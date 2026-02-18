@@ -32,6 +32,7 @@ class ExcelImportUtilTest {
     @Before
     fun setup() {
         context = ApplicationProvider.getApplicationContext()
+        coEvery { studentGroupDao.getAllStudentGroupsList() } returns emptyList()
     }
 
     @Test
@@ -140,7 +141,7 @@ class ExcelImportUtilTest {
     fun testImportWithGroupNameMatching() {
         runBlocking {
             coEvery { studentRepository.insertStudent(any()) } returns 1L
-            coEvery { studentGroupDao.getGroupByName("Math Group") } returns StudentGroup(id = 101, name = "Math Group", color = "#FF0000")
+            coEvery { studentGroupDao.getAllStudentGroupsList() } returns listOf(StudentGroup(id = 101, name = "Math Group", color = "#FF0000"))
 
             val file = File(context.cacheDir, "test_group_matching.xlsx")
             val workbook = XSSFWorkbook()

@@ -70,6 +70,9 @@ object ExcelImportUtil {
                     }
                 }
 
+                // Pre-load groups to avoid N+1 query problem
+                val groupMap = studentGroupDao.getAllStudentGroupsList().associateBy { it.name.lowercase(Locale.getDefault()) }
+
                 while (rows.hasNext()) {
                     try {
                         val row = rows.next()
@@ -110,14 +113,8 @@ object ExcelImportUtil {
 
                         if (firstName.isNotBlank()) {
                             // Find group ID by name if provided (Ported from Python)
-                            var groupId: Long? = null
-                            if (!groupName.isNullOrBlank()) {
-                                try {
-                                    val group = studentGroupDao.getGroupByName(groupName)
-                                    groupId = group?.id
-                                } catch (e: Exception) {
-                                    Log.e(TAG, "Error looking up group name: $groupName", e)
-                                }
+                            val groupId = groupName?.let { name ->
+                                groupMap[name.lowercase(Locale.getDefault())]?.id
                             }
 
                             val student = Student(

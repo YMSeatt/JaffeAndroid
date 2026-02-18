@@ -59,11 +59,13 @@ class GhostHUDViewModel(application: Application) : AndroidViewModel(application
         stopTracking()
     }
 
+    // Pre-allocate to avoid GC pressure in onSensorChanged
+    private val rotationMatrix = FloatArray(9)
+    private val orientation = FloatArray(3)
+
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
-            val rotationMatrix = FloatArray(9)
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-            val orientation = FloatArray(3)
             SensorManager.getOrientation(rotationMatrix, orientation)
             _heading.value = orientation[0]
         }
@@ -82,6 +84,9 @@ class GhostHUDViewModel(application: Application) : AndroidViewModel(application
      */
     fun updateTargets(students: List<StudentUiItem>, prophecies: List<GhostOracle.Prophecy>) {
         viewModelScope.launch {
+            // Pre-group prophecies by student ID to avoid O(S * P) complexity
+            val propheciesByStudent = prophecies.groupBy { it.studentId }
+
             val frictionStudents = prophecies.filter {
                 it.type == GhostOracle.ProphecyType.SOCIAL_FRICTION ||
                 it.type == GhostOracle.ProphecyType.ENGAGEMENT_DROP
@@ -97,8 +102,9 @@ class GhostHUDViewModel(application: Application) : AndroidViewModel(application
                 val angle = atan2(dy, dx)
                 angles.add(angle)
 
-                val score = prophecies.filter { it.studentId == student.id.toLong() }
-                    .maxOfOrNull { it.confidence } ?: 0.5f
+                // O(1) lookup for prophecies
+                val score = propheciesByStudent[student.id.toLong()]
+                    ?.maxOfOrNull { it.confidence } ?: 0.5f
                 scores.add(score)
             }
 
