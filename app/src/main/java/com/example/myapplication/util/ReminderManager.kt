@@ -14,11 +14,19 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Manager responsible for scheduling and canceling teacher reminders using [AlarmManager].
+ * ReminderManager: The primary authority for teacher reminder scheduling.
  *
- * This utility handles the integration with Android's alarm system to ensure notifications
- * are delivered at the correct time, even if the application is not running.
- * It also manages modern Android requirements for exact alarm permissions (API 31+).
+ * This utility serves as the modern, Hilt-enabled implementation for managing [AlarmManager]
+ * registrations. It is the core engine behind the Reminders screen accessible from the
+ * main seating chart view.
+ *
+ * ### Key Characteristics:
+ * - **Integration**: Works in tandem with [ReminderReceiver].
+ * - **DI**: fully supported by Hilt for constructor injection.
+ * - **Consistency**: Uses **lowercase** intent keys (e.g., `reminder_id`) for broadcast data.
+ * - **Modernity**: Handles API 31+ exact alarm permission checks.
+ *
+ * Note: This implementation is distinct from the legacy [com.example.myapplication.alarm.AlarmScheduler].
  */
 @Singleton
 class ReminderManager @Inject constructor(@ApplicationContext private val context: Context) {

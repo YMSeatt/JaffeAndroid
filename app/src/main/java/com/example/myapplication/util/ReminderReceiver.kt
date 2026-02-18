@@ -10,18 +10,22 @@ import androidx.core.app.NotificationCompat
 import com.example.myapplication.R
 
 /**
- * BroadcastReceiver triggered by [android.app.AlarmManager] when a reminder is due.
+ * ReminderReceiver: The primary entry point for scheduled reminder broadcasts.
  *
- * This receiver is responsible for creating and displaying a system notification
- * to alert the teacher. It handles notification channel creation for Android O (API 26) and above.
+ * This receiver is triggered by [android.app.AlarmManager] and is responsible for
+ * elevating a background alarm into a visible system notification.
+ *
+ * ### Implementation Details:
+ * - **Channel**: Uses the `"reminder_channel"` ID.
+ * - **Extras**: Expects **lowercase** keys: `reminder_id`, `reminder_title`, and `reminder_description`.
+ * - **Registration**: Must be declared in `AndroidManifest.xml` (unlike its legacy counterpart).
  */
 class ReminderReceiver : BroadcastReceiver() {
     /**
-     * Called when the broadcast is received. Extracts reminder details from the [Intent]
-     * and displays a notification.
+     * Processes the incoming alarm intent and triggers a notification.
      *
      * @param context The application context.
-     * @param intent The intent containing "reminder_id", "reminder_title", and "reminder_description".
+     * @param intent The intent containing lowercase reminder metadata.
      */
     override fun onReceive(context: Context, intent: Intent) {
         val reminderId = intent.getLongExtra("reminder_id", 0)

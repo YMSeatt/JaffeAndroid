@@ -58,6 +58,19 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   The `Command` pattern is used for the Undo/Redo system.
 *   The **Reminder System** utilizes `android.app.AlarmManager` for precise scheduling and `BroadcastReceiver`s for triggering system notifications even when the app is backgrounded.
 
+### ⏰ Reminders & Alarms Architecture
+The application currently contains two parallel implementations for teacher reminders. Developers should adhere to the following guidelines to maintain consistency:
+
+1.  **Primary Implementation (`util` & `screens` packages)**:
+    *   **Components**: `ReminderManager`, `ReminderReceiver`, `ReminderViewModel`, and `ui/screens/RemindersScreen.kt`.
+    *   **Standard**: This is the Hilt-enabled, modern implementation used by the main application flow. It uses **lowercase** Intent keys (e.g., `reminder_id`).
+    *   **Status**: **Source of Truth**. Use this for all new features and modifications.
+
+2.  **Legacy Implementation (`alarm` & `settings` packages)**:
+    *   **Components**: `AlarmScheduler`, `AlarmReceiver`, `RemindersViewModel`, and `ui/settings/RemindersScreen.kt`.
+    *   **Standard**: A redundant system that uses **uppercase** Intent keys (e.g., `REMINDER_ID`).
+    *   **Status**: **Deprecated**. This implementation is non-functional for system notifications (missing Manifest registration) and is maintained only for legacy UI compatibility within the Settings menu.
+
 ## 🏗️ Technical Architecture & Data Parity
 
 This project maintains strict data parity between the Android and Python applications, allowing for seamless data migration via JSON exports.

@@ -13,11 +13,15 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
- * ViewModel for the Reminders screen, utilizing the [ReminderManager] utility.
+ * ReminderViewModel: The primary coordinator for teacher reminders.
  *
  * This ViewModel manages the lifecycle of teacher reminders, coordinating between
  * the Room database ([ReminderDao]) and the system's [android.app.AlarmManager]
- * via [ReminderManager].
+ * via the primary [ReminderManager].
+ *
+ * ### Usage:
+ * This is the modern, Hilt-enabled ViewModel used by the standard `RemindersScreen`
+ * (located in `ui/screens`).
  */
 @HiltViewModel
 class ReminderViewModel @Inject constructor(

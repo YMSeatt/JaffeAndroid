@@ -33,6 +33,18 @@ import com.example.myapplication.ui.dialogs.AddReminderDialog
 import com.example.myapplication.ui.dialogs.EditReminderDialog
 import com.example.myapplication.viewmodel.RemindersViewModel
 
+/**
+ * RemindersScreen (Settings): A legacy user interface for managing reminders.
+ *
+ * This version of the reminders screen is integrated into the Settings navigation
+ * but uses a redundant implementation ([RemindersViewModel] and [AlarmScheduler]).
+ *
+ * ### ⚠️ Redundancy Note:
+ * This component is considered **legacy**. Developers should refer to the primary
+ * [com.example.myapplication.ui.screens.RemindersScreen] for the most up-to-date
+ * implementation and features.
+ */
+@Deprecated("Use the primary RemindersScreen in ui.screens instead.")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindersScreen(onDismiss: () -> Unit, remindersViewModel: RemindersViewModel = viewModel()) {
