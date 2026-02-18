@@ -38,6 +38,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
     val behaviorSummary = statsData.behaviorSummary
     val quizSummary = statsData.quizSummary
     val homeworkSummary = statsData.homeworkSummary
+    val attendanceSummary = statsData.attendanceSummary
+    val totalDays = statsData.totalDaysInRange
 
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
 
@@ -134,7 +136,21 @@ fun StatsScreen(viewModel: StatsViewModel) {
         // Stats Display
         LazyColumn(modifier = Modifier.weight(1f)) {
             item {
-                Text("Behavior Summary", style = MaterialTheme.typography.headlineMedium)
+                Text("Attendance Summary (Total Days: $totalDays)", style = MaterialTheme.typography.headlineMedium)
+            }
+            items(attendanceSummary) {
+                Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Student: ${it.studentName}")
+                        Text("Days Present: ${it.daysPresent}")
+                        Text("Days Absent: ${it.daysAbsent}")
+                        Text("Attendance: ${"%.1f".format(it.attendancePercentage)}%")
+                    }
+                }
+            }
+
+            item {
+                Text("Behavior Summary", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(top = 16.dp))
             }
             items(behaviorSummary) {
                 Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {

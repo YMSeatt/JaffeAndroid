@@ -10,12 +10,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import java.util.Calendar
 import javax.inject.Inject
 
 // Define data classes to hold the summary information
 data class BehaviorSummary(val studentName: String, val behavior: String, val count: Int)
 data class QuizSummary(val studentName: String, val quizName: String, val averageScore: Double, val timesTaken: Int)
 data class HomeworkSummary(val studentName: String, val assignmentName: String, val count: Int, val totalPoints: Double)
+data class AttendanceSummary(val studentName: String, val daysPresent: Int, val daysAbsent: Int, val attendancePercentage: Double)
 
 /**
  * Consolidated statistics data to reduce UI recomposition triggers.
@@ -23,7 +25,9 @@ data class HomeworkSummary(val studentName: String, val assignmentName: String, 
 data class StatsData(
     val behaviorSummary: List<BehaviorSummary> = emptyList(),
     val quizSummary: List<QuizSummary> = emptyList(),
-    val homeworkSummary: List<HomeworkSummary> = emptyList()
+    val homeworkSummary: List<HomeworkSummary> = emptyList(),
+    val attendanceSummary: List<AttendanceSummary> = emptyList(),
+    val totalDaysInRange: Int = 0
 )
 
 @HiltViewModel
@@ -100,19 +104,107 @@ class StatsViewModel @Inject constructor(
                 val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, studentMap)
                 val quizSummaryList = calculateQuizSummary(filteredQuizLogs, studentMap, quizMarkTypes)
                 val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, studentMap)
+                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, students, behaviorEvents, homeworkLogs, quizLogs)
 
                 _statsData.postValue(
                     StatsData(
                         behaviorSummary = behaviorSummaryList,
                         quizSummary = quizSummaryList,
-                        homeworkSummary = homeworkSummaryList
+                        homeworkSummary = homeworkSummaryList,
+                        attendanceSummary = attendanceSummaryList,
+                        totalDaysInRange = totalDays
                     )
                 )
             }
         }
     }
 
-    private fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
+    private fun truncateToDay(timestamp: Long, cal: Calendar): Long {
+        cal.timeInMillis = timestamp
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
+    }
+
+    internal fun calculateAttendanceSummary(
+        options: ExportOptions,
+        students: List<Student>,
+        behaviorEvents: List<BehaviorEvent>,
+        homeworkLogs: List<HomeworkLog>,
+        quizLogs: List<QuizLog>
+    ): Pair<List<AttendanceSummary>, Int> {
+        val cal = Calendar.getInstance()
+
+        // Determine date range from options or fallback to log boundaries
+        val startMillis = options.startDate ?: listOfNotNull(
+            behaviorEvents.minOfOrNull { it.timestamp },
+            homeworkLogs.minOfOrNull { it.loggedAt },
+            quizLogs.minOfOrNull { it.loggedAt }
+        ).minOrNull() ?: System.currentTimeMillis()
+        val endMillis = options.endDate ?: System.currentTimeMillis()
+
+        val reportStart = truncateToDay(startMillis, cal)
+        val reportEnd = truncateToDay(endMillis, cal)
+
+        // Generate list of days in the range
+        val dates = mutableListOf<Long>()
+        cal.timeInMillis = reportStart
+        while (cal.timeInMillis <= reportEnd) {
+            val currentDayStart = truncateToDay(cal.timeInMillis, cal)
+            dates.add(currentDayStart)
+            cal.timeInMillis = currentDayStart
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+            if (dates.size > 366) break // Safety break for large ranges
+        }
+
+        if (dates.isEmpty()) return Pair(emptyList(), 0)
+
+        // Track active days per student (optimized for O(1) presence checks)
+        val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
+        behaviorEvents.forEach { event ->
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(truncateToDay(event.timestamp, cal))
+        }
+        homeworkLogs.forEach { log ->
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+        }
+        quizLogs.forEach { log ->
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+        }
+
+        val studentIdsFilterSet = options.studentIds?.toSet()
+        val filteredStudents = if (studentIdsFilterSet != null) {
+            students.filter { studentIdsFilterSet.contains(it.id) }
+        } else {
+            students
+        }.sortedBy { "${it.lastName} ${it.firstName}" }
+
+        val summaryList = mutableListOf<AttendanceSummary>()
+        for (student in filteredStudents) {
+            val presentDaysSet = studentActiveDays[student.id] ?: emptySet()
+            var presentCount = 0
+            for (dateMillis in dates) {
+                if (presentDaysSet.contains(dateMillis)) {
+                    presentCount++
+                }
+            }
+            val absentCount = dates.size - presentCount
+            val percentage = (presentCount.toDouble() / dates.size) * 100
+            summaryList.add(
+                AttendanceSummary(
+                    studentName = "${student.firstName} ${student.lastName}",
+                    daysPresent = presentCount,
+                    daysAbsent = absentCount,
+                    attendancePercentage = percentage
+                )
+            )
+        }
+
+        return Pair(summaryList, dates.size)
+    }
+
+    internal fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
         // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists
         val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
         for (event in behaviorEvents) {
@@ -137,7 +229,7 @@ class StatsViewModel @Inject constructor(
         return summaryList
     }
 
-    private fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
+    internal fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
         // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
         val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
 
@@ -192,7 +284,7 @@ class StatsViewModel @Inject constructor(
         return summaryList
     }
 
-    private fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>): List<HomeworkSummary> {
+    internal fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>): List<HomeworkSummary> {
         // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop
         val homeworkCountMap = mutableMapOf<Long, MutableMap<String, Int>>()
         val homeworkPointsMap = mutableMapOf<Long, MutableMap<String, Double>>()
