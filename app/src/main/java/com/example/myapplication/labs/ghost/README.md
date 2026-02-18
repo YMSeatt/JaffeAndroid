@@ -92,6 +92,12 @@ A data refraction layer using **Chromatic Dispersion**.
 - **Interactive Refraction**: Users drag a virtual prism across the screen to reveal hidden data "spectral signatures" under the student icons.
 - **Neural Signature Analysis**: Integrated with `Python/ghost_spectra_analyzer.py` to process classroom signatures and identify students in "Infrared" (at-risk) or "Ultraviolet" (high engagement) states.
 
+### 16. Ghost Singularity (`GhostSingularityLayer.kt`, `GhostSingularityShader.kt`, `GhostSingularityEngine.kt`)
+A high-intensity **Data Sink** visualization for destructive actions.
+- **Gravitational Lensing**: Uses an AGSL shader to distort UI space around a central singularity, simulating the curvature of space-time.
+- **Tactile Collapse**: Implements multi-stage haptic feedback using `VibrationEffect.Composition` (PRIMITIVE_LOW_TICK -> PRIMITIVE_THUD -> PRIMITIVE_QUICK_FALL) as students approach the event horizon.
+- **Accretion Disk**: Procedurally generates a glowing, rotating disk of "data energy" around the singularity.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

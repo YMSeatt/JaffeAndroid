@@ -40,7 +40,7 @@ object GhostHUDShader {
             float2 center = float2(0.5, 0.5);
             float2 distVector = uv - center;
             float dist = length(distVector);
-            float angle = atan2(distVector.y, distVector.x);
+            float angle = atan(distVector.y, distVector.x);
 
             float rotatedAngle = angle + iHeading + 1.5708;
             rotatedAngle = mod(rotatedAngle + 3.14159, 6.28318) - 3.14159;
