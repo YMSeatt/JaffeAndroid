@@ -8,12 +8,22 @@ import com.example.myapplication.data.Reminder
 import java.util.Calendar
 
 /**
- * Utility responsible for scheduling and canceling teacher reminders using [AlarmManager].
+ * AlarmScheduler: A secondary, legacy implementation for scheduling teacher reminders.
  *
- * This implementation is part of the 'alarm' package and works in conjunction with [AlarmReceiver].
- * Note: This class provides functionality similar to [com.example.myapplication.util.ReminderManager]
- * but uses different Intent extras and a separate receiver.
+ * This class is part of a redundant alarm subsystem that overlaps with the primary
+ * [com.example.myapplication.util.ReminderManager]. It uses distinct **uppercase**
+ * intent keys and works in conjunction with the [AlarmReceiver].
+ *
+ * ### ⚠️ Redundancy Note:
+ * This implementation is currently considered **legacy**. Developers should prefer
+ * using [com.example.myapplication.util.ReminderManager] for all new reminder logic.
+ * Furthermore, the associated [AlarmReceiver] is not registered in the Manifest,
+ * making this scheduler non-functional for system-level notifications.
  */
+@Deprecated(
+    message = "Use ReminderManager for the primary, Hilt-enabled reminder implementation.",
+    replaceWith = ReplaceWith("ReminderManager", "com.example.myapplication.util.ReminderManager")
+)
 class AlarmScheduler(private val context: Context) {
 
     private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager

@@ -12,12 +12,20 @@ import com.example.myapplication.data.ReminderDao
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for the Settings-based Reminders screen, utilizing the [AlarmScheduler].
+ * RemindersViewModel: A secondary, legacy coordinator for teacher reminders.
  *
- * This ViewModel handles reminder persistence and scheduling specifically for the
- * settings-integrated reminders view.
- * Note: This class overlaps significantly with [ReminderViewModel].
+ * This ViewModel serves the settings-integrated reminders view but overlaps
+ * significantly with the primary [ReminderViewModel]. It utilizes the legacy
+ * [AlarmScheduler] and manual database access rather than Hilt-driven injection.
+ *
+ * ### ⚠️ Redundancy Note:
+ * This component is considered **legacy**. New features should utilize
+ * [ReminderViewModel] and the associated primary [com.example.myapplication.util.ReminderManager].
  */
+@Deprecated(
+    message = "Use ReminderViewModel for the primary reminder implementation.",
+    replaceWith = ReplaceWith("ReminderViewModel", "com.example.myapplication.viewmodel.ReminderViewModel")
+)
 class RemindersViewModel(application: Application) : AndroidViewModel(application) {
 
     private val reminderDao: ReminderDao

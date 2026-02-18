@@ -52,6 +52,15 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 
+/**
+ * RemindersScreen: The primary user interface for managing teacher reminders.
+ *
+ * This screen is accessible from the main seating chart view and utilizes the
+ * modern [ReminderViewModel] for data persistence and primary [ReminderManager]
+ * for system alarm scheduling.
+ *
+ * Note: This is distinct from the legacy version located in `ui/settings`.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindersScreen(

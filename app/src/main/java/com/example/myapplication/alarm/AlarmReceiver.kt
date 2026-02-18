@@ -10,10 +10,19 @@ import androidx.core.app.NotificationCompat
 import com.example.myapplication.R
 
 /**
- * BroadcastReceiver responsible for receiving scheduled alarms and displaying notifications.
+ * AlarmReceiver: A legacy broadcast receiver for teacher reminders.
  *
- * This implementation is part of the 'alarm' package. It uses the "REMINDERS" notification channel.
+ * This receiver is part of a redundant implementation that overlaps with
+ * [com.example.myapplication.util.ReminderReceiver]. It expects **uppercase**
+ * intent keys: `REMINDER_ID`, `REMINDER_TITLE`, and `REMINDER_DESCRIPTION`.
+ *
+ * ### ⚠️ Redundancy Note:
+ * This receiver is currently **not registered** in the `AndroidManifest.xml`, which
+ * means it will never trigger for system alarms. It is maintained for legacy
+ * compatibility with older settings screens but should be avoided in favor of
+ * [com.example.myapplication.util.ReminderReceiver].
  */
+@Deprecated("Use ReminderReceiver for the primary reminder implementation.")
 class AlarmReceiver : BroadcastReceiver() {
 
     /**
