@@ -43,12 +43,13 @@ class GhostHologramEngine(context: Context) : SensorEventListener {
         sensorManager.unregisterListener(this)
     }
 
+    // Pre-allocate to avoid GC pressure in onSensorChanged
+    private val rotationMatrix = FloatArray(9)
+    private val orientation = FloatArray(3)
+
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ROTATION_VECTOR) {
-            val rotationMatrix = FloatArray(9)
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
-
-            val orientation = FloatArray(3)
             SensorManager.getOrientation(rotationMatrix, orientation)
 
             // orientation[1] is pitch, orientation[2] is roll (in radians)
