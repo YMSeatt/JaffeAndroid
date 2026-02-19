@@ -66,37 +66,53 @@ class StatsViewModel @Inject constructor(
     fun updateStats(options: ExportOptions) {
         viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val students = studentDao.getAllStudentsNonLiveData()
-                val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-                val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-                val quizLogs = quizLogDao.getAllQuizLogsList()
+                val startDate = options.startDate ?: 0L
+                val endDate = options.endDate ?: Long.MAX_VALUE
+                val studentIds = options.studentIds
+
+                val students = if (studentIds != null && studentIds.isNotEmpty()) {
+                    studentDao.getStudentsByIdsList(studentIds)
+                } else {
+                    studentDao.getAllStudentsNonLiveData()
+                }
+
+                val behaviorEvents = if (studentIds != null && studentIds.isNotEmpty()) {
+                    behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
+                } else {
+                    behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
+                }
+
+                val homeworkLogs = if (studentIds != null && studentIds.isNotEmpty()) {
+                    homeworkLogDao.getFilteredHomeworkLogsWithStudents(startDate, endDate, studentIds)
+                } else {
+                    homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
+                }
+
+                val quizLogs = if (studentIds != null && studentIds.isNotEmpty()) {
+                    quizLogDao.getFilteredQuizLogsWithStudents(startDate, endDate, studentIds)
+                } else {
+                    quizLogDao.getFilteredQuizLogs(startDate, endDate)
+                }
+
                 val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
 
-                // Filter data based on options
-                // Optimization: Convert lists to sets for O(1) lookup during filtering
-                val studentIdsSet = options.studentIds?.toSet()
+                // Filter data based on remaining options (types)
                 val behaviorTypesSet = options.behaviorTypes?.toSet()
                 val homeworkTypesSet = options.homeworkTypes?.toSet()
 
-                val filteredBehaviorEvents = behaviorEvents.filter { event ->
-                    (options.startDate == null || event.timestamp >= options.startDate) &&
-                            (options.endDate == null || event.timestamp <= options.endDate) &&
-                            (studentIdsSet == null || studentIdsSet.contains(event.studentId)) &&
-                            (behaviorTypesSet == null || behaviorTypesSet.contains(event.type))
+                val filteredBehaviorEvents = if (behaviorTypesSet == null) {
+                    behaviorEvents
+                } else {
+                    behaviorEvents.filter { behaviorTypesSet.contains(it.type) }
                 }
 
-                val filteredHomeworkLogs = homeworkLogs.filter { log ->
-                    (options.startDate == null || log.loggedAt >= options.startDate) &&
-                            (options.endDate == null || log.loggedAt <= options.endDate) &&
-                            (studentIdsSet == null || studentIdsSet.contains(log.studentId)) &&
-                            (homeworkTypesSet == null || homeworkTypesSet.contains(log.assignmentName))
+                val filteredHomeworkLogs = if (homeworkTypesSet == null) {
+                    homeworkLogs
+                } else {
+                    homeworkLogs.filter { homeworkTypesSet.contains(it.assignmentName) }
                 }
 
-                val filteredQuizLogs = quizLogs.filter { log ->
-                    (options.startDate == null || log.loggedAt >= options.startDate) &&
-                            (options.endDate == null || log.loggedAt <= options.endDate) &&
-                            (studentIdsSet == null || studentIdsSet.contains(log.studentId))
-                }
+                val filteredQuizLogs = quizLogs
 
                 val studentMap = students.associateBy { it.id }
 
@@ -104,7 +120,7 @@ class StatsViewModel @Inject constructor(
                 val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, studentMap)
                 val quizSummaryList = calculateQuizSummary(filteredQuizLogs, studentMap, quizMarkTypes)
                 val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, studentMap)
-                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, students, behaviorEvents, homeworkLogs, quizLogs)
+                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, students, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs)
 
                 _statsData.postValue(
                     StatsData(
@@ -173,12 +189,7 @@ class StatsViewModel @Inject constructor(
             studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
         }
 
-        val studentIdsFilterSet = options.studentIds?.toSet()
-        val filteredStudents = if (studentIdsFilterSet != null) {
-            students.filter { studentIdsFilterSet.contains(it.id) }
-        } else {
-            students
-        }.sortedBy { "${it.lastName} ${it.firstName}" }
+        val filteredStudents = students.sortedBy { "${it.lastName} ${it.firstName}" }
 
         val summaryList = mutableListOf<AttendanceSummary>()
         for (student in filteredStudents) {
