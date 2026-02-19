@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.core.content.FileProvider
+import java.io.File
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -999,37 +1001,43 @@ fun SeatingChartScreen(
                     fromAddress = from,
                     onDismissRequest = { onShowEmailDialogChange(false) },
                     onSend = { to, subject, body ->
-                        activity?.lifecycleScope?.launch {
-                            val emailUtil = EmailUtil(activity)
-                            // Create a temporary file for the attachment
-                            val file = kotlin.io.path.createTempFile("export", ".xlsx").toFile()
-                            val uri = Uri.fromFile(file)
-                            seatingChartViewModel.pendingExportOptions?.let { options ->
-                                val result = seatingChartViewModel.exportData(
-                                    context = activity,
-                                    uri = uri,
-                                    options = options
+                        activity?.let { mainActivity ->
+                            mainActivity.lifecycleScope.launch {
+                                val emailUtil = EmailUtil(mainActivity)
+                                // HARDEN: Create temporary file in the app's private cache directory
+                                val file = File.createTempFile("export_", ".xlsx", mainActivity.cacheDir)
+                                val uri = FileProvider.getUriForFile(
+                                    mainActivity,
+                                    "com.example.myapplication.fileprovider",
+                                    file
                                 )
-                                if (result.isSuccess) {
-                                    try {
-                                        emailUtil.sendEmailWithRetry(
-                                            from = from,
-                                            password = emailPassword,
-                                            to = to,
-                                            subject = subject,
-                                            body = body,
-                                            attachmentPath = file.absolutePath,
-                                            smtpSettings = smtpSettings
-                                        )
-                                        Toast.makeText(activity, "Email sent!", Toast.LENGTH_SHORT).show()
-                                    } catch (e: EmailException) {
-                                        Toast.makeText(activity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                seatingChartViewModel.pendingExportOptions?.let { options ->
+                                    val result = seatingChartViewModel.exportData(
+                                        context = mainActivity,
+                                        uri = uri,
+                                        options = options
+                                    )
+                                    if (result.isSuccess) {
+                                        try {
+                                            emailUtil.sendEmailWithRetry(
+                                                from = from,
+                                                password = emailPassword,
+                                                to = to,
+                                                subject = subject,
+                                                body = body,
+                                                attachmentPath = file.absolutePath,
+                                                smtpSettings = smtpSettings
+                                            )
+                                            Toast.makeText(mainActivity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                        } catch (e: EmailException) {
+                                            Toast.makeText(mainActivity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                        }
+                                    } else {
+                                        Toast.makeText(mainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                     }
-                                } else {
-                                    Toast.makeText(activity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                 }
+                                onShowEmailDialogChange(false)
                             }
-                            onShowEmailDialogChange(false)
                         }
                     }
                 )
