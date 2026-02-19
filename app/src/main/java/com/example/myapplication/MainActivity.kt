@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch(Dispatchers.IO) {
             val cacheDir = applicationContext.cacheDir
             val tempFiles = cacheDir.listFiles { _, name ->
-                name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg")
+                name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg") || name.endsWith(".db")
             }
             tempFiles?.forEach { file ->
                 try {

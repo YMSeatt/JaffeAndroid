@@ -55,7 +55,8 @@ class EmailWorker(
         val requestType = inputData.getString("request_type")
         when (requestType) {
             "daily_report" -> {
-                val file = File(applicationContext.cacheDir, "daily_report.xlsx")
+                // HARDEN: Use unique temporary filename in private cache directory
+                val file = File.createTempFile("daily_report_", ".xlsx", applicationContext.cacheDir)
                 try {
                     val students = studentDao.getAllStudentsNonLiveData()
                     val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
@@ -177,7 +178,8 @@ class EmailWorker(
                 }
             }
             "on_stop_export" -> {
-                val file = File(applicationContext.cacheDir, "on_stop_export.xlsx")
+                // HARDEN: Use unique temporary filename in private cache directory
+                val file = File.createTempFile("on_stop_export_", ".xlsx", applicationContext.cacheDir)
                 try {
                     val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                     val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
