@@ -8,6 +8,12 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
+/**
+ * Data Access Object for student homework logs.
+ *
+ * This DAO provides methods for tracking homework completion, detailed scores,
+ * and efforts, with support for temporal UI filtering.
+ */
 @Dao
 interface HomeworkLogDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -46,6 +52,13 @@ interface HomeworkLogDao {
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentHomeworkLogsForStudentList(studentId: Long, limit: Int): List<HomeworkLog>
 
+    /**
+     * Retrieves recent homework logs for UI display on student icons, applying
+     * visibility filters:
+     *
+     * 1. **User Clearance**: Excludes logs that occurred before the student's [lastCleared] timestamp.
+     * 2. **Temporal Decay**: Excludes logs older than [homeworkDisplayTimeout] hours.
+     */
     @Query("""
         SELECT * FROM homework_logs 
         WHERE studentId = :studentId 

@@ -28,17 +28,31 @@ data class Student(
     var xPosition: Float = 0f,
     /** Vertical position on the seating chart canvas. */
     var yPosition: Float = 0f,
-    // UI Customization fields
+    // --- UI Customization Fields ---
+    // These fields allow for per-student styling overrides on the seating chart.
+    // If null, the application-wide default styles (defined in UserPreferences) are used.
+
+    /** Custom width for the student icon on the seating chart. */
     var customWidth: Int? = null,
+    /** Custom height for the student icon on the seating chart. */
     var customHeight: Int? = null,
+    /** Custom background color (Hex string). */
     var customBackgroundColor: String? = null,
+    /** Custom border/outline color (Hex string). */
     var customOutlineColor: String? = null,
+    /** Custom text color for the name (Hex string). */
     var customTextColor: String? = null,
+    /** Custom thickness for the icon border. */
     var customOutlineThickness: Int? = null,
+    /** Custom corner radius for the icon box. */
     var customCornerRadius: Int? = null,
+    /** Custom internal padding for the icon box. */
     var customPadding: Int? = null,
+    /** Custom font family name (e.g., "sans-serif", "monospace"). */
     var customFontFamily: String? = null,
+    /** Custom font size in SP. */
     var customFontSize: Int? = null,
+    /** Custom color for all text elements (Hex string). */
     var customFontColor: String? = null,
     /** A temporary instruction or task assigned to the student, displayed on their icon. */
     var temporaryTask: String? = null,
