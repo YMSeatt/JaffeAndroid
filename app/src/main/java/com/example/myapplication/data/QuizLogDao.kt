@@ -8,11 +8,19 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 
+/**
+ * Data Access Object for student quiz performance logs.
+ *
+ * This DAO handles both historical quiz records and active "In-Progress" session logs,
+ * enabling real-time academic progress tracking.
+ */
 @Dao
 interface QuizLogDao {
+    /** Inserts or replaces a quiz log entry. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(log: QuizLog): Long
 
+    /** Bulk inserts quiz logs, used for migrating session data to persistent storage. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(logs: List<QuizLog>): List<Long>
 
@@ -49,6 +57,17 @@ interface QuizLogDao {
     @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentQuizLogsForStudentList(studentId: Long, limit: Int): List<QuizLog>
 
+    /**
+     * Retrieves quiz logs for UI display on student icons, specifically filtering for
+     * active or recent relevant data.
+     *
+     * ### Visibility Logic:
+     * 1. **User Clearance**: Excludes logs that occurred before the student's [lastCleared] timestamp.
+     * 2. **Session Context**: Only selects logs where `isComplete = 0`. This ensures that only
+     *    in-progress quiz sessions or recently unfinished logs appear on the chart icons,
+     *    avoiding clutter from finished historical quizzes.
+     * 3. **Temporal Decay**: Excludes logs older than [quizDisplayTimeout] hours.
+     */
     @Query("""
         SELECT * FROM quiz_logs 
         WHERE studentId = :studentId 
