@@ -98,6 +98,12 @@ A high-intensity **Data Sink** visualization for destructive actions.
 - **Tactile Collapse**: Implements multi-stage haptic feedback using `VibrationEffect.Composition` (PRIMITIVE_LOW_TICK -> PRIMITIVE_THUD -> PRIMITIVE_QUICK_FALL) as students approach the event horizon.
 - **Accretion Disk**: Procedurally generates a glowing, rotating disk of "data energy" around the singularity.
 
+### 17. Ghost Aurora (`GhostAuroraLayer.kt`, `GhostAuroraShader.kt`, `GhostAuroraEngine.kt`)
+A "Classroom Climate" visualization using **Procedural Auroras**.
+- **Atmospheric Visualization**: Renders a beautiful, flowing aurora in the background that reflects the collective mood of the classroom.
+- **Data-Driven Colors**: Aurora colors shift based on the balance of positive (Cyan), negative (Red), and academic (Purple) logs.
+- **Dynamic Intensity**: The brightness and flow speed of the aurora scale with recent log frequency.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

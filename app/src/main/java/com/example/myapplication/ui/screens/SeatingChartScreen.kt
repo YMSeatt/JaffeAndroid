@@ -118,6 +118,7 @@ import com.example.myapplication.labs.ghost.GhostPortalLayer
 import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
+import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
@@ -193,6 +194,7 @@ fun SeatingChartScreen(
     var isVectorActive by remember { mutableStateOf(false) }
     var isSpectraActive by remember { mutableStateOf(false) }
     var isFluxActive by remember { mutableStateOf(false) }
+    var isAuroraActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
@@ -482,6 +484,8 @@ fun SeatingChartScreen(
                 onToggleVector = { isVectorActive = !isVectorActive },
                 isSpectraActive = isSpectraActive,
                 onToggleSpectra = { isSpectraActive = !isSpectraActive },
+                isAuroraActive = isAuroraActive,
+                onToggleAurora = { isAuroraActive = !isAuroraActive },
                 isFluxActive = isFluxActive,
                 onToggleFlux = { isFluxActive = !isFluxActive },
                 isSingularityActive = isSingularityActive,
@@ -619,6 +623,14 @@ fun SeatingChartScreen(
                     portalPosition = if (portalPosition == Offset.Zero)
                         Offset(canvasSize.width / 2f, canvasSize.height / 2f)
                         else portalPosition
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.AURORA_MODE_ENABLED && isAuroraActive) {
+                GhostAuroraLayer(
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    homeworkLogs = allHomeworkLogs
                 )
             }
 
@@ -1242,6 +1254,8 @@ fun SeatingChartTopAppBar(
     onToggleVector: () -> Unit,
     isSpectraActive: Boolean,
     onToggleSpectra: () -> Unit,
+    isAuroraActive: Boolean,
+    onToggleAurora: () -> Unit,
     isFluxActive: Boolean,
     onToggleFlux: () -> Unit,
     isSingularityActive: Boolean,
@@ -1426,6 +1440,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Palette, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isAuroraActive) "Disable Ghost Aurora 👻" else "Enable Ghost Aurora 👻") },
+                            onClick = {
+                                onToggleAurora()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Palette, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLUX_MODE_ENABLED) {

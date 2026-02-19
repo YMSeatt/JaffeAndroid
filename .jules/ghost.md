@@ -34,6 +34,23 @@ Teachers often "feel" the social dynamics of a room but can't see them. "Ghost L
 
 ---
 
+## 🌌 Experiment: Ghost Aurora (Classroom Climate Visualization)
+**Date:** 2027-02-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, teachers don't just "feel" the room; they see it. "Ghost Aurora" translates the aggregate classroom energy into a beautiful, atmospheric visualization. It provides a non-distracting, ambient indicator of the "Classroom Climate," allowing teachers to gauge the mood without looking at specific logs.
+
+### 🛠️ The Tech
+- **AGSL Domain Warping**: Implemented a sophisticated aurora shader using multi-layered FBM and domain warping for fluid, ethereal motion.
+- **Climate Engine**: A logic engine that blends colors based on behavior ratios and scales intensity with activity frequency.
+
+### 🔦 The Discovery
+- **Ambient Awareness**: We discovered that mapping "Climate" to a background layer reduces cognitive load compared to traditional charts.
+- **Atmospheric Transition**: The smooth color blending between Cyan (Positive) and Red (Negative) creates a "weather-like" feel that is more intuitive than binary status indicators.
+
+---
+
 ## 🛰️ Experiment: Ghost Vector (Social Gravity Visualization)
 **Date:** 2026-08-10
 **Status:** PROTOTYPE COMPLETE
