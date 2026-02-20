@@ -119,6 +119,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.GhostPulseLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
@@ -195,6 +196,7 @@ fun SeatingChartScreen(
     var isSpectraActive by remember { mutableStateOf(false) }
     var isFluxActive by remember { mutableStateOf(false) }
     var isAuroraActive by remember { mutableStateOf(false) }
+    var isPulseActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
@@ -490,6 +492,8 @@ fun SeatingChartScreen(
                 onToggleFlux = { isFluxActive = !isFluxActive },
                 isSingularityActive = isSingularityActive,
                 onToggleSingularity = { isSingularityActive = !isSingularityActive },
+                isPulseActive = isPulseActive,
+                onTogglePulse = { isPulseActive = !isPulseActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -653,6 +657,15 @@ fun SeatingChartScreen(
                 GhostSingularityLayer(
                     students = students,
                     isSingularityActive = isSingularityActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PULSE_MODE_ENABLED && isPulseActive) {
+                GhostPulseLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
                 )
             }
 
@@ -1260,6 +1273,8 @@ fun SeatingChartTopAppBar(
     onToggleFlux: () -> Unit,
     isSingularityActive: Boolean,
     onToggleSingularity: () -> Unit,
+    isPulseActive: Boolean,
+    onTogglePulse: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1448,6 +1463,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Palette, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isPulseActive) "Disable Neural Pulse 👻" else "Enable Neural Pulse 👻") },
+                            onClick = {
+                                onTogglePulse()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.RadioButtonChecked, null, tint = androidx.compose.ui.graphics.Color.Green) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLUX_MODE_ENABLED) {
