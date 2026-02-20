@@ -111,7 +111,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.Stack
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.ArrayDeque
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.math.abs
@@ -222,15 +224,16 @@ class SeatingChartViewModel @Inject constructor(
 
     /**
      * The history of executed commands.
-     * New commands are pushed onto this stack. [undo] pops from here.
+     * New commands are pushed onto this ArrayDeque. [undo] pops from here.
+     * Replaced synchronized Stack with ArrayDeque for better performance.
      */
-    private val commandUndoStack = Stack<Command>()
+    private val commandUndoStack = ArrayDeque<Command>()
 
     /**
      * The history of undone commands.
      * Commands are pushed here during [undo]. [redo] pops from here and reapplies them.
      */
-    private val commandRedoStack = Stack<Command>()
+    private val commandRedoStack = ArrayDeque<Command>()
 
     private val _undoStackState = MutableStateFlow<List<Command>>(emptyList())
 
@@ -252,7 +255,10 @@ class SeatingChartViewModel @Inject constructor(
     private var updateJob: Job? = null
 
     private fun updateUndoStackState() {
-        _undoStackState.value = commandUndoStack.toList()
+        // BOLT: ArrayDeque.toList() returns elements in first-to-last order.
+        // Since we use push() (addFirst), the newest command is first.
+        // The UI (and the previous Stack implementation) expects oldest-to-newest order.
+        _undoStackState.value = commandUndoStack.toList().reversed()
     }
     /**
      * Stores optimistic student positions during drag operations.
@@ -306,13 +312,17 @@ class SeatingChartViewModel @Inject constructor(
     /** Caches the parsed initials mapping for quizzes. */
     private var quizInitialsMapCache: Map<String, String> = emptyMap()
 
+    private var memoizedGroups: List<com.example.myapplication.data.StudentGroup>? = null
+    /** Caches the mapping of group IDs to colors. */
+    private var groupColorMapCache: Map<Long, String> = emptyMap()
+
     private data class StudentCacheKey(
         val studentDataHash: Int,
         val behaviorLogsIdentity: Int,
         val homeworkLogsIdentity: Int,
         val quizLogsIdentity: Int,
         val rulesIdentity: Int,
-        val prefsHash: Int,
+        val relevantPrefsHash: Int,
         val sessionActive: Boolean,
         val currentMode: String,
         val timeKey: String,
@@ -471,23 +481,37 @@ class SeatingChartViewModel @Inject constructor(
                 // --- Stage 1: Data Pre-processing (Memoized) ---
 
                 // Group flat behavior logs by student ID to optimize O(1) lookup in the student loop.
+                // BOLT: Identity-preserving grouping prevents adding a log for one student from invalidating
+                // the cache for all other students.
                 val behaviorEvents = allBehaviorEvents.value ?: emptyList()
                 if (behaviorEvents !== memoizedBehaviorEvents) {
-                    behaviorLogsByStudentCache = behaviorEvents.groupBy { it.studentId }
+                    val newGrouped = behaviorEvents.groupBy { it.studentId }
+                    val oldGrouped = behaviorLogsByStudentCache
+                    behaviorLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
+                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
+                    }
                     memoizedBehaviorEvents = behaviorEvents
                 }
                 val behaviorLogsByStudent = behaviorLogsByStudentCache
 
                 val homeworkLogs = allHomeworkLogs.value ?: emptyList()
                 if (homeworkLogs !== memoizedHomeworkLogs) {
-                    homeworkLogsByStudentCache = homeworkLogs.groupBy { it.studentId }
+                    val newGrouped = homeworkLogs.groupBy { it.studentId }
+                    val oldGrouped = homeworkLogsByStudentCache
+                    homeworkLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
+                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
+                    }
                     memoizedHomeworkLogs = homeworkLogs
                 }
                 val homeworkLogsByStudent = homeworkLogsByStudentCache
 
                 val quizLogs = allQuizLogs.value ?: emptyList()
                 if (quizLogs !== memoizedQuizLogs) {
-                    quizLogsByStudentCache = quizLogs.groupBy { it.studentId }
+                    val newGrouped = quizLogs.groupBy { it.studentId }
+                    val oldGrouped = quizLogsByStudentCache
+                    quizLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
+                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
+                    }
                     memoizedQuizLogs = quizLogs
                 }
                 val quizLogsByStudent = quizLogsByStudentCache
@@ -505,7 +529,11 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 val groups = allGroups.value ?: emptyList()
-                val groupColorMap = groups.associate { it.id to it.color }
+                if (groups !== memoizedGroups) {
+                    groupColorMapCache = groups.associate { it.id to it.color }
+                    memoizedGroups = groups
+                }
+                val groupColorMap = groupColorMapCache
 
                 val behaviorLimit = prefs.recentBehaviorIncidentsLimit
                 val homeworkLimit = prefs.recentHomeworkLogsLimit
@@ -548,21 +576,33 @@ class SeatingChartViewModel @Inject constructor(
                 val homeworkDisplayTimeout = prefs.homeworkDisplayTimeout
                 val quizDisplayTimeout = prefs.quizDisplayTimeout
                 val currentTime = System.currentTimeMillis()
-                val calendar = java.util.Calendar.getInstance().apply { timeInMillis = currentTime }
-                val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
-                    java.util.Calendar.MONDAY -> 0
-                    java.util.Calendar.TUESDAY -> 1
-                    java.util.Calendar.WEDNESDAY -> 2
-                    java.util.Calendar.THURSDAY -> 3
-                    java.util.Calendar.FRIDAY -> 4
-                    java.util.Calendar.SATURDAY -> 5
-                    java.util.Calendar.SUNDAY -> 6
-                    else -> -1
-                }
-                val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
-                val minute = calendar.get(java.util.Calendar.MINUTE)
-                val currentTimeString = "${if (hour < 10) "0$hour" else hour}:${if (minute < 10) "0$minute" else minute}"
+
+                // BOLT: Replaced slow java.util.Calendar with java.time.LocalDateTime (Min SDK 26)
+                val now = LocalDateTime.now()
+                val dayOfWeek = now.dayOfWeek.value - 1 // LocalDateTime is 1(Mon)-7(Sun), we want 0-6
+                val currentTimeString = now.format(DateTimeFormatter.ofPattern("HH:mm"))
                 val timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
+
+                // BOLT: Refine cache key to only include preferences that affect Stage 2 re-calculations.
+                // This prevents irrelevant preference changes (like edit mode) from clearing the whole cache.
+                val relevantPrefsHash = listOf(
+                    prefs.recentBehaviorIncidentsLimit,
+                    prefs.recentHomeworkLogsLimit,
+                    prefs.recentLogsLimit,
+                    prefs.maxRecentLogsToDisplay,
+                    prefs.useInitialsForBehavior,
+                    prefs.useInitialsForHomework,
+                    prefs.useInitialsForQuiz,
+                    prefs.behaviorInitialsMap,
+                    prefs.homeworkInitialsMap,
+                    prefs.quizInitialsMap,
+                    prefs.behaviorDisplayTimeout,
+                    prefs.homeworkDisplayTimeout,
+                    prefs.quizDisplayTimeout,
+                    prefs.liveQuizQuestionsGoal,
+                    prefs.liveQuizInitialColor,
+                    prefs.liveQuizFinalColor
+                ).hashCode()
 
                 // Memoized rule decoding
                 val rules = allRules.value ?: emptyList()
@@ -594,7 +634,7 @@ class SeatingChartViewModel @Inject constructor(
                         homeworkLogsIdentity = System.identityHashCode(homeworkList),
                         quizLogsIdentity = System.identityHashCode(quizList),
                         rulesIdentity = System.identityHashCode(decodedRules),
-                        prefsHash = prefs.hashCode(),
+                        relevantPrefsHash = relevantPrefsHash,
                         sessionActive = sessionActive,
                         currentMode = currentModeValue,
                         timeKey = currentTimeString,

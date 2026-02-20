@@ -328,10 +328,16 @@ object ConditionalFormattingEngine {
                 val behaviorNames = rule.behaviorNamesSet
                 val countThreshold = condition.countThreshold ?: return false
                 val timeWindowHours = condition.timeWindowHours ?: 24
-                val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 60 * 60 * 1000
+                val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 3600000L
 
-                val count = behaviorLog.count {
-                    it.timestamp >= cutoffTime && behaviorNames.contains(it.type.lowercase())
+                // BOLT: Manual count with early break since behaviorLog is sorted DESC
+                var count = 0
+                for (event in behaviorLog) {
+                    if (event.timestamp < cutoffTime) break
+                    if (behaviorNames.contains(event.type.lowercase())) {
+                        count++
+                        if (count >= countThreshold) return true // BOLT: Return early if threshold met
+                    }
                 }
                 count >= countThreshold
             }
@@ -343,7 +349,7 @@ object ConditionalFormattingEngine {
                 val scoreThresholdPercent = condition.scoreThresholdPercent ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id.toLong()) return@any false
+                    // BOLT: Removed redundant studentId check as quizLog is already student-specific
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
                     val score = log.markValue
@@ -398,7 +404,7 @@ object ConditionalFormattingEngine {
                 val countThreshold = condition.markCountThreshold ?: return false
 
                 quizLog.any { log ->
-                    if (log.studentId != student.id.toLong()) return@any false
+                    // BOLT: Removed redundant studentId check
                     try {
                         val marksData = decodedMarksCache.get(log.marksData) ?: json.decodeFromString<Map<String, Int>>(log.marksData).also {
                             decodedMarksCache.put(log.marksData, it)
