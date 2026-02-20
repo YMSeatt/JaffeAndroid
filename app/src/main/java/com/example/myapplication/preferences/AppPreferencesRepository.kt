@@ -317,23 +317,26 @@ class AppPreferencesRepository @Inject constructor(
     val studentLogsLastClearedFlow: Flow<Map<Long, Long>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet())
-                .mapNotNull { it.split(":").let { parts ->
-                    if (parts.size == 2) {
-                        val studentId = parts[0].toLongOrNull()
-                        val timestamp = parts[1].toLongOrNull()
-                        if (studentId != null && timestamp != null) {
-                            studentId to timestamp
+                .mapNotNull {
+                    val decrypted = securityUtil.decryptSafe(it)
+                    decrypted.split(":").let { parts ->
+                        if (parts.size == 2) {
+                            val studentId = parts[0].toLongOrNull()
+                            val timestamp = parts[1].toLongOrNull()
+                            if (studentId != null && timestamp != null) {
+                                studentId to timestamp
+                            } else null
                         } else null
-                    } else null
-                } }.toMap()
+                    }
+                }.toMap()
         }
 
     suspend fun updateStudentLogsLastCleared(studentId: Long, timestamp: Long) {
         context.dataStore.edit { settings ->
             val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
             val newCleared = currentCleared.toMutableSet()
-            newCleared.removeAll { it.startsWith("$studentId:") }
-            newCleared.add("$studentId:$timestamp")
+            newCleared.removeAll { securityUtil.decryptSafe(it).startsWith("$studentId:") }
+            newCleared.add(securityUtil.encrypt("$studentId:$timestamp"))
             settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] = newCleared
         }
     }
@@ -342,7 +345,7 @@ class AppPreferencesRepository @Inject constructor(
         context.dataStore.edit { settings ->
             val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
             val newCleared = currentCleared.toMutableSet()
-            newCleared.removeAll { it.startsWith("$studentId:") }
+            newCleared.removeAll { securityUtil.decryptSafe(it).startsWith("$studentId:") }
             settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] = newCleared
         }
     }
@@ -497,34 +500,46 @@ class AppPreferencesRepository @Inject constructor(
 
     val behaviorTypesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.BEHAVIOR_TYPES_LIST] ?: emptySet()
+            (preferences[PreferencesKeys.BEHAVIOR_TYPES_LIST] ?: emptySet()).map {
+                securityUtil.decryptSafe(it)
+            }.toSet()
         }
 
     suspend fun updateBehaviorTypes(types: Set<String>) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.BEHAVIOR_TYPES_LIST] = types
+            settings[PreferencesKeys.BEHAVIOR_TYPES_LIST] = types.map {
+                securityUtil.encrypt(it)
+            }.toSet()
         }
     }
 
     val homeworkAssignmentTypesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] ?: emptySet()
+            (preferences[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] ?: emptySet()).map {
+                securityUtil.decryptSafe(it)
+            }.toSet()
         }
 
     suspend fun updateHomeworkAssignmentTypes(types: Set<String>) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] = types
+            settings[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] = types.map {
+                securityUtil.encrypt(it)
+            }.toSet()
         }
     }
 
     val homeworkStatusesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.HOMEWORK_STATUSES_LIST] ?: emptySet()
+            (preferences[PreferencesKeys.HOMEWORK_STATUSES_LIST] ?: emptySet()).map {
+                securityUtil.decryptSafe(it)
+            }.toSet()
         }
 
     suspend fun updateHomeworkStatuses(statuses: Set<String>) {
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.HOMEWORK_STATUSES_LIST] = statuses
+            settings[PreferencesKeys.HOMEWORK_STATUSES_LIST] = statuses.map {
+                securityUtil.encrypt(it)
+            }.toSet()
         }
     }
 
@@ -942,12 +957,14 @@ class AppPreferencesRepository @Inject constructor(
 
     val liveHomeworkSelectOptionsFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] ?: "Done,Not Done,Signed,Returned" // Default options
+            val value = preferences[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] ?: "Done,Not Done,Signed,Returned"
+            securityUtil.decryptSafe(value)
         }
 
     suspend fun updateLiveHomeworkSelectOptions(options: String) {
+        val encryptedOptions = securityUtil.encrypt(options)
         context.dataStore.edit { settings ->
-            settings[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] = options
+            settings[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] = encryptedOptions
         }
     }
 
