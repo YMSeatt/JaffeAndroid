@@ -5,7 +5,17 @@ import sys
 def analyze_vectors(classroom_data):
     """
     Analyzes student data to calculate social gravity vectors and classroom cohesion.
-    This script mirrors the logic used in the Android 'Ghost Vector' experiment.
+
+    This script implements a "Social Gravity" model where students exert forces on
+    one another based on their proximity and behavioral history (collaboration
+    vs friction). It calculates a net force vector for each student, indicating
+    their current "Social Momentum."
+
+    Args:
+        classroom_data (dict): The classroom data including student positions.
+
+    Returns:
+        str: A Markdown-formatted report of the classroom's social cohesion metrics.
     """
     students = classroom_data.get('students', [])
 

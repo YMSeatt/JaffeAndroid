@@ -5,6 +5,20 @@ import random
 def generate_hologram_svg(students, output_path="hologram_blueprint.svg"):
     """
     Generates a futuristic SVG 'blueprint' of the classroom seating chart.
+
+    This utility synthesizes a stylized vector representation of the classroom layout,
+    incorporating "glow" filters and a fixed-grid aesthetic. It is designed to be
+    compatible with the coordinate system used in the Android 'Ghost Blueprint Engine'.
+
+    Args:
+        students (list): A list of dictionaries, each containing 'name', 'x', and 'y'.
+        output_path (str): The file path where the generated SVG will be saved.
+
+    Coordinate Scaling:
+        The function maps logical coordinates to a 1200x800 SVG canvas.
+        Formula: (pos / 4) + offset
+        - division by 4: Compresses the 4000x4000 Android logical space to ~1000 units.
+        - +200/+100: Centers the layout within the SVG frame.
     """
     width = 1200
     height = 800
