@@ -200,7 +200,7 @@ class GhostVoiceAssistant(
                     comment = null
                 )
             )
-            Log.d("GhostVoice", "Successfully logged $behaviorType for student with initials ${student.initials.value}")
+            Log.d("GhostVoice", "Successfully logged $behaviorType for student (Initials Masked)")
         } ?: Log.w("GhostVoice", "Could not identify student in log command.")
     }
 }
