@@ -28,6 +28,7 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   **UI**: Tkinter with `sv_ttk` (Sun-Valley Theme)
 *   **Reporting**: `openpyxl`
 *   **Encryption**: `cryptography` (Fernet)
+*   **Experimental**: "Ghost Lab" analysis suite for advanced neural metrics and social gravity modeling.
 
 ## 📂 Project Structure
 

@@ -6,7 +6,16 @@ import random
 def generate_neural_dossier(student_data):
     """
     Generates a futuristic 'Neural Dossier' based on student data.
-    Simulates a 2027-era AI analysis.
+
+    This function simulates a 2027-era AI analysis, transforming simple student
+    metadata into a high-fidelity report featuring predictive trajectories
+    and complex neural metrics.
+
+    Args:
+        student_data (dict): Dictionary containing student information (id, name, etc).
+
+    Returns:
+        str: A formatted Markdown string containing the Neural Dossier.
     """
     student_name = student_data.get('name', 'Unknown')
     student_id = student_data.get('id', 'N/A')

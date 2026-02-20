@@ -15,6 +15,16 @@ def calculate_flow_intensity(data):
     """
     Calculates the 'Neural Flow' intensity of a classroom based on behavioral events.
     Higher density of recent events leads to a stronger 'Flux' surge.
+
+    The intensity is determined by the density of logs per student, modulated
+    by a sinusoidal "Classroom Tempo" that simulates the organic ebbs and flows
+    of energy in a learning environment.
+
+    Args:
+        data (dict): The classroom data dictionary, containing 'students' and 'behavior_logs'.
+
+    Returns:
+        float: A normalized intensity value between 0.1 and 1.0.
     """
     students = data.get("students", [])
     behavior_logs = data.get("behavior_logs", [])

@@ -5,7 +5,17 @@ from datetime import datetime
 def analyze_spectra(data_path):
     """
     Analyzes the 'Spectral Signature' of a classroom based on exported JSON data.
-    In 2027, this would be part of a real-time neural dashboard.
+
+    This analysis calculates "Refractive Variance" (dispersion) and "Neural Turbulence"
+    (agitation) to categorize students into spectral states.
+
+    Metrics:
+    - Infrared: Students with high "Neural Turbulence" (recent negative logs).
+    - Ultraviolet: Students with high "Normalized Intensity" (high engagement).
+    - Stable: Students with balanced or baseline signatures.
+
+    Args:
+        data_path (str): Path to the classroom JSON export file.
     """
     if not os.path.exists(data_path):
         print(f"Error: {data_path} not found.")

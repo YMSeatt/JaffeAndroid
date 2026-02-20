@@ -53,5 +53,16 @@ This application is designed to maintain logical parity with its [Android counte
 *   **Coordinate Parity**: While Python uses a **2000x1500** logical canvas and Android uses **4000x4000**, the data is import-compatible.
 *   **Feature Alignment**: Shared implementations of the Command pattern for Undo/Redo and complex conditional formatting rules.
 
+## 👻 Ghost Lab (Experimental Analysis)
+
+This directory includes a suite of experimental analysis tools that bridge the gap between the desktop application and futuristic neural visualizations. These tools process classroom data exports to generate high-fidelity insights and stylized blueprints.
+
+- **`ghost_blueprint.py`**: Generates a futuristic SVG blueprint of the classroom layout, compatible with the Android Ghost Blueprint Engine's coordinate system.
+- **`ghost_flux_simulator.py`**: Calculates "Neural Flow" intensity from student logs, providing recommendations for haptic feedback and shader scaling.
+- **`ghost_lattice.py`**: Analyzes social proximity and shared behavioral markers to infer a "Social Lattice" graph of student relationships.
+- **`ghost_link.py`**: Simulates a 2027-era AI analysis, generating "Neural Dossiers" with predictive trajectories for student performance.
+- **`ghost_spectra_analyzer.py`**: Performs "Neural Spectroscopy" to identify students in Infrared (at-risk) or Ultraviolet (high engagement) spectral states.
+- **`ghost_vector_analysis.py`**: Implements a "Social Gravity" model to calculate net social force vectors and classroom cohesion metrics.
+
 ---
 *Documentation love letter from Scribe 📜*
