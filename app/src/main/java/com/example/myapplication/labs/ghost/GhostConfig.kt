@@ -17,4 +17,5 @@ object GhostConfig {
     const val FLUX_MODE_ENABLED = true
     const val SINGULARITY_MODE_ENABLED = true
     const val AURORA_MODE_ENABLED = true
+    const val PULSE_MODE_ENABLED = true
 }
