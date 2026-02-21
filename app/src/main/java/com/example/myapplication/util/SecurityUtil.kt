@@ -24,8 +24,18 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
- * A utility for handling Fernet encryption and decryption within the Android app.
- * It manages the secure storage and retrieval of the encryption key.
+ * SecurityUtil: The central security manager for the application.
+ *
+ * This class is responsible for:
+ * 1. **Data Confidentiality**: Handling Fernet encryption and decryption for classroom data files,
+ *    ensuring compatibility with the Python desktop application.
+ * 2. **Key Lifecycle Management**: Managing the transition from legacy hardcoded keys to
+ *    modern, hardware-backed keys via the Android KeyStore.
+ * 3. **Identity Verification**: Providing robust password hashing and multi-format verification
+ *    logic to support seamless migration of user credentials across platforms.
+ *
+ * This utility ensures logical parity with `Python/data_encryption.py` while leveraging
+ * modern Android security features.
  */
 @Singleton
 class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
@@ -43,7 +53,14 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
         private const val PBKDF2_KEY_LENGTH = 256
         private const val PBKDF2_PREFIX = "pbkdf2"
 
-        // The old, insecure hardcoded key. Used as a fallback for migrating existing data.
+        /**
+         * The legacy, hardcoded shared key used by the Python desktop application
+         * and earlier versions of the Android app.
+         *
+         * **Role in Ecosystem**: This key serves as the cryptographic bridge for cross-platform
+         * data sync. It allows the Android app to decrypt classroom data exported from the
+         * Python app, which still relies on this shared secret (see `Python/encryption_key.py`).
+         */
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
         /**
@@ -70,7 +87,17 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
         /**
          * Verifies a password against a stored hash.
-         * Supports PBKDF2, salted SHA-512, and legacy unsalted SHA-256/SHA-512 hashes.
+         *
+         * This method implements a multi-format verifier to ensure data portability across
+         * different versions and platforms:
+         * 1. **PBKDF2**: Modern Android format (`pbkdf2:iterations:salt:hash`).
+         * 2. **Salted SHA-512**: Legacy mobile format.
+         * 3. **Unsalted SHA3-512**: Logical parity with the Python application's hashing strategy.
+         * 4. **Unsalted SHA-256/SHA-512**: Legacy compatibility formats.
+         *
+         * @param password The plaintext password to verify.
+         * @param storedHash The hash string retrieved from persistent storage.
+         * @return True if the password matches the hash, false otherwise.
          */
         fun verifyPassword(password: String, storedHash: String): Boolean {
             if (storedHash.startsWith("$PBKDF2_PREFIX:")) {
