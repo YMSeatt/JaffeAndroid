@@ -50,13 +50,9 @@ fun GhostFluxLayer(
         label = "time"
     )
 
-    // Calculate Global Engagement/Agitation for Haptics
-    val globalAgitation = remember(behaviorLogs) {
-        if (behaviorLogs.isEmpty()) 0.2f
-        else {
-            val count = behaviorLogs.size.coerceAtMost(100)
-            (count.toFloat() / 100f).coerceIn(0.2f, 1.0f)
-        }
+    // Calculate Global Engagement/Agitation for Haptics using ported Python logic
+    val globalAgitation = remember(students, behaviorLogs) {
+        GhostFluxEngine.calculateFlowIntensity(students.size, behaviorLogs.size)
     }
 
     /**

@@ -5,6 +5,7 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import kotlin.math.sin
 
 /**
  * GhostFluxEngine: Hardware-level integration for the Flux experiment.
@@ -43,7 +44,7 @@ class GhostFluxEngine(private val context: Context) {
             if (intensity > 0.8f) {
                 composition.addPrimitive(
                     VibrationEffect.Composition.PRIMITIVE_QUICK_RISE,
-                    0.6f,
+                    1.0f, // Ported from Python blueprint: 100% amplitude
                     40 // ms delay for the surge effect
                 )
             }
@@ -57,6 +58,33 @@ class GhostFluxEngine(private val context: Context) {
             // Fallback for older legacy devices
             @Suppress("DEPRECATION")
             vibrator.vibrate(30)
+        }
+    }
+
+    companion object {
+        /**
+         * Calculates the "Neural Flow" intensity of a classroom based on behavioral events.
+         * Ported from Python blueprint (ghost_flux_simulator.py).
+         *
+         * @param studentCount Number of students in the classroom.
+         * @param logCount Number of behavioral events recorded.
+         * @return A normalized intensity value between 0.1 and 1.0.
+         */
+        fun calculateFlowIntensity(studentCount: Int, logCount: Int): Float {
+            if (logCount == 0) return 0.1f
+
+            // student_count = len(students) if students else 1
+            val effectiveStudentCount = if (studentCount > 0) studentCount else 1
+
+            // Calculate base intensity (Density of interaction)
+            // intensity = (log_count / (student_count * 5.0))
+            val baseIntensity = logCount.toFloat() / (effectiveStudentCount * 5.0f)
+
+            // Apply sinusoidal 'Classroom Tempo' factor to simulate organic waves of engagement
+            // tempo = 1.0 + 0.2 * math.sin(log_count / 5.0)
+            val tempo = 1.0f + 0.2f * sin(logCount.toFloat() / 5.0f)
+
+            return (baseIntensity * tempo).coerceIn(0.1f, 1.0f)
         }
     }
 }

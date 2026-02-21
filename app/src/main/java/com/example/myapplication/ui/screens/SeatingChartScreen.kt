@@ -300,7 +300,7 @@ fun SeatingChartScreen(
 
     DisposableEffect(Unit) {
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
-            ghostPhantasmEngine.observeScreenRecording(context.mainExecutor) { recording ->
+            ghostPhantasmEngine.observeScreenRecording(ContextCompat.getMainExecutor(context)) { recording ->
                 isScreenRecording = recording
             }
         }
