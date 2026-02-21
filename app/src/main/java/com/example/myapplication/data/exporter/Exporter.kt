@@ -19,9 +19,10 @@ import org.apache.poi.ss.usermodel.Workbook
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import java.io.ByteArrayOutputStream
 import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 /**
@@ -58,13 +59,12 @@ class Exporter(
         val headerStyle: org.apache.poi.ss.usermodel.CellStyle,
         val rightAlignmentStyle: org.apache.poi.ss.usermodel.CellStyle,
         val leftAlignmentStyle: org.apache.poi.ss.usermodel.CellStyle,
-        val fullDateFormat: SimpleDateFormat,
-        val dateFormat: SimpleDateFormat,
-        val timeFormat: SimpleDateFormat,
-        val dayFormat: SimpleDateFormat,
-        val attendanceDateFormat: SimpleDateFormat,
-        val calendar: Calendar,
-        val date: Date
+        val fullDateFormat: DateTimeFormatter,
+        val dateFormat: DateTimeFormatter,
+        val timeFormat: DateTimeFormatter,
+        val dayFormat: DateTimeFormatter,
+        val attendanceDateFormat: DateTimeFormatter,
+        val zoneId: ZoneId
     )
 
     /**
@@ -110,13 +110,12 @@ class Exporter(
             leftAlignmentStyle = workbook.createCellStyle().apply {
                 alignment = HorizontalAlignment.LEFT
             },
-            fullDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
-            dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()),
-            timeFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault()),
-            dayFormat = SimpleDateFormat("EEEE", Locale.getDefault()),
-            attendanceDateFormat = SimpleDateFormat("yyyy-MM-dd (EEE)", Locale.getDefault()),
-            calendar = Calendar.getInstance(),
-            date = Date()
+            fullDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.getDefault()),
+            dateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.getDefault()),
+            timeFormat = DateTimeFormatter.ofPattern("HH:mm:ss", Locale.getDefault()),
+            dayFormat = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()),
+            attendanceDateFormat = DateTimeFormatter.ofPattern("yyyy-MM-dd (EEE)", Locale.getDefault()),
+            zoneId = ZoneId.systemDefault()
         )
 
         // Filter data
@@ -318,23 +317,23 @@ class Exporter(
                 is BehaviorEvent -> item.timestamp
                 is HomeworkLog -> item.loggedAt
                 is QuizLog -> item.loggedAt
-                else -> 0
+                else -> 0L
             }
 
-            context.date.time = timestamp
+            val zonedDateTime = Instant.ofEpochMilli(timestamp).atZone(context.zoneId)
             var col = 0
-            row.createCell(col++).setCellValue(context.fullDateFormat.format(context.date))
+            row.createCell(col++).setCellValue(context.fullDateFormat.format(zonedDateTime))
             row.createCell(col).apply {
-                setCellValue(context.dateFormat.format(context.date))
+                setCellValue(context.dateFormat.format(zonedDateTime))
                 cellStyle = context.rightAlignmentStyle
             }
             col++
             row.createCell(col).apply {
-                setCellValue(context.timeFormat.format(context.date))
+                setCellValue(context.timeFormat.format(zonedDateTime))
                 cellStyle = context.rightAlignmentStyle
             }
             col++
-            row.createCell(col++).setCellValue(context.dayFormat.format(context.date))
+            row.createCell(col++).setCellValue(context.dayFormat.format(zonedDateTime))
             row.createCell(col++).setCellValue(student?.firstName ?: "Unknown")
             row.createCell(col++).setCellValue(student?.lastName ?: "")
 
@@ -508,7 +507,7 @@ class Exporter(
             val behaviorCounts = behaviorLogs.groupBy { it.studentId }
                 .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
 
-            behaviorCounts.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+            behaviorCounts.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
                 val studentBehaviors = behaviorCounts[studentId]
                 studentBehaviors?.keys?.sorted()?.forEach { behavior ->
                     val row = sheet.createRow(currentRow++)
@@ -554,7 +553,7 @@ class Exporter(
                 quizScoresList.add(scorePercent)
             }
 
-            quizScores.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+            quizScores.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
                 val studentQuizzes = quizScores[studentId]
                 studentQuizzes?.keys?.sorted()?.forEach { quizName ->
                     val scores = studentQuizzes[quizName]!!
@@ -597,7 +596,7 @@ class Exporter(
                 studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)
             }
 
-            homeworkSummary.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+            homeworkSummary.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
                 val studentHomeworks = homeworkSummary[studentId]
                 studentHomeworks?.keys?.sorted()?.forEach { assignmentName ->
                     val summary = studentHomeworks[assignmentName]!!
@@ -670,19 +669,6 @@ class Exporter(
     }
 
     /**
-     * Normalizes a timestamp to the beginning of its day (00:00:00.000).
-     * Reuses the provided [Calendar] instance for performance.
-     */
-    private fun truncateToDay(timestamp: Long, cal: Calendar): Long {
-        cal.timeInMillis = timestamp
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
-
-    /**
      * Creates an 'Attendance Report' sheet showing student presence based on logged activities.
      * Ported from Python's generate_attendance_data and export_attendance_to_excel.
      *
@@ -701,10 +687,9 @@ class Exporter(
         val sheet = workbook.createSheet("Attendance Report")
         sheet.createFreezePane(1, 1)
 
-        val cal = context.calendar
+        val zoneId = context.zoneId
 
         // Determine date range from options or fallback to log boundaries.
-        // Optimized: Uses minOfOrNull on individual lists to avoid massive intermediate list allocations.
         val startMillis = options.startDate ?: listOfNotNull(
             behaviorEvents.minOfOrNull { it.timestamp },
             homeworkLogs.minOfOrNull { it.loggedAt },
@@ -712,41 +697,37 @@ class Exporter(
         ).minOrNull() ?: System.currentTimeMillis()
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
-        val reportStart = truncateToDay(startMillis, cal)
-        val reportEnd = truncateToDay(endMillis, cal)
+        val reportStartDay = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate().toEpochDay()
+        val reportEndDay = Instant.ofEpochMilli(endMillis).atZone(zoneId).toLocalDate().toEpochDay()
 
-        // Generate list of days in the range
-        val dates = mutableListOf<Long>()
-        cal.timeInMillis = reportStart
-        while (cal.timeInMillis <= reportEnd) {
-            // Re-normalizing each day ensures that dateMillis matches the keys in studentActiveDays
-            // even if Calendar.add is affected by DST transitions (e.g. midnight becoming 01:00).
-            val currentDayStart = truncateToDay(cal.timeInMillis, cal)
-            dates.add(currentDayStart)
-            cal.timeInMillis = currentDayStart
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-            if (dates.size > 366) break // Safety break for large ranges
-        }
+        if (reportEndDay < reportStartDay) return
 
-        // Pre-calculate active days for all students to enable O(1) presence checks.
-        // This is BOLT's primary optimization for this component.
-        // Optimized: Reuses the 'cal' instance to minimize object allocations and memory pressure.
+        // BOLT: Optimize by using epoch days for O(1) presence checks and avoiding Calendar
+        val totalDaysInRange = (reportEndDay - reportStartDay + 1).toInt().coerceAtMost(366)
+        val lastReportDay = reportStartDay + totalDaysInRange - 1
+
+        // Track active days per student (optimized for O(1) presence checks using epoch day)
         val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
-
         behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(truncateToDay(event.timestamp, cal))
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(event.timestamp).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
         homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
         quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
 
         val headers = mutableListOf("Student Name")
-        dates.forEach {
-            context.date.time = it
-            headers.add(context.attendanceDateFormat.format(context.date))
+        for (day in 0 until totalDaysInRange) {
+            val date = LocalDate.ofEpochDay(reportStartDay + day).atStartOfDay(zoneId)
+            headers.add(context.attendanceDateFormat.format(date))
         }
         headers.add("Total Present")
         headers.add("Total Absent")
@@ -764,7 +745,7 @@ class Exporter(
             students.filter { studentIdsFilterSet.contains(it.id) }
         } else {
             students
-        }.sortedBy { "${it.lastName} ${it.firstName}" }
+        }.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val centerStyle = workbook.createCellStyle().apply {
             alignment = HorizontalAlignment.CENTER
@@ -775,26 +756,26 @@ class Exporter(
             row.createCell(0).setCellValue("${student.firstName} ${student.lastName}")
 
             var totalPresent = 0
-            var totalAbsent = 0
-
             val presentDays = studentActiveDays[student.id] ?: emptySet()
 
-            dates.forEachIndexed { dateIndex, dateMillis ->
-                // Presence check: O(1) Set lookup
-                val isPresent = presentDays.contains(dateMillis)
+            for (dayOffset in 0 until totalDaysInRange) {
+                val epochDay = reportStartDay + dayOffset
+                val isPresent = presentDays.contains(epochDay)
 
-                val cell = row.createCell(dateIndex + 1)
+                val cell = row.createCell(dayOffset + 1)
                 cell.setCellValue(if (isPresent) "P" else "A")
                 cell.cellStyle = centerStyle
 
-                if (isPresent) totalPresent++ else totalAbsent++
+                if (isPresent) totalPresent++
             }
 
-            row.createCell(dates.size + 1).apply {
+            val totalAbsent = totalDaysInRange - totalPresent
+
+            row.createCell(totalDaysInRange + 1).apply {
                 setCellValue(totalPresent.toDouble())
                 cellStyle = context.rightAlignmentStyle
             }
-            row.createCell(dates.size + 2).apply {
+            row.createCell(totalDaysInRange + 2).apply {
                 setCellValue(totalAbsent.toDouble())
                 cellStyle = context.rightAlignmentStyle
             }

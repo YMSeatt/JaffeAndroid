@@ -10,7 +10,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.util.Calendar
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import javax.inject.Inject
 
 // Define data classes to hold the summary information
@@ -135,15 +137,6 @@ class StatsViewModel @Inject constructor(
         }
     }
 
-    private fun truncateToDay(timestamp: Long, cal: Calendar): Long {
-        cal.timeInMillis = timestamp
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        return cal.timeInMillis
-    }
-
     internal fun calculateAttendanceSummary(
         options: ExportOptions,
         students: List<Student>,
@@ -151,7 +144,7 @@ class StatsViewModel @Inject constructor(
         homeworkLogs: List<HomeworkLog>,
         quizLogs: List<QuizLog>
     ): Pair<List<AttendanceSummary>, Int> {
-        val cal = Calendar.getInstance()
+        val zoneId = ZoneId.systemDefault()
 
         // Determine date range from options or fallback to log boundaries
         val startMillis = options.startDate ?: listOfNotNull(
@@ -161,47 +154,46 @@ class StatsViewModel @Inject constructor(
         ).minOrNull() ?: System.currentTimeMillis()
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
-        val reportStart = truncateToDay(startMillis, cal)
-        val reportEnd = truncateToDay(endMillis, cal)
+        val reportStartDay = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate().toEpochDay()
+        val reportEndDay = Instant.ofEpochMilli(endMillis).atZone(zoneId).toLocalDate().toEpochDay()
 
-        // Generate list of days in the range
-        val dates = mutableListOf<Long>()
-        cal.timeInMillis = reportStart
-        while (cal.timeInMillis <= reportEnd) {
-            val currentDayStart = truncateToDay(cal.timeInMillis, cal)
-            dates.add(currentDayStart)
-            cal.timeInMillis = currentDayStart
-            cal.add(Calendar.DAY_OF_YEAR, 1)
-            if (dates.size > 366) break // Safety break for large ranges
-        }
+        if (reportEndDay < reportStartDay) return Pair(emptyList(), 0)
 
-        if (dates.isEmpty()) return Pair(emptyList(), 0)
+        // BOLT: Optimize by using epoch days for O(1) presence checks and avoiding Calendar
+        val totalDaysInRange = (reportEndDay - reportStartDay + 1).toInt().coerceAtMost(366)
+        val lastReportDay = reportStartDay + totalDaysInRange - 1
 
-        // Track active days per student (optimized for O(1) presence checks)
+        // Track active days per student (optimized for O(1) presence checks using epoch day)
         val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
         behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(truncateToDay(event.timestamp, cal))
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(event.timestamp).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
         homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
         quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(truncateToDay(log.loggedAt, cal))
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
+                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
+            )
         }
 
-        val filteredStudents = students.sortedBy { "${it.lastName} ${it.firstName}" }
+        // BOLT: Avoid string concatenation in sorting
+        val filteredStudents = students.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val summaryList = mutableListOf<AttendanceSummary>()
         for (student in filteredStudents) {
             val presentDaysSet = studentActiveDays[student.id] ?: emptySet()
-            var presentCount = 0
-            for (dateMillis in dates) {
-                if (presentDaysSet.contains(dateMillis)) {
-                    presentCount++
-                }
-            }
-            val absentCount = dates.size - presentCount
-            val percentage = (presentCount.toDouble() / dates.size) * 100
+
+            // BOLT: Optimize nested loop by counting active days within the report range
+            // This replaces the O(S*D) loop with O(S + active_days), which is much faster.
+            val presentCount = presentDaysSet.count { it in reportStartDay..lastReportDay }
+
+            val absentCount = totalDaysInRange - presentCount
+            val percentage = if (totalDaysInRange > 0) (presentCount.toDouble() / totalDaysInRange) * 100 else 0.0
             summaryList.add(
                 AttendanceSummary(
                     studentName = "${student.firstName} ${student.lastName}",
@@ -212,7 +204,7 @@ class StatsViewModel @Inject constructor(
             )
         }
 
-        return Pair(summaryList, dates.size)
+        return Pair(summaryList, totalDaysInRange)
     }
 
     internal fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
@@ -224,7 +216,7 @@ class StatsViewModel @Inject constructor(
         }
 
         val summaryList = mutableListOf<BehaviorSummary>()
-        behaviorCounts.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+        behaviorCounts.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
             val studentBehaviors = behaviorCounts[studentId]
             studentBehaviors?.keys?.sorted()?.forEach { behavior ->
                 val student = students[studentId]
@@ -277,7 +269,7 @@ class StatsViewModel @Inject constructor(
         }
 
         val summaryList = mutableListOf<QuizSummary>()
-        quizScores.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+        quizScores.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
             val studentQuizzes = quizScores[studentId]
             studentQuizzes?.keys?.sorted()?.forEach { quizName ->
                 val stats = studentQuizzes[quizName]!!
@@ -324,7 +316,7 @@ class StatsViewModel @Inject constructor(
         }
 
         val summaryList = mutableListOf<HomeworkSummary>()
-        homeworkCountMap.keys.sortedBy { students[it]?.lastName }.forEach { studentId ->
+        homeworkCountMap.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
             val studentHomeworks = homeworkCountMap[studentId]
             studentHomeworks?.keys?.sorted()?.forEach { assignmentName ->
                 val count = studentHomeworks[assignmentName] ?: 0
