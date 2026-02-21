@@ -10,6 +10,9 @@ import androidx.core.content.FileProvider
 import java.io.File
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.draganddrop.dragAndDropTarget
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -121,6 +124,8 @@ import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
+import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
+import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -198,6 +203,7 @@ fun SeatingChartScreen(
     var isAuroraActive by remember { mutableStateOf(false) }
     var isPulseActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
+    var isPhasingActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
@@ -297,6 +303,7 @@ fun SeatingChartScreen(
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
+    val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
 
     DisposableEffect(Unit) {
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
@@ -363,6 +370,17 @@ fun SeatingChartScreen(
         } else {
             hudViewModel.stopTracking()
         }
+    }
+
+    // Phasing Transition Animation
+    val phaseLevel by animateFloatAsState(
+        targetValue = if (isPhasingActive) 1f else 0f,
+        animationSpec = tween(1500, easing = LinearOutSlowInEasing),
+        label = "phaseLevel"
+    )
+
+    LaunchedEffect(phaseLevel) {
+        ghostPhasingEngine.updatePhase(phaseLevel)
     }
 
     // Phantasm Heartbeat Effect
@@ -492,6 +510,11 @@ fun SeatingChartScreen(
                 onToggleFlux = { isFluxActive = !isFluxActive },
                 isSingularityActive = isSingularityActive,
                 onToggleSingularity = { isSingularityActive = !isSingularityActive },
+                isPhasingActive = isPhasingActive,
+                onTogglePhasing = {
+                    isPhasingActive = !isPhasingActive
+                    if (isPhasingActive) ghostPhasingEngine.triggerPulse()
+                },
                 isPulseActive = isPulseActive,
                 onTogglePulse = { isPulseActive = !isPulseActive },
                 onExportBlueprint = {
@@ -608,6 +631,15 @@ fun SeatingChartScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
+                .pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            // Two-finger long press is hard with detectTapGestures
+                            // but we can simulate a special "Ghost Gesture" if needed.
+                            // For now, the menu toggle is primary.
+                        }
+                    )
+                }
                 .onSizeChanged { canvasSize = it }
                 .then(
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
@@ -621,7 +653,8 @@ fun SeatingChartScreen(
                 )
 
         ) {
-            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
+            GhostPhasingLayer(engine = ghostPhasingEngine) {
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
                 GhostPortalLayer(
                     isDraggingActive = isDraggingPortalActive,
                     portalPosition = if (portalPosition == Offset.Zero)
@@ -1124,6 +1157,7 @@ fun SeatingChartScreen(
         }
     }
 }
+}
 
 
 @Composable
@@ -1273,6 +1307,8 @@ fun SeatingChartTopAppBar(
     onToggleFlux: () -> Unit,
     isSingularityActive: Boolean,
     onToggleSingularity: () -> Unit,
+    isPhasingActive: Boolean,
+    onTogglePhasing: () -> Unit,
     isPulseActive: Boolean,
     onTogglePulse: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1491,6 +1527,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Black) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHASING_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isPhasingActive) "De-Phase Layer 👻" else "Neural Phase 👻") },
+                            onClick = {
+                                onTogglePhasing()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Blue) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED) {
