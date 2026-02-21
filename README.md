@@ -107,5 +107,23 @@ The [`SeatingChartViewModel.updateStudentsForDisplay`](app/src/main/java/com/exa
 ### 4. Object Identity Preservation
 By maintaining a persistent [`studentUiItemCache`](app/src/main/java/com/example/myapplication/viewmodel/SeatingChartViewModel.kt), the system ensures that Jetpack Compose can perform fine-grained "diff-and-patch" updates. Because the object instances remain the same, Compose only recomposes the specific properties (e.g., `xPosition`, `fontColor`) that changed, rather than re-rendering the entire seating chart.
 
+## 🔐 Security & Cross-Platform Data Sync
+
+To ensure data portability and security between the Android and Python applications, this project implements a unified security architecture.
+
+### 🛡️ Fernet Symmetric Encryption
+Both platforms utilize **Fernet** (AES-128 in CBC mode with HMAC-SHA256 for integrity) to secure JSON data files. This ensures that classroom data remains private even if the physical storage is accessed.
+
+### 🔑 Key Management & Evolution
+The project handles encryption keys in two stages:
+1.  **Legacy Hardcoded Key (`v1`)**: The Python application and early Android versions used a shared, hardcoded 32-byte key. This key is still maintained in the Android application as a `FALLBACK_KEY` to allow importing and migrating data exported from the Python desktop app.
+2.  **Hardened Android Key (`v2`)**: Modern Android versions generate a unique, random 32-byte key on the first run. This key is wrapped and stored securely using the **Android KeyStore** (`fernet.key.v2`). The app automatically migrates data from the legacy key to this hardened system.
+
+### 📋 Password Hashing Logical Parity
+User passwords are treated with cross-platform compatibility in mind:
+- **Python App**: Uses **SHA3-512** for fast, local credential verification.
+- **Android App**: Uses **PBKDF2 with HMAC-SHA256** (100,000 iterations) for modern, brute-force resistant security.
+- **Migration Path**: The Android `SecurityUtil` includes a multi-format verifier that can recognize and validate legacy Python SHA3-512 hashes, facilitating a seamless transition when moving a classroom from desktop to mobile.
+
 ---
 *Documentation love letter from Scribe 📜*

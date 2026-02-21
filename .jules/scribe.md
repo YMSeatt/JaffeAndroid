@@ -17,3 +17,7 @@
 
 ### 4. Neural Map Connections
 - **The Star Pattern**: To avoid $O(N^2)$ visual clutter, the `NeuralMapLayer` connects group members in a "star pattern" (everyone to the first member) rather than a "complete graph" (everyone to everyone). This keeps the UI clean while still showing group cohesion.
+
+### 5. Cross-Platform Security & Data Migration
+- **The Bridge Key**: The hardcoded key in `SecurityUtil.kt` (Android) and `encryption_key.py` (Python) is the "cryptographic glue" that allows users to move their classroom between desktop and mobile. While Android has upgraded to KeyStore-managed keys (`fernet.key.v2`), this `FALLBACK_KEY` is preserved specifically for data ingestion from the Python app.
+- **Hashing Parity**: Python's SHA3-512 hashing was chosen for speed, while Android's PBKDF2 with 100,000 iterations was chosen for security hardening. The Android `verifyPassword` method includes specific logic to detect the length of a hash (128 chars for SHA3-512) and apply the correct legacy verification to ensure users don't get locked out when migrating.
