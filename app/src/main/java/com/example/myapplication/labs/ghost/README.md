@@ -104,6 +104,12 @@ A "Classroom Climate" visualization using **Procedural Auroras**.
 - **Data-Driven Colors**: Aurora colors shift based on the balance of positive (Cyan), negative (Red), and academic (Purple) logs.
 - **Dynamic Intensity**: The brightness and flow speed of the aurora scale with recent log frequency.
 
+### 18. Ghost Phasing (`phasing/GhostPhasingLayer.kt`, `phasing/GhostPhasingShader.kt`, `phasing/GhostPhasingEngine.kt`)
+A multi-layered **Neural Backstage** visualization.
+- **Neural Transition**: Uses a glitchy AGSL transition shader (Chromatic Aberration + Scanlines) to "phase" the classroom UI into a hidden data layer.
+- **Backstage Void**: Renders a deep-space "Neural Void" background featuring floating "Neural Seeds" and real-time data particle streams.
+- **Tactile Sync**: Synchronizes visual "glitches" with complex haptic feedback (VibrationEffect.Composition) to simulate the sensation of shifting through UI layers.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
