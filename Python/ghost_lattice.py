@@ -7,6 +7,12 @@ Ghost Lattice: Social Dynamics Visualizer.
 
 This script analyzes student proximity and shared behavioral markers to
 infer a "Social Lattice" (a network graph of relationships).
+
+### Logic Parity Note
+This script serves as the prototype for the Android `GhostLatticeEngine.kt`.
+Note that the mobile implementation uses a higher proximity threshold (800 units)
+to account for canvas scaling and a different classification heuristic (log-driven
+random seeding) to improve cultural adaptability.
 """
 
 def analyze_social_lattice(students_file, logs_file):
