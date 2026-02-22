@@ -63,4 +63,7 @@ object GhostConfig {
 
     /** Enables the "Neural Backstage" glitch transition and data-void background layer. */
     const val PHASING_MODE_ENABLED = true
+
+    /** Enables the "Ghost Lens" predictive spatiotemporal refraction layer. */
+    const val LENS_MODE_ENABLED = true
 }

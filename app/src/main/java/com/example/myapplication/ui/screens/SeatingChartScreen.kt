@@ -123,6 +123,8 @@ import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
+import com.example.myapplication.labs.ghost.GhostLensEngine
+import com.example.myapplication.labs.ghost.GhostLensLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
@@ -202,6 +204,7 @@ fun SeatingChartScreen(
     var isFluxActive by remember { mutableStateOf(false) }
     var isAuroraActive by remember { mutableStateOf(false) }
     var isPulseActive by remember { mutableStateOf(false) }
+    var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -302,6 +305,7 @@ fun SeatingChartScreen(
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
+    val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
 
@@ -506,6 +510,8 @@ fun SeatingChartScreen(
                 onToggleSpectra = { isSpectraActive = !isSpectraActive },
                 isAuroraActive = isAuroraActive,
                 onToggleAurora = { isAuroraActive = !isAuroraActive },
+                isLensActive = isLensActive,
+                onToggleLens = { isLensActive = !isLensActive },
                 isFluxActive = isFluxActive,
                 onToggleFlux = { isFluxActive = !isFluxActive },
                 isSingularityActive = isSingularityActive,
@@ -769,13 +775,35 @@ fun SeatingChartScreen(
                 )
             }
 
-            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
-                GhostHologramLayer(engine = ghostHologramEngine) {
-                    chartContent()
+            val seatingChartWithLens = @Composable {
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LENS_MODE_ENABLED && isLensActive) {
+                    GhostLensLayer(
+                        engine = ghostLensEngine,
+                        students = students,
+                        allProphecies = GhostOracle.consult(students, allBehaviorEvents),
+                        canvasScale = scale,
+                        canvasOffset = offset
+                    ) {
+                        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
+                            GhostHologramLayer(engine = ghostHologramEngine) {
+                                chartContent()
+                            }
+                        } else {
+                            chartContent()
+                        }
+                    }
+                } else {
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
+                        GhostHologramLayer(engine = ghostHologramEngine) {
+                            chartContent()
+                        }
+                    } else {
+                        chartContent()
+                    }
                 }
-            } else {
-                chartContent()
             }
+
+            seatingChartWithLens()
 
             // Ghost Overlays
             if (GhostConfig.GHOST_MODE_ENABLED) {
@@ -1303,6 +1331,8 @@ fun SeatingChartTopAppBar(
     onToggleSpectra: () -> Unit,
     isAuroraActive: Boolean,
     onToggleAurora: () -> Unit,
+    isLensActive: Boolean,
+    onToggleLens: () -> Unit,
     isFluxActive: Boolean,
     onToggleFlux: () -> Unit,
     isSingularityActive: Boolean,
@@ -1507,6 +1537,14 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.RadioButtonChecked, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isLensActive) "Disable Ghost Lens 👻" else "Enable Ghost Lens 👻") },
+                            onClick = {
+                                onToggleLens()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLUX_MODE_ENABLED) {

@@ -110,6 +110,12 @@ A multi-layered **Neural Backstage** visualization.
 - **Backstage Void**: Renders a deep-space "Neural Void" background featuring floating "Neural Seeds" and real-time data particle streams.
 - **Tactile Sync**: Synchronizes visual "glitches" with complex haptic feedback (VibrationEffect.Composition) to simulate the sensation of shifting through UI layers.
 
+### 19. Ghost Lens (`GhostLensLayer.kt`, `GhostLensShader.kt`, `GhostLensEngine.kt`)
+A predictive spatiotemporal **Refraction Layer**.
+- **Predictive Magnification**: Uses a draggable virtual lens that "refracts" the seating chart to reveal predicted student states and prophecies.
+- **AGSL Refraction**: Implements spherical distortion and chromatic aberration within the lens field using a high-performance shader.
+- **AI Integration**: Bridges to `GhostOracle` to display real-time on-device AI prophecies for students under the lens.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
