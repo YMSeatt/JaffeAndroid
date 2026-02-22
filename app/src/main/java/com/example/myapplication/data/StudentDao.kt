@@ -61,16 +61,6 @@ interface StudentDao {
     @Query("SELECT * FROM students WHERE id IN (:studentIds)")
     suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student>
 
-    /**
-     * Retrieves a projection of student data optimized for the seating chart display.
-     *
-     * This query selects only the fields necessary for rendering the chart icons,
-     * significantly reducing memory footprint when working with large classes compared
-     * to fetching full [Student] entities.
-     */
-    @Query("SELECT s.id, s.firstName, s.lastName, s.initials, s.xPosition, s.yPosition, s.customWidth, s.customHeight, s.customBackgroundColor, s.customOutlineColor, s.customTextColor, s.groupId FROM students s")
-    fun getStudentsForDisplay(): LiveData<List<StudentDetailsForDisplay>>
-
     @Deprecated("Use BehaviorEventDao.getRecentBehaviorEventsForStudent instead.", ReplaceWith("BehaviorEventDao.getRecentBehaviorEventsForStudent"))
     @Query("SELECT BE.* FROM behavior_events BE JOIN students S ON BE.studentId = S.id WHERE S.id = :studentId ORDER BY BE.timestamp DESC LIMIT :limit")
     fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>

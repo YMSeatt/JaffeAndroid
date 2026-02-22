@@ -3,7 +3,7 @@ package com.example.myapplication.util
 
 import android.util.Log
 import android.util.LruCache
-import com.example.myapplication.data.StudentDetailsForDisplay
+import com.example.myapplication.data.Student
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.QuizLog
@@ -168,7 +168,7 @@ object ConditionalFormattingEngine {
      * @return A list of color/outline pairs representing all matching rule formats.
      */
     fun applyConditionalFormatting(
-        student: StudentDetailsForDisplay,
+        student: Student,
         rules: List<ConditionalFormattingRule>,
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
@@ -230,7 +230,7 @@ object ConditionalFormattingEngine {
      * @return A list of color/outline pairs representing all matching rule formats.
      */
     fun applyConditionalFormattingDecoded(
-        student: StudentDetailsForDisplay,
+        student: Student,
         rules: List<DecodedConditionalFormattingRule>,
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
@@ -274,7 +274,7 @@ object ConditionalFormattingEngine {
      * @return True if the condition matches, false otherwise.
      */
     private fun checkCondition(
-        student: StudentDetailsForDisplay,
+        student: Student,
         rule: DecodedConditionalFormattingRule,
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
