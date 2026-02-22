@@ -70,4 +70,15 @@ data class Student(
         val lastInitial = lastName.firstOrNull()?.uppercaseChar() ?: ' '
         return "$firstInitial$lastInitial".trim()
     }
+
+    /**
+     * Returns the user-defined initials if present, otherwise generates them from the name.
+     */
+    fun getEffectiveInitials(): String {
+        return if (!initials.isNullOrBlank()) {
+            initials!!
+        } else {
+            getGeneratedInitials()
+        }
+    }
 }

@@ -158,9 +158,6 @@ class SeatingChartViewModel @Inject constructor(
     /** Live stream of all students in the database. */
     val allStudents: LiveData<List<Student>>
 
-    /** Live stream of student details optimized for display (includes initials and aggregate counts). */
-    val allStudentsForDisplay: LiveData<List<com.example.myapplication.data.StudentDetailsForDisplay>>
-
     /** Live stream of all furniture items in the current layout. */
     val allFurniture: LiveData<List<Furniture>>
 
@@ -377,7 +374,6 @@ class SeatingChartViewModel @Inject constructor(
     init {
         // Initialize basic LiveData streams from repositories
         allStudents = repository.allStudents
-        allStudentsForDisplay = studentDao.getStudentsForDisplay()
         allFurniture = repository.getAllFurniture().asLiveData()
         allLayoutTemplates = repository.getAllLayoutTemplates().asLiveData()
         allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
@@ -394,7 +390,6 @@ class SeatingChartViewModel @Inject constructor(
         // Wire up MediatorLiveData sources.
         // Any change in the underlying database or session state triggers the unified update pipeline.
         studentsForDisplay.addSource(allStudents) { updateTrigger.tryEmit(Unit) }
-        studentsForDisplay.addSource(allStudentsForDisplay) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(allGroups.asLiveData()) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(sessionQuizLogs) { updateTrigger.tryEmit(Unit) }
         studentsForDisplay.addSource(sessionHomeworkLogs) { updateTrigger.tryEmit(Unit) }
@@ -475,9 +470,6 @@ class SeatingChartViewModel @Inject constructor(
         updateJob?.cancel()
         updateJob = viewModelScope.launch {
             withContext(Dispatchers.Default) {
-                val studentsForDisplayData = allStudentsForDisplay.value ?: return@withContext
-                val studentDetailsMap = studentsForDisplayData.associateBy { it.id }
-
                 // --- Stage 1: Data Pre-processing (Memoized) ---
 
                 // Group flat behavior logs by student ID to optimize O(1) lookup in the student loop.
@@ -726,25 +718,20 @@ class SeatingChartViewModel @Inject constructor(
 
                         // 2d. Conditional Formatting:
                         // Evaluate the prioritized rule set against the student's current state and history.
-                        val studentDetails = studentDetailsMap[student.id]
-                        val conditionalFormattingResult = if (studentDetails != null) {
-                            ConditionalFormattingEngine.applyConditionalFormattingDecoded(
-                                student = studentDetails,
-                                rules = decodedRules,
-                                behaviorLog = behaviorList ?: emptyList(),
-                                quizLog = quizList ?: emptyList(),
-                                homeworkLog = homeworkList ?: emptyList(),
-                                isLiveQuizActive = sessionActive,
-                                liveQuizScores = liveQuizScores.value ?: emptyMap(),
-                                isLiveHomeworkActive = sessionActive,
-                                liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
-                                currentMode = currentModeValue,
-                                currentTimeMillis = currentTime,
-                                timeContext = timeContext
-                            )
-                        } else {
-                            emptyList()
-                        }
+                        val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
+                            student = student,
+                            rules = decodedRules,
+                            behaviorLog = behaviorList ?: emptyList(),
+                            quizLog = quizList ?: emptyList(),
+                            homeworkLog = homeworkList ?: emptyList(),
+                            isLiveQuizActive = sessionActive,
+                            liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                            isLiveHomeworkActive = sessionActive,
+                            liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                            currentMode = currentModeValue,
+                            currentTimeMillis = currentTime,
+                            timeContext = timeContext
+                        )
 
                         StudentDerivedData(
                             behaviorDescription,

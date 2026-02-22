@@ -53,7 +53,6 @@ class SeatingChartLayoutToolsTest {
         // Mock minimal requirements for SeatingChartViewModel init
         every { appPreferencesRepository.userPreferencesFlow } returns flowOf(mockk(relaxed = true))
         every { repository.allStudents } returns MutableLiveData(emptyList())
-        every { studentDao.getStudentsForDisplay() } returns MutableLiveData(emptyList())
         every { repository.getAllFurniture() } returns flowOf(emptyList())
         every { repository.getAllLayoutTemplates() } returns flowOf(emptyList())
         every { repository.getAllQuizMarkTypes() } returns flowOf(emptyList())

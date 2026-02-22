@@ -64,7 +64,7 @@ fun Student.toStudentUiItem(
         id = this.id.toInt(),
         fullName = mutableStateOf("$firstName $lastName"),
         nickname = mutableStateOf(nickname),
-        initials = mutableStateOf("${firstName.first()}${lastName.first()}"),
+        initials = mutableStateOf(getEffectiveInitials()),
         xPosition = mutableStateOf(xPosition),
         yPosition = mutableStateOf(yPosition),
         displayWidth = mutableStateOf((customWidth ?: defaultWidth).dp),
@@ -132,7 +132,7 @@ fun Student.updateStudentUiItem(
 
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
-    updateIfChanged(item.initials, "${firstName.first()}${lastName.first()}")
+    updateIfChanged(item.initials, getEffectiveInitials())
     updateIfChanged(item.xPosition, xPosition)
     updateIfChanged(item.yPosition, yPosition)
     updateIfChanged(item.displayWidth, (customWidth ?: defaultWidth).dp)

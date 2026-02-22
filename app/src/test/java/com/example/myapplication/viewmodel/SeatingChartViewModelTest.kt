@@ -107,7 +107,6 @@ class SeatingChartViewModelTest {
 
         // Mock LiveData sources
         every { repository.allStudents } returns androidx.lifecycle.MutableLiveData(emptyList())
-        every { studentDao.getStudentsForDisplay() } returns androidx.lifecycle.MutableLiveData(emptyList())
         every { repository.getAllFurniture() } returns flowOf(emptyList())
         every { repository.getAllLayoutTemplates() } returns flowOf(emptyList())
         every { behaviorEventDao.getAllBehaviorEvents() } returns androidx.lifecycle.MutableLiveData(emptyList())
