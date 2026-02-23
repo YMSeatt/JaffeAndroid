@@ -35,7 +35,18 @@ object GhostPulseEngine {
         currentTime: Long,
         windowMillis: Long = 5000L
     ): List<ResonancePulse> {
-        val recentEvents = events.filter { currentTime - it.timestamp < windowMillis }
+        if (events.isEmpty()) return emptyList()
+
+        // BOLT: Events are sorted by timestamp DESC. Use early exit to avoid O(N) scan.
+        val recentEvents = mutableListOf<BehaviorEvent>()
+        for (event in events) {
+            if (currentTime - event.timestamp < windowMillis) {
+                recentEvents.add(event)
+            } else if (event.timestamp < currentTime - windowMillis) {
+                break
+            }
+        }
+
         if (recentEvents.isEmpty()) return emptyList()
 
         val studentMap = students.associateBy { it.id.toLong() }

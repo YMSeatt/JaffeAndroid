@@ -81,39 +81,39 @@ class GhostLatticeEngine {
         val edges = mutableListOf<Edge>()
         if (nodes.size < 2) return edges
         val random = Random(42) // Deterministic seeding for consistent visual results
-        nodes.forEachIndexed { i, nodeA ->
-            nodes.forEachIndexed { j, nodeB ->
-                if (i < j) {
-                    val dist = calculateDistance(nodeA, nodeB)
-                    // Only students within 800 logical units are considered for lattice connections
-                    if (dist < 800) {
-                        val isPositive = random.nextFloat() > 0.7
-                        val isNegative = !isPositive && random.nextFloat() > 0.8
-                        val type = when {
-                            isPositive -> ConnectionType.COLLABORATION
-                            isNegative -> ConnectionType.FRICTION
-                            else -> ConnectionType.NEUTRAL
-                        }
-                        val color = when (type) {
-                            ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
-                            ConnectionType.FRICTION -> Color(0xFFFF3366)      // Pulsing Red
-                            else -> Color(0xFF6699FF)                         // Deep Blue
-                        }
-                        // Strength decays as distance increases
-                        val strength = (1.0f - (dist / 1200f)).coerceIn(0.1f, 1.0f)
-                        edges.add(Edge(nodeA.id, nodeB.id, strength, type, color))
+
+        // BOLT: Threshold for proximity is 800, use squared distance to avoid sqrt in O(N^2) loop
+        val thresholdSq = 800f * 800f
+
+        for (i in nodes.indices) {
+            val nodeA = nodes[i]
+            for (j in i + 1 until nodes.size) {
+                val nodeB = nodes[j]
+                val dx = nodeA.x - nodeB.x
+                val dy = nodeA.y - nodeB.y
+                val distSq = dx * dx + dy * dy
+
+                // Only students within 800 logical units are considered for lattice connections
+                if (distSq < thresholdSq) {
+                    val dist = sqrt(distSq)
+                    val isPositive = random.nextFloat() > 0.7
+                    val isNegative = !isPositive && random.nextFloat() > 0.8
+                    val type = when {
+                        isPositive -> ConnectionType.COLLABORATION
+                        isNegative -> ConnectionType.FRICTION
+                        else -> ConnectionType.NEUTRAL
                     }
+                    val color = when (type) {
+                        ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
+                        ConnectionType.FRICTION -> Color(0xFFFF3366)      // Pulsing Red
+                        else -> Color(0xFF6699FF)                         // Deep Blue
+                    }
+                    // Strength decays as distance increases
+                    val strength = (1.0f - (dist / 1200f)).coerceIn(0.1f, 1.0f)
+                    edges.add(Edge(nodeA.id, nodeB.id, strength, type, color))
                 }
             }
         }
         return edges.take(50)
-    }
-
-    /**
-     * Calculates the Euclidean distance between two lattice nodes.
-     */
-    private fun calculateDistance(a: LatticeNode, b: LatticeNode): Float {
-        val dx = (a.x - b.x); val dy = (a.y - b.y)
-        return sqrt(dx * dx + dy * dy)
     }
 }
