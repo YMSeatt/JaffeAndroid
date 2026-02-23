@@ -27,9 +27,22 @@ import java.util.Locale
 
 /**
  * Handles the generation of Excel (.xlsx) reports from application data.
- * Supports filtering by date, students, and log types, and can optionally encrypt the output.
  *
- * @param context The application context, used for accessing files and content resolver.
+ * This class coordinates the transformation of Room database entities (Students, BehaviorEvents,
+ * QuizLogs, HomeworkLogs) into a formatted, multi-sheet Excel workbook using the Apache POI library.
+ *
+ * ### Workflow:
+ * 1. **Filtering**: Processes raw data based on [ExportOptions] (date ranges, student selection, log types).
+ * 2. **Workbook Construction**: Initializes an [XSSFWorkbook] and creates specialized styles (bold, alignments, date formats).
+ * 3. **Sheet Generation**: Populates various worksheets based on user preferences:
+ *    - Log Sheets (Behavior, Quiz, Homework, or Combined).
+ *    - Summary Sheets (Aggregated student statistics).
+ *    - Individual Student Sheets (Detailed history per student).
+ *    - Attendance Reports (Presence tracking based on activity).
+ * 4. **Persistence & Security**: Serializes the workbook to a byte array and writes it to a [Uri].
+ *    Optionally encrypts the resulting file using [SecurityUtil].
+ *
+ * @param context The application context, used for accessing files, content resolver, and resources.
  */
 class Exporter(
     private val context: Context
@@ -40,10 +53,17 @@ class Exporter(
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
     /**
-     * Cache for decoded marks data JSON strings to avoid redundant deserialization.
+     * Cache for decoded marks data JSON strings to avoid redundant deserialization
+     * during large export operations involving many log entries.
      */
     private val parsedMarksCache = mutableMapOf<String, Map<String, Any>>()
 
+    /**
+     * Helper to safely deserialize JSON-based mark data.
+     *
+     * @param json The raw JSON string from the database (e.g., [QuizLog.marksData]).
+     * @return A map of keys to values, or an empty map if parsing fails.
+     */
     private fun parseMarksData(json: String?): Map<String, Any> {
         if (json.isNullOrEmpty()) return emptyMap()
         return parsedMarksCache.getOrPut(json) {
@@ -210,12 +230,24 @@ class Exporter(
 
     /**
      * Creates a single worksheet in the given workbook and populates it with log data.
-     * Handles dynamic headers for Homework logs based on custom types and status.
+     *
+     * This method handles the complex layout of individual log sheets, including:
+     * 1. **Dynamic Header Detection**: For homework logs, it scans the provided data set
+     *    to identify "ad-hoc" keys in the JSON marks data that aren't defined in the
+     *    standard [customHomeworkTypes] list. These are added as additional columns.
+     * 2. **Context-Aware Headers**: Adjusts columns based on the sheet type (e.g., adding
+     *    "Behavior" for behavior logs vs. "Quiz Name" and scores for quiz logs).
+     * 3. **Row Population**: Iterates through log entries, resolving student names and
+     *    calculating calculated fields (like percentage scores for quizzes).
      *
      * @param workbook The Apache POI Workbook instance.
      * @param sheetName The name of the sheet to create.
      * @param data The list of log entries (BehaviorEvent, HomeworkLog, or QuizLog).
      * @param students Map of student IDs to Student objects for quick lookup.
+     * @param quizMarkTypes Configuration for quiz scoring.
+     * @param customHomeworkTypes List of user-defined homework categories.
+     * @param customHomeworkStatuses List of user-defined homework status labels.
+     * @param context Pre-calculated formatting styles and date formatters.
      */
     private suspend fun createSheet(
         workbook: Workbook,
@@ -474,10 +506,22 @@ class Exporter(
     }
 
     /**
-     * Creates a 'Summary' sheet containing aggregated statistics:
-     * - Behavior counts by student.
-     * - Quiz averages and attempt counts by student.
-     * - Homework completion counts and total points by student.
+     * Creates a 'Summary' sheet containing aggregated statistics for the entire reporting period.
+     *
+     * The summary includes:
+     * - **Behavior Summary**: Counts of each behavior type per student.
+     * - **Quiz Summary**: Average percentage scores and attempt counts for each quiz.
+     * - **Homework Summary**: Completion counts and total points earned per student.
+     *
+     * All summaries are sorted by student last name to ensure a professional report layout.
+     *
+     * @param workbook The Apache POI Workbook instance.
+     * @param data All log entries included in the export.
+     * @param students Map of students for name resolution.
+     * @param quizMarkTypes Configuration for score calculation.
+     * @param customHomeworkTypes Configuration for homework point aggregation.
+     * @param customHomeworkStatuses Configuration for homework status resolution.
+     * @param context Formatting context.
      */
     private suspend fun createSummarySheet(
         workbook: Workbook,
@@ -617,7 +661,11 @@ class Exporter(
 
     /**
      * Creates a separate worksheet for each student that has associated log entries.
-     * Optimized: groups logs by student ID once to avoid O(N*M) filtering.
+     *
+     * This method is optimized for large classrooms by grouping all provided logs
+     * by student ID in a single pass before creating the worksheets. Sheet names
+     * are sanitized to comply with Excel's naming restrictions (max 31 characters,
+     * restricted special symbols).
      */
     private suspend fun createIndividualStudentSheets(
         workbook: Workbook,
