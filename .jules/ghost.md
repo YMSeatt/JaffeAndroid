@@ -86,4 +86,22 @@ In 2027, "Data Transparency" is a literal concept. "Ghost Spectra" allows teache
 - **Interactive Discovery**: The draggable prism encourages "exploratory debugging" of the classroom state rather than static report reading.
 
 ---
+
+## 👁️ Experiment: Ghost Iris (Personalized Neural Signatures)
+**Date:** 2027-04-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, every student has a unique "Data Fingerprint." "Ghost Iris" translates this into a beautiful, personalized "Neural Iris"—a procedurally generated fractal pattern that serves as a student's digital identity. It's more than a profile picture; it's a living representation of their classroom journey.
+
+### 🛠️ The Tech
+- **AGSL Fractal Noise**: Implemented `NEURAL_IRIS` shader using multi-layered procedural noise and Voronoi-inspired fibers.
+- **Iris Engine**: Calculates deterministic visual parameters (seed, color, complexity) based on student ID, behavioral balance, and academic performance.
+- **SkSL Parity**: Discovered that AGSL requires SkSL-standard `mix()` for linear interpolation instead of GLSL's `lerp()`.
+
+### 🔦 The Discovery
+- **Personalization through Hash**: By seeding the procedural noise with a hash of the student ID, we ensure that every student has a consistent but unique iris, creating a sense of "digital ownership."
+- **Visual Synthesis**: Mapping "Behavioral Balance" to the primary color (Cyan/Positive, Magenta/Negative) and "Academic Performance" to the secondary color creates an intuitive, glanceable status indicator that feels organic rather than robotic.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
