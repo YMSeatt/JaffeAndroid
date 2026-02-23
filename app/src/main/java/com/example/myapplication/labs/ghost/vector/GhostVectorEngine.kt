@@ -63,36 +63,44 @@ class GhostVectorEngine {
         nodes: List<GhostLatticeEngine.LatticeNode>,
         edges: List<GhostLatticeEngine.Edge>
     ): List<SocialVector> {
+        val nodeMap = nodes.associateBy { it.id }
+
+        // Group edges by student ID to transform O(S * E) into O(S + E)
+        val edgesByStudent = mutableMapOf<Long, MutableList<GhostLatticeEngine.Edge>>()
+        edges.forEach { edge ->
+            edgesByStudent.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
+            edgesByStudent.getOrPut(edge.toId) { mutableListOf() }.add(edge)
+        }
+
         return nodes.map { node ->
             var netDx = 0f
             var netDy = 0f
 
-            edges.forEach { edge ->
-                if (edge.fromId == node.id || edge.toId == node.id) {
-                    val otherId = if (edge.fromId == node.id) edge.toId else edge.fromId
-                    val otherNode = nodes.find { it.id == otherId } ?: return@forEach
+            val studentEdges = edgesByStudent[node.id] ?: emptyList()
+            studentEdges.forEach { edge ->
+                val otherId = if (edge.fromId == node.id) edge.toId else edge.fromId
+                val otherNode = nodeMap[otherId] ?: return@forEach
 
-                    val dx = otherNode.x - node.x
-                    val dy = otherNode.y - node.y
-                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                val dx = otherNode.x - node.x
+                val dy = otherNode.y - node.y
+                val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
 
-                    // Normalize direction
-                    val dirX = dx / dist
-                    val dirY = dy / dist
+                // Normalize direction
+                val dirX = dx / dist
+                val dirY = dy / dist
 
-                    // Force calculation based on connection type
-                    // COLLABORATION: Positive force (Attracts)
-                    // FRICTION: Negative force (Repels)
-                    // NEUTRAL: Mild positive force
-                    val forceMagnitude = when (edge.type) {
-                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
-                        GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
-                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
-                    }
-
-                    netDx += dirX * forceMagnitude
-                    netDy += dirY * forceMagnitude
+                // Force calculation based on connection type
+                // COLLABORATION: Positive force (Attracts)
+                // FRICTION: Negative force (Repels)
+                // NEUTRAL: Mild positive force
+                val forceMagnitude = when (edge.type) {
+                    GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
+                    GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
+                    GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
                 }
+
+                netDx += dirX * forceMagnitude
+                netDy += dirY * forceMagnitude
             }
 
             val mag = sqrt(netDx * netDx + netDy * netDy)
@@ -124,7 +132,7 @@ class GhostVectorEngine {
      */
     fun analyzeClassroomCohesion(vectors: List<SocialVector>): SocialAnalysis {
         val avgCohesion = if (vectors.isNotEmpty()) {
-            vectors.map { it.magnitude }.average().toFloat()
+            vectors.sumOf { it.magnitude.toDouble() }.toFloat() / vectors.size
         } else 0f
 
         val status = if (avgCohesion < 50f) "STABLE" else "DYNAMIC"
