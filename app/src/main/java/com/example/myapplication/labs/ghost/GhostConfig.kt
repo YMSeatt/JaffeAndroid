@@ -66,4 +66,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Lens" predictive spatiotemporal refraction layer. */
     const val LENS_MODE_ENABLED = true
+
+    /** Enables personalized Neural Iris signatures for each student. */
+    const val IRIS_MODE_ENABLED = true
 }

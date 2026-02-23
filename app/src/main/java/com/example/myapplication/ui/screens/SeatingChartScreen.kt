@@ -207,6 +207,7 @@ fun SeatingChartScreen(
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
+    var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     val hudViewModel: GhostHUDViewModel = viewModel()
@@ -523,6 +524,8 @@ fun SeatingChartScreen(
                 },
                 isPulseActive = isPulseActive,
                 onTogglePulse = { isPulseActive = !isPulseActive },
+                isIrisActive = isIrisActive,
+                onToggleIris = { isIrisActive = !isIrisActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -767,6 +770,10 @@ fun SeatingChartScreen(
                     homeworkLogFontColor = homeworkLogFontColor,
                     quizLogFontBold = quizLogFontBold,
                     homeworkLogFontBold = homeworkLogFontBold,
+                    isIrisActive = isIrisActive,
+                    allBehaviorEvents = allBehaviorEvents,
+                    allQuizLogs = allQuizLogs,
+                    allHomeworkLogs = allHomeworkLogs,
                     onStudentClick = onStudentClick,
                     onStudentLongClick = onStudentLongClick,
                     onFurnitureClick = onFurnitureClick,
@@ -1206,6 +1213,10 @@ fun SeatingChartContent(
     homeworkLogFontColor: androidx.compose.ui.graphics.Color,
     quizLogFontBold: Boolean,
     homeworkLogFontBold: Boolean,
+    isIrisActive: Boolean = false,
+    allBehaviorEvents: List<BehaviorEvent> = emptyList(),
+    allQuizLogs: List<com.example.myapplication.data.QuizLog> = emptyList(),
+    allHomeworkLogs: List<com.example.myapplication.data.HomeworkLog> = emptyList(),
     onStudentClick: (StudentUiItem) -> Unit,
     onStudentLongClick: (StudentUiItem) -> Unit,
     onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
@@ -1237,6 +1248,17 @@ fun SeatingChartContent(
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
             students.forEach { studentItem ->
+                val irisParams = if (isIrisActive) {
+                    remember(studentItem.id, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                        com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
+                            studentItem.id.toLong(),
+                            allBehaviorEvents.filter { it.studentId == studentItem.id.toLong() },
+                            allQuizLogs.filter { it.studentId == studentItem.id.toLong() },
+                            allHomeworkLogs.filter { it.studentId == studentItem.id.toLong() }
+                        )
+                    }
+                } else null
+
                 StudentDraggableIcon(
                     studentUiItem = studentItem,
                     viewModel = seatingChartViewModel,
@@ -1253,6 +1275,8 @@ fun SeatingChartContent(
                     canvasSize = canvasSize,
                     canvasScale = scale,
                     canvasOffset = offset,
+                    isIrisActive = isIrisActive,
+                    irisParams = irisParams,
                     quizLogFontColor = quizLogFontColor,
                     homeworkLogFontColor = homeworkLogFontColor,
                     quizLogFontBold = quizLogFontBold,
@@ -1341,6 +1365,8 @@ fun SeatingChartTopAppBar(
     onTogglePhasing: () -> Unit,
     isPulseActive: Boolean,
     onTogglePulse: () -> Unit,
+    isIrisActive: Boolean,
+    onToggleIris: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1546,6 +1572,16 @@ fun SeatingChartTopAppBar(
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
+                        if (GhostConfig.IRIS_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isIrisActive) "Disable Neural Iris 👻" else "Enable Neural Iris 👻") },
+                                onClick = {
+                                    onToggleIris()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.RadioButtonChecked, null, tint = androidx.compose.ui.graphics.Color.White) }
+                            )
+                        }
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLUX_MODE_ENABLED) {
                         DropdownMenuItem(

@@ -116,6 +116,12 @@ A predictive spatiotemporal **Refraction Layer**.
 - **AGSL Refraction**: Implements spherical distortion and chromatic aberration within the lens field using a high-performance shader.
 - **AI Integration**: Bridges to `GhostOracle` to display real-time on-device AI prophecies for students under the lens.
 
+### 20. Ghost Iris (`GhostIrisLayer.kt`, `GhostIrisShader.kt`, `GhostIrisEngine.kt`)
+A personalized **Neural Signature** visualization.
+- **Procedural Identity**: Generates a unique, animated fractal iris for each student, seeded by their student ID.
+- **Data-Driven Evolution**: The iris's colors and pattern complexity shift dynamically based on the student's behavioral balance and academic performance.
+- **AGSL Fractal Noise**: Uses a high-performance Voronoi/Fractal noise shader to create organic, biological patterns.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.GhostConfig
+import com.example.myapplication.labs.ghost.GhostIrisEngine
+import com.example.myapplication.labs.ghost.GhostIrisLayer
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -102,6 +104,8 @@ fun StudentDraggableIcon(
     autoExpandEnabled: Boolean,
     canvasScale: Float,
     canvasOffset: Offset,
+    isIrisActive: Boolean = false,
+    irisParams: GhostIrisEngine.IrisParameters? = null,
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
     quizLogFontBold: Boolean = true,
@@ -218,7 +222,7 @@ fun StudentDraggableIcon(
                     ),
                 shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value),
                 colors = CardDefaults.cardColors(
-                    containerColor = studentUiItem.displayBackgroundColor.value.first()
+                    containerColor = if (isIrisActive && irisParams != null) Color.Transparent else studentUiItem.displayBackgroundColor.value.first()
                 ),
                 border = BorderStroke(
                     if (isSelected) 6.dp else studentUiItem.displayOutlineThickness.value,
@@ -234,6 +238,13 @@ fun StudentDraggableIcon(
                         .fillMaxSize()
                         .padding(studentUiItem.displayPadding.value)
                 ) {
+                    if (isIrisActive && irisParams != null) {
+                        GhostIrisLayer(
+                            params = irisParams,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
+
                     val backgroundColors = studentUiItem.displayBackgroundColor.value
                     if (backgroundColors.size > 1) {
                         Box(modifier = Modifier.matchParentSize()) {
