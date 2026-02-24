@@ -97,11 +97,55 @@ class StudentRepository(
         return behaviorEventDao.insert(event)
     }
 
+    /**
+     * BOLT: Centralized filtered fetch logic to handle the distinction between
+     * null studentIds (all students) and empty studentIds (no students).
+     */
+    suspend fun getFilteredStudents(studentIds: List<Long>?): List<Student> {
+        return when {
+            studentIds == null -> studentDao.getAllStudentsNonLiveData()
+            studentIds.isEmpty() -> emptyList()
+            else -> studentDao.getStudentsByIdsList(studentIds)
+        }
+    }
+
+    suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<BehaviorEvent> {
+        return when {
+            studentIds == null -> behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
+            studentIds.isEmpty() -> emptyList()
+            else -> behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
+        }
+    }
+
+    suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<HomeworkLog> {
+        return when {
+            studentIds == null -> homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
+            studentIds.isEmpty() -> emptyList()
+            else -> homeworkLogDao.getFilteredHomeworkLogsWithStudents(startDate, endDate, studentIds)
+        }
+    }
+
+    suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<QuizLog> {
+        return when {
+            studentIds == null -> quizLogDao.getFilteredQuizLogs(startDate, endDate)
+            studentIds.isEmpty() -> emptyList()
+            else -> quizLogDao.getFilteredQuizLogsWithStudents(startDate, endDate, studentIds)
+        }
+    }
+
     suspend fun insertQuizLog(log: QuizLog): Long {
         return quizLogDao.insert(log)
     }
 
     suspend fun deleteQuizLog(log: QuizLog) {
         quizLogDao.deleteQuizLog(log)
+    }
+
+    suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student> {
+        return studentDao.getStudentsByIdsList(studentIds)
+    }
+
+    suspend fun getAllStudentsNonLiveData(): List<Student> {
+        return studentDao.getAllStudentsNonLiveData()
     }
 }

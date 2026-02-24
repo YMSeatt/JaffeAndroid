@@ -53,20 +53,18 @@ class EmailWorker(
         }
 
         val requestType = inputData.getString("request_type")
+
+        // BOLT: Instantiate repository once for reuse across request types
+        val repository = com.example.myapplication.data.StudentRepository(
+            studentDao, behaviorEventDao, homeworkLogDao, quizLogDao,
+            db.furnitureDao(), db.layoutTemplateDao(), quizMarkTypeDao, applicationContext
+        )
+
         when (requestType) {
             "daily_report" -> {
                 // HARDEN: Use unique temporary filename in private cache directory
                 val file = File.createTempFile("daily_report_", ".xlsx", applicationContext.cacheDir)
                 try {
-                    val students = studentDao.getAllStudentsNonLiveData()
-                    val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-                    val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-                    val quizLogs = quizLogDao.getAllQuizLogsList()
-                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
-                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
-                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
-
                     val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: "Daily Report - ${dateFormat.format(Date())}"
                     val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: "Please find the daily report attached."
                     val options = inputData.getString("export_options")?.let {
@@ -90,6 +88,21 @@ class EmailWorker(
                             options.copy(startDate = calendar.timeInMillis, endDate = endDate)
                         }
                     } ?: options
+
+                    val startDate = finalOptions.startDate ?: 0L
+                    val endDate = finalOptions.endDate ?: Long.MAX_VALUE
+                    val studentIds = finalOptions.studentIds
+
+                    // BOLT: Use centralized filtered fetch logic
+                    val students = repository.getFilteredStudents(studentIds)
+                    val behaviorEvents = repository.getFilteredBehaviorEvents(startDate, endDate, studentIds)
+                    val homeworkLogs = repository.getFilteredHomeworkLogs(startDate, endDate, studentIds)
+                    val quizLogs = repository.getFilteredQuizLogs(startDate, endDate, studentIds)
+
+                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
                     val uri = FileProvider.getUriForFile(
                         applicationContext,
@@ -184,19 +197,27 @@ class EmailWorker(
                     val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                     val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                     val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
+
+                    val startDate = exportOptions.startDate ?: 0L
+                    val endDate = exportOptions.endDate ?: Long.MAX_VALUE
+                    val studentIds = exportOptions.studentIds
+
+                    // BOLT: Use centralized filtered fetch logic
+                    val students = repository.getFilteredStudents(studentIds)
+                    val behaviorEvents = repository.getFilteredBehaviorEvents(startDate, endDate, studentIds)
+                    val homeworkLogs = repository.getFilteredHomeworkLogs(startDate, endDate, studentIds)
+                    val quizLogs = repository.getFilteredQuizLogs(startDate, endDate, studentIds)
+
+                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
+                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
+                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
+                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+
                     val uri = FileProvider.getUriForFile(
                         applicationContext,
                         "com.example.myapplication.fileprovider",
                         file
                     )
-                    val students = studentDao.getAllStudentsNonLiveData()
-                    val behaviorEvents = behaviorEventDao.getAllBehaviorEventsList()
-                    val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-                    val quizLogs = quizLogDao.getAllQuizLogsList()
-                    val studentGroups = studentGroupDao.getAllStudentGroupsList()
-                    val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
-                    val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
-                    val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
 
                     exporter.export(
                         uri = uri,
