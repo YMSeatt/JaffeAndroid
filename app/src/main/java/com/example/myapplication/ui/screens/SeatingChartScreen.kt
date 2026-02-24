@@ -123,6 +123,7 @@ import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
+import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
@@ -206,6 +207,7 @@ fun SeatingChartScreen(
     var isPulseActive by remember { mutableStateOf(false) }
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
+    var isWarpActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -526,6 +528,8 @@ fun SeatingChartScreen(
                 onTogglePulse = { isPulseActive = !isPulseActive },
                 isIrisActive = isIrisActive,
                 onToggleIris = { isIrisActive = !isIrisActive },
+                isWarpActive = isWarpActive,
+                onToggleWarp = { isWarpActive = !isWarpActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -669,6 +673,15 @@ fun SeatingChartScreen(
                     portalPosition = if (portalPosition == Offset.Zero)
                         Offset(canvasSize.width / 2f, canvasSize.height / 2f)
                         else portalPosition
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WARP_MODE_ENABLED && isWarpActive) {
+                GhostWarpLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
                 )
             }
 
@@ -1367,6 +1380,8 @@ fun SeatingChartTopAppBar(
     onTogglePulse: () -> Unit,
     isIrisActive: Boolean,
     onToggleIris: () -> Unit,
+    isWarpActive: Boolean,
+    onToggleWarp: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1580,6 +1595,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.RadioButtonChecked, null, tint = androidx.compose.ui.graphics.Color.White) }
+                            )
+                        }
+                        if (GhostConfig.WARP_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isWarpActive) "Stabilize Spacetime 👻" else "Neural Warp 👻") },
+                                onClick = {
+                                    onToggleWarp()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }

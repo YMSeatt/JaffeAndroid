@@ -69,4 +69,7 @@ object GhostConfig {
 
     /** Enables personalized Neural Iris signatures for each student. */
     const val IRIS_MODE_ENABLED = true
+
+    /** Enables the "Ghost Warp" neural spacetime dilation effect. */
+    const val WARP_MODE_ENABLED = true
 }

@@ -104,4 +104,22 @@ In 2027, every student has a unique "Data Fingerprint." "Ghost Iris" translates 
 - **Visual Synthesis**: Mapping "Behavioral Balance" to the primary color (Cyan/Positive, Magenta/Negative) and "Academic Performance" to the secondary color creates an intuitive, glanceable status indicator that feels organic rather than robotic.
 
 ---
+
+## 🌀 Experiment: Ghost Warp (Neural Spacetime Dilation)
+**Date:** 2027-05-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, data isn't just displayed; it exerts weight. **Ghost Warp** visualizes the "Spacetime Curvature" of the classroom. High-impact students (those with high behavior log density) create "Gravity Wells" that physically distort the background data-plane. This helps teachers intuitively see which students or groups are "dominating" the classroom's attention or energy.
+
+### 🛠️ The Tech
+- **AGSL Spatial Distortion**: Implemented `NEURAL_WARP` shader using an inverse-distance warp algorithm.
+- **Neural Curvature Engine**: Calculates "GravityPoints" (x, y, mass, radius) based on behavior log frequency and recency.
+- **Python Data Bridge**: `ghost_warp_analysis.py` provides offline curvature and gravitational hotspot analysis.
+
+### 🔦 The Discovery
+- **Visual Weight**: Mapping student activity to "Mass" creates a natural hierarchy. The background grid distortion provides a non-verbal cue of classroom intensity.
+- **Event Horizon Glow**: Adding a glow effect to mass points helps identify the "center" of the warp even when distortion is subtle.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
