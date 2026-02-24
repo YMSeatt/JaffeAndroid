@@ -971,6 +971,9 @@ class SeatingChartViewModel @Inject constructor(
      * This method gathers data from all relevant Room DAOs and delegates the actual
      * Excel generation to the [com.example.myapplication.data.exporter.Exporter] utility.
      *
+     * BOLT: Optimized to fetch only filtered data from the database, reducing memory
+     * pressure and avoiding O(N) in-memory filtering for large datasets.
+     *
      * @param context Application context.
      * @param uri The URI where the generated file should be saved.
      * @param options Configuration for what data to include (e.g., summary sheets, encryption).
@@ -981,10 +984,15 @@ class SeatingChartViewModel @Inject constructor(
         uri: Uri,
         options: com.example.myapplication.data.exporter.ExportOptions
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        val allStudentsList = studentDao.getAllStudentsNonLiveData()
-        val behaviorLogs = behaviorEventDao.getAllBehaviorEventsList()
-        val homeworkLogs = homeworkLogDao.getAllHomeworkLogsList()
-        val quizLogs = quizLogDao.getAllQuizLogsList()
+        val startDate = options.startDate ?: 0L
+        val endDate = options.endDate ?: Long.MAX_VALUE
+        val studentIds = options.studentIds
+
+        val students = repository.getFilteredStudents(studentIds)
+        val behaviorLogs = repository.getFilteredBehaviorEvents(startDate, endDate, studentIds)
+        val homeworkLogs = repository.getFilteredHomeworkLogs(startDate, endDate, studentIds)
+        val quizLogs = repository.getFilteredQuizLogs(startDate, endDate, studentIds)
+
         val studentGroups = studentGroupDao.getAllStudentGroupsList()
         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
         val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
@@ -994,7 +1002,7 @@ class SeatingChartViewModel @Inject constructor(
         exporter.export(
             uri = uri,
             options = options,
-            students = allStudentsList,
+            students = students,
             behaviorEvents = behaviorLogs,
             homeworkLogs = homeworkLogs,
             quizLogs = quizLogs,

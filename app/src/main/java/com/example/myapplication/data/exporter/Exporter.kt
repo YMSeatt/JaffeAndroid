@@ -139,30 +139,24 @@ class Exporter(
         )
 
         // Filter data
-        // Optimization: Convert lists to sets for O(1) lookup during filtering
-        val studentIdsSet = options.studentIds?.toSet()
+        // BOLT: Removed redundant O(N) filtering for startDate, endDate and studentIds as data
+        // is now pre-filtered at the database level.
         val behaviorTypesSet = options.behaviorTypes?.toSet()
         val homeworkTypesSet = options.homeworkTypes?.toSet()
 
-        val filteredBehaviorEvents = behaviorEvents.filter { event ->
-            (options.startDate == null || event.timestamp >= options.startDate) &&
-                    (options.endDate == null || event.timestamp <= options.endDate) &&
-                    (studentIdsSet == null || studentIdsSet.contains(event.studentId)) &&
-                    (behaviorTypesSet == null || behaviorTypesSet.contains(event.type))
+        val filteredBehaviorEvents = if (behaviorTypesSet == null) {
+            behaviorEvents
+        } else {
+            behaviorEvents.filter { behaviorTypesSet.contains(it.type) }
         }
 
-        val filteredHomeworkLogs = homeworkLogs.filter { log ->
-            (options.startDate == null || log.loggedAt >= options.startDate) &&
-                    (options.endDate == null || log.loggedAt <= options.endDate) &&
-                    (studentIdsSet == null || studentIdsSet.contains(log.studentId)) &&
-                    (homeworkTypesSet == null || homeworkTypesSet.contains(log.assignmentName))
+        val filteredHomeworkLogs = if (homeworkTypesSet == null) {
+            homeworkLogs
+        } else {
+            homeworkLogs.filter { homeworkTypesSet.contains(it.assignmentName) }
         }
 
-        val filteredQuizLogs = quizLogs.filter { log ->
-            (options.startDate == null || log.loggedAt >= options.startDate) &&
-                    (options.endDate == null || log.loggedAt <= options.endDate) &&
-                    (studentIdsSet == null || studentIdsSet.contains(log.studentId))
-        }
+        val filteredQuizLogs = quizLogs
 
         val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
             when (it) {
@@ -272,12 +266,15 @@ class Exporter(
         }
 
         // Collect dynamic keys from Homework Logs if relevant
+        // BOLT: Avoid filterIsInstance loop and use a more efficient collection strategy
         val dynamicHomeworkKeys = if (sheetName == "Homework Log" || isMasterLog) {
             val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
             val keys = mutableSetOf<String>()
-            data.filterIsInstance<HomeworkLog>().forEach { log ->
-                log.marksData?.let { json ->
-                    keys.addAll(parseMarksData(json).keys)
+            for (item in data) {
+                if (item is HomeworkLog) {
+                    item.marksData?.let { json ->
+                        keys.addAll(parseMarksData(json).keys)
+                    }
                 }
             }
             keys.filter { it !in knownHomeworkKeys }.sorted()
