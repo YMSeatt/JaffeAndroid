@@ -51,4 +51,60 @@ class GhostSpectraEngineTest {
         // Should be ignored as it's outside 24h window
         assertEquals(0.1f, agitation, 0.01f)
     }
+
+    @Test
+    fun testAnalyzeStudentSpectra_Infrared() {
+        val logs = listOf(
+            BehaviorEvent(studentId = 1L, type = "Negative", timestamp = 1000L, comment = null),
+            BehaviorEvent(studentId = 1L, type = "Negative", timestamp = 1000L, comment = null),
+            BehaviorEvent(studentId = 1L, type = "Positive", timestamp = 1000L, comment = null)
+        )
+        val spectra = GhostSpectraEngine.analyzeStudentSpectra(1L, logs)
+        // shift = 2/3 = 0.66 > 0.5 -> INFRARED
+        assertEquals(GhostSpectraEngine.SpectralState.INFRARED, spectra.state)
+        assertEquals(3f / 20f, spectra.intensity, 0.01f)
+        assertEquals(2f / 3f, spectra.shift, 0.01f)
+    }
+
+    @Test
+    fun testAnalyzeStudentSpectra_Ultraviolet() {
+        val logs = mutableListOf<BehaviorEvent>()
+        repeat(18) {
+            logs.add(BehaviorEvent(studentId = 1L, type = "Positive", timestamp = 1000L, comment = null))
+        }
+        val spectra = GhostSpectraEngine.analyzeStudentSpectra(1L, logs)
+        // intensity = 18/20 = 0.9 > 0.8. shift = 0 -> ULTRAVIOLET
+        assertEquals(GhostSpectraEngine.SpectralState.ULTRAVIOLET, spectra.state)
+        assertEquals(0.9f, spectra.intensity, 0.01f)
+        assertEquals(0f, spectra.shift, 0.01f)
+    }
+
+    @Test
+    fun testAnalyzeStudentSpectra_Stable() {
+        val logs = listOf(
+            BehaviorEvent(studentId = 1L, type = "Positive", timestamp = 1000L, comment = null),
+            BehaviorEvent(studentId = 1L, type = "Negative", timestamp = 1000L, comment = null)
+        )
+        val spectra = GhostSpectraEngine.analyzeStudentSpectra(1L, logs)
+        // shift = 1/2 = 0.5 (not > 0.5). intensity = 2/20 = 0.1 -> STABLE
+        assertEquals(GhostSpectraEngine.SpectralState.STABLE, spectra.state)
+    }
+
+    @Test
+    fun testGenerateSpectraReport() {
+        val spectra = listOf(
+            GhostSpectraEngine.StudentSpectra(1L, 0.9f, 0f, GhostSpectraEngine.SpectralState.ULTRAVIOLET),
+            GhostSpectraEngine.StudentSpectra(2L, 0.2f, 0.8f, GhostSpectraEngine.SpectralState.INFRARED)
+        )
+        val names = mapOf(1L to "Alice", 2L to "Bob")
+        val report = GhostSpectraEngine.generateSpectraReport(spectra, names, 0.5f, 0.2f)
+
+        assertTrue(report.contains("# 👻 GHOST SPECTRA: NEURAL ANALYSIS REPORT"))
+        assertTrue(report.contains("Dispersion Index: 0.50"))
+        assertTrue(report.contains("Agitation Level:  0.20"))
+        assertTrue(report.contains("Alice: ULTRAVIOLET (High Engagement)"))
+        assertTrue(report.contains("Bob: INFRARED (At Risk)"))
+        assertTrue(report.contains("(I:0.90, S:0.00)"))
+        assertTrue(report.contains("(I:0.20, S:0.80)"))
+    }
 }
