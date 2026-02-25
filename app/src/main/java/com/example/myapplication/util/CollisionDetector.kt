@@ -20,6 +20,9 @@ object CollisionDetector {
     /** Default height of a student icon if not specified in [Student]. */
     private const val DEFAULT_HEIGHT = 100
 
+    /** BOLT: Pre-allocate comparator to avoid object churn during placement. */
+    private val SPOT_COMPARATOR = compareBy<Pair<Float, Float>>({ it.second }, { it.first })
+
     /**
      * Finds the next best available position for a student on the canvas that does not overlap
      * with existing students.
@@ -95,16 +98,26 @@ object CollisionDetector {
             }
         }
 
-        // Filter out spots that are off-canvas, if canvasHeight is specified
-        val validSpots = if (canvasHeight <= 0) {
-            potentialSpots
-        } else {
-            potentialSpots.filter { it.second + iconHeight <= canvasHeight }
+        // Step 4: Find the best spot: Min Y, then Min X
+        // BOLT: Optimized search to avoid list filtering and use pre-allocated comparator.
+        var bestSpot: Pair<Float, Float>? = null
+
+        for (spot in potentialSpots) {
+            // If canvasHeight is specified, prioritize spots that fit on the canvas.
+            if (canvasHeight > 0 && spot.second + iconHeight > canvasHeight) {
+                continue
+            }
+
+            if (bestSpot == null || SPOT_COMPARATOR.compare(spot, bestSpot) < 0) {
+                bestSpot = spot
+            }
         }
 
-        val spotsToSearch = if (validSpots.isNotEmpty()) validSpots else potentialSpots
+        // If no spot fit on the canvas, fallback to the best available spot regardless of height bounds.
+        if (bestSpot == null && potentialSpots.isNotEmpty()) {
+            bestSpot = potentialSpots.minWithOrNull(SPOT_COMPARATOR)
+        }
 
-        // Step 4: Find the best spot: Min Y, then Min X
-        return spotsToSearch.minWithOrNull(compareBy({ it.second }, { it.first })) ?: Pair(0f, 0f)
+        return bestSpot ?: Pair(0f, 0f)
     }
 }

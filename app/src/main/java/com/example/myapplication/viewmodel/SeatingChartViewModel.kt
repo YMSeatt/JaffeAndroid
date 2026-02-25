@@ -293,9 +293,20 @@ class SeatingChartViewModel @Inject constructor(
     /** Caches quiz logs grouped by student ID. */
     private var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
 
+    private var memoizedSessionQuizLogs: List<QuizLog>? = null
+    /** Caches session quiz logs grouped by student ID. */
+    private var sessionQuizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
+
+    private var memoizedSessionHomeworkLogs: List<HomeworkLog>? = null
+    /** Caches session homework logs grouped by student ID. */
+    private var sessionHomeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
+
     private var memoizedRules: List<ConditionalFormattingRule>? = null
     /** Stores prioritized, decoded rule objects to avoid repetitive JSON parsing. */
     private var decodedRulesCache: List<DecodedConditionalFormattingRule> = emptyList()
+
+    private var memoizedUserPreferences: UserPreferences? = null
+    private var memoizedRelevantPrefsHash: Int = 0
 
     private var memoizedBehaviorInitials: String? = null
     /** Caches the parsed initials mapping for behavior types. */
@@ -509,16 +520,19 @@ class SeatingChartViewModel @Inject constructor(
                 val quizLogsByStudent = quizLogsByStudentCache
 
                 val sessionActive = isSessionActive.value == true
-                val sessionQuizLogsGrouped = if (sessionActive) {
-                    sessionQuizLogs.value?.groupBy { it.studentId } ?: emptyMap()
-                } else {
-                    emptyMap()
+                val currentSessionQuizLogs = if (sessionActive) sessionQuizLogs.value ?: emptyList() else emptyList()
+                if (currentSessionQuizLogs !== memoizedSessionQuizLogs) {
+                    sessionQuizLogsByStudentCache = currentSessionQuizLogs.groupBy { it.studentId }
+                    memoizedSessionQuizLogs = currentSessionQuizLogs
                 }
-                val sessionHomeworkLogsGrouped = if (sessionActive) {
-                    sessionHomeworkLogs.value?.groupBy { it.studentId } ?: emptyMap()
-                } else {
-                    emptyMap()
+                val sessionQuizLogsGrouped = sessionQuizLogsByStudentCache
+
+                val currentSessionHomeworkLogs = if (sessionActive) sessionHomeworkLogs.value ?: emptyList() else emptyList()
+                if (currentSessionHomeworkLogs !== memoizedSessionHomeworkLogs) {
+                    sessionHomeworkLogsByStudentCache = currentSessionHomeworkLogs.groupBy { it.studentId }
+                    memoizedSessionHomeworkLogs = currentSessionHomeworkLogs
                 }
+                val sessionHomeworkLogsGrouped = sessionHomeworkLogsByStudentCache
 
                 val groups = allGroups.value ?: emptyList()
                 if (groups !== memoizedGroups) {
@@ -577,24 +591,29 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Refine cache key to only include preferences that affect Stage 2 re-calculations.
                 // This prevents irrelevant preference changes (like edit mode) from clearing the whole cache.
-                val relevantPrefsHash = listOf(
-                    prefs.recentBehaviorIncidentsLimit,
-                    prefs.recentHomeworkLogsLimit,
-                    prefs.recentLogsLimit,
-                    prefs.maxRecentLogsToDisplay,
-                    prefs.useInitialsForBehavior,
-                    prefs.useInitialsForHomework,
-                    prefs.useInitialsForQuiz,
-                    prefs.behaviorInitialsMap,
-                    prefs.homeworkInitialsMap,
-                    prefs.quizInitialsMap,
-                    prefs.behaviorDisplayTimeout,
-                    prefs.homeworkDisplayTimeout,
-                    prefs.quizDisplayTimeout,
-                    prefs.liveQuizQuestionsGoal,
-                    prefs.liveQuizInitialColor,
-                    prefs.liveQuizFinalColor
-                ).hashCode()
+                // Optimization: Pre-calculate hash only when preferences change.
+                if (prefs !== memoizedUserPreferences) {
+                    memoizedRelevantPrefsHash = listOf(
+                        prefs.recentBehaviorIncidentsLimit,
+                        prefs.recentHomeworkLogsLimit,
+                        prefs.recentLogsLimit,
+                        prefs.maxRecentLogsToDisplay,
+                        prefs.useInitialsForBehavior,
+                        prefs.useInitialsForHomework,
+                        prefs.useInitialsForQuiz,
+                        prefs.behaviorInitialsMap,
+                        prefs.homeworkInitialsMap,
+                        prefs.quizInitialsMap,
+                        prefs.behaviorDisplayTimeout,
+                        prefs.homeworkDisplayTimeout,
+                        prefs.quizDisplayTimeout,
+                        prefs.liveQuizQuestionsGoal,
+                        prefs.liveQuizInitialColor,
+                        prefs.liveQuizFinalColor
+                    ).hashCode()
+                    memoizedUserPreferences = prefs
+                }
+                val relevantPrefsHash = memoizedRelevantPrefsHash
 
                 // Memoized rule decoding
                 val rules = allRules.value ?: emptyList()
@@ -604,12 +623,19 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val decodedRules = decodedRulesCache
 
+                // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute
+                val anyTimeBasedRules = decodedRules.any { it.condition.activeTimes?.isNotEmpty() == true }
+                val effectiveTimeKey = if (anyTimeBasedRules) currentTimeString else "STATIC_TIME"
+
                 val defaultStyle = prefs.defaultStudentStyle
 
-                // Clean up caches for deleted students.
-                val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
-                studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
-                studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
+                // BOLT: Clean up caches for deleted students only if number of students decreased.
+                // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
+                if (studentUiItemCache.size > students.size) {
+                    val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
+                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
+                    studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
+                }
 
                 // --- Stage 2: Per-Student Transformation ---
                 val studentsWithBehavior = students.map { student ->
@@ -629,7 +655,7 @@ class SeatingChartViewModel @Inject constructor(
                         relevantPrefsHash = relevantPrefsHash,
                         sessionActive = sessionActive,
                         currentMode = currentModeValue,
-                        timeKey = currentTimeString,
+                        timeKey = effectiveTimeKey,
                         lastCleared = lastCleared
                     )
 
@@ -1521,9 +1547,11 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     private fun updateFurnitureForDisplay(furnitureList: List<Furniture>) {
-        // Clean up cache for deleted furniture
-        val currentFurnitureIds = furnitureList.map { it.id }.toSet()
-        furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
+        // BOLT: Clean up cache for deleted furniture only if count decreased.
+        if (furnitureUiItemCache.size > furnitureList.size) {
+            val currentFurnitureIds = furnitureList.map { it.id }.toSet()
+            furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
+        }
 
         val mappedList = furnitureList.map { furniture ->
             val pending = pendingFurniturePositions[furniture.id]
