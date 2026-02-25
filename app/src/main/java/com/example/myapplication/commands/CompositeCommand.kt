@@ -2,11 +2,17 @@ package com.example.myapplication.commands
 
 /**
  * A command that groups multiple other commands into a single atomic action.
- * Executing this command executes all sub-commands in order.
- * Undoing this command undoes all sub-commands in reverse order.
  *
- * @param commands The list of commands to group.
- * @param description A human-readable description of the bulk action.
+ * This implementation of the Macro Command pattern ensures that complex operations
+ * (like aligning or distributing multiple items) are treated as a single entry
+ * in the user's undo history.
+ *
+ * - **Execution**: Sub-commands are executed in their original list order.
+ * - **Undo**: Sub-commands are undone in **reverse** order to ensure state consistency,
+ *   as later actions might depend on the state produced by earlier ones.
+ *
+ * @param commands The list of commands to group and execute atomically.
+ * @param description A human-readable description of the bulk action (e.g., "Align 5 Items").
  */
 class CompositeCommand(
     private val commands: List<Command>,

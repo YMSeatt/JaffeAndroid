@@ -889,23 +889,24 @@ class SeatingChartViewModel @Inject constructor(
      * entire recent work. This is particularly useful for correcting a log entry made
      * minutes ago without undoing subsequent layout changes.
      *
-     * ### Selective Undo Algorithm:
+     * ### ⚡ Selective Undo Algorithm:
      *
-     * 1. **Rollback**: Temporarily pops and undos all commands from the top of the
-     *    [commandUndoStack] down to (but not including) the target index. This reverts
-     *    the application state to exactly how it was immediately after the target
-     *    command was first executed.
-     * 2. **Isolate**: Pops and undos the target command itself.
-     * 3. **Re-branch**: Re-executes the target command. This "refreshes" its effect
-     *    in the database. In future iterations, this step could be expanded to support
-     *    true "toggling" or "editing" of historical actions.
-     * 4. **Invalidate Future**: Clears the [commandRedoStack] because the historical
-     *    "future" (the commands we rolled back in step 1) may have depended on the
-     *    state we just mutated.
+     * This implementation follows a **"Rollback -> Isolate -> Re-branch"** strategy to
+     * ensure data integrity while allowing historical modifications:
      *
-     * **Note:** To maintain data integrity, all actions that occurred AFTER the target
-     * index are permanently discarded. This "re-branches" history from the point of
-     * the target action.
+     * 1.  **Rollback**: The engine temporarily undos all commands from the top of the
+     *     [commandUndoStack] down to (but not including) the target index. This reverts
+     *     the application state to exactly how it was immediately after the target
+     *     command was first executed.
+     * 2.  **Isolate**: The target command itself is popped and its `undo()` method is called.
+     * 3.  **Re-execution (Re-branching)**: The target command is then re-executed. In the current
+     *     UI flow, this often acts as a "refresh" or is part of an edit cycle.
+     * 4.  **History Invalidation**: To avoid "temporal paradoxes"—where future commands
+     *     depend on a state that has been mutated—all commands that were rolled back in
+     *     Step 1 are **permanently discarded**. The [commandRedoStack] is also cleared.
+     *
+     * **Note:** Because this "re-branches" the application's timeline, any work performed
+     * *after* the selected action will be lost.
      *
      * @param targetIndex The index of the command in [commandUndoStack] to manipulate.
      */
@@ -1071,12 +1072,19 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to persist a student to the database.
+     * This is called by [AddStudentCommand] during execution.
+     */
     suspend fun internalAddStudent(student: Student): Long {
         return withContext(Dispatchers.IO) {
             repository.insertStudent(student)
         }
     }
 
+    /**
+     * Triggers an update for a student's data via the Command pattern.
+     */
     fun updateStudent(oldStudent: Student, newStudent: Student) {
         viewModelScope.launch {
             val command =
@@ -1085,6 +1093,10 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to update a student in the database.
+     * This is called by [UpdateStudentCommand] during execution.
+     */
     suspend fun internalUpdateStudent(student: Student) {
         withContext(Dispatchers.IO) {
             repository.updateStudent(student)
@@ -1092,6 +1104,9 @@ class SeatingChartViewModel @Inject constructor(
     }
 
 
+    /**
+     * Triggers the deletion of a student via the Command pattern.
+     */
     fun deleteStudent(student: Student) {
         viewModelScope.launch {
             val command = DeleteStudentCommand(this@SeatingChartViewModel, student)
@@ -1099,6 +1114,10 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to remove a student from the database.
+     * This is called by [DeleteStudentCommand] during execution.
+     */
     suspend fun internalDeleteStudent(student: Student) {
         withContext(Dispatchers.IO) {
             repository.deleteStudent(student)
@@ -1157,17 +1176,26 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to update a student's spatial coordinates.
+     * Called by [MoveStudentCommand] and gesture handlers.
+     */
     suspend fun internalUpdateStudentPosition(studentId: Long, newX: Float, newY: Float) {
         withContext(Dispatchers.IO) {
             studentDao.updatePosition(studentId, newX, newY)
         }
     }
 
-
+    /**
+     * Fetches a student entity directly from the repository for editing purposes.
+     */
     suspend fun getStudentForEditing(studentId: Long): Student? = withContext(Dispatchers.IO) {
         return@withContext repository.getStudentById(studentId)
     }
 
+    /**
+     * Checks if a student with the given names already exists in the database.
+     */
     suspend fun studentExists(firstName: String, lastName: String): Boolean {
         return repository.studentExists(firstName, lastName)
     }
@@ -1428,12 +1456,19 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to persist furniture to the database.
+     * Called by [AddFurnitureCommand] during execution.
+     */
     suspend fun internalAddFurniture(furniture: Furniture): Long {
         return withContext(Dispatchers.IO) {
             repository.insertFurniture(furniture)
         }
     }
 
+    /**
+     * Triggers an update for furniture data via the Command pattern.
+     */
     fun updateFurniture(oldFurniture: Furniture, newFurniture: Furniture) {
         viewModelScope.launch {
             val command =
@@ -1442,12 +1477,20 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Internal helper to update furniture in the database.
+     * Called by [UpdateFurnitureCommand] during execution.
+     */
     suspend fun internalUpdateFurniture(furniture: Furniture) {
         withContext(Dispatchers.IO) {
             repository.updateFurniture(furniture)
         }
     }
 
+    /**
+     * Internal helper to remove furniture from the database.
+     * Called by [DeleteFurnitureCommand] during execution.
+     */
     suspend fun internalDeleteFurniture(furniture: Furniture) {
         withContext(Dispatchers.IO) {
             repository.deleteFurniture(furniture)
