@@ -2,8 +2,10 @@ package com.example.myapplication.commands
 
 /**
  * Represents a reversible operation within the application.
- * The Command pattern is used to support a robust Undo/Redo system,
- * allowing users to revert changes to the seating chart layout, student data, and logs.
+ *
+ * The Command pattern is the backbone of the application's Undo/Redo system.
+ * By encapsulating user actions as objects, we can maintain a history of state
+ * changes and provide non-linear history manipulation features like Selective Undo.
  */
 interface Command {
     /**
