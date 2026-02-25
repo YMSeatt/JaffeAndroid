@@ -188,6 +188,28 @@ private data class StudentStyles(
  *
  * @return A [StudentStyles] object containing the resolved colors.
  */
+private val singletonColorListCache = java.util.concurrent.ConcurrentHashMap<Color, List<Color>>()
+
+/**
+ * BOLT: Optimized helper to get a single-item list of colors without redundant allocations.
+ * Reuses a cached list for the given color to avoid thousands of small O(1) list objects.
+ */
+private fun getSingletonColorList(color: Color): List<Color> {
+    return singletonColorListCache.getOrPut(color) { java.util.Collections.singletonList(color) }
+}
+
+/**
+ * Resolves the visual styling for a student based on a hierarchy of priorities.
+ *
+ * The styling precedence is as follows (highest to lowest):
+ * 1. **Conditional Formatting**: Dynamic rules (e.g., "Score < 50%") override all other styles.
+ *    Multiple matching rules result in a list of colors (often rendered as a gradient or border).
+ * 2. **User Overrides**: Manual customizations set by the teacher on an individual student.
+ * 3. **Group Settings**: Styles inherited from the student's assigned group (e.g., "Blue Group").
+ * 4. **Defaults**: Global application defaults for students.
+ *
+ * @return A [StudentStyles] object containing the resolved colors.
+ */
 private fun Student.calculateStyles(
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
@@ -213,17 +235,18 @@ private fun Student.calculateStyles(
         emptyList()
     }
 
+    // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
     val backgroundColors = if (formattedColors.isNotEmpty()) {
         formattedColors
     } else {
-        listOf(baseBackgroundColor)
+        getSingletonColorList(baseBackgroundColor)
     }
 
     val outlineColors = if (conditionalFormattingResult.isNotEmpty()) {
         conditionalFormattingResult.map { it.second?.let { colorString -> safeParseColor(colorString) }
             ?: baseOutlineColor }
     } else {
-        listOf(baseOutlineColor)
+        getSingletonColorList(baseOutlineColor)
     }
 
     val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
