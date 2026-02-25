@@ -122,6 +122,12 @@ A personalized **Neural Signature** visualization.
 - **Data-Driven Evolution**: The iris's colors and pattern complexity shift dynamically based on the student's behavioral balance and academic performance.
 - **AGSL Fractal Noise**: Uses a high-performance Voronoi/Fractal noise shader to create organic, biological patterns.
 
+### 21. Ghost Warp (`warp/GhostWarpLayer.kt`, `warp/GhostWarpShader.kt`, `warp/GhostWarpEngine.kt`)
+A Proof of Concept for **Neural Spacetime Dilation**. It visualizes the "Spacetime Curvature" of the classroom based on behavioral intensity. High-activity students create "Gravity Wells" that distort the background grid.
+
+### 22. Ghost Nebula (`GhostNebulaLayer.kt`, `GhostNebulaShader.kt`, `GhostNebulaEngine.kt`)
+A Proof of Concept for **Atmospheric Density Visualization**. It visualizes the "Social Atmosphere" as a dynamic, gaseous nebula. High-activity areas create "Stellar Nurseries" (bright, dense gas), while quiet areas remain "Cold Voids".
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

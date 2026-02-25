@@ -122,6 +122,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
 import com.example.myapplication.labs.ghost.GhostLensEngine
@@ -204,6 +205,7 @@ fun SeatingChartScreen(
     var isSpectraActive by remember { mutableStateOf(false) }
     var isFluxActive by remember { mutableStateOf(false) }
     var isAuroraActive by remember { mutableStateOf(false) }
+    var isNebulaActive by remember { mutableStateOf(false) }
     var isPulseActive by remember { mutableStateOf(false) }
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
@@ -513,6 +515,8 @@ fun SeatingChartScreen(
                 onToggleSpectra = { isSpectraActive = !isSpectraActive },
                 isAuroraActive = isAuroraActive,
                 onToggleAurora = { isAuroraActive = !isAuroraActive },
+                isNebulaActive = isNebulaActive,
+                onToggleNebula = { isNebulaActive = !isNebulaActive },
                 isLensActive = isLensActive,
                 onToggleLens = { isLensActive = !isLensActive },
                 isFluxActive = isFluxActive,
@@ -690,6 +694,13 @@ fun SeatingChartScreen(
                     behaviorLogs = allBehaviorEvents,
                     quizLogs = allQuizLogs,
                     homeworkLogs = allHomeworkLogs
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.NEBULA_MODE_ENABLED && isNebulaActive) {
+                GhostNebulaLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents
                 )
             }
 
@@ -1368,6 +1379,8 @@ fun SeatingChartTopAppBar(
     onToggleSpectra: () -> Unit,
     isAuroraActive: Boolean,
     onToggleAurora: () -> Unit,
+    isNebulaActive: Boolean,
+    onToggleNebula: () -> Unit,
     isLensActive: Boolean,
     onToggleLens: () -> Unit,
     isFluxActive: Boolean,
@@ -1571,6 +1584,16 @@ fun SeatingChartTopAppBar(
                             },
                             leadingIcon = { Icon(Icons.Default.Palette, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
+                        if (GhostConfig.NEBULA_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isNebulaActive) "Disable Ghost Nebula 👻" else "Enable Ghost Nebula 👻") },
+                                onClick = {
+                                    onToggleNebula()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Blue) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(if (isPulseActive) "Disable Neural Pulse 👻" else "Enable Neural Pulse 👻") },
                             onClick = {

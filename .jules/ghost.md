@@ -122,4 +122,22 @@ In 2027, data isn't just displayed; it exerts weight. **Ghost Warp** visualizes 
 - **Event Horizon Glow**: Adding a glow effect to mass points helps identify the "center" of the warp even when distortion is subtle.
 
 ---
+
+## 🌌 Experiment: Ghost Nebula (Atmospheric Density Visualization)
+**Date:** 2027-06-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, the classroom is an ecosystem. "Ghost Nebula" visualizes the "Social Atmosphere" as a dynamic, gaseous nebula. High-activity areas (lots of logs) create "Stellar Nurseries" (bright, dense gas), while quiet areas remain "Cold Voids". It's a macroscopic view of classroom energy that goes beyond individual student icons.
+
+### 🛠️ The Tech
+- **AGSL Gaseous Noise**: Implemented a multi-layered fractal Brownian motion (fbm) and domain warping shader in AGSL to simulate fluid, gaseous motion.
+- **Nebula Engine**: Calculates "Nebula Density" and activity clusters based on behavior log frequency and type.
+- **Python Bridge**: `Python/ghost_nebula_analyzer.py` provides parity for atmospheric data analysis of exported classroom JSON.
+
+### 🔦 The Discovery
+- **Atmospheric Perspective**: By using a gaseous background, we provide a "vibe" check that is less intrusive than discrete UI elements.
+- **Color Coding**: Mapping cluster colors to behavior types (Cyan/Positive, Magenta/Negative) helps identify the "emotional temperature" of different classroom areas at a glance.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*

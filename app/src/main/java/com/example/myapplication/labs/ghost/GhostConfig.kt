@@ -72,4 +72,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Warp" neural spacetime dilation effect. */
     const val WARP_MODE_ENABLED = true
+
+    /** Enables the "Ghost Nebula" atmospheric density visualization. */
+    const val NEBULA_MODE_ENABLED = true
 }
