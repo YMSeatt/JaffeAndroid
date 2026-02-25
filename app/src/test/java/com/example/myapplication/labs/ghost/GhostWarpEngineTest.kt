@@ -45,6 +45,49 @@ class GhostWarpEngineTest {
         assertEquals(5, points.size)
     }
 
+    @Test
+    fun `analyzeClassroomCurvature calculates correct status`() {
+        val students = listOf(createMockStudent(1, 0f, 0f), createMockStudent(2, 10f, 10f))
+        val now = System.currentTimeMillis()
+
+        // Test FLAT status (low activity)
+        val logsLow = listOf(BehaviorEvent(1, 1L, "Positive", now, null))
+        val analysisLow = GhostWarpEngine.analyzeClassroomCurvature(students, logsLow)
+        assertEquals(GhostWarpEngine.WarpStatus.FLAT, analysisLow.status)
+
+        // Test NOMINAL status (> 2.0 avg curvature)
+        // Student 1: 3 logs * 1.0 = 3.0. Student 2: 2 logs * 1.0 = 2.0. Avg = 2.5
+        val logsNominal = (1..3).map { BehaviorEvent(it, 1L, "Positive", now, null) } +
+                          (4..5).map { BehaviorEvent(it, 2L, "Positive", now, null) }
+        val analysisNominal = GhostWarpEngine.analyzeClassroomCurvature(students, logsNominal)
+        assertEquals(GhostWarpEngine.WarpStatus.NOMINAL, analysisNominal.status)
+
+        // Test HIGH DISTORTION status (> 5.0 avg curvature)
+        // Student 1: 10 logs * 1.0 = 10. Student 2: 2 logs * 1.0 = 2. Avg = 6.0
+        val logsHigh = (1..10).map { BehaviorEvent(it, 1L, "Positive", now, null) } +
+                       (11..12).map { BehaviorEvent(it, 2L, "Positive", now, null) }
+        val analysisHigh = GhostWarpEngine.analyzeClassroomCurvature(students, logsHigh)
+        assertEquals(GhostWarpEngine.WarpStatus.HIGH_DISTORTION, analysisHigh.status)
+    }
+
+    @Test
+    fun `generateWarpReport contains expected sections`() {
+        val students = listOf(createMockStudent(1, 100f, 200f))
+        val logs = listOf(BehaviorEvent(1, 1L, "Negative", System.currentTimeMillis(), null))
+        val analysis = GhostWarpEngine.analyzeClassroomCurvature(students, logs)
+
+        val report = GhostWarpEngine.generateWarpReport(analysis)
+
+        assertTrue(report.contains("# \uD83D\uDC7B GHOST WARP ANALYSIS: CLASSROOM CURVATURE"))
+        assertTrue(report.contains("Global Classroom Curvature:"))
+        assertTrue(report.contains("Status:"))
+        assertTrue(report.contains("## [GRAVITATIONAL HOTSPOTS]"))
+        assertTrue(report.contains("Student 1"))
+        assertTrue(report.contains("Curvature"))
+        assertTrue(report.contains("at (100, 200)"))
+        assertTrue(report.contains("Increase spacing near high-curvature nodes"))
+    }
+
     private fun createMockStudent(id: Int, x: Float, y: Float): StudentUiItem {
         @Suppress("DEPRECATION")
         return StudentUiItem(
