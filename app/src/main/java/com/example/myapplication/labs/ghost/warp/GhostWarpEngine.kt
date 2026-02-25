@@ -2,6 +2,7 @@ package com.example.myapplication.labs.ghost.warp
 
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
+import java.util.Locale
 import kotlin.math.max
 
 /**
@@ -9,12 +10,131 @@ import kotlin.math.max
  */
 object GhostWarpEngine {
 
+    /**
+     * Categorization of classroom curvature status.
+     */
+    enum class WarpStatus(val description: String) {
+        HIGH_DISTORTION("Significant behavioral energy detected."),
+        NOMINAL("Stable data-plane."),
+        FLAT("Low activity levels.")
+    }
+
+    /**
+     * Encapsulates the curvature analysis for a single student.
+     */
+    data class StudentCurvature(
+        val studentId: Long,
+        val studentName: String,
+        val x: Float,
+        val y: Float,
+        val mass: Float,
+        val curvature: Float
+    )
+
+    /**
+     * Represents the global classroom curvature analysis.
+     */
+    data class ClassroomWarpAnalysis(
+        val globalCurvature: Float,
+        val status: WarpStatus,
+        val hotspots: List<StudentCurvature>
+    )
+
     data class GravityPoint(
         val x: Float,
         val y: Float,
         val mass: Float,
         val radius: Float
     )
+
+    /**
+     * Analyzes classroom curvature based on student behavioral density.
+     * Ported from `Python/ghost_warp_analysis.py`.
+     */
+    fun analyzeClassroomCurvature(
+        students: List<StudentUiItem>,
+        behaviorLogs: List<BehaviorEvent>
+    ): ClassroomWarpAnalysis {
+        if (students.isEmpty()) {
+            return ClassroomWarpAnalysis(0f, WarpStatus.FLAT, emptyList())
+        }
+
+        val currentTime = System.currentTimeMillis()
+        val oneHourMs = 60 * 60 * 1000L
+
+        // Group logs by student and calculate weighted activity (mass)
+        val studentActivity = behaviorLogs.groupBy { it.studentId }
+            .mapValues { (_, logs) ->
+                logs.sumOf { log ->
+                    // Logs within the last hour have more "weight" (Android enhancement)
+                    val recencyFactor = if (currentTime - log.timestamp < oneHourMs) 2.0 else 1.0
+                    // Negative logs create more "warp" (turbulence) - Matching Python blueprint
+                    val typeFactor = if (log.type.contains("Negative", ignoreCase = true)) 1.5 else 1.0
+                    recencyFactor * typeFactor
+                }.toFloat()
+            }
+
+        val totalActivity = studentActivity.values.sum()
+        val globalCurvature = totalActivity / students.size
+
+        // Thresholds parity-matched with Python blueprint
+        val status = when {
+            globalCurvature > 5.0f -> WarpStatus.HIGH_DISTORTION
+            globalCurvature > 2.0f -> WarpStatus.NOMINAL
+            else -> WarpStatus.FLAT
+        }
+
+        val hotspots = students.mapNotNull { student ->
+            val activity = studentActivity[student.id.toLong()] ?: return@mapNotNull null
+            if (activity == 0f) return@mapNotNull null
+
+            StudentCurvature(
+                studentId = student.id.toLong(),
+                studentName = student.fullName.value,
+                x = student.xPosition.value,
+                y = student.yPosition.value,
+                mass = activity,
+                curvature = activity / 10.0f
+            )
+        }
+        .sortedByDescending { it.curvature }
+        .take(5)
+
+        return ClassroomWarpAnalysis(globalCurvature, status, hotspots)
+    }
+
+    /**
+     * Generates a Markdown-formatted report for classroom curvature.
+     * Ported from `Python/ghost_warp_analysis.py`.
+     */
+    fun generateWarpReport(analysis: ClassroomWarpAnalysis): String {
+        val timestamp = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        )
+
+        val report = StringBuilder()
+        report.append("# 👻 GHOST WARP ANALYSIS: CLASSROOM CURVATURE\n")
+        report.append("**Timestamp:** $timestamp\n\n")
+
+        report.append("## [SPACETIME METRICS]\n")
+        report.append("Global Classroom Curvature: ${String.format(Locale.US, "%.2f", analysis.globalCurvature)}\n")
+        report.append("Status: ${analysis.status.name} - ${analysis.status.description}\n\n")
+
+        report.append("## [GRAVITATIONAL HOTSPOTS]\n")
+        if (analysis.hotspots.isEmpty()) {
+            report.append("No significant gravitational hotspots detected.\n")
+        } else {
+            analysis.hotspots.forEach { h ->
+                report.append("  • ${h.studentName}: Curvature ${String.format(Locale.US, "%.2f", h.curvature)} at (${h.x.toInt()}, ${h.y.toInt()})\n")
+            }
+        }
+
+        report.append("\n**[Recommendation]:** Increase spacing near high-curvature nodes to prevent social collision.\n")
+        report.append("--------------------------------------------------\n")
+        report.append("*Generated by Ghost Warp Analysis Bridge v1.0 (Experimental)*")
+
+        return report.toString()
+    }
 
     /**
      * Identifies the top "Gravity Wells" in the classroom based on student activity.
