@@ -138,7 +138,7 @@ object ConditionalFormattingEngine {
      * @return A list of successfully decoded and prioritized rules.
      */
     fun decodeRules(rules: List<ConditionalFormattingRule>): List<DecodedConditionalFormattingRule> {
-        return rules.mapNotNull { rule ->
+        return rules.filter { it.enabled }.mapNotNull { rule ->
             try {
                 val condition = json.decodeFromString<Condition>(rule.conditionJson)
                 val format = json.decodeFromString<Format>(rule.formatJson)

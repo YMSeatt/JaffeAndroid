@@ -19,6 +19,7 @@ import androidx.room.PrimaryKey
  *                       defining the visual styles (color, outline) to apply.
  * @property targetType What the rule applies to (currently defaults to "student").
  * @property priority The order in which rules are applied. Lower values have higher priority.
+ * @property enabled Whether the rule is currently active.
  */
 @Entity(tableName = "conditional_formatting_rules")
 data class ConditionalFormattingRule(
@@ -29,5 +30,6 @@ data class ConditionalFormattingRule(
     val conditionJson: String = "{}",
     val formatJson: String = "{}",
     val targetType: String = "student",
-    val priority: Int = 0
+    val priority: Int = 0,
+    val enabled: Boolean = true
 )

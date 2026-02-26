@@ -16,6 +16,9 @@ interface ConditionalFormattingRuleDao {
     @Update
     suspend fun updateRule(rule: ConditionalFormattingRule)
 
+    @Update
+    suspend fun updateRules(rules: List<ConditionalFormattingRule>)
+
     @Delete
     suspend fun deleteRule(rule: ConditionalFormattingRule)
 

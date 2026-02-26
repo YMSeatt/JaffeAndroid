@@ -17,6 +17,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -49,6 +51,7 @@ fun ConditionalFormattingRuleEditor(
     onDismiss: () -> Unit,
 ) {
     var name by remember(rule) { mutableStateOf(rule?.name ?: "") }
+    var enabled by remember(rule) { mutableStateOf(rule?.enabled ?: true) }
     var priority by remember(rule) { mutableStateOf(rule?.priority?.toString() ?: "0") }
     var ruleType by remember(rule) { mutableStateOf(rule?.type ?: "group") }
     var targetType by remember(rule) { mutableStateOf(rule?.targetType ?: "student") }
@@ -144,6 +147,13 @@ fun ConditionalFormattingRuleEditor(
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Enabled", modifier = Modifier.weight(1f))
+                        Switch(checked = enabled, onCheckedChange = { enabled = it })
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     ExposedDropdownMenuBox(
                         expanded = expanded,
                         onExpandedChange = { expanded = !expanded },
@@ -421,6 +431,7 @@ fun ConditionalFormattingRuleEditor(
                     
                     val newRule = (rule ?: ConditionalFormattingRule()).copy(
                         name = name,
+                        enabled = enabled,
                         priority = priority.toIntOrNull() ?: 0,
                         type = ruleType,
                         targetType = targetType,
