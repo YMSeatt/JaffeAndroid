@@ -55,6 +55,7 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 ## 📜 Documentation
 
 *   Core logic in `Exporter.kt` handles the complex mapping between app data and Excel reports.
+*   Advanced "Tribal Knowledge" and implementation secrets are documented in [DEVELOPER_INSIGHTS.md](DEVELOPER_INSIGHTS.md).
 *   Encryption logic is centralized in `SecurityUtil.kt`.
 *   The `Command` pattern is used for the Undo/Redo system.
 *   The **Reminder System** utilizes `android.app.AlarmManager` for precise scheduling and `BroadcastReceiver`s for triggering system notifications even when the app is backgrounded.

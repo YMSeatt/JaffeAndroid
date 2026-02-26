@@ -168,6 +168,11 @@ class GhostVoiceAssistant(
      * 1. **Behavior Type**: Matches against [customBehaviors] or falls back to keywords (positive, negative, question).
      * 2. **Student Identity**: Scans the command for student full names or nicknames.
      *
+     * **⚠️ Technical Warning (Keyword Collision):**
+     * The parser uses simple substring matching (`contains()`). This can lead to collisions if the
+     * command contains keywords like "bad" within a longer comment (e.g., "Log note: student was
+     * NOT bad" will trigger a "Negative behavior" log). Use specific trigger phrases to minimize errors.
+     *
      * @param command The recognized command string.
      */
     private fun handleLogCommand(command: String) {
