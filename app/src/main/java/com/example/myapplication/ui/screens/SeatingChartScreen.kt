@@ -122,6 +122,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
@@ -210,6 +211,7 @@ fun SeatingChartScreen(
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
+    var isFutureActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -534,6 +536,8 @@ fun SeatingChartScreen(
                 onToggleIris = { isIrisActive = !isIrisActive },
                 isWarpActive = isWarpActive,
                 onToggleWarp = { isWarpActive = !isWarpActive },
+                isFutureActive = isFutureActive,
+                onToggleFuture = { isFutureActive = !isFutureActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -684,6 +688,16 @@ fun SeatingChartScreen(
                 GhostWarpLayer(
                     students = students,
                     behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FUTURE_MODE_ENABLED && isFutureActive) {
+                GhostFutureLayer(
+                    students = students,
+                    historicalLogs = allBehaviorEvents,
+                    isFutureActive = isFutureActive,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
@@ -1395,6 +1409,8 @@ fun SeatingChartTopAppBar(
     onToggleIris: () -> Unit,
     isWarpActive: Boolean,
     onToggleWarp: () -> Unit,
+    isFutureActive: Boolean,
+    onToggleFuture: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1628,6 +1644,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.FUTURE_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isFutureActive) "Present Timeline 👻" else "Neural Future 👻") },
+                                onClick = {
+                                    onToggleFuture()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
                         }
                     }
