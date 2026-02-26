@@ -39,6 +39,12 @@ class ConditionalFormattingRuleViewModel @Inject constructor(
         }
     }
 
+    fun bulkUpdateRules(rules: List<ConditionalFormattingRule>) {
+        viewModelScope.launch {
+            conditionalFormattingRuleDao.updateRules(rules)
+        }
+    }
+
     fun deleteRule(rule: ConditionalFormattingRule) {
         viewModelScope.launch {
             conditionalFormattingRuleDao.deleteRule(rule)
