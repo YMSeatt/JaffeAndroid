@@ -36,30 +36,18 @@ fun Student.toStudentUiItem(
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
     groupColor: String?,
-    conditionalFormattingResult: List<Pair<String?, String?>>,
-    liveQuizProgressColor: Color? = null,
+    backgroundColors: List<Color>,
+    outlineColors: List<Color>,
+    textColor: Color,
+    fontColor: Color,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
-    defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
-    defaultOutlineColor: String = DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX,
-    defaultTextColor: String = DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
     defaultOutlineThickness: Int = DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP,
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int,
-    defaultFontColor: String
+    defaultFontSize: Int
 ): StudentUiItem {
-    val styles = calculateStyles(
-        groupColor,
-        conditionalFormattingResult,
-        liveQuizProgressColor,
-        defaultBackgroundColor,
-        defaultOutlineColor,
-        defaultTextColor,
-        defaultFontColor
-    )
-
     return StudentUiItem(
         id = this.id.toInt(),
         fullName = mutableStateOf("$firstName $lastName"),
@@ -69,9 +57,9 @@ fun Student.toStudentUiItem(
         yPosition = mutableStateOf(yPosition),
         displayWidth = mutableStateOf((customWidth ?: defaultWidth).dp),
         displayHeight = mutableStateOf((customHeight ?: defaultHeight).dp),
-        displayBackgroundColor = mutableStateOf(styles.backgroundColors),
-        displayOutlineColor = mutableStateOf(styles.outlineColors),
-        displayTextColor = mutableStateOf(styles.textColor),
+        displayBackgroundColor = mutableStateOf(backgroundColors),
+        displayOutlineColor = mutableStateOf(outlineColors),
+        displayTextColor = mutableStateOf(textColor),
         displayOutlineThickness = mutableStateOf((customOutlineThickness ?: defaultOutlineThickness).dp),
         displayCornerRadius = mutableStateOf((customCornerRadius ?: defaultCornerRadius).dp),
         displayPadding = mutableStateOf((customPadding ?: defaultPadding).dp),
@@ -83,7 +71,7 @@ fun Student.toStudentUiItem(
         groupId = mutableStateOf(groupId),
         fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
         fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
-        fontColor = mutableStateOf(styles.fontColor),
+        fontColor = mutableStateOf(fontColor),
         temporaryTask = mutableStateOf(temporaryTask)
     )
 }
@@ -106,30 +94,18 @@ fun Student.updateStudentUiItem(
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
     groupColor: String?,
-    conditionalFormattingResult: List<Pair<String?, String?>>,
-    liveQuizProgressColor: Color? = null,
+    backgroundColors: List<Color>,
+    outlineColors: List<Color>,
+    textColor: Color,
+    fontColor: Color,
     defaultWidth: Int = DEFAULT_STUDENT_BOX_WIDTH_DP,
     defaultHeight: Int = DEFAULT_STUDENT_BOX_HEIGHT_DP,
-    defaultBackgroundColor: String = DEFAULT_STUDENT_BOX_BG_COLOR_HEX,
-    defaultOutlineColor: String = DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX,
-    defaultTextColor: String = DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX,
     defaultOutlineThickness: Int = DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP,
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int,
-    defaultFontColor: String
+    defaultFontSize: Int
 ) {
-    val styles = calculateStyles(
-        groupColor,
-        conditionalFormattingResult,
-        liveQuizProgressColor,
-        defaultBackgroundColor,
-        defaultOutlineColor,
-        defaultTextColor,
-        defaultFontColor
-    )
-
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
     updateIfChanged(item.initials, getEffectiveInitials())
@@ -137,9 +113,9 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.yPosition, yPosition)
     updateIfChanged(item.displayWidth, (customWidth ?: defaultWidth).dp)
     updateIfChanged(item.displayHeight, (customHeight ?: defaultHeight).dp)
-    updateIfChanged(item.displayBackgroundColor, styles.backgroundColors)
-    updateIfChanged(item.displayOutlineColor, styles.outlineColors)
-    updateIfChanged(item.displayTextColor, styles.textColor)
+    updateIfChanged(item.displayBackgroundColor, backgroundColors)
+    updateIfChanged(item.displayOutlineColor, outlineColors)
+    updateIfChanged(item.displayTextColor, textColor)
     updateIfChanged(item.displayOutlineThickness, (customOutlineThickness ?: defaultOutlineThickness).dp)
     updateIfChanged(item.displayCornerRadius, (customCornerRadius ?: defaultCornerRadius).dp)
     updateIfChanged(item.displayPadding, (customPadding ?: defaultPadding).dp)
@@ -151,7 +127,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.groupId, groupId)
     updateIfChanged(item.fontFamily, customFontFamily ?: defaultFontFamily)
     updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
-    updateIfChanged(item.fontColor, styles.fontColor)
+    updateIfChanged(item.fontColor, fontColor)
     updateIfChanged(item.temporaryTask, temporaryTask)
 }
 
@@ -169,7 +145,11 @@ private fun <T> updateIfChanged(state: MutableState<T>, newValue: T) {
     }
 }
 
-private data class StudentStyles(
+/**
+ * BOLT: Data class to hold resolved styles, exported for use in SeatingChartViewModel's
+ * memoized transformation Stage 2.
+ */
+data class StudentStyles(
     val backgroundColors: List<Color>,
     val outlineColors: List<Color>,
     val textColor: Color,
@@ -210,7 +190,11 @@ private fun getSingletonColorList(color: Color): List<Color> {
  *
  * @return A [StudentStyles] object containing the resolved colors.
  */
-private fun Student.calculateStyles(
+/**
+ * Resolves the visual styling for a student based on a hierarchy of priorities.
+ * Moved to public/internal for access in SeatingChartViewModel's optimization pipeline.
+ */
+fun Student.calculateStyles(
     groupColor: String?,
     conditionalFormattingResult: List<Pair<String?, String?>>,
     liveQuizProgressColor: Color?,

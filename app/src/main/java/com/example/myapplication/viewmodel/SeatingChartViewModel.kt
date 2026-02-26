@@ -76,6 +76,8 @@ import com.example.myapplication.preferences.UserPreferences
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.ui.model.ChartItemId
 import com.example.myapplication.ui.model.StudentUiItem
+import com.example.myapplication.ui.model.StudentStyles
+import com.example.myapplication.ui.model.calculateStyles
 import com.example.myapplication.ui.model.toStudentUiItem
 import com.example.myapplication.ui.model.updateStudentUiItem
 import com.example.myapplication.ui.model.toFurnitureUiItem
@@ -343,7 +345,9 @@ class SeatingChartViewModel @Inject constructor(
         val quizDescription: List<String>,
         val sessionLogs: List<String>,
         val conditionalFormattingResult: List<Pair<String?, String?>>,
-        val liveQuizProgressColor: Color?
+        val liveQuizProgressColor: Color?,
+        // BOLT: Cache resolved styles to avoid redundant allocations in Stage 3
+        val styles: StudentStyles
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -586,7 +590,7 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Replaced slow java.util.Calendar with java.time.LocalDateTime (Min SDK 26)
                 val now = LocalDateTime.now()
                 val dayOfWeek = now.dayOfWeek.value - 1 // LocalDateTime is 1(Mon)-7(Sun), we want 0-6
-                val currentTimeString = now.format(DateTimeFormatter.ofPattern("HH:mm"))
+                val currentTimeString = now.format(TIME_FORMATTER)
                 val timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
 
                 // BOLT: Refine cache key to only include preferences that affect Stage 2 re-calculations.
@@ -666,26 +670,39 @@ class SeatingChartViewModel @Inject constructor(
                         // 2a. Log Filtering:
                         // Only show logs that haven't been "cleared" by the user and haven't exceeded
                         // the display timeout defined in preferences.
-                        val recentEvents = if (student.showLogs) {
-                            behaviorList?.filter {
-                                it.timestamp > lastCleared && (behaviorDisplayTimeout == 0 || currentTime < it.timestamp + (behaviorDisplayTimeout.toLong() * 3600000L))
-                            }?.take(behaviorLimit) ?: emptyList()
-                        } else {
-                            emptyList()
+                        // BOLT: Optimized filtering using manual loops and early breaks on DESC sorted lists.
+                        val recentEvents = mutableListOf<BehaviorEvent>()
+                        if (student.showLogs && behaviorList != null) {
+                            val timeoutMs = behaviorDisplayTimeout.toLong() * 3600000L
+                            for (event in behaviorList) {
+                                if (recentEvents.size >= behaviorLimit) break
+                                if (event.timestamp <= lastCleared) break
+                                if (behaviorDisplayTimeout > 0 && currentTime >= event.timestamp + timeoutMs) break
+                                recentEvents.add(event)
+                            }
                         }
-                        val recentHomework = if (student.showLogs) {
-                            homeworkList?.filter {
-                                it.loggedAt > lastCleared && (homeworkDisplayTimeout == 0 || currentTime < it.loggedAt + (homeworkDisplayTimeout.toLong() * 3600000L))
-                            }?.take(homeworkLimit) ?: emptyList()
-                        } else {
-                            emptyList()
+
+                        val recentHomework = mutableListOf<HomeworkLog>()
+                        if (student.showLogs && homeworkList != null) {
+                            val timeoutMs = homeworkDisplayTimeout.toLong() * 3600000L
+                            for (log in homeworkList) {
+                                if (recentHomework.size >= homeworkLimit) break
+                                if (log.loggedAt <= lastCleared) break
+                                if (homeworkDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
+                                recentHomework.add(log)
+                            }
                         }
-                        val recentQuizzes = if (student.showLogs) {
-                            quizList?.filter {
-                                it.loggedAt > lastCleared && !it.isComplete && (quizDisplayTimeout == 0 || currentTime < it.loggedAt + (quizDisplayTimeout.toLong() * 3600000L))
-                            }?.take(quizLimit) ?: emptyList()
-                        } else {
-                            emptyList()
+
+                        val recentQuizzes = mutableListOf<QuizLog>()
+                        if (student.showLogs && quizList != null) {
+                            val timeoutMs = quizDisplayTimeout.toLong() * 3600000L
+                            for (log in quizList) {
+                                if (recentQuizzes.size >= quizLimit) break
+                                if (log.loggedAt <= lastCleared) break
+                                if (log.isComplete) continue
+                                if (quizDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
+                                recentQuizzes.add(log)
+                            }
                         }
 
                         // 2b. Description Generation:
@@ -759,13 +776,25 @@ class SeatingChartViewModel @Inject constructor(
                             timeContext = timeContext
                         )
 
+                        // 2e. BOLT: Resolve styles in Stage 2 to avoid redundant allocations in Stage 3 sync
+                        val styles = student.calculateStyles(
+                            groupColor = groupColorMap[student.groupId],
+                            conditionalFormattingResult = conditionalFormattingResult,
+                            liveQuizProgressColor = liveQuizProgressColor,
+                            defaultBackgroundColor = prefs.defaultStudentStyle.backgroundColor,
+                            defaultOutlineColor = prefs.defaultStudentStyle.outlineColor,
+                            defaultTextColor = prefs.defaultStudentStyle.textColor,
+                            defaultFontColor = prefs.defaultStudentStyle.fontColor
+                        )
+
                         StudentDerivedData(
                             behaviorDescription,
                             homeworkDescription,
                             quizDescription,
                             sessionLogs,
                             conditionalFormattingResult,
-                            liveQuizProgressColor
+                            liveQuizProgressColor,
+                            styles
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -777,8 +806,9 @@ class SeatingChartViewModel @Inject constructor(
                     val sessionLogs = derivedData.sessionLogs
                     val conditionalFormattingResult = derivedData.conditionalFormattingResult
                     val liveQuizProgressColor = derivedData.liveQuizProgressColor
+                    val styles = derivedData.styles
 
-                    // 2d. Optimistic Reconciliation:
+                    // 2f. Optimistic Reconciliation:
                     // If the student is currently being dragged, use the local "pending" position
                     // to ensure immediate UI feedback before the database update completes.
                     val pendingPos = pendingStudentPositions[student.id.toInt()]
@@ -805,19 +835,17 @@ class SeatingChartViewModel @Inject constructor(
                             recentQuizDescription = quizDescription,
                             sessionLogText = sessionLogs,
                             groupColor = groupColorMap[student.groupId],
-                            conditionalFormattingResult = conditionalFormattingResult,
-                            liveQuizProgressColor = liveQuizProgressColor,
+                            backgroundColors = styles.backgroundColors,
+                            outlineColors = styles.outlineColors,
+                            textColor = styles.textColor,
+                            fontColor = styles.fontColor,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,
-                            defaultBackgroundColor = defaultStyle.backgroundColor,
-                            defaultOutlineColor = defaultStyle.outlineColor,
-                            defaultTextColor = defaultStyle.textColor,
                             defaultOutlineThickness = defaultStyle.outlineThickness,
                             defaultCornerRadius = defaultStyle.cornerRadius,
                             defaultPadding = defaultStyle.padding,
                             defaultFontFamily = defaultStyle.fontFamily,
-                            defaultFontSize = defaultStyle.fontSize,
-                            defaultFontColor = defaultStyle.fontColor
+                            defaultFontSize = defaultStyle.fontSize
                         )
                         existingItem
                     } else {
@@ -827,19 +855,17 @@ class SeatingChartViewModel @Inject constructor(
                             recentQuizDescription = quizDescription,
                             sessionLogText = sessionLogs,
                             groupColor = groupColorMap[student.groupId],
-                            conditionalFormattingResult = conditionalFormattingResult,
-                            liveQuizProgressColor = liveQuizProgressColor,
+                            backgroundColors = styles.backgroundColors,
+                            outlineColors = styles.outlineColors,
+                            textColor = styles.textColor,
+                            fontColor = styles.fontColor,
                             defaultWidth = defaultStyle.width,
                             defaultHeight = defaultStyle.height,
-                            defaultBackgroundColor = defaultStyle.backgroundColor,
-                            defaultOutlineColor = defaultStyle.outlineColor,
-                            defaultTextColor = defaultStyle.textColor,
                             defaultOutlineThickness = defaultStyle.outlineThickness,
                             defaultCornerRadius = defaultStyle.cornerRadius,
                             defaultPadding = defaultStyle.padding,
                             defaultFontFamily = defaultStyle.fontFamily,
-                            defaultFontSize = defaultStyle.fontSize,
-                            defaultFontColor = defaultStyle.fontColor
+                            defaultFontSize = defaultStyle.fontSize
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem
@@ -1960,6 +1986,11 @@ class SeatingChartViewModel @Inject constructor(
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
         }
+    }
+
+    companion object {
+        /** BOLT: Cached formatter to avoid per-update allocations. */
+        private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
     }
 
     /**
