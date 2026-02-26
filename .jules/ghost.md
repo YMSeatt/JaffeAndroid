@@ -140,4 +140,22 @@ In 2027, the classroom is an ecosystem. "Ghost Nebula" visualizes the "Social At
 - **Color Coding**: Mapping cluster colors to behavior types (Cyan/Positive, Magenta/Negative) helps identify the "emotional temperature" of different classroom areas at a glance.
 
 ---
+
+## ⌛ Experiment: Ghost Future (Neural Classroom Simulation)
+**Date:** 2027-07-05
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, teachers don't just record history; they simulate the future. **Ghost Future** uses a "Stochastic Neural Engine" to fast-forward the classroom state, predicting potential behavioral hotspots and academic drifts before they happen. It allows teachers to "Time Warp" and see the likely outcome of current classroom dynamics.
+
+### 🛠️ The Tech
+- **Stochastic Markov Engine**: Implemented `GhostFutureEngine` to generate simulated behavior events based on student's current "Social Gravity" and "Academic Entropy" (via `GhostOracle`).
+- **AGSL Temporal Shader**: Created `GhostFutureShader` with an amber-tinted digital interface, scanlines, and time-lapse jitter to simulate "Future Vision."
+- **Python Bridge**: `Python/ghost_future.py` provides multi-day trajectory simulation for deep offline analysis.
+
+### 🔦 The Discovery
+- **Proactive Intervention**: By visualizing predicted negative events (Magenta "Ghosts"), teachers can adjust seating or attention before the event actually occurs.
+- **Probabilistic Forecasting**: Using `GhostOracle` as a heuristic engine allows for a lightweight, on-device simulation that feels "intelligent" without requiring massive compute.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
