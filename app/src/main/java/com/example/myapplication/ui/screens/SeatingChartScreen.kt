@@ -133,6 +133,8 @@ import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
+import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
+import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -212,6 +214,7 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
+    var isOsmosisActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -538,6 +541,8 @@ fun SeatingChartScreen(
                 onToggleWarp = { isWarpActive = !isWarpActive },
                 isFutureActive = isFutureActive,
                 onToggleFuture = { isFutureActive = !isFutureActive },
+                isOsmosisActive = isOsmosisActive,
+                onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -716,6 +721,26 @@ fun SeatingChartScreen(
                     students = students,
                     behaviorLogs = allBehaviorEvents
                 )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.OSMOSIS_MODE_ENABLED && isOsmosisActive) {
+                val osmoticNodes = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    students.map { student ->
+                        val (k, b) = GhostOsmosisEngine.calculateStudentPotentials(
+                            allBehaviorEvents.filter { it.studentId == student.id.toLong() },
+                            allQuizLogs.filter { it.studentId == student.id.toLong() },
+                            allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+                        )
+                        GhostOsmosisEngine.OsmoticNode(
+                            id = student.id.toLong(),
+                            x = student.xPosition.value,
+                            y = student.yPosition.value,
+                            knowledgePotential = k,
+                            behaviorConcentration = b
+                        )
+                    }
+                }
+                GhostOsmosisLayer(students = osmoticNodes)
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
@@ -1411,6 +1436,8 @@ fun SeatingChartTopAppBar(
     onToggleWarp: () -> Unit,
     isFutureActive: Boolean,
     onToggleFuture: () -> Unit,
+    isOsmosisActive: Boolean,
+    onToggleOsmosis: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1654,6 +1681,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.OSMOSIS_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isOsmosisActive) "Balance Classroom 👻" else "Ghost Osmosis 👻") },
+                                onClick = {
+                                    onToggleOsmosis()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Blue) }
                             )
                         }
                     }
