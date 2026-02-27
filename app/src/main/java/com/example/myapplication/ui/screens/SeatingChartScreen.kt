@@ -1285,14 +1285,24 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
+            val behaviorLogsByStudent = remember(allBehaviorEvents) {
+                allBehaviorEvents.groupBy { it.studentId }
+            }
+            val quizLogsByStudent = remember(allQuizLogs) {
+                allQuizLogs.groupBy { it.studentId }
+            }
+            val homeworkLogsByStudent = remember(allHomeworkLogs) {
+                allHomeworkLogs.groupBy { it.studentId }
+            }
+
             students.forEach { studentItem ->
                 val irisParams = if (isIrisActive) {
-                    remember(studentItem.id, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    remember(studentItem.id, behaviorLogsByStudent, quizLogsByStudent, homeworkLogsByStudent) {
                         com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
                             studentItem.id.toLong(),
-                            allBehaviorEvents.filter { it.studentId == studentItem.id.toLong() },
-                            allQuizLogs.filter { it.studentId == studentItem.id.toLong() },
-                            allHomeworkLogs.filter { it.studentId == studentItem.id.toLong() }
+                            behaviorLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
+                            quizLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
+                            homeworkLogsByStudent[studentItem.id.toLong()] ?: emptyList()
                         )
                     }
                 } else null
