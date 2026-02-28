@@ -49,4 +49,52 @@ class GhostOsmosisEngineTest {
         val first = gradients.first()
         assertTrue(first.potential > 0f)
     }
+
+    @Test
+    fun testAnalyzeOsmoticBalance_ParityWithPython() {
+        // Mock data from Python ghost_osmosis_analyzer.py __main__
+        val students = listOf(
+            GhostOsmosisEngine.OsmoticNode(1, 500f, 500f, 0.9f, 0.8f),  // High performing mentor
+            GhostOsmosisEngine.OsmoticNode(2, 600f, 600f, 0.4f, 0.1f),  // Nearby student (Diffusion zone)
+            GhostOsmosisEngine.OsmoticNode(3, 3000f, 3000f, 0.7f, -0.5f) // Isolated student with friction
+        )
+
+        val analysis = GhostOsmosisEngine.analyzeOsmoticBalance(students)
+
+        // Python results for this mock data:
+        // total_interactions: 1 (only student 1 and 2 are within 1000 units)
+        // dist: sqrt(100^2 + 100^2) = 141.42
+        // k_diff: abs(0.9 - 0.4) = 0.5
+        // b_diff: abs(0.8 - 0.1) = 0.7
+        // weight: exp(-(141.42^2) / (2 * 400^2)) = exp(-20000 / 320000) = exp(-0.0625) ≈ 0.9394
+        // total_diffusion: (0.5 + 0.7) * 0.9394 = 1.12728
+        // avg_diffusion: 1.12728 / 1 = 1.12728
+        // balance_score: max(0.0, 1.0 - (1.12728 * 2.0)) = 0.0
+        // status: HIGH_GRADIENT (since balanceScore < 0.4)
+
+        assertEquals(1, analysis.totalInteractions)
+        assertEquals(0f, analysis.balanceScore, 0.01f)
+        assertEquals(GhostOsmosisEngine.OsmosisStatus.HIGH_GRADIENT, analysis.status)
+        assertEquals(1.127f, analysis.avgDiffusionDelta, 0.01f)
+    }
+
+    @Test
+    fun testGenerateOsmosisReport() {
+        val analysis = GhostOsmosisEngine.OsmosisAnalysis(
+            status = GhostOsmosisEngine.OsmosisStatus.EQUILIBRIUM,
+            balanceScore = 0.95f,
+            totalInteractions = 12,
+            avgDiffusionDelta = 0.025f
+        )
+
+        val report = GhostOsmosisEngine.generateOsmosisReport(analysis, timestamp = "2027-10-10 10:10:10")
+
+        assertTrue(report.contains("# 👻 GHOST OSMOSIS: NEURAL DIFFUSION ANALYSIS"))
+        assertTrue(report.contains("Classroom Status:** EQUILIBRIUM"))
+        assertTrue(report.contains("Osmotic Balance Score:** 95.0%"))
+        assertTrue(report.contains("Timestamp:** 2027-10-10 10:10:10"))
+        assertTrue(report.contains("Active Diffusion Zones: 12"))
+        assertTrue(report.contains("Avg Diffusion Delta:   0.025"))
+        assertTrue(report.contains("The classroom has reached a state of neural equilibrium."))
+    }
 }
