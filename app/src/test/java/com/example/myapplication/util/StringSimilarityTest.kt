@@ -14,6 +14,10 @@ class StringSimilarityTest {
         assertEquals(2, StringSimilarity.levenshteinDistance("book", "back"))
         assertEquals(4, StringSimilarity.levenshteinDistance("", "test"))
         assertEquals(4, StringSimilarity.levenshteinDistance("test", ""))
+
+        // From NameMatchingUtilTest
+        assertEquals(3, StringSimilarity.levenshteinDistance("Saturday", "Sunday"))
+        assertEquals(1, StringSimilarity.levenshteinDistance("abc", "abd"))
     }
 
     @Test
@@ -34,5 +38,9 @@ class StringSimilarityTest {
         // Empty strings
         assertEquals(1.0f, StringSimilarity.nameSimilarityRatio("", ""), 0.001f)
         assertEquals(0.0f, StringSimilarity.nameSimilarityRatio("John", ""), 0.001f)
+
+        // From NameMatchingUtilTest
+        assertEquals((4.0/7.0).toFloat(), StringSimilarity.nameSimilarityRatio("kitten", "sitting"), 0.001f)
+        assertEquals(1.0f, StringSimilarity.nameSimilarityRatio("John", "john"), 0.001f)
     }
 }
