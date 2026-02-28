@@ -122,6 +122,8 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.GhostSparkEngine
+import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
@@ -214,6 +216,7 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
+    var isSparkActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
@@ -314,6 +317,7 @@ fun SeatingChartScreen(
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
@@ -541,6 +545,8 @@ fun SeatingChartScreen(
                 onToggleWarp = { isWarpActive = !isWarpActive },
                 isFutureActive = isFutureActive,
                 onToggleFuture = { isFutureActive = !isFutureActive },
+                isSparkActive = isSparkActive,
+                onToggleSpark = { isSparkActive = !isSparkActive },
                 isOsmosisActive = isOsmosisActive,
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 onExportBlueprint = {
@@ -720,6 +726,15 @@ fun SeatingChartScreen(
                 GhostNebulaLayer(
                     students = students,
                     behaviorLogs = allBehaviorEvents
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPARK_MODE_ENABLED && isSparkActive) {
+                GhostSparkLayer(
+                    engine = ghostSparkEngine,
+                    students = students,
+                    canvasScale = scale,
+                    canvasOffset = offset
                 )
             }
 
@@ -1067,6 +1082,15 @@ fun SeatingChartScreen(
                     behaviorTypes = behaviorTypeNames,
                     onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null },
                     onBehaviorLogged = { count ->
+                    if (isSparkActive) {
+                        val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                        targets.forEach { id ->
+                            val s = students.find { it.id.toLong() == id }
+                            if (s != null) {
+                                ghostSparkEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
+                            }
+                        }
+                    }
                         coroutineScope.launch {
                             val result = snackbarHostState.showSnackbar(
                                 message = "Logged behavior for $count student(s)",
@@ -1446,6 +1470,8 @@ fun SeatingChartTopAppBar(
     onToggleWarp: () -> Unit,
     isFutureActive: Boolean,
     onToggleFuture: () -> Unit,
+    isSparkActive: Boolean,
+    onToggleSpark: () -> Unit,
     isOsmosisActive: Boolean,
     onToggleOsmosis: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1691,6 +1717,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.SPARK_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSparkActive) "Static State 👻" else "Ghost Spark 👻") },
+                                onClick = {
+                                    onToggleSpark()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.OSMOSIS_MODE_ENABLED) {
