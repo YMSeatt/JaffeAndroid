@@ -81,4 +81,7 @@ object GhostConfig {
 
     /** Enables "Ghost Osmosis" knowledge diffusion and behavioral concentration gradients. */
     const val OSMOSIS_MODE_ENABLED = true
+
+    /** Enables "Ghost Spark" high-performance neural particle system. */
+    const val SPARK_MODE_ENABLED = true
 }
