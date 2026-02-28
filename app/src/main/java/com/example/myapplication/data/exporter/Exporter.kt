@@ -45,10 +45,9 @@ import java.util.Locale
  * @param context The application context, used for accessing files, content resolver, and resources.
  */
 class Exporter(
-    private val context: Context
+    private val context: Context,
+    private val securityUtil: SecurityUtil = SecurityUtil(context)
 ) {
-
-    private val securityUtil = SecurityUtil(context)
     private val gson = Gson()
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
@@ -315,7 +314,7 @@ class Exporter(
         val headerRow = sheet.createRow(0)
         headers.forEachIndexed { index, header ->
             val cell = headerRow.createCell(index)
-            cell.setCellValue(header)
+            cell.setCellValue(sanitize(header))
             cell.cellStyle = context.headerStyle
         }
 
@@ -363,8 +362,8 @@ class Exporter(
             }
             col++
             row.createCell(col++).setCellValue(context.dayFormat.format(zonedDateTime))
-            row.createCell(col++).setCellValue(student?.firstName ?: "Unknown")
-            row.createCell(col++).setCellValue(student?.lastName ?: "")
+            row.createCell(col++).setCellValue(sanitize(student?.firstName ?: "Unknown"))
+            row.createCell(col++).setCellValue(sanitize(student?.lastName ?: ""))
 
             if (isMasterLog) {
                 row.createCell(col++).setCellValue(
@@ -381,11 +380,11 @@ class Exporter(
                 is BehaviorEvent -> {
                     val targetCol = if (behaviorCol != -1) behaviorCol else itemNameCol
                     if (targetCol != -1) {
-                        row.createCell(targetCol).setCellValue(item.type)
+                        row.createCell(targetCol).setCellValue(sanitize(item.type))
                     }
                     if (commentCol != -1) {
                         row.createCell(commentCol).apply {
-                            setCellValue(item.comment ?: "")
+                            setCellValue(sanitize(item.comment ?: ""))
                             cellStyle = context.leftAlignmentStyle
                         }
                     }
@@ -393,7 +392,7 @@ class Exporter(
                 is QuizLog -> {
                     val targetCol = if (quizNameCol != -1) quizNameCol else itemNameCol
                     if (targetCol != -1) {
-                        row.createCell(targetCol).setCellValue(item.quizName)
+                        row.createCell(targetCol).setCellValue(sanitize(item.quizName))
                     }
                     if (numQuestionsCol != -1) {
                         row.createCell(numQuestionsCol).apply {
@@ -431,7 +430,7 @@ class Exporter(
                     }
                     if (commentCol != -1) {
                         row.createCell(commentCol).apply {
-                            setCellValue(item.comment ?: "")
+                            setCellValue(sanitize(item.comment ?: ""))
                             cellStyle = context.leftAlignmentStyle
                         }
                     }
@@ -439,7 +438,7 @@ class Exporter(
                 is HomeworkLog -> {
                     val targetCol = if (homeworkTypeCol != -1) homeworkTypeCol else itemNameCol
                     if (targetCol != -1) {
-                        row.createCell(targetCol).setCellValue(item.assignmentName)
+                        row.createCell(targetCol).setCellValue(sanitize(item.assignmentName))
                     }
                     val marksData = if (item.marksData != null) parseMarksData(item.marksData) else null
 
@@ -454,7 +453,7 @@ class Exporter(
                             if (index != -1) {
                                 val stringValue = value.toString()
                                 row.createCell(index).apply {
-                                    setCellValue(stringValue)
+                                    setCellValue(sanitize(stringValue))
                                     cellStyle = context.rightAlignmentStyle
                                 }
                                 val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
@@ -481,14 +480,14 @@ class Exporter(
                         }
                         if (homeworkEffortCol != -1) {
                             row.createCell(homeworkEffortCol).apply {
-                                setCellValue(effort)
+                                setCellValue(sanitize(effort))
                                 cellStyle = context.rightAlignmentStyle
                             }
                         }
                     }
                     if (commentCol != -1) {
                         row.createCell(commentCol).apply {
-                            setCellValue(item.comment ?: "")
+                            setCellValue(sanitize(item.comment ?: ""))
                             cellStyle = context.leftAlignmentStyle
                         }
                     }
@@ -553,8 +552,8 @@ class Exporter(
                 studentBehaviors?.keys?.sorted()?.forEach { behavior ->
                     val row = sheet.createRow(currentRow++)
                     val student = students[studentId]
-                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
-                    row.createCell(1).setCellValue(behavior)
+                    row.createCell(0).setCellValue(sanitize(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown"))
+                    row.createCell(1).setCellValue(sanitize(behavior))
                     row.createCell(2).setCellValue(studentBehaviors[behavior]?.toDouble() ?: 0.0)
                 }
             }
@@ -600,8 +599,8 @@ class Exporter(
                     val scores = studentQuizzes[quizName]!!
                     val row = sheet.createRow(currentRow++)
                     val student = students[studentId]
-                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
-                    row.createCell(1).setCellValue(quizName)
+                    row.createCell(0).setCellValue(sanitize(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown"))
+                    row.createCell(1).setCellValue(sanitize(quizName))
                     row.createCell(2).setCellValue(scores.average())
                     row.createCell(3).setCellValue(scores.size.toDouble())
                 }
@@ -643,8 +642,8 @@ class Exporter(
                     val summary = studentHomeworks[assignmentName]!!
                     val row = sheet.createRow(currentRow++)
                     val student = students[studentId]
-                    row.createCell(0).setCellValue(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown")
-                    row.createCell(1).setCellValue(assignmentName)
+                    row.createCell(0).setCellValue(sanitize(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown"))
+                    row.createCell(1).setCellValue(sanitize(assignmentName))
                     row.createCell(2).setCellValue(summary.first.toDouble())
                     row.createCell(3).setCellValue(summary.second)
                 }
@@ -699,17 +698,17 @@ class Exporter(
         val headerRow = sheet.createRow(0)
         val headers = listOf("First Name", "Last Name", "Nickname", "Gender", "Group Name")
         headers.forEachIndexed { index, header ->
-            headerRow.createCell(index).setCellValue(header)
+            headerRow.createCell(index).setCellValue(sanitize(header))
         }
 
         students.forEachIndexed { index, student ->
             val row = sheet.createRow(index + 1)
-            row.createCell(0).setCellValue(student.firstName)
-            row.createCell(1).setCellValue(student.lastName)
-            row.createCell(2).setCellValue(student.nickname ?: "")
-            row.createCell(3).setCellValue(student.gender)
+            row.createCell(0).setCellValue(sanitize(student.firstName))
+            row.createCell(1).setCellValue(sanitize(student.lastName))
+            row.createCell(2).setCellValue(sanitize(student.nickname ?: ""))
+            row.createCell(3).setCellValue(sanitize(student.gender))
             val group = student.groupId?.let { studentGroups[it] }
-            row.createCell(4).setCellValue(group?.name ?: "")
+            row.createCell(4).setCellValue(sanitize(group?.name ?: ""))
         }
     }
 
@@ -780,7 +779,7 @@ class Exporter(
         val headerRow = sheet.createRow(0)
         headers.forEachIndexed { index, header ->
             val cell = headerRow.createCell(index)
-            cell.setCellValue(header)
+            cell.setCellValue(sanitize(header))
             cell.cellStyle = context.headerStyle
         }
 
@@ -798,7 +797,7 @@ class Exporter(
 
         filteredStudents.forEachIndexed { rowIndex, student ->
             val row = sheet.createRow(rowIndex + 1)
-            row.createCell(0).setCellValue("${student.firstName} ${student.lastName}")
+            row.createCell(0).setCellValue(sanitize("${student.firstName} ${student.lastName}"))
 
             var totalPresent = 0
             val presentDays = studentActiveDays[student.id] ?: emptySet()
@@ -824,6 +823,22 @@ class Exporter(
                 setCellValue(totalAbsent.toDouble())
                 cellStyle = context.rightAlignmentStyle
             }
+        }
+    }
+
+    /**
+     * Sanitizes a string for Excel by prepending a single quote if it starts with
+     * a potential formula-triggering character (=, +, -, @).
+     *
+     * This prevents Excel Formula Injection (CSV Injection) vulnerabilities.
+     */
+    private fun sanitize(value: String?): String {
+        if (value.isNullOrBlank()) return ""
+        val triggers = charArrayOf('=', '+', '-', '@')
+        return if (value[0] in triggers) {
+            "'$value"
+        } else {
+            value
         }
     }
 }
