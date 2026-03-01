@@ -84,4 +84,7 @@ object GhostConfig {
 
     /** Enables "Ghost Spark" high-performance neural particle system. */
     const val SPARK_MODE_ENABLED = true
+
+    /** Enables "Ghost Entanglement" quantum social synchronicity visualization. */
+    const val ENTANGLEMENT_MODE_ENABLED = true
 }
