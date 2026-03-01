@@ -137,6 +137,8 @@ import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
+import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
+import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -218,6 +220,7 @@ fun SeatingChartScreen(
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
+    var isEntanglementActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -549,6 +552,8 @@ fun SeatingChartScreen(
                 onToggleSpark = { isSparkActive = !isSparkActive },
                 isOsmosisActive = isOsmosisActive,
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
+                isEntanglementActive = isEntanglementActive,
+                onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -743,6 +748,13 @@ fun SeatingChartScreen(
                     students.mapNotNull { it.osmoticNode.value }
                 }
                 GhostOsmosisLayer(students = osmoticNodes)
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTANGLEMENT_MODE_ENABLED && isEntanglementActive) {
+                GhostEntanglementLayer(
+                    students = students,
+                    isEntanglementActive = isEntanglementActive
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
@@ -1442,6 +1454,8 @@ fun SeatingChartTopAppBar(
     onToggleSpark: () -> Unit,
     isOsmosisActive: Boolean,
     onToggleOsmosis: () -> Unit,
+    isEntanglementActive: Boolean,
+    onToggleEntanglement: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1705,6 +1719,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Blue) }
+                            )
+                        }
+                        if (GhostConfig.ENTANGLEMENT_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEntanglementActive) "De-Entangle 👻" else "Ghost Entanglement 👻") },
+                                onClick = {
+                                    onToggleEntanglement()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }

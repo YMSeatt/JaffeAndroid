@@ -133,6 +133,12 @@ A Proof of Concept for **Knowledge Diffusion & Behavioral Concentration**. It vi
 - **Diffusion Gradients**: Calculates "Knowledge Potential" and "Behavioral Concentration" to drive a glowing, fluid-like diffusion field.
 - **Osmotic Balance**: Integrated with `Python/ghost_osmosis_analyzer.py` to identify equilibrium states and high-gradient zones.
 
+### 24. Ghost Entanglement (`entanglement/GhostEntanglementLayer.kt`, `entanglement/GhostEntanglementShader.kt`, `entanglement/GhostEntanglementEngine.kt`)
+A Proof of Concept for **Quantum Social Synchronicity**. It visualizes "Quantum Links" between students who exhibit high synchronicity (timing, performance, proximity).
+- **Quantum Coherence**: Calculates "Coherence" scores between students to drive visual ripples and glowing connections.
+- **Spooky Action**: Visualizes how a behavioral event in one student might "ripple" to entangled partners.
+- **Python Bridge**: Integrated with `Python/ghost_entanglement.py` for mathematical parity and entanglement matrix analysis.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
