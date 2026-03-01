@@ -2,6 +2,7 @@ package com.example.myapplication.labs.ghost.lattice
 
 import androidx.compose.ui.graphics.Color
 import com.example.myapplication.data.BehaviorEvent
+import java.util.ArrayDeque
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -67,6 +68,17 @@ class GhostLatticeEngine {
     data class LatticeNode(val id: Long, val x: Float, val y: Float)
 
     /**
+     * Represents a socially connected group of students.
+     *
+     * @property studentIds The set of student IDs belonging to this cluster.
+     * @property avgStrength The average connection strength within the cluster.
+     */
+    data class SocialCluster(
+        val studentIds: Set<Long>,
+        val avgStrength: Float
+    )
+
+    /**
      * Computes the social lattice for a set of student nodes and behavior logs.
      *
      * This method employs a proximity-based heuristic to identify potential connections.
@@ -115,5 +127,61 @@ class GhostLatticeEngine {
             }
         }
         return edges.take(50)
+    }
+
+    /**
+     * Identifies social clusters (connected components) within the lattice graph.
+     *
+     * This follows the logic intended by the Python blueprint to identify
+     * student groupings based on social proximity and behavioral markers.
+     *
+     * @param nodes The list of student nodes.
+     * @param edges The list of social connections.
+     * @return A list of identified [SocialCluster]s.
+     */
+    fun findSocialClusters(nodes: List<LatticeNode>, edges: List<Edge>): List<SocialCluster> {
+        if (nodes.isEmpty()) return emptyList()
+
+        val adjacency = mutableMapOf<Long, MutableList<Edge>>()
+        edges.forEach { edge ->
+            adjacency.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
+            adjacency.getOrPut(edge.toId) { mutableListOf() }.add(edge)
+        }
+
+        val visited = mutableSetOf<Long>()
+        val clusters = mutableListOf<SocialCluster>()
+
+        nodes.forEach { node ->
+            if (node.id !in visited) {
+                val clusterIds = mutableSetOf<Long>()
+                val clusterEdges = mutableSetOf<Edge>()
+                val queue = ArrayDeque<Long>()
+
+                queue.add(node.id)
+                visited.add(node.id)
+
+                while (queue.isNotEmpty()) {
+                    val currentId = queue.removeFirst()
+                    clusterIds.add(currentId)
+
+                    adjacency[currentId]?.forEach { edge ->
+                        clusterEdges.add(edge)
+                        val neighborId = if (edge.fromId == currentId) edge.toId else edge.fromId
+                        if (neighborId !in visited) {
+                            visited.add(neighborId)
+                            queue.add(neighborId)
+                        }
+                    }
+                }
+
+                val avgStrength = if (clusterEdges.isNotEmpty()) {
+                    clusterEdges.sumOf { it.strength.toDouble() }.toFloat() / clusterEdges.size
+                } else 0f
+
+                clusters.add(SocialCluster(clusterIds, avgStrength))
+            }
+        }
+
+        return clusters.sortedByDescending { it.studentIds.size }
     }
 }
