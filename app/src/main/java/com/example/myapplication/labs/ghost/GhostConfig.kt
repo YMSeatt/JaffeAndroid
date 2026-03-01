@@ -78,4 +78,10 @@ object GhostConfig {
 
     /** Enables the "Ghost Nebula" atmospheric density visualization. */
     const val NEBULA_MODE_ENABLED = true
+
+    /** Enables "Ghost Osmosis" knowledge diffusion and behavioral concentration gradients. */
+    const val OSMOSIS_MODE_ENABLED = true
+
+    /** Enables "Ghost Spark" high-performance neural particle system. */
+    const val SPARK_MODE_ENABLED = true
 }

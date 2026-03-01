@@ -17,8 +17,12 @@ import kotlinx.serialization.InternalSerializationApi
 /**
  * Represents a time range and set of days when a conditional formatting rule is active.
  *
- * @property startTime The start time in "HH:MM" format (24-hour).
- * @property endTime The end time in "HH:MM" format (24-hour).
+ * These objects are evaluated during the Stage 2 transformation in the seating chart update
+ * pipeline. Using pre-formatted strings for time comparison allows for efficient temporal
+ * filtering without expensive Calendar/Date object churn.
+ *
+ * @property startTime The start time in "HH:mm" format (24-hour).
+ * @property endTime The end time in "HH:mm" format (24-hour).
  * @property daysOfWeek List of integers representing days of the week (0=Monday, 6=Sunday).
  */
 @Serializable
@@ -32,23 +36,53 @@ data class ActiveTime(
  * Defines the criteria that must be met for a conditional formatting rule to be applied.
  * This class is serialized to JSON and stored in the [ConditionalFormattingRule] entity.
  *
- * @property type The category of the condition (e.g., "group", "behavior_count", "quiz_score_threshold").
- * @property groupId Used when type is "group". Matches students in a specific group.
- * @property behaviorNames Comma-separated list of behavior types to count. Used when type is "behavior_count".
- * @property countThreshold The minimum number of events required to trigger the rule.
- * @property timeWindowHours The look-back period (in hours) for behavior-based rules. Defaults to 24.
- * @property quizResponse The specific response string to match in live quiz sessions.
- * @property homeworkTypeId The assignment name or ID to match for homework rules.
- * @property homeworkResponse The specific status or response to match for homework rules (e.g., "yes", "no").
- * @property homeworkOptionName The specific option name to match in multi-select homework checks.
- * @property operator Comparison operator for numeric thresholds (e.g., "<=", ">=", "==").
- * @property quizNameContains Partial match filter for quiz names in historical quiz rules.
- * @property scoreThresholdPercent Percentage threshold (0-100) for quiz performance rules.
- * @property markTypeId The specific ID of a quiz mark type to count.
- * @property markOperator Comparison operator for mark counts.
- * @property markCountThreshold Threshold value for the number of specific marks received.
- * @property activeModes List of application modes (e.g., "behavior", "quiz", "homework") where this rule applies.
- * @property activeTimes List of [ActiveTime] ranges where this rule applies.
+ * ### Condition Type Schema:
+ * Each `type` utilizes a specific subset of properties. Unused properties should be null.
+ *
+ * - **`group`**:
+ *   - [groupId]: The ID of the student group to match.
+ * - **`behavior_count`**:
+ *   - [behaviorNames]: Comma-separated list of behavior types to monitor (case-insensitive).
+ *   - [countThreshold]: The minimum number of occurrences to trigger the rule.
+ *   - [timeWindowHours]: The look-back period in hours (defaults to 24).
+ * - **`quiz_score_threshold`**:
+ *   - [quizNameContains]: Partial name filter for the quiz.
+ *   - [scoreThresholdPercent]: Percentage value (0-100) to compare against.
+ *   - [operator]: Comparison operator (`<=`, `>=`, `==`, `<`, `>`).
+ * - **`live_quiz_response`**:
+ *   - [quizResponse]: The exact string response to match (case-insensitive).
+ * - **`live_homework_yes_no`**:
+ *   - [homeworkTypeId]: The ID/name of the homework assignment.
+ *   - [homeworkResponse]: The expected status (e.g., "Yes", "No").
+ * - **`live_homework_select`**:
+ *   - [homeworkOptionName]: The specific multi-select option name to match.
+ * - **`quiz_mark_count`**:
+ *   - [markTypeId]: The ID of the specific quiz mark (e.g., "Correct").
+ *   - [markCountThreshold]: The minimum count of that mark.
+ *   - [markOperator]: Comparison operator for the count (`<=`, `>=`, `==`, etc.).
+ *
+ * ### Global Filters:
+ * These properties apply regardless of the [type]:
+ * - [activeModes]: List of UI modes (`behavior`, `quiz`, `homework`) where the rule is active.
+ * - [activeTimes]: Specific time windows and days when the rule is evaluated.
+ *
+ * @property type The category of the condition.
+ * @property groupId Used by `group` type.
+ * @property behaviorNames Used by `behavior_count` type.
+ * @property countThreshold Used by `behavior_count` type.
+ * @property timeWindowHours Used by `behavior_count` type.
+ * @property quizResponse Used by `live_quiz_response` type.
+ * @property homeworkTypeId Used by live homework types.
+ * @property homeworkResponse Used by `live_homework_yes_no` type.
+ * @property homeworkOptionName Used by `live_homework_select` type.
+ * @property operator Used by `quiz_score_threshold` type.
+ * @property quizNameContains Used by `quiz_score_threshold` type.
+ * @property scoreThresholdPercent Used by `quiz_score_threshold` type.
+ * @property markTypeId Used by `quiz_mark_count` type.
+ * @property markOperator Used by `quiz_mark_count` type.
+ * @property markCountThreshold Used by `quiz_mark_count` type.
+ * @property activeModes Optional mode-based activation filter.
+ * @property activeTimes Optional temporal activation filter.
  */
 @Serializable
 data class Condition(
@@ -72,7 +106,10 @@ data class Condition(
 )
 
 /**
- * Defines the visual styles to apply when a condition is met.
+ * Defines the visual styles to apply when a [Condition] is met.
+ *
+ * Multiple matching rules can result in stacked formats (e.g., a background color
+ * and an outline color applied simultaneously).
  *
  * @property color The background or fill color in Hex format (e.g., "#FF0000").
  * @property outline The border or outline color in Hex format.
@@ -86,6 +123,11 @@ data class Format(
 /**
  * A processed version of [ConditionalFormattingRule] where JSON strings have been
  * deserialized into [Condition] and [Format] objects.
+ *
+ * This class is a key component of the application's performance architecture. By
+ * pre-decoding rules and pre-calculating sets (like [behaviorNamesSet]), the engine
+ * avoids expensive JSON parsing and string splitting during high-frequency UI updates
+ * (e.g., student dragging).
  *
  * @property id The unique ID of the rule from the database.
  * @property priority The execution priority (lower numbers are processed first).
@@ -119,6 +161,19 @@ data class FormattingTimeContext(
  * This engine processes [ConditionalFormattingRule] entities by decoding their JSON-based
  * conditions and formats, then checking those conditions against student data, behavior logs,
  * and academic performance.
+ *
+ * ### Architectural Intent:
+ * The [ConditionalFormattingEngine] is designed for high-frequency execution (triggered during
+ * every seating chart update, including student dragging). To maintain 60fps performance, it
+ * utilizes several optimization strategies:
+ * 1. **Prioritized Execution**: Rules are sorted by `priority` so that the most important
+ *    styles are resolved first.
+ * 2. **Rule Decoding Cache**: Rules are pre-decoded into [DecodedConditionalFormattingRule]
+ *    objects in the ViewModel to avoid O(N) JSON parsing during the rendering loop.
+ * 3. **Mark Data Memoization**: Uses [decodedMarksCache] (an [LruCache]) to store results of
+ *    expensive mark-data JSON parsing from [QuizLog] entities.
+ * 4. **Early Exit Filters**: Applies global filters (like [activeModes] and [activeTimes])
+ *    before executing complex condition-specific logic.
  */
 object ConditionalFormattingEngine {
 

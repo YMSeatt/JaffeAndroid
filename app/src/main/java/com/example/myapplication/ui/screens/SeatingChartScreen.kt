@@ -122,6 +122,8 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.GhostSparkEngine
+import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
@@ -133,6 +135,8 @@ import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
+import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
+import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -212,6 +216,8 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
+    var isSparkActive by remember { mutableStateOf(false) }
+    var isOsmosisActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -311,6 +317,7 @@ fun SeatingChartScreen(
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
@@ -538,6 +545,10 @@ fun SeatingChartScreen(
                 onToggleWarp = { isWarpActive = !isWarpActive },
                 isFutureActive = isFutureActive,
                 onToggleFuture = { isFutureActive = !isFutureActive },
+                isSparkActive = isSparkActive,
+                onToggleSpark = { isSparkActive = !isSparkActive },
+                isOsmosisActive = isOsmosisActive,
+                onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -716,6 +727,35 @@ fun SeatingChartScreen(
                     students = students,
                     behaviorLogs = allBehaviorEvents
                 )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPARK_MODE_ENABLED && isSparkActive) {
+                GhostSparkLayer(
+                    engine = ghostSparkEngine,
+                    students = students,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.OSMOSIS_MODE_ENABLED && isOsmosisActive) {
+                val osmoticNodes = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    students.map { student ->
+                        val (k, b) = GhostOsmosisEngine.calculateStudentPotentials(
+                            allBehaviorEvents.filter { it.studentId == student.id.toLong() },
+                            allQuizLogs.filter { it.studentId == student.id.toLong() },
+                            allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+                        )
+                        GhostOsmosisEngine.OsmoticNode(
+                            id = student.id.toLong(),
+                            x = student.xPosition.value,
+                            y = student.yPosition.value,
+                            knowledgePotential = k,
+                            behaviorConcentration = b
+                        )
+                    }
+                }
+                GhostOsmosisLayer(students = osmoticNodes)
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
@@ -1042,6 +1082,15 @@ fun SeatingChartScreen(
                     behaviorTypes = behaviorTypeNames,
                     onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null },
                     onBehaviorLogged = { count ->
+                    if (isSparkActive) {
+                        val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                        targets.forEach { id ->
+                            val s = students.find { it.id.toLong() == id }
+                            if (s != null) {
+                                ghostSparkEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
+                            }
+                        }
+                    }
                         coroutineScope.launch {
                             val result = snackbarHostState.showSnackbar(
                                 message = "Logged behavior for $count student(s)",
@@ -1285,14 +1334,24 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
+            val behaviorLogsByStudent = remember(allBehaviorEvents) {
+                allBehaviorEvents.groupBy { it.studentId }
+            }
+            val quizLogsByStudent = remember(allQuizLogs) {
+                allQuizLogs.groupBy { it.studentId }
+            }
+            val homeworkLogsByStudent = remember(allHomeworkLogs) {
+                allHomeworkLogs.groupBy { it.studentId }
+            }
+
             students.forEach { studentItem ->
                 val irisParams = if (isIrisActive) {
-                    remember(studentItem.id, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    remember(studentItem.id, behaviorLogsByStudent, quizLogsByStudent, homeworkLogsByStudent) {
                         com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
                             studentItem.id.toLong(),
-                            allBehaviorEvents.filter { it.studentId == studentItem.id.toLong() },
-                            allQuizLogs.filter { it.studentId == studentItem.id.toLong() },
-                            allHomeworkLogs.filter { it.studentId == studentItem.id.toLong() }
+                            behaviorLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
+                            quizLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
+                            homeworkLogsByStudent[studentItem.id.toLong()] ?: emptyList()
                         )
                     }
                 } else null
@@ -1411,6 +1470,10 @@ fun SeatingChartTopAppBar(
     onToggleWarp: () -> Unit,
     isFutureActive: Boolean,
     onToggleFuture: () -> Unit,
+    isSparkActive: Boolean,
+    onToggleSpark: () -> Unit,
+    isOsmosisActive: Boolean,
+    onToggleOsmosis: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1654,6 +1717,26 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.SPARK_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSparkActive) "Static State 👻" else "Ghost Spark 👻") },
+                                onClick = {
+                                    onToggleSpark()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.OSMOSIS_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isOsmosisActive) "Balance Classroom 👻" else "Ghost Osmosis 👻") },
+                                onClick = {
+                                    onToggleOsmosis()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Blue) }
                             )
                         }
                     }

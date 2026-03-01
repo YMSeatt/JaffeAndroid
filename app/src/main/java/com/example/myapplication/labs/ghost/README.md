@@ -128,6 +128,11 @@ A Proof of Concept for **Neural Spacetime Dilation**. It visualizes the "Spaceti
 ### 22. Ghost Nebula (`GhostNebulaLayer.kt`, `GhostNebulaShader.kt`, `GhostNebulaEngine.kt`)
 A Proof of Concept for **Atmospheric Density Visualization**. It visualizes the "Social Atmosphere" as a dynamic, gaseous nebula. High-activity areas create "Stellar Nurseries" (bright, dense gas), while quiet areas remain "Cold Voids".
 
+### 23. Ghost Osmosis (`osmosis/GhostOsmosisLayer.kt`, `osmosis/GhostOsmosisShader.kt`, `osmosis/GhostOsmosisEngine.kt`)
+A Proof of Concept for **Knowledge Diffusion & Behavioral Concentration**. It visualizes the classroom as a fluid field where academic strength and behavioral patterns "diffuse" between students in close proximity.
+- **Diffusion Gradients**: Calculates "Knowledge Potential" and "Behavioral Concentration" to drive a glowing, fluid-like diffusion field.
+- **Osmotic Balance**: Integrated with `Python/ghost_osmosis_analyzer.py` to identify equilibrium states and high-gradient zones.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

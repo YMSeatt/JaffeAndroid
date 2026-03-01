@@ -47,15 +47,20 @@ fun GhostFutureLayer(
         GhostFutureEngine.generateFutureEvents(students, historicalLogs, hoursIntoFuture = 2)
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    val futureShader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                val shader = RuntimeShader(GhostFutureShader.TEMPORAL_WARP)
-                shader.setFloatUniform("iResolution", size.width, size.height)
-                shader.setFloatUniform("iTime", time)
-                shader.setFloatUniform("iIntensity", 1.0f)
+            RuntimeShader(GhostFutureShader.TEMPORAL_WARP)
+        } else null
+    }
 
-                drawRect(brush = ShaderBrush(shader))
+    Box(modifier = modifier.fillMaxSize()) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && futureShader != null) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                futureShader.setFloatUniform("iResolution", size.width, size.height)
+                futureShader.setFloatUniform("iTime", time)
+                futureShader.setFloatUniform("iIntensity", 1.0f)
+
+                drawRect(brush = ShaderBrush(futureShader))
 
                 // Draw Predicted Events as floating nodes
                 simulatedEvents.forEach { event ->

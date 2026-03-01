@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.example.myapplication.data.*
+import com.example.myapplication.util.SecurityUtil
 import io.mockk.every
 import io.mockk.mockk
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -37,7 +38,8 @@ class ExporterTest {
         every { pfd.fileDescriptor } returns fos.fd
         every { contentResolver.openFileDescriptor(uri, "w") } returns pfd
 
-        val exporter = Exporter(context)
+        val securityUtil = mockk<SecurityUtil>(relaxed = true)
+        val exporter = Exporter(context, securityUtil)
 
         val students = listOf(Student(id = 1, firstName = "John", lastName = "Doe", stringId = "1"))
         val behaviorEvents = listOf(BehaviorEvent(id = 1, studentId = 1, type = "Participation", timestamp = System.currentTimeMillis(), comment = "test comment"))
@@ -127,7 +129,8 @@ class ExporterTest {
         every { pfd.fileDescriptor } returns fos.fd
         every { contentResolver.openFileDescriptor(uri, "w") } returns pfd
 
-        val exporter = Exporter(context)
+        val securityUtil = mockk<SecurityUtil>(relaxed = true)
+        val exporter = Exporter(context, securityUtil)
 
         val students = listOf(Student(id = 1, firstName = "John", lastName = "Doe", stringId = "1"))
         val quizLogs = listOf(QuizLog(id = 1, studentId = 1, quizName = "Math Quiz", markValue = 10.0, maxMarkValue = 10.0, loggedAt = System.currentTimeMillis(), comment = null, marksData = "{}", numQuestions = 10, markType = "pts"))
@@ -160,6 +163,80 @@ class ExporterTest {
 
         assertNotNull("Quiz Log sheet should exist", sheet)
         assertEquals("There should be 1 quiz log row (+1 header)", 2, sheet.physicalNumberOfRows)
+
+        tempFile.delete()
+    }
+
+    @Test
+    fun `export with formula-triggering characters sanitizes values`() {
+        val context = mockk<Context>(relaxed = true)
+        val filesDir = File("build/tmp/testFilesDir")
+        filesDir.mkdirs()
+        every { context.filesDir } returns filesDir
+        every { context.applicationContext } returns context
+
+        val contentResolver = mockk<ContentResolver>(relaxed = true)
+        every { context.contentResolver } returns contentResolver
+
+        val uri = mockk<Uri>()
+        val tempFile = File("build/tmp/test_export_security.xlsx")
+        if (tempFile.exists()) tempFile.delete()
+        val fos = FileOutputStream(tempFile)
+        val pfd = mockk<ParcelFileDescriptor>(relaxed = true)
+        every { pfd.fileDescriptor } returns fos.fd
+        every { contentResolver.openFileDescriptor(uri, "w") } returns pfd
+
+        val securityUtil = mockk<SecurityUtil>(relaxed = true)
+        val exporter = Exporter(context, securityUtil)
+
+        // Student with malicious name and nickname
+        val students = listOf(
+            Student(id = 1, firstName = "=SUM(1,2)", lastName = "+1+1", nickname = "-Hacker", stringId = "1")
+        )
+        // Malicious comment and behavior type
+        val behaviorEvents = listOf(
+            BehaviorEvent(id = 1, studentId = 1, type = "@malicious", timestamp = System.currentTimeMillis(), comment = "=cmd|' /c calc'!A0")
+        )
+
+        val options = ExportOptions(
+            includeBehaviorLogs = true,
+            includeStudentInfoSheet = true,
+            separateSheets = true
+        )
+
+        kotlinx.coroutines.runBlocking {
+            exporter.export(
+                uri = uri,
+                options = options,
+                students = students,
+                behaviorEvents = behaviorEvents,
+                homeworkLogs = emptyList(),
+                quizLogs = emptyList(),
+                studentGroups = emptyList(),
+                quizMarkTypes = emptyList(),
+                customHomeworkTypes = emptyList(),
+                customHomeworkStatuses = emptyList(),
+                encrypt = false
+            )
+        }
+        fos.close()
+
+        val workbook = XSSFWorkbook(ByteArrayInputStream(tempFile.readBytes()))
+
+        // Check Behavior Log sheet
+        val behaviorSheet = workbook.getSheet("Behavior Log")
+        val behaviorRow = behaviorSheet.getRow(1)
+        assertEquals("'=SUM(1,2)", behaviorRow.getCell(4).stringCellValue)
+        assertEquals("'+1+1", behaviorRow.getCell(5).stringCellValue)
+        assertEquals("'@malicious", behaviorRow.getCell(6).stringCellValue)
+        assertEquals("'=cmd|' /c calc'!A0", behaviorRow.getCell(7).stringCellValue)
+
+        // Check Student Info sheet
+        val infoSheet = workbook.getSheet("Students Info")
+        val infoRow = infoSheet.getRow(1)
+        assertEquals("'=SUM(1,2)", infoRow.getCell(0).stringCellValue)
+        assertEquals("'+1+1", infoRow.getCell(1).stringCellValue)
+        assertEquals("'-Hacker", infoRow.getCell(2).stringCellValue)
 
         tempFile.delete()
     }

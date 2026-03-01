@@ -47,6 +47,12 @@ fun GhostLensLayer(
         engine.getPropheciesForStudentsUnderLens(students, allProphecies, canvasScale, canvasOffset)
     }
 
+    val lensShader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(GhostLensShader.GHOST_LENS)
+        } else null
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -62,14 +68,13 @@ fun GhostLensLayer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val shader = RuntimeShader(GhostLensShader.GHOST_LENS)
-                        shader.setFloatUniform("iResolution", size.width, size.height)
-                        shader.setFloatUniform("iLensPos", lensPos.x, lensPos.y)
-                        shader.setFloatUniform("iLensRadius", lensRadius)
-                        shader.setFloatUniform("iMagnification", 0.7f)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && lensShader != null) {
+                        lensShader.setFloatUniform("iResolution", size.width, size.height)
+                        lensShader.setFloatUniform("iLensPos", lensPos.x, lensPos.y)
+                        lensShader.setFloatUniform("iLensRadius", lensRadius)
+                        lensShader.setFloatUniform("iMagnification", 0.7f)
 
-                        renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "child")
+                        renderEffect = RenderEffect.createRuntimeShaderEffect(lensShader, "child")
                             .asComposeRenderEffect()
                     }
                 }
