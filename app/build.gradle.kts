@@ -46,7 +46,12 @@ android {
         kotlinCompilerExtensionVersion = "1.5.11"
     }
     packagingOptions {
-        pickFirst("META-INF/LICENSE.txt")
+        jniLibs {
+            useLegacyPackaging = false
+        }
+        resources {
+            pickFirsts += setOf("META-INF/LICENSE.txt")
+        }
     }
 }
 
@@ -88,9 +93,9 @@ dependencies {
     kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.48")
 
     // Room
-    implementation("androidx.room:room-runtime:2.6.1")
-    kapt("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
+    implementation("androidx.room:room-runtime:2.8.4")
+    kapt("androidx.room:room-compiler:2.8.4")
+    implementation("androidx.room:room-ktx:2.8.4")
 
     // ViewModel and LiveData
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.3")
