@@ -43,5 +43,7 @@ data class StudentUiItem(
     val groupColor: MutableState<Color?>,
     val groupId: MutableState<Long?>,
     val sessionLogText: MutableState<List<String>>,
-    val temporaryTask: MutableState<String?>
+    val temporaryTask: MutableState<String?>,
+    val irisParams: MutableState<com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?>,
+    val osmoticNode: MutableState<com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?>
 )

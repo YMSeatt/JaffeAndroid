@@ -347,7 +347,10 @@ class SeatingChartViewModel @Inject constructor(
         val conditionalFormattingResult: List<Pair<String?, String?>>,
         val liveQuizProgressColor: Color?,
         // BOLT: Cache resolved styles to avoid redundant allocations in Stage 3
-        val styles: StudentStyles
+        val styles: StudentStyles,
+        val irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters,
+        val knowledgePotential: Float,
+        val behaviorConcentration: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -787,6 +790,20 @@ class SeatingChartViewModel @Inject constructor(
                             defaultFontColor = prefs.defaultStudentStyle.fontColor
                         )
 
+                        // 2f. BOLT: Pre-calculate Ghost Lab data for high-performance rendering
+                        val irisParams = com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
+                            student.id,
+                            behaviorList ?: emptyList(),
+                            quizList ?: emptyList(),
+                            homeworkList ?: emptyList()
+                        )
+
+                        val (kPotential, bConcentration) = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
+                            behaviorList ?: emptyList(),
+                            quizList ?: emptyList(),
+                            homeworkList ?: emptyList()
+                        )
+
                         StudentDerivedData(
                             behaviorDescription,
                             homeworkDescription,
@@ -794,7 +811,10 @@ class SeatingChartViewModel @Inject constructor(
                             sessionLogs,
                             conditionalFormattingResult,
                             liveQuizProgressColor,
-                            styles
+                            styles,
+                            irisParams,
+                            kPotential,
+                            bConcentration
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -807,6 +827,14 @@ class SeatingChartViewModel @Inject constructor(
                     val conditionalFormattingResult = derivedData.conditionalFormattingResult
                     val liveQuizProgressColor = derivedData.liveQuizProgressColor
                     val styles = derivedData.styles
+                    val irisParams = derivedData.irisParams
+                    val osmoticNode = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode(
+                        id = student.id,
+                        x = student.xPosition,
+                        y = student.yPosition,
+                        knowledgePotential = derivedData.knowledgePotential,
+                        behaviorConcentration = derivedData.behaviorConcentration
+                    )
 
                     // 2f. Optimistic Reconciliation:
                     // If the student is currently being dragged, use the local "pending" position
@@ -845,7 +873,9 @@ class SeatingChartViewModel @Inject constructor(
                             defaultCornerRadius = defaultStyle.cornerRadius,
                             defaultPadding = defaultStyle.padding,
                             defaultFontFamily = defaultStyle.fontFamily,
-                            defaultFontSize = defaultStyle.fontSize
+                            defaultFontSize = defaultStyle.fontSize,
+                            irisParams = irisParams,
+                            osmoticNode = osmoticNode
                         )
                         existingItem
                     } else {
@@ -865,7 +895,9 @@ class SeatingChartViewModel @Inject constructor(
                             defaultCornerRadius = defaultStyle.cornerRadius,
                             defaultPadding = defaultStyle.padding,
                             defaultFontFamily = defaultStyle.fontFamily,
-                            defaultFontSize = defaultStyle.fontSize
+                            defaultFontSize = defaultStyle.fontSize,
+                            irisParams = irisParams,
+                            osmoticNode = osmoticNode
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem
