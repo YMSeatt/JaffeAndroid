@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.9.22"
+    alias(libs.plugins.kotlin.serialization)
     id("kotlin-kapt")
     alias(libs.plugins.hilt.android)
 }
@@ -43,7 +43,7 @@ android {
         viewBinding = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.11"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packagingOptions {
         jniLibs {
