@@ -46,7 +46,9 @@ fun Student.toStudentUiItem(
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int
+    defaultFontSize: Int,
+    irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -72,7 +74,9 @@ fun Student.toStudentUiItem(
         fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
         fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
         fontColor = mutableStateOf(fontColor),
-        temporaryTask = mutableStateOf(temporaryTask)
+        temporaryTask = mutableStateOf(temporaryTask),
+        irisParams = mutableStateOf(irisParams),
+        osmoticNode = mutableStateOf(osmoticNode)
     )
 }
 
@@ -104,7 +108,9 @@ fun Student.updateStudentUiItem(
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int
+    defaultFontSize: Int,
+    irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -129,6 +135,8 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
     updateIfChanged(item.fontColor, fontColor)
     updateIfChanged(item.temporaryTask, temporaryTask)
+    updateIfChanged(item.irisParams, irisParams)
+    updateIfChanged(item.osmoticNode, osmoticNode)
 }
 
 /**

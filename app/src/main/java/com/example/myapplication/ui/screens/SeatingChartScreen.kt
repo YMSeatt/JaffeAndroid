@@ -739,21 +739,8 @@ fun SeatingChartScreen(
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.OSMOSIS_MODE_ENABLED && isOsmosisActive) {
-                val osmoticNodes = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
-                    students.map { student ->
-                        val (k, b) = GhostOsmosisEngine.calculateStudentPotentials(
-                            allBehaviorEvents.filter { it.studentId == student.id.toLong() },
-                            allQuizLogs.filter { it.studentId == student.id.toLong() },
-                            allHomeworkLogs.filter { it.studentId == student.id.toLong() }
-                        )
-                        GhostOsmosisEngine.OsmoticNode(
-                            id = student.id.toLong(),
-                            x = student.xPosition.value,
-                            y = student.yPosition.value,
-                            knowledgePotential = k,
-                            behaviorConcentration = b
-                        )
-                    }
+                val osmoticNodes = remember(students) {
+                    students.mapNotNull { it.osmoticNode.value }
                 }
                 GhostOsmosisLayer(students = osmoticNodes)
             }
@@ -1334,27 +1321,8 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
-            val behaviorLogsByStudent = remember(allBehaviorEvents) {
-                allBehaviorEvents.groupBy { it.studentId }
-            }
-            val quizLogsByStudent = remember(allQuizLogs) {
-                allQuizLogs.groupBy { it.studentId }
-            }
-            val homeworkLogsByStudent = remember(allHomeworkLogs) {
-                allHomeworkLogs.groupBy { it.studentId }
-            }
-
             students.forEach { studentItem ->
-                val irisParams = if (isIrisActive) {
-                    remember(studentItem.id, behaviorLogsByStudent, quizLogsByStudent, homeworkLogsByStudent) {
-                        com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
-                            studentItem.id.toLong(),
-                            behaviorLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
-                            quizLogsByStudent[studentItem.id.toLong()] ?: emptyList(),
-                            homeworkLogsByStudent[studentItem.id.toLong()] ?: emptyList()
-                        )
-                    }
-                } else null
+                val irisParams = if (isIrisActive) studentItem.irisParams.value else null
 
                 StudentDraggableIcon(
                     studentUiItem = studentItem,
