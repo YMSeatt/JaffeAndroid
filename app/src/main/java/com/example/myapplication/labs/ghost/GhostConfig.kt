@@ -87,4 +87,7 @@ object GhostConfig {
 
     /** Enables "Ghost Entanglement" quantum social synchronicity visualization. */
     const val ENTANGLEMENT_MODE_ENABLED = true
+
+    /** Enables "Ghost Ion" neural ionization and electrostatic discharge visualization. */
+    const val ION_MODE_ENABLED = true
 }

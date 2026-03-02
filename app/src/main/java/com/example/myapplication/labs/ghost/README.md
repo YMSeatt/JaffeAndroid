@@ -139,6 +139,13 @@ A Proof of Concept for **Quantum Social Synchronicity**. It visualizes "Quantum 
 - **Spooky Action**: Visualizes how a behavioral event in one student might "ripple" to entangled partners.
 - **Python Bridge**: Integrated with `Python/ghost_entanglement.py` for mathematical parity and entanglement matrix analysis.
 
+### 25. Ghost Ion (`ion/GhostIonLayer.kt`, `ion/GhostIonShader.kt`, `ion/GhostIonEngine.kt`)
+A Proof of Concept for **Neural Ionization & Electrostatic Visualization**. It maps classroom "energy" to a glowing, ionized gas layer.
+- **Ionic Potential**: Calculates charge based on behavioral balance and density based on log frequency and hardware temperature.
+- **Hardware Synthesis**: Integrates real-time device battery temperature as a metaphor for classroom "heat".
+- **AGSL Discharge**: Renders ionized clouds and procedural "electrostatic discharge" flickers using a high-performance shader.
+- **Python Bridge**: Integrated with `Python/ghost_ion_analyzer.py` for logical parity and charge distribution analysis.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
