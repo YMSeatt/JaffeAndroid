@@ -13,6 +13,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
+import com.example.myapplication.util.DecodedConditionalFormattingRule
 import com.example.myapplication.util.safeParseColor
 
 /**
@@ -24,8 +25,7 @@ import com.example.myapplication.util.safeParseColor
  * @param recentHomeworkDescription Formatted list of recent homework logs.
  * @param recentQuizDescription Formatted list of recent quiz logs.
  * @param sessionLogText Combined history of events for the current session.
- * @param groupColor The Hex color of the student's group, if any.
- * @param conditionalFormattingResult List of active color/outline pairs from the formatting engine.
+ * @param groupColor The color of the student's group, if any.
  * @param defaultFontFamily Global default font family from user preferences.
  * @param defaultFontSize Global default font size from user preferences.
  * @param defaultFontColor Global default font color from user preferences.
@@ -35,7 +35,7 @@ fun Student.toStudentUiItem(
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
-    groupColor: String?,
+    groupColor: Color?,
     backgroundColors: List<Color>,
     outlineColors: List<Color>,
     textColor: Color,
@@ -69,7 +69,7 @@ fun Student.toStudentUiItem(
         recentHomeworkDescription = mutableStateOf(recentHomeworkDescription),
         recentQuizDescription = mutableStateOf(recentQuizDescription),
         sessionLogText = mutableStateOf(sessionLogText),
-        groupColor = mutableStateOf(groupColor?.let { safeParseColor(it) }),
+        groupColor = mutableStateOf(groupColor),
         groupId = mutableStateOf(groupId),
         fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
         fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
@@ -97,7 +97,7 @@ fun Student.updateStudentUiItem(
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
-    groupColor: String?,
+    groupColor: Color?,
     backgroundColors: List<Color>,
     outlineColors: List<Color>,
     textColor: Color,
@@ -129,7 +129,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.recentHomeworkDescription, recentHomeworkDescription)
     updateIfChanged(item.recentQuizDescription, recentQuizDescription)
     updateIfChanged(item.sessionLogText, sessionLogText)
-    updateIfChanged(item.groupColor, groupColor?.let { safeParseColor(it) })
+    updateIfChanged(item.groupColor, groupColor)
     updateIfChanged(item.groupId, groupId)
     updateIfChanged(item.fontFamily, customFontFamily ?: defaultFontFamily)
     updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
@@ -198,28 +198,24 @@ private fun getSingletonColorList(color: Color): List<Color> {
  *
  * @return A [StudentStyles] object containing the resolved colors.
  */
-/**
- * Resolves the visual styling for a student based on a hierarchy of priorities.
- * Moved to public/internal for access in SeatingChartViewModel's optimization pipeline.
- */
 fun Student.calculateStyles(
-    groupColor: String?,
-    conditionalFormattingResult: List<Pair<String?, String?>>,
+    groupColor: Color?,
+    matchingRules: List<DecodedConditionalFormattingRule>,
     liveQuizProgressColor: Color?,
-    defaultBackgroundColor: String,
-    defaultOutlineColor: String,
-    defaultTextColor: String,
-    defaultFontColor: String
+    defaultBackgroundColor: Color,
+    defaultOutlineColor: Color,
+    defaultTextColor: Color,
+    defaultFontColor: Color
 ): StudentStyles {
     val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
     val customTextColor = customTextColor?.let { safeParseColor(it) }
 
-    val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)).copy(alpha = 1f)
-    val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+    val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: defaultBackgroundColor).copy(alpha = 1f)
+    val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor ?: defaultOutlineColor
 
-    val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.mapNotNull {
-            it.first?.let { colorStr -> safeParseColor(colorStr) }
+    val formattedColors = if (matchingRules.isNotEmpty()) {
+        matchingRules.mapNotNull {
+            it.format.color?.let { colorStr -> safeParseColor(colorStr) }
                 ?.takeIf { color -> color.alpha > 0f }
                 ?.copy(alpha = 1f)
         }
@@ -234,15 +230,16 @@ fun Student.calculateStyles(
         getSingletonColorList(baseBackgroundColor)
     }
 
-    val outlineColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.map { it.second?.let { colorString -> safeParseColor(colorString) }
-            ?: baseOutlineColor }
+    val outlineColors = if (matchingRules.isNotEmpty()) {
+        matchingRules.map { rule ->
+            rule.format.outline?.let { colorString -> safeParseColor(colorString) } ?: baseOutlineColor
+        }
     } else {
         getSingletonColorList(baseOutlineColor)
     }
 
-    val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
-    val fontColor = customFontColor?.let { safeParseColor(it) } ?: safeParseColor(defaultFontColor) ?: Color.Black
+    val textColor = customTextColor ?: defaultTextColor
+    val fontColor = customFontColor?.let { safeParseColor(it) } ?: defaultFontColor
 
     return StudentStyles(backgroundColors, outlineColors, textColor, fontColor)
 }

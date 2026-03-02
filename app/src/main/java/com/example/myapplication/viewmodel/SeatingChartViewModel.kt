@@ -324,7 +324,7 @@ class SeatingChartViewModel @Inject constructor(
 
     private var memoizedGroups: List<com.example.myapplication.data.StudentGroup>? = null
     /** Caches the mapping of group IDs to colors. */
-    private var groupColorMapCache: Map<Long, String> = emptyMap()
+    private var groupColorMapCache: Map<Long, Color?> = emptyMap()
 
     private data class StudentCacheKey(
         val studentDataHash: Int,
@@ -344,7 +344,7 @@ class SeatingChartViewModel @Inject constructor(
         val homeworkDescription: List<String>,
         val quizDescription: List<String>,
         val sessionLogs: List<String>,
-        val conditionalFormattingResult: List<Pair<String?, String?>>,
+        val matchingRules: List<DecodedConditionalFormattingRule>,
         val liveQuizProgressColor: Color?,
         // BOLT: Cache resolved styles to avoid redundant allocations in Stage 3
         val styles: StudentStyles,
@@ -543,7 +543,7 @@ class SeatingChartViewModel @Inject constructor(
 
                 val groups = allGroups.value ?: emptyList()
                 if (groups !== memoizedGroups) {
-                    groupColorMapCache = groups.associate { it.id to it.color }
+                    groupColorMapCache = groups.associate { it.id to com.example.myapplication.util.safeParseColor(it.color) }
                     memoizedGroups = groups
                 }
                 val groupColorMap = groupColorMapCache
@@ -635,6 +635,11 @@ class SeatingChartViewModel @Inject constructor(
                 val effectiveTimeKey = if (anyTimeBasedRules) currentTimeString else "STATIC_TIME"
 
                 val defaultStyle = prefs.defaultStudentStyle
+                // BOLT: Pre-parse default colors to avoid redundant string-to-color conversions in the student loop
+                val defaultBackgroundColor = com.example.myapplication.util.safeParseColor(defaultStyle.backgroundColor)
+                val defaultOutlineColor = com.example.myapplication.util.safeParseColor(defaultStyle.outlineColor)
+                val defaultTextColor = com.example.myapplication.util.safeParseColor(defaultStyle.textColor)
+                val defaultFontColor = com.example.myapplication.util.safeParseColor(defaultStyle.fontColor)
 
                 // BOLT: Clean up caches for deleted students only if number of students decreased.
                 // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
@@ -764,7 +769,7 @@ class SeatingChartViewModel @Inject constructor(
 
                         // 2d. Conditional Formatting:
                         // Evaluate the prioritized rule set against the student's current state and history.
-                        val conditionalFormattingResult = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
+                        val matchingRules = ConditionalFormattingEngine.applyConditionalFormattingDecoded(
                             student = student,
                             rules = decodedRules,
                             behaviorLog = behaviorList ?: emptyList(),
@@ -782,12 +787,12 @@ class SeatingChartViewModel @Inject constructor(
                         // 2e. BOLT: Resolve styles in Stage 2 to avoid redundant allocations in Stage 3 sync
                         val styles = student.calculateStyles(
                             groupColor = groupColorMap[student.groupId],
-                            conditionalFormattingResult = conditionalFormattingResult,
+                            matchingRules = matchingRules,
                             liveQuizProgressColor = liveQuizProgressColor,
-                            defaultBackgroundColor = prefs.defaultStudentStyle.backgroundColor,
-                            defaultOutlineColor = prefs.defaultStudentStyle.outlineColor,
-                            defaultTextColor = prefs.defaultStudentStyle.textColor,
-                            defaultFontColor = prefs.defaultStudentStyle.fontColor
+                            defaultBackgroundColor = defaultBackgroundColor,
+                            defaultOutlineColor = defaultOutlineColor,
+                            defaultTextColor = defaultTextColor,
+                            defaultFontColor = defaultFontColor
                         )
 
                         // 2f. BOLT: Pre-calculate Ghost Lab data for high-performance rendering
@@ -809,7 +814,7 @@ class SeatingChartViewModel @Inject constructor(
                             homeworkDescription,
                             quizDescription,
                             sessionLogs,
-                            conditionalFormattingResult,
+                            matchingRules,
                             liveQuizProgressColor,
                             styles,
                             irisParams,
@@ -824,7 +829,7 @@ class SeatingChartViewModel @Inject constructor(
                     val homeworkDescription = derivedData.homeworkDescription
                     val quizDescription = derivedData.quizDescription
                     val sessionLogs = derivedData.sessionLogs
-                    val conditionalFormattingResult = derivedData.conditionalFormattingResult
+                    val matchingRules = derivedData.matchingRules
                     val liveQuizProgressColor = derivedData.liveQuizProgressColor
                     val styles = derivedData.styles
                     val irisParams = derivedData.irisParams
