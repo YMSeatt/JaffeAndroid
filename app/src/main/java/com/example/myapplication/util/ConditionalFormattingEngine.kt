@@ -233,7 +233,7 @@ object ConditionalFormattingEngine {
         isLiveHomeworkActive: Boolean,
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String
-    ): List<Pair<String?, String?>> {
+    ): List<DecodedConditionalFormattingRule> {
         val decodedRules = decodeRules(rules)
         val calendar = java.util.Calendar.getInstance()
         val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
@@ -297,8 +297,8 @@ object ConditionalFormattingEngine {
         currentMode: String,
         currentTimeMillis: Long,
         timeContext: FormattingTimeContext
-    ): List<Pair<String?, String?>> {
-        val matchingFormats = mutableListOf<Pair<String?, String?>>()
+    ): List<DecodedConditionalFormattingRule> {
+        val matchingRules = mutableListOf<DecodedConditionalFormattingRule>()
 
         for (rule in rules) {
             if (checkCondition(
@@ -316,11 +316,11 @@ object ConditionalFormattingEngine {
                     timeContext
                 )
             ) {
-                matchingFormats.add(Pair(rule.format.color, rule.format.outline))
+                matchingRules.add(rule)
             }
         }
 
-        return matchingFormats
+        return matchingRules
     }
 
     /**
