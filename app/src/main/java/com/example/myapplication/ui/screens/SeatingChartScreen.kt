@@ -122,6 +122,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.ion.GhostIonLayer
 import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
@@ -221,6 +222,7 @@ fun SeatingChartScreen(
     var isSparkActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
+    var isIonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -554,6 +556,8 @@ fun SeatingChartScreen(
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 isEntanglementActive = isEntanglementActive,
                 onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
+                isIonActive = isIonActive,
+                onToggleIon = { isIonActive = !isIonActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -754,6 +758,15 @@ fun SeatingChartScreen(
                 GhostEntanglementLayer(
                     students = students,
                     isEntanglementActive = isEntanglementActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ION_MODE_ENABLED && isIonActive) {
+                GhostIonLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset
                 )
             }
 
@@ -1456,6 +1469,8 @@ fun SeatingChartTopAppBar(
     onToggleOsmosis: () -> Unit,
     isEntanglementActive: Boolean,
     onToggleEntanglement: () -> Unit,
+    isIonActive: Boolean,
+    onToggleIon: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1729,6 +1744,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ION_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isIonActive) "Discharge Ions 👻" else "Ghost Ion 👻") },
+                                onClick = {
+                                    onToggleIon()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
                         }
                     }
