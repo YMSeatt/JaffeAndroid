@@ -46,5 +46,13 @@ The primary Python script `seatingchartmain.py` (approx. 400KB) is physically sp
 - **Rationale**: This was done to circumvent legacy file size limitations in certain deployment or editing environments.
 - **Maintenance**: Both "half" files should be kept in sync with the combined `seatingchartmain.py`, as they represent the same logical application state.
 
+## 🗄️ Database Schema Evolution
+
+The application's Room database has evolved through numerous architectural shifts to support increasing complexity.
+
+- **Relational Hardening**: The schema transitioned from simple string-based group assignments (v6) to a robust relational model with `Long` primary keys (v7/8). This ensures data integrity when students are moved between groups or deleted.
+- **JSON-Backed Flexibility**: To avoid frequent schema migrations for UI-driven changes, log entities (`HomeworkLog` v11, `QuizLog` v12) utilize JSON-based `marksData` fields. This allows the application to support dynamic scoring types (e.g., "Partial Credit", "Effort Marks") without altering the underlying SQLite tables.
+- **Automated Lifecycle**: Modern versions introduce automated subsystems like `Reminder` (v23) and `EmailSchedule` (v24), which operate as independent background workers driven by specific database triggers.
+
 ---
 *Documentation love letter from Scribe 📜*
