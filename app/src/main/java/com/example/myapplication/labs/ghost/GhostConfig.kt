@@ -90,4 +90,7 @@ object GhostConfig {
 
     /** Enables "Ghost Ion" neural ionization and electrostatic discharge visualization. */
     const val ION_MODE_ENABLED = true
+
+    /** Enables "Ghost Entropy" neural turbulence and thermal distortion visualization. */
+    const val ENTROPY_MODE_ENABLED = true
 }

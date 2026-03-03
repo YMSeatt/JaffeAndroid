@@ -140,6 +140,7 @@ import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
+import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -223,6 +224,7 @@ fun SeatingChartScreen(
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
+    var isEntropyActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -558,6 +560,8 @@ fun SeatingChartScreen(
                 onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
                 isIonActive = isIonActive,
                 onToggleIon = { isIonActive = !isIonActive },
+                isEntropyActive = isEntropyActive,
+                onToggleEntropy = { isEntropyActive = !isEntropyActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -770,6 +774,7 @@ fun SeatingChartScreen(
                 )
             }
 
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
                 GhostSpectraLayer(
                     behaviorLogs = allBehaviorEvents
@@ -872,6 +877,23 @@ fun SeatingChartScreen(
                 )
             }
 
+            val seatingChartWithEntropy = @Composable {
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTROPY_MODE_ENABLED && isEntropyActive) {
+                    GhostEntropyLayer(
+                        students = students,
+                        behaviorLogs = allBehaviorEvents,
+                        quizLogs = allQuizLogs,
+                        canvasScale = scale,
+                        canvasOffset = offset,
+                        isActive = isEntropyActive
+                    ) {
+                        chartContent()
+                    }
+                } else {
+                    chartContent()
+                }
+            }
+
             val seatingChartWithLens = @Composable {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LENS_MODE_ENABLED && isLensActive) {
                     GhostLensLayer(
@@ -883,19 +905,19 @@ fun SeatingChartScreen(
                     ) {
                         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
                             GhostHologramLayer(engine = ghostHologramEngine) {
-                                chartContent()
+                                seatingChartWithEntropy()
                             }
                         } else {
-                            chartContent()
+                            seatingChartWithEntropy()
                         }
                     }
                 } else {
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
                         GhostHologramLayer(engine = ghostHologramEngine) {
-                            chartContent()
+                            seatingChartWithEntropy()
                         }
                     } else {
-                        chartContent()
+                        seatingChartWithEntropy()
                     }
                 }
             }
@@ -1471,6 +1493,8 @@ fun SeatingChartTopAppBar(
     onToggleEntanglement: () -> Unit,
     isIonActive: Boolean,
     onToggleIon: () -> Unit,
+    isEntropyActive: Boolean,
+    onToggleEntropy: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1754,6 +1778,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.ENTROPY_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEntropyActive) "Stabilize Entropy 👻" else "Ghost Entropy 👻") },
+                                onClick = {
+                                    onToggleEntropy()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
                             )
                         }
                     }
