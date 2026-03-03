@@ -25,6 +25,7 @@ import com.example.myapplication.ui.model.StudentUiItem
 fun GhostFutureLayer(
     students: List<StudentUiItem>,
     historicalLogs: List<BehaviorEvent>,
+    prophecies: List<GhostOracle.Prophecy>,
     isFutureActive: Boolean,
     canvasScale: Float,
     canvasOffset: Offset,
@@ -43,8 +44,8 @@ fun GhostFutureLayer(
         label = "time"
     )
 
-    val simulatedEvents = remember(students, historicalLogs) {
-        GhostFutureEngine.generateFutureEvents(students, historicalLogs, hoursIntoFuture = 2)
+    val simulatedEvents = remember(students, historicalLogs, prophecies) {
+        GhostFutureEngine.generateFutureEvents(students, historicalLogs, prophecies, hoursIntoFuture = 2)
     }
 
     val futureShader = remember {

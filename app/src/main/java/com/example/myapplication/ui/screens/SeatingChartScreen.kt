@@ -197,6 +197,7 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedItemIds by seatingChartViewModel.selectedItemIds.observeAsState(initial = emptySet())
+    val allProphecies by seatingChartViewModel.prophecies.collectAsState()
     val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
     val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
@@ -205,7 +206,6 @@ fun SeatingChartScreen(
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
     var showGhostOracleDialog by remember { mutableStateOf(false) }
-    var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
     var isHudActive by remember { mutableStateOf(false) }
     var isChronosActive by remember { mutableStateOf(false) }
     var isHologramActive by remember { mutableStateOf(false) }
@@ -512,7 +512,6 @@ fun SeatingChartScreen(
                 lastExportPath = lastExportPath,
                 selectedStudentUiItemForAction = selectedStudentUiItemForAction,
                 onNeuralOracleClick = {
-                    currentProphecies = GhostOracle.consult(students, allBehaviorEvents)
                     showGhostOracleDialog = true
                 },
                 isHudActive = isHudActive,
@@ -717,6 +716,7 @@ fun SeatingChartScreen(
                 GhostFutureLayer(
                     students = students,
                     historicalLogs = allBehaviorEvents,
+                    prophecies = allProphecies,
                     isFutureActive = isFutureActive,
                     canvasScale = scale,
                     canvasOffset = offset
@@ -877,7 +877,7 @@ fun SeatingChartScreen(
                     GhostLensLayer(
                         engine = ghostLensEngine,
                         students = students,
-                        allProphecies = GhostOracle.consult(students, allBehaviorEvents),
+                        allProphecies = allProphecies,
                         canvasScale = scale,
                         canvasOffset = offset
                     ) {
@@ -924,7 +924,7 @@ fun SeatingChartScreen(
                     GhostHUDLayer(
                         hudViewModel = hudViewModel,
                         students = students,
-                        prophecies = GhostOracle.consult(students, allBehaviorEvents)
+                        prophecies = allProphecies
                     )
                 }
             }
@@ -1276,7 +1276,7 @@ fun SeatingChartScreen(
 
             if (showGhostOracleDialog) {
                 GhostOracleDialog(
-                    prophecies = currentProphecies,
+                    prophecies = allProphecies,
                     onDismiss = { showGhostOracleDialog = false }
                 )
             }

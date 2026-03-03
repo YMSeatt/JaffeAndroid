@@ -57,7 +57,12 @@ fun GhostPulseLayer(
 
     val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
 
+    // BOLT: Pool shaders to avoid O(R) allocations in the draw loop.
+    val shaderPool = remember { mutableListOf<RuntimeShader>() }
+    val brushPool = remember { mutableListOf<ShaderBrush>() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
+        var idx = 0
         resonances.forEach { resonance ->
             val student = studentMap[resonance.studentId] ?: return@forEach
 
@@ -65,7 +70,15 @@ fun GhostPulseLayer(
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-            val shader = RuntimeShader(GhostPulseShader.NEURAL_PULSE)
+            if (idx >= shaderPool.size) {
+                val s = RuntimeShader(GhostPulseShader.NEURAL_PULSE)
+                shaderPool.add(s)
+                brushPool.add(ShaderBrush(s))
+            }
+            val shader = shaderPool[idx]
+            val brush = brushPool[idx]
+            idx++
+
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iCenter", centerX, centerY)
@@ -76,7 +89,7 @@ fun GhostPulseLayer(
             val age = (System.currentTimeMillis() - resonance.startTime).toFloat()
             shader.setFloatUniform("iRadius", age * 0.8f * canvasScale)
 
-            drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = brush)
         }
     }
 }

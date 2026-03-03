@@ -23,10 +23,10 @@ object GhostFutureEngine {
     fun generateFutureEvents(
         students: List<StudentUiItem>,
         historicalLogs: List<BehaviorEvent>,
+        prophecies: List<GhostOracle.Prophecy>,
         hoursIntoFuture: Int = 1
     ): List<BehaviorEvent> {
         val simulatedEvents = mutableListOf<BehaviorEvent>()
-        val prophecies = GhostOracle.consult(students, historicalLogs)
         val currentTime = System.currentTimeMillis()
         val random = Random(currentTime)
 
