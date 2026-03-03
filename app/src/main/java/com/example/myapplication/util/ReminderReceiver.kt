@@ -40,7 +40,10 @@ class ReminderReceiver : BroadcastReceiver() {
                 "reminder_channel",
                 "Reminders",
                 NotificationManager.IMPORTANCE_DEFAULT
-            )
+            ).apply {
+                // HARDEN: Ensure PII is not leaked on the lockscreen for the entire channel
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            }
             notificationManager.createNotificationChannel(channel)
         }
 
@@ -48,6 +51,7 @@ class ReminderReceiver : BroadcastReceiver() {
             .setContentTitle(title)
             .setContentText(description)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // HARDEN: Protect PII on lockscreen for individual notifications
             .build()
 
         notificationManager.notify(reminderId.toInt(), notification)
