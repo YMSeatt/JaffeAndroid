@@ -61,7 +61,18 @@ fun NeuralMapLayer(
             .groupBy { it.studentId }
     }
 
+    // BOLT: Pre-allocate shader pools to avoid O(N) allocations in the draw loop.
+    // Unique instances are required per item because Android's recording Canvas
+    // captures the shader's state at the time of the draw call.
+    val auraShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val auraBrushPool = remember { mutableListOf<ShaderBrush>() }
+    val lineShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val lineBrushPool = remember { mutableListOf<ShaderBrush>() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
+        var auraIdx = 0
+        var lineIdx = 0
+
         // Draw Cognitive Auras for students with many negative logs
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
             students.forEach { student ->
@@ -70,14 +81,22 @@ fun NeuralMapLayer(
                     val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
                     val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-                    val shader = RuntimeShader(GhostShader.COGNITIVE_AURA)
+                    if (auraIdx >= auraShaderPool.size) {
+                        val s = RuntimeShader(GhostShader.COGNITIVE_AURA)
+                        auraShaderPool.add(s)
+                        auraBrushPool.add(ShaderBrush(s))
+                    }
+                    val shader = auraShaderPool[auraIdx]
+                    val brush = auraBrushPool[auraIdx]
+                    auraIdx++
+
                     shader.setFloatUniform("iResolution", size.width, size.height)
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iCenter", centerX, centerY)
                     shader.setFloatUniform("iColor", 1.0f, 0.2f, 0.1f) // Reddish aura
                     shader.setFloatUniform("iIntensity", min(negativeCount / 5f, 1.0f))
 
-                    drawRect(brush = ShaderBrush(shader))
+                    drawRect(brush = brush)
                 }
             }
         }
@@ -102,12 +121,19 @@ fun NeuralMapLayer(
                 val center2 = centers[i]
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val shader = RuntimeShader(GhostShader.NEURAL_LINE)
+                    if (lineIdx >= lineShaderPool.size) {
+                        val s = RuntimeShader(GhostShader.NEURAL_LINE)
+                        lineShaderPool.add(s)
+                        lineBrushPool.add(ShaderBrush(s))
+                    }
+                    val shader = lineShaderPool[lineIdx]
+                    val brush = lineBrushPool[lineIdx]
+                    lineIdx++
+
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iColor", groupColor.red, groupColor.green, groupColor.blue)
                     shader.setFloatUniform("iResolution", size.width, size.height)
 
-                    val brush = ShaderBrush(shader)
                     drawLine(
                         brush = brush,
                         start = center1,

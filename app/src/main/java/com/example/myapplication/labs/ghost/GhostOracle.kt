@@ -1,8 +1,10 @@
 package com.example.myapplication.labs.ghost
 
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.data.Student
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.abs
+import kotlin.math.sqrt
 
 /**
  * GhostOracle: An experimental on-device AI engine (simulating Gemini Nano).
@@ -45,69 +47,108 @@ object GhostOracle {
         students: List<StudentUiItem>,
         behaviorLogs: List<BehaviorEvent>
     ): List<Prophecy> {
+        val rawStudents = students.map { uiItem ->
+            Student(
+                id = uiItem.id.toLong(),
+                firstName = uiItem.fullName.value.split(" ").firstOrNull() ?: "",
+                lastName = uiItem.fullName.value.split(" ").lastOrNull() ?: "",
+                xPosition = uiItem.xPosition.value,
+                yPosition = uiItem.yPosition.value
+            )
+        }
+        return consult(rawStudents, behaviorLogs)
+    }
+
+    /**
+     * BOLT: Optimized overload for [consult] that accepts raw Student entities and pre-grouped logs.
+     * Transforms O(N^2 * L) into O(N^2 + L) by pre-calculating indices and using O(1) lookups.
+     */
+    fun consult(
+        students: List<Student>,
+        behaviorLogs: List<BehaviorEvent>,
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>? = null
+    ): List<Prophecy> {
+        if (students.isEmpty()) return emptyList()
+
         val prophecies = mutableListOf<Prophecy>()
+        val currentTime = System.currentTimeMillis()
 
-        // Analyze Social Friction (students with negative logs sitting close together)
-        val negativeLogsByStudent = behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
+        // 1. Pre-process logs for O(1) lookup during O(N^2) loop
+        val logsByStudent = behaviorLogsByStudent ?: behaviorLogs.groupBy { it.studentId }
+        val negativeCounts = logsByStudent.mapValues { (_, logs) ->
+            logs.count { it.type.contains("Negative", ignoreCase = true) }
+        }
 
-        students.forEach { student ->
-            val myNegativeCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
+        // 2. Optimized Social Friction Analysis (O(N^2))
+        // Replaced nested forEach/filter with indexed loops to eliminate object churn.
+        val n = students.size
+        for (i in 0 until n) {
+            val s1 = students[i]
+            val s1NegCount = negativeCounts[s1.id] ?: 0
 
-            // Check neighbors
-            students.filter { it.id > student.id }.forEach { neighbor ->
-                val dist = calculateDistance(student, neighbor)
-                if (dist < 150) { // Close proximity
-                    val neighborNegativeCount = negativeLogsByStudent[neighbor.id.toLong()]?.size ?: 0
+            // Only evaluate friction if s1 has potential for friction
+            if (s1NegCount > 1) {
+                for (j in i + 1 until n) {
+                    val s2 = students[j]
+                    val s2NegCount = negativeCounts[s2.id] ?: 0
 
-                    if (myNegativeCount > 1 && neighborNegativeCount > 1) {
-                        prophecies.add(
-                            Prophecy(
-                                studentId = student.id.toLong(),
-                                type = ProphecyType.SOCIAL_FRICTION,
-                                description = "Predicted tension between ${student.fullName} and ${neighbor.fullName}. High probability of disruptive interaction.",
-                                confidence = 0.85f
+                    if (s2NegCount > 1) {
+                        val dx = s1.xPosition - s2.xPosition
+                        val dy = s1.yPosition - s2.yPosition
+                        val distSq = dx * dx + dy * dy
+
+                        if (distSq < 150f * 150f) { // Close proximity (150^2)
+                            prophecies.add(
+                                Prophecy(
+                                    studentId = s1.id,
+                                    type = ProphecyType.SOCIAL_FRICTION,
+                                    description = "Predicted tension between ${s1.firstName} ${s1.lastName} and ${s2.firstName} ${s2.lastName}. High probability of disruptive interaction.",
+                                    confidence = 0.85f
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
 
-            // Analyze Engagement Drop (long time since last positive log)
-            val myLogs = behaviorLogs.filter { it.studentId == student.id.toLong() }
-            val lastPositive = myLogs.filter { !it.type.contains("Negative", ignoreCase = true) }
-                .maxByOrNull { it.timestamp }
+            // 3. Optimized Engagement Drop Analysis (O(L_student))
+            val myLogs = logsByStudent[s1.id] ?: emptyList()
+            if (myLogs.isNotEmpty()) {
+                // Find last positive log using manual loop to avoid multiple filter/sort cycles
+                var lastPositiveTimestamp = -1L
+                for (log in myLogs) {
+                    if (!log.type.contains("Negative", ignoreCase = true)) {
+                        if (log.timestamp > lastPositiveTimestamp) {
+                            lastPositiveTimestamp = log.timestamp
+                        }
+                    }
+                }
 
-            if (lastPositive != null) {
-                val daysSince = (System.currentTimeMillis() - lastPositive.timestamp) / (1000 * 60 * 60 * 24)
-                if (daysSince > 7) {
+                if (lastPositiveTimestamp != -1L) {
+                    val daysSince = (currentTime - lastPositiveTimestamp) / (1000 * 60 * 60 * 24)
+                    if (daysSince > 7) {
+                        prophecies.add(
+                            Prophecy(
+                                studentId = s1.id,
+                                type = ProphecyType.ENGAGEMENT_DROP,
+                                description = "Neural trends indicate fading engagement. Student hasn't received positive reinforcement in $daysSince days.",
+                                confidence = 0.7f
+                            )
+                        )
+                    }
+                } else {
                     prophecies.add(
                         Prophecy(
-                            studentId = student.id.toLong(),
+                            studentId = s1.id,
                             type = ProphecyType.ENGAGEMENT_DROP,
-                            description = "Neural trends indicate fading engagement. Student hasn't received positive reinforcement in $daysSince days.",
-                            confidence = 0.7f
+                            description = "Critical: No positive baseline established. Early intervention recommended.",
+                            confidence = 0.9f
                         )
                     )
                 }
-            } else if (myLogs.isNotEmpty()) {
-                prophecies.add(
-                    Prophecy(
-                        studentId = student.id.toLong(),
-                        type = ProphecyType.ENGAGEMENT_DROP,
-                        description = "Critical: No positive baseline established. Early intervention recommended.",
-                        confidence = 0.9f
-                    )
-                )
             }
         }
 
         return prophecies.distinctBy { it.description }
-    }
-
-    private fun calculateDistance(s1: StudentUiItem, s2: StudentUiItem): Float {
-        val dx = s1.xPosition.value - s2.xPosition.value
-        val dy = s1.yPosition.value - s2.yPosition.value
-        return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 }
