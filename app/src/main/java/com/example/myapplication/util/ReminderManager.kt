@@ -17,16 +17,20 @@ import javax.inject.Singleton
  * ReminderManager: The primary authority for teacher reminder scheduling.
  *
  * This utility serves as the modern, Hilt-enabled implementation for managing [AlarmManager]
- * registrations. It is the core engine behind the Reminders screen accessible from the
- * main seating chart view.
+ * registrations. It acts as the core coordination engine between the UI (RemindersScreen)
+ * and the Android system alarm service.
  *
- * ### Key Characteristics:
- * - **Integration**: Works in tandem with [ReminderReceiver].
- * - **DI**: fully supported by Hilt for constructor injection.
- * - **Consistency**: Uses **lowercase** intent keys (e.g., `reminder_id`) for broadcast data.
- * - **Modernity**: Handles API 31+ exact alarm permission checks.
+ * ### Architectural Role:
+ * - **Centralized Control**: Ensures all alarms are scheduled through a single, consistent path.
+ * - **Modern Compatibility**: Gracefully handles API 31+ restrictions regarding exact alarms.
+ * - **Security-First**: Enforces [PendingIntent.FLAG_IMMUTABLE] to prevent external manipulation
+ *   of scheduled alarms.
  *
- * Note: This implementation is distinct from the legacy [com.example.myapplication.alarm.AlarmScheduler].
+ * ### Intent Protocol:
+ * To ensure cross-platform compatibility and system consistency, this manager utilizes
+ * **strictly lowercase** intent keys (e.g., `reminder_id`).
+ *
+ * Note: This implementation supersedes the decommissioned legacy alarm scheduler.
  */
 @Singleton
 class ReminderManager @Inject constructor(@ApplicationContext private val context: Context) {
@@ -34,8 +38,10 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
 
     /**
      * Checks if the application has permission to schedule exact alarms.
-     * On Android 12 (API 31) and above, this requires the [android.Manifest.permission.SCHEDULE_EXACT_ALARM]
-     * permission and user approval in system settings.
+     *
+     * Beginning with Android 12 (API 31), apps must hold the [android.Manifest.permission.SCHEDULE_EXACT_ALARM]
+     * permission and it must be granted by the user in system settings. This method provides
+     * a safe check before attempting to call [AlarmManager.setExact].
      *
      * @return True if exact alarms can be scheduled, false otherwise.
      */
@@ -49,14 +55,23 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
 
     /**
      * Schedules a [Reminder] to trigger a notification at its specified timestamp.
-     * Uses [AlarmManager.setExact] to ensure precise delivery.
+     *
+     * This method utilizes [AlarmManager.setExact] with [AlarmManager.RTC_WAKEUP] to ensure
+     * that the teacher is notified at the precise moment requested, even if the device
+     * is currently in a low-power state.
+     *
+     * ### Implementation Safety:
+     * - **ID Collision**: Uses the [Reminder.id] as the `requestCode` to ensure that
+     *   multiple reminders do not overwrite each other in the system registry.
+     * - **Immutability**: Appends [PendingIntent.FLAG_IMMUTABLE] to satisfy Android 12+
+     *   security requirements and prevent malicious tampering with the intent data.
+     * - **Naming**: Adheres to lowercase intent keys (`reminder_id`, etc.) for consistency.
      *
      * @param reminder The reminder entity containing the title, description, and trigger time.
      */
     fun scheduleReminder(reminder: Reminder) {
         if (!canScheduleExactAlarms()) {
-            Log.d("ReminderManager", "Cannot schedule exact alarms. App needs permission.")
-            // Optionally, you could throw an exception or return a status
+            Log.w("ReminderManager", "Permission denied: Cannot schedule exact alarm for reminder ${reminder.id}.")
             return
         }
 
@@ -77,7 +92,10 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
     }
 
     /**
-     * Cancels a previously scheduled reminder.
+     * Cancels a previously scheduled reminder in the system [AlarmManager].
+     *
+     * To successfully cancel an alarm, the [PendingIntent] must exactly match the one
+     * used during scheduling (including the `requestCode` and `Intent` action/component).
      *
      * @param reminderId The unique identifier of the reminder to cancel.
      */
