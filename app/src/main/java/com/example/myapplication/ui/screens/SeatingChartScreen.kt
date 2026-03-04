@@ -141,6 +141,8 @@ import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
 import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
+import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
+import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -225,6 +227,7 @@ fun SeatingChartScreen(
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
     var isEntropyActive by remember { mutableStateOf(false) }
+    var isZenithActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -326,6 +329,7 @@ fun SeatingChartScreen(
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
+    val ghostZenithEngine = remember { GhostZenithEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
@@ -561,6 +565,8 @@ fun SeatingChartScreen(
                 onToggleIon = { isIonActive = !isIonActive },
                 isEntropyActive = isEntropyActive,
                 onToggleEntropy = { isEntropyActive = !isEntropyActive },
+                isZenithActive = isZenithActive,
+                onToggleZenith = { isZenithActive = !isZenithActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -697,6 +703,7 @@ fun SeatingChartScreen(
                 )
 
         ) {
+            GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
                 GhostPortalLayer(
@@ -873,7 +880,9 @@ fun SeatingChartScreen(
                     onStudentLongClick = onStudentLongClick,
                     onFurnitureClick = onFurnitureClick,
                     onFurnitureLongClick = onFurnitureLongClick,
-                    seatingChartViewModel = seatingChartViewModel
+                    seatingChartViewModel = seatingChartViewModel,
+                    isZenithActive = isZenithActive,
+                    zenithScope = zenithScope
                 )
             }
 
@@ -1314,6 +1323,7 @@ fun SeatingChartScreen(
     }
 }
 }
+}
 
 
 @Composable
@@ -1342,7 +1352,9 @@ fun SeatingChartContent(
     onStudentLongClick: (StudentUiItem) -> Unit,
     onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
     onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
-    seatingChartViewModel: SeatingChartViewModel
+    seatingChartViewModel: SeatingChartViewModel,
+    isZenithActive: Boolean = false,
+    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null
 ) {
     Box(
         modifier = Modifier
@@ -1370,6 +1382,11 @@ fun SeatingChartContent(
 
             students.forEach { studentItem ->
                 val irisParams = if (isIrisActive) studentItem.irisParams.value else null
+                val altitude = if (isZenithActive) {
+                    val behavior = allBehaviorEvents.filter { it.studentId == studentItem.id.toLong() }
+                    val quiz = allQuizLogs.filter { it.studentId == studentItem.id.toLong() }
+                    GhostZenithEngine.calculateStudentAltitude(quiz, behavior)
+                } else 0f
 
                 StudentDraggableIcon(
                     studentUiItem = studentItem,
@@ -1389,6 +1406,9 @@ fun SeatingChartContent(
                     canvasOffset = offset,
                     isIrisActive = isIrisActive,
                     irisParams = irisParams,
+                    isZenithActive = isZenithActive,
+                    altitude = altitude,
+                    zenithScope = zenithScope,
                     quizLogFontColor = quizLogFontColor,
                     homeworkLogFontColor = homeworkLogFontColor,
                     quizLogFontBold = quizLogFontBold,
@@ -1495,6 +1515,8 @@ fun SeatingChartTopAppBar(
     onToggleIon: () -> Unit,
     isEntropyActive: Boolean,
     onToggleEntropy: () -> Unit,
+    isZenithActive: Boolean,
+    onToggleZenith: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1788,6 +1810,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
+                            )
+                        }
+                        if (GhostConfig.ZENITH_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isZenithActive) "Flatten Space 👻" else "Ghost Zenith 👻") },
+                                onClick = {
+                                    onToggleZenith()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }
