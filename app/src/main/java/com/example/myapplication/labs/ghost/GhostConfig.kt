@@ -93,4 +93,7 @@ object GhostConfig {
 
     /** Enables "Ghost Entropy" neural turbulence and thermal distortion visualization. */
     const val ENTROPY_MODE_ENABLED = true
+
+    /** Enables "Ghost Zenith" spatial depth and device-tilt parallax effects. */
+    const val ZENITH_MODE_ENABLED = true
 }

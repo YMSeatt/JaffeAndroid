@@ -106,6 +106,9 @@ fun StudentDraggableIcon(
     canvasOffset: Offset,
     isIrisActive: Boolean = false,
     irisParams: GhostIrisEngine.IrisParameters? = null,
+    isZenithActive: Boolean = false,
+    altitude: Float = 0f,
+    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
     quizLogFontBold: Boolean = true,
@@ -168,6 +171,11 @@ fun StudentDraggableIcon(
                         y = ((offsetY * canvasScale) + canvasOffset.y).roundToInt()
                     )
                 }
+                .then(
+                    if (isZenithActive && zenithScope != null) {
+                        with(zenithScope) { Modifier.studentElevation(altitude) }
+                    } else Modifier
+                )
                 .scale(scale)
         ) {
             Card(
