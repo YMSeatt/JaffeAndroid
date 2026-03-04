@@ -66,7 +66,9 @@ object GhostOracle {
     fun consult(
         students: List<Student>,
         behaviorLogs: List<BehaviorEvent>,
-        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>? = null
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>? = null,
+        negativeCounts: Map<Long, Int>? = null,
+        lastPositiveTimestamps: Map<Long, Long>? = null
     ): List<Prophecy> {
         if (students.isEmpty()) return emptyList()
 
@@ -75,8 +77,32 @@ object GhostOracle {
 
         // 1. Pre-process logs for O(1) lookup during O(N^2) loop
         val logsByStudent = behaviorLogsByStudent ?: behaviorLogs.groupBy { it.studentId }
-        val negativeCounts = logsByStudent.mapValues { (_, logs) ->
-            logs.count { it.type.contains("Negative", ignoreCase = true) }
+
+        // BOLT: Single-pass calculation of metrics if not provided by caller
+        val finalNegativeCounts: Map<Long, Int>
+        val finalLastPositiveTimestamps: Map<Long, Long>
+
+        if (negativeCounts == null || lastPositiveTimestamps == null) {
+            val negCounts = mutableMapOf<Long, Int>()
+            val lastPosTs = mutableMapOf<Long, Long>()
+            logsByStudent.forEach { (studentId, logs) ->
+                var nNeg = 0
+                var lastTs = -1L
+                for (log in logs) {
+                    if (log.type.contains("Negative", ignoreCase = true)) {
+                        nNeg++
+                    } else if (log.timestamp > lastTs) {
+                        lastTs = log.timestamp
+                    }
+                }
+                negCounts[studentId] = nNeg
+                lastPosTs[studentId] = lastTs
+            }
+            finalNegativeCounts = negCounts
+            finalLastPositiveTimestamps = lastPosTs
+        } else {
+            finalNegativeCounts = negativeCounts
+            finalLastPositiveTimestamps = lastPositiveTimestamps
         }
 
         // 2. Optimized Social Friction Analysis (O(N^2))
@@ -84,13 +110,13 @@ object GhostOracle {
         val n = students.size
         for (i in 0 until n) {
             val s1 = students[i]
-            val s1NegCount = negativeCounts[s1.id] ?: 0
+            val s1NegCount = finalNegativeCounts[s1.id] ?: 0
 
             // Only evaluate friction if s1 has potential for friction
             if (s1NegCount > 1) {
                 for (j in i + 1 until n) {
                     val s2 = students[j]
-                    val s2NegCount = negativeCounts[s2.id] ?: 0
+                    val s2NegCount = finalNegativeCounts[s2.id] ?: 0
 
                     if (s2NegCount > 1) {
                         val dx = s1.xPosition - s2.xPosition
@@ -112,17 +138,8 @@ object GhostOracle {
             }
 
             // 3. Optimized Engagement Drop Analysis (O(L_student))
-            val myLogs = logsByStudent[s1.id] ?: emptyList()
-            if (myLogs.isNotEmpty()) {
-                // Find last positive log using manual loop to avoid multiple filter/sort cycles
-                var lastPositiveTimestamp = -1L
-                for (log in myLogs) {
-                    if (!log.type.contains("Negative", ignoreCase = true)) {
-                        if (log.timestamp > lastPositiveTimestamp) {
-                            lastPositiveTimestamp = log.timestamp
-                        }
-                    }
-                }
+            if (logsByStudent.containsKey(s1.id)) {
+                val lastPositiveTimestamp = finalLastPositiveTimestamps[s1.id] ?: -1L
 
                 if (lastPositiveTimestamp != -1L) {
                     val daysSince = (currentTime - lastPositiveTimestamp) / (1000 * 60 * 60 * 24)
@@ -149,6 +166,7 @@ object GhostOracle {
             }
         }
 
-        return prophecies.distinctBy { it.description }
+        // BOLT: Removed distinctBy as we only generate unique prophecies per student pair or student
+        return prophecies
     }
 }

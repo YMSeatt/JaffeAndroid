@@ -31,14 +31,27 @@ object GhostIrisEngine {
         val seed = (studentId * 12345.678f) % 1000f
 
         // Calculate performance metrics
-        val positiveCount = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-        val negativeCount = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
+        // BOLT: Single-pass calculation to avoid O(B) + O(B) + O(Q) list iterations.
+        var positiveCount = 0
+        for (event in behaviorLogs) {
+            if (!event.type.contains("Negative", ignoreCase = true)) {
+                positiveCount++
+            }
+        }
         val behaviorBalance = if (behaviorLogs.isEmpty()) 0.5f
             else (positiveCount.toFloat() / behaviorLogs.size).coerceIn(0f, 1f)
 
-        val avgQuiz = if (quizLogs.isNotEmpty()) {
-            quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> if (m > 0) v / m else null } } }.average().toFloat()
-        } else 0.75f
+        var quizSum = 0.0f
+        var quizCount = 0
+        for (log in quizLogs) {
+            val v = log.markValue
+            val m = log.maxMarkValue
+            if (v != null && m != null && m > 0) {
+                quizSum += (v.toFloat() / m.toFloat())
+                quizCount++
+            }
+        }
+        val avgQuiz = if (quizCount > 0) quizSum / quizCount else 0.75f
 
         // Colors based on behavior balance
         // Positive: Cyan/Blue, Negative: Red/Purple, Neutral: Green/Teal

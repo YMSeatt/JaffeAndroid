@@ -295,6 +295,15 @@ class SeatingChartViewModel @Inject constructor(
     /** Caches behavior logs grouped by student ID to avoid O(B) filtering inside student loops. */
     private var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
 
+    /** BOLT: Incremental caches for behavior metrics used by AI engines. */
+    private val negativeCountsCache = ConcurrentHashMap<Long, Int>()
+    private val lastPositiveTimestampsCache = ConcurrentHashMap<Long, Long>()
+
+    /** BOLT: Memoization for AI prophecies to avoid O(N^2) every frame. */
+    private var memoizedProphecies: List<GhostOracle.Prophecy> = emptyList()
+    private var prophecyStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var prophecyLogsRef: List<com.example.myapplication.data.BehaviorEvent>? = null
+
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
     private var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
@@ -505,6 +514,32 @@ class SeatingChartViewModel @Inject constructor(
                 if (behaviorEvents !== memoizedBehaviorEvents) {
                     val newGrouped = behaviorEvents.groupBy { it.studentId }
                     val oldGrouped = behaviorLogsByStudentCache
+
+                    // BOLT: Incremental update of behavior metrics
+                    newGrouped.forEach { (studentId, logs) ->
+                        // BOLT: Identity check (===) for optimized incremental update
+                        if (oldGrouped[studentId] !== logs) {
+                            var nNeg = 0
+                            var lastPosTs = -1L
+                            for (log in logs) {
+                                if (log.type.contains("Negative", ignoreCase = true)) {
+                                    nNeg++
+                                } else if (log.timestamp > lastPosTs) {
+                                    lastPosTs = log.timestamp
+                                }
+                            }
+                            negativeCountsCache[studentId] = nNeg
+                            lastPositiveTimestampsCache[studentId] = lastPosTs
+                        }
+                    }
+
+                    // BOLT: Prune stale metric caches for students whose logs were cleared/deleted
+                    if (newGrouped.size < oldGrouped.size) {
+                        val currentLogStudentIds = newGrouped.keys
+                        negativeCountsCache.keys.retainAll(currentLogStudentIds)
+                        lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
+                    }
+
                     behaviorLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
                         if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
                     }
@@ -512,10 +547,19 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val behaviorLogsByStudent = behaviorLogsByStudentCache
 
-                // BOLT: Calculate on-device AI prophecies in the background pipeline to avoid
-                // O(N^2) analysis on the main thread during composition.
-                val currentProphecies = GhostOracle.consult(students, behaviorEvents, behaviorLogsByStudent)
-                _prophecies.value = currentProphecies
+                // BOLT: Memoized AI prophecies to avoid redundant O(N^2) analysis.
+                if (students !== prophecyStudentsRef || behaviorEvents !== prophecyLogsRef) {
+                    memoizedProphecies = GhostOracle.consult(
+                        students = students,
+                        behaviorLogs = behaviorEvents,
+                        behaviorLogsByStudent = behaviorLogsByStudent,
+                        negativeCounts = negativeCountsCache,
+                        lastPositiveTimestamps = lastPositiveTimestampsCache
+                    )
+                    prophecyStudentsRef = students
+                    prophecyLogsRef = behaviorEvents
+                }
+                _prophecies.value = memoizedProphecies
 
                 val homeworkLogs = allHomeworkLogs.value ?: emptyList()
                 if (homeworkLogs !== memoizedHomeworkLogs) {
