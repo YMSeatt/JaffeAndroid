@@ -12,20 +12,31 @@ import com.example.myapplication.R
 /**
  * ReminderReceiver: The primary entry point for scheduled reminder broadcasts.
  *
- * This receiver is triggered by [android.app.AlarmManager] and is responsible for
- * elevating a background alarm into a visible system notification.
+ * This [BroadcastReceiver] is triggered by the system [android.app.AlarmManager] at
+ * the requested time. Its primary responsibility is to transform a background alarm
+ * event into a user-visible system notification.
  *
- * ### Implementation Details:
- * - **Channel**: Uses the `"reminder_channel"` ID.
- * - **Extras**: Expects **lowercase** keys: `reminder_id`, `reminder_title`, and `reminder_description`.
- * - **Registration**: Must be declared in `AndroidManifest.xml` (unlike its legacy counterpart).
+ * ### Architecture & Lifecycle:
+ * - **Trigger**: Activated via a [PendingIntent] sent from [ReminderManager].
+ * - **Execution Window**: Runs on the main thread for a brief period. Heavy processing
+ *   is avoided to ensure the system doesn't kill the receiver.
+ * - **Intent Protocol**: Expects metadata in **strictly lowercase** keys (`reminder_id`, etc.)
+ *   to maintain parity with the Android ecosystem standards used in this app.
+ *
+ * ### Security & Privacy:
+ * - **Lock Screen Privacy**: Explicitly sets visibility to [NotificationCompat.VISIBILITY_PRIVATE]
+ *   to prevent Personally Identifiable Information (PII), such as student names or
+ *   sensitive classroom tasks, from being visible on a locked device.
  */
 class ReminderReceiver : BroadcastReceiver() {
     /**
      * Processes the incoming alarm intent and triggers a notification.
      *
+     * This method handles the creation of the notification channel (on API 26+) and
+     * the construction of the individual notification using [NotificationCompat.Builder].
+     *
      * @param context The application context.
-     * @param intent The intent containing lowercase reminder metadata.
+     * @param intent The intent containing lowercase reminder metadata (id, title, description).
      */
     override fun onReceive(context: Context, intent: Intent) {
         val reminderId = intent.getLongExtra("reminder_id", 0)
