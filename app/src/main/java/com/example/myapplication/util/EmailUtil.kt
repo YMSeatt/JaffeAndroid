@@ -25,15 +25,48 @@ import javax.mail.internet.MimeBodyPart
 import javax.mail.internet.MimeMessage
 import javax.mail.internet.MimeMultipart
 
+/**
+ * EmailUtil: A utility for secure SMTP communication and automated reporting.
+ *
+ * This class encapsulates JavaMail operations, providing a bridge between the
+ * application's reporting logic and external mail servers. It handles both direct
+ * email transmission and backgrounding via [WorkManager] for improved reliability.
+ *
+ * ### Security Hardening:
+ * - **Identity Verification**: Enforces `mail.smtp.ssl.checkserveridentity` to prevent MITM attacks.
+ * - **Mandatory Encryption**: Requires STARTTLS and disables downgrade attempts.
+ * - **Encrypted Payload**: Sensitive metadata is encrypted using [SecurityUtil] before being
+ *   passed to background workers.
+ *
+ * @param context Application context used for accessing WorkManager and SecurityUtil.
+ */
 class EmailUtil(private val context: Context) {
 
     private val workManager = WorkManager.getInstance(context)
     private val securityUtil = SecurityUtil(context)
 
+    /**
+     * Validates an email address using a standard RFC 5322-compliant pattern.
+     */
     private fun isValidEmail(email: String): Boolean {
         return EMAIL_ADDRESS_PATTERN.matcher(email).matches()
     }
 
+    /**
+     * Offloads an email request to [EmailWorker] via [WorkManager] for background processing.
+     *
+     * This is the preferred method for sending emails from the UI, as it ensures delivery
+     * even if the app is closed or the network is unstable. It enforces a `CONNECTED`
+     * network constraint.
+     *
+     * @param from The sender's email address.
+     * @param password The sender's SMTP password (used for authentication).
+     * @param to The recipient's email address.
+     * @param subject The email subject line.
+     * @param body The HTML or plaintext body of the email.
+     * @param attachmentPath Optional absolute path to a file to be attached (e.g., an Excel report).
+     * @param smtpSettings Configuration for the SMTP server (host, port, SSL/TLS).
+     */
     suspend fun sendEmailWithRetry(
         from: String,
         password: String,
@@ -70,6 +103,19 @@ class EmailUtil(private val context: Context) {
         workManager.enqueue(workRequest)
     }
 
+    /**
+     * Directly executes an SMTP transmission using the JavaMail API.
+     *
+     * This method performs synchronous I/O on [Dispatchers.IO] and should typically
+     * be called from a background worker like [EmailWorker].
+     *
+     * ### Features:
+     * 1. **Multi-part Support**: Correctly handles both HTML body content and file attachments.
+     * 2. **Session Authentication**: Uses standard [Authenticator] for credential verification.
+     * 3. **Robust Security**: Configures the SMTP session with mandatory SSL/TLS and identity checks.
+     *
+     * @throws EmailException If validation fails, authentication is rejected, or a network error occurs.
+     */
     @Throws(EmailException::class)
     suspend fun sendEmail(
         from: String,
@@ -138,6 +184,10 @@ class EmailUtil(private val context: Context) {
     }
 
     companion object {
+        /**
+         * A regular expression pattern for validating email addresses.
+         * Derived from common Android/Web standards to ensure high compatibility.
+         */
         private val EMAIL_ADDRESS_PATTERN = Pattern.compile(
             "[a-zA-Z0-9\\+\\.\\_\\%\\-\\+]{1,256}" +
                     "\\@" +
