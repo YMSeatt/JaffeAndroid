@@ -54,5 +54,22 @@ The application's Room database has evolved through numerous architectural shift
 - **JSON-Backed Flexibility**: To avoid frequent schema migrations for UI-driven changes, log entities (`HomeworkLog` v11, `QuizLog` v12) utilize JSON-based `marksData` fields. This allows the application to support dynamic scoring types (e.g., "Partial Credit", "Effort Marks") without altering the underlying SQLite tables.
 - **Automated Lifecycle**: Modern versions introduce automated subsystems like `Reminder` (v23) and `EmailSchedule` (v24), which operate as independent background workers driven by specific database triggers.
 
+## 📧 Email Reporting Architecture
+
+The application utilizes a sophisticated background reporting system to ensure data portability and archival without impacting the teacher's interactive experience.
+
+### 1. The Coordination Pipeline
+The flow for automated or manual exports follows a strict chain of command:
+- **Initiator**: The UI (via `SeatingChartViewModel`) or a system trigger (like `onStop` or a scheduled alarm).
+- **Scheduler**: `WorkManager` enqueues a request for the `EmailWorker`.
+- **Coordinator**: `EmailWorker` executes on a background thread. It fetches fresh data from the database, coordinates with the `Exporter` to generate the `.xlsx` file, and delegates the final transmission to `EmailUtil`.
+- **Transmission**: `EmailUtil` handles the low-level SMTP handshake using JavaMail.
+
+### 2. The Security Boundary
+To protect student PII while data is "in transit" within the Android system:
+- **WorkData Encryption**: Sensitive fields like the recipient email address, SMTP password, and report subjects are **encrypted** using `SecurityUtil` before being put into the `WorkManager` input map.
+- **Worker Decryption**: The `EmailWorker` is the only component authorized to decrypt these values immediately before they are needed for the SMTP session.
+- **Temporary Persistence**: Reports generated for email are stored in the app's **private cache directory** (`applicationContext.cacheDir`) and are explicitly deleted in a `finally` block once transmission is attempted.
+
 ---
 *Documentation love letter from Scribe 📜*

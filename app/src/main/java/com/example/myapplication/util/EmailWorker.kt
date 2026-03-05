@@ -22,11 +22,46 @@ import java.util.Calendar
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.decodeFromString
 
+/**
+ * EmailWorker: A high-performance background task handler for classroom reporting.
+ *
+ * This [CoroutineWorker] implementation coordinates the generation, encryption, and
+ * transmission of classroom data reports. It serves as the primary engine for all
+ * asynchronous email operations, ensuring that heavy tasks like Excel generation
+ * and multi-pass database synthesis do not impact UI responsiveness.
+ *
+ * ### Security Model:
+ * To protect Personally Identifiable Information (PII), all sensitive data passed to
+ * this worker via `inputData` (emails, passwords, report configurations) must be
+ * encrypted using [SecurityUtil]. The worker automatically decrypts these values
+ * before execution.
+ *
+ * ### Architectural Performance (BOLT):
+ * - **Single-Pass Synthesis**: Aggregates data from multiple DAOs in a single IO block.
+ * - **Resource Isolation**: Runs strictly on [Dispatchers.IO].
+ * - **Resource Cleanup**: Employs mandatory `finally` blocks to ensure temporary report
+ *   files are purged from local storage immediately after transmission.
+ */
 class EmailWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    /**
+     * Executes the requested background task based on the provided "request_type".
+     *
+     * #### Supported Operations:
+     * 1. **`daily_report`**: Generates a periodic classroom analytics report based on
+     *    relative date ranges (e.g., "Past 7 days").
+     * 2. **`send_email`**: Standard transactional email delivery with support for attachments.
+     * 3. **`process_pending_emails`**: Reliability handler that flushes the [PendingEmail]
+     *    queue (failed or deferred sends).
+     * 4. **`on_stop_export`**: Triggered by the application lifecycle to ensure an up-to-date
+     *    data backup is safely emailed when the app is closed.
+     *
+     * @return [Result.success] if the task completes, or [Result.failure] if mandatory
+     *         credentials (like the SMTP password) are missing or decryption fails.
+     */
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(applicationContext)
         val studentDao = db.studentDao()
