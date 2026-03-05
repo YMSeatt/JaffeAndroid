@@ -96,4 +96,7 @@ object GhostConfig {
 
     /** Enables "Ghost Zenith" spatial depth and device-tilt parallax effects. */
     const val ZENITH_MODE_ENABLED = true
+
+    /** Enables "Ghost Emergence" behavioral cellular automata visualization. */
+    const val EMERGENCE_MODE_ENABLED = true
 }

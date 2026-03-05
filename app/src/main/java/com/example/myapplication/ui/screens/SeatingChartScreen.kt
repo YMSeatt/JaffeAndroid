@@ -141,6 +141,8 @@ import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
 import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
+import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
+import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -228,6 +230,7 @@ fun SeatingChartScreen(
     var isIonActive by remember { mutableStateOf(false) }
     var isEntropyActive by remember { mutableStateOf(false) }
     var isZenithActive by remember { mutableStateOf(false) }
+    var isEmergenceActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -330,6 +333,7 @@ fun SeatingChartScreen(
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostZenithEngine = remember { GhostZenithEngine(context) }
+    val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
@@ -567,6 +571,8 @@ fun SeatingChartScreen(
                 onToggleEntropy = { isEntropyActive = !isEntropyActive },
                 isZenithActive = isZenithActive,
                 onToggleZenith = { isZenithActive = !isZenithActive },
+                isEmergenceActive = isEmergenceActive,
+                onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -935,6 +941,16 @@ fun SeatingChartScreen(
 
             // Ghost Overlays
             if (GhostConfig.GHOST_MODE_ENABLED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (GhostConfig.EMERGENCE_MODE_ENABLED && isEmergenceActive) {
+                        GhostEmergenceLayer(
+                            engine = ghostEmergenceEngine,
+                            students = students,
+                            behaviorLogs = allBehaviorEvents
+                        )
+                    }
+                }
+
                 if (GhostConfig.CHRONOS_MODE_ENABLED && isChronosActive) {
                     GhostChronosLayer(
                         students = students,
@@ -1517,6 +1533,8 @@ fun SeatingChartTopAppBar(
     onToggleEntropy: () -> Unit,
     isZenithActive: Boolean,
     onToggleZenith: () -> Unit,
+    isEmergenceActive: Boolean,
+    onToggleEmergence: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1820,6 +1838,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.EMERGENCE_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEmergenceActive) "De-Emerge 👻" else "Ghost Emergence 👻") },
+                                onClick = {
+                                    onToggleEmergence()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                             )
                         }
                     }
