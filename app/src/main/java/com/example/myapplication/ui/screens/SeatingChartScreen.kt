@@ -5,6 +5,7 @@ import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
@@ -143,6 +144,7 @@ import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
 import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
+import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -231,6 +233,7 @@ fun SeatingChartScreen(
     var isEntropyActive by remember { mutableStateOf(false) }
     var isZenithActive by remember { mutableStateOf(false) }
     var isEmergenceActive by remember { mutableStateOf(false) }
+    var isCatalystActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -573,6 +576,8 @@ fun SeatingChartScreen(
                 onToggleZenith = { isZenithActive = !isZenithActive },
                 isEmergenceActive = isEmergenceActive,
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
+                isCatalystActive = isCatalystActive,
+                onToggleCatalyst = { isCatalystActive = !isCatalystActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -785,6 +790,18 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED && isCatalystActive) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    GhostCatalystLayer(
+                        students = students,
+                        behaviorLogs = allBehaviorEvents,
+                        canvasScale = scale,
+                        canvasOffset = offset,
+                        isActive = isCatalystActive
+                    )
+                }
             }
 
 
@@ -1535,6 +1552,8 @@ fun SeatingChartTopAppBar(
     onToggleZenith: () -> Unit,
     isEmergenceActive: Boolean,
     onToggleEmergence: () -> Unit,
+    isCatalystActive: Boolean,
+    onToggleCatalyst: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1848,6 +1867,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.CATALYST_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            DropdownMenuItem(
+                                text = { Text(if (isCatalystActive) "De-Catalyze 👻" else "Ghost Catalyst 👻") },
+                                onClick = {
+                                    onToggleCatalyst()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }

@@ -146,6 +146,12 @@ A Proof of Concept for **Neural Ionization & Electrostatic Visualization**. It m
 - **AGSL Discharge**: Renders ionized clouds and procedural "electrostatic discharge" flickers using a high-performance shader.
 - **Python Bridge**: Integrated with `Python/ghost_ion_analyzer.py` for logical parity and charge distribution analysis.
 
+### 26. Ghost Catalyst (`catalyst/GhostCatalystLayer.kt`, `catalyst/GhostCatalystShader.kt`, `catalyst/GhostCatalystEngine.kt`)
+A Proof of Concept for **Behavioral Chain Reaction Mapping**. It treats the classroom as a chemical system where student actions act as catalysts for subsequent events.
+- **Reaction Kinetics**: Detects "Catalytic Events" using a spatio-temporal sliding window (Radius 800, Window 300s).
+- **Social Bonds**: Visualizes "Ionic Bonds" (glowing AGSL lines) between catalysts and reactants.
+- **Macroscopic Analysis**: Integrated with `Python/ghost_catalyst_analysis.py` to calculate classroom Reaction Rates and Activation Energy.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
