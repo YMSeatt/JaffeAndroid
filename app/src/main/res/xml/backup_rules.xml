@@ -5,4 +5,5 @@
     <include domain="file" />
     <exclude domain="file" path="fernet.key" />
     <exclude domain="file" path="fernet.key.v2" />
+    <exclude domain="file" path="archives" />
 </full-backup-content>

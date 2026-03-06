@@ -86,7 +86,12 @@ class SettingsViewModel @Inject constructor(
             AppDatabase.getDatabase(context).close()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
             val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-            val archiveFile = java.io.File(context.filesDir, "archive_$timestamp.db")
+
+            // HARDEN: Use a dedicated archives directory to allow exclusion from cloud backups
+            val archiveDir = File(context.filesDir, "archives")
+            if (!archiveDir.exists()) archiveDir.mkdirs()
+
+            val archiveFile = File(archiveDir, "archive_$timestamp.db")
             dbFile.copyTo(archiveFile, overwrite = true)
             // The database will be re-created on next access
             _restoreComplete.postValue(true)
@@ -95,7 +100,25 @@ class SettingsViewModel @Inject constructor(
 
     fun listArchivedDatabases(): List<String> {
         val context = application
-        return context.filesDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }
+        val archiveDir = File(context.filesDir, "archives")
+        if (!archiveDir.exists()) archiveDir.mkdirs()
+
+        // PRIVACY: One-time migration of legacy archives from the root files directory
+        // to the hardened archives subdirectory.
+        context.filesDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }?.forEach { legacyFile ->
+            try {
+                val targetFile = File(archiveDir, legacyFile.name)
+                if (!targetFile.exists()) {
+                    legacyFile.renameTo(targetFile)
+                } else {
+                    legacyFile.delete()
+                }
+            } catch (e: Exception) {
+                // Ignore migration errors for individual files
+            }
+        }
+
+        return archiveDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }
             ?.map { it.name } ?: emptyList()
     }
 
