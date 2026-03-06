@@ -99,4 +99,7 @@ object GhostConfig {
 
     /** Enables "Ghost Emergence" behavioral cellular automata visualization. */
     const val EMERGENCE_MODE_ENABLED = true
+
+    /** Enables "Ghost Catalyst" behavioral chain reaction mapping. */
+    const val CATALYST_MODE_ENABLED = true
 }
