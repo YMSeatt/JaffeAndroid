@@ -1415,11 +1415,7 @@ fun SeatingChartContent(
 
             students.forEach { studentItem ->
                 val irisParams = if (isIrisActive) studentItem.irisParams.value else null
-                val altitude = if (isZenithActive) {
-                    val behavior = allBehaviorEvents.filter { it.studentId == studentItem.id.toLong() }
-                    val quiz = allQuizLogs.filter { it.studentId == studentItem.id.toLong() }
-                    GhostZenithEngine.calculateStudentAltitude(quiz, behavior)
-                } else 0f
+                val altitude = if (isZenithActive) studentItem.altitude.value else 0f
 
                 StudentDraggableIcon(
                     studentUiItem = studentItem,
