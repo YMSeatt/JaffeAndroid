@@ -81,14 +81,30 @@ class GhostZenithEngine(context: Context) : SensorEventListener {
             quizLogs: List<QuizLog>,
             behaviorLogs: List<BehaviorEvent>
         ): Float {
+            // BOLT: Replaced functional operators (filter, map, average) with manual loops
+            // to avoid redundant object allocations per student, per frame.
             val academicScore = if (quizLogs.isEmpty()) 0.5f else {
-                quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }
-                    .average().toFloat()
+                var totalRatio = 0.0f
+                var validCount = 0
+                for (log in quizLogs) {
+                    val v = log.markValue
+                    val m = log.maxMarkValue
+                    if (v != null && m != null && m > 0) {
+                        totalRatio += (v.toFloat() / m.toFloat())
+                        validCount++
+                    }
+                }
+                if (validCount > 0) totalRatio / validCount else 0.5f
             }
 
             val behaviorScore = if (behaviorLogs.isEmpty()) 0.5f else {
-                val pos = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-                pos.toFloat() / behaviorLogs.size
+                var positiveCount = 0
+                for (event in behaviorLogs) {
+                    if (!event.type.contains("Negative", ignoreCase = true)) {
+                        positiveCount++
+                    }
+                }
+                positiveCount.toFloat() / behaviorLogs.size
             }
 
             // Weighted average: Academic performance has more "buoyancy" in the 2027 vision

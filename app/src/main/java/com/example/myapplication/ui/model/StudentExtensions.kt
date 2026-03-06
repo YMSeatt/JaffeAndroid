@@ -48,7 +48,8 @@ fun Student.toStudentUiItem(
     defaultFontFamily: String,
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
+    altitude: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -76,7 +77,8 @@ fun Student.toStudentUiItem(
         fontColor = mutableStateOf(fontColor),
         temporaryTask = mutableStateOf(temporaryTask),
         irisParams = mutableStateOf(irisParams),
-        osmoticNode = mutableStateOf(osmoticNode)
+        osmoticNode = mutableStateOf(osmoticNode),
+        altitude = mutableStateOf(altitude)
     )
 }
 
@@ -110,7 +112,8 @@ fun Student.updateStudentUiItem(
     defaultFontFamily: String,
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
+    altitude: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -137,6 +140,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.temporaryTask, temporaryTask)
     updateIfChanged(item.irisParams, irisParams)
     updateIfChanged(item.osmoticNode, osmoticNode)
+    updateIfChanged(item.altitude, altitude)
 }
 
 /**

@@ -367,7 +367,8 @@ class SeatingChartViewModel @Inject constructor(
         val styles: StudentStyles,
         val irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters,
         val knowledgePotential: Float,
-        val behaviorConcentration: Float
+        val behaviorConcentration: Float,
+        val altitude: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -866,6 +867,11 @@ class SeatingChartViewModel @Inject constructor(
                             homeworkList ?: emptyList()
                         )
 
+                        val altitude = com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
+                            quizLogs = quizList ?: emptyList(),
+                            behaviorLogs = behaviorList ?: emptyList()
+                        )
+
                         StudentDerivedData(
                             behaviorDescription,
                             homeworkDescription,
@@ -876,7 +882,8 @@ class SeatingChartViewModel @Inject constructor(
                             styles,
                             irisParams,
                             kPotential,
-                            bConcentration
+                            bConcentration,
+                            altitude
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -937,7 +944,8 @@ class SeatingChartViewModel @Inject constructor(
                             defaultFontFamily = defaultStyle.fontFamily,
                             defaultFontSize = defaultStyle.fontSize,
                             irisParams = irisParams,
-                            osmoticNode = osmoticNode
+                            osmoticNode = osmoticNode,
+                            altitude = derivedData.altitude
                         )
                         existingItem
                     } else {
@@ -959,7 +967,8 @@ class SeatingChartViewModel @Inject constructor(
                             defaultFontFamily = defaultStyle.fontFamily,
                             defaultFontSize = defaultStyle.fontSize,
                             irisParams = irisParams,
-                            osmoticNode = osmoticNode
+                            osmoticNode = osmoticNode,
+                            altitude = derivedData.altitude
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem
