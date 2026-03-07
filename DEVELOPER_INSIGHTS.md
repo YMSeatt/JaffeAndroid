@@ -71,5 +71,18 @@ To protect student PII while data is "in transit" within the Android system:
 - **Worker Decryption**: The `EmailWorker` is the only component authorized to decrypt these values immediately before they are needed for the SMTP session.
 - **Temporary Persistence**: Reports generated for email are stored in the app's **private cache directory** (`applicationContext.cacheDir`) and are explicitly deleted in a `finally` block once transmission is attempted.
 
+## 📥 Data Ingestion & Parity
+
+Maintaining data portability between the Python desktop application and the Android mobile app is a core architectural requirement.
+
+- **Unified Standard (v10)**: The modern ingestion pipeline (see [Importer.kt](app/src/main/java/com/example/myapplication/data/importer/Importer.kt)) utilizes a unified JSON schema that encapsulates students, furniture, and all historical logs.
+- **Coordinate Transformation**: Both apps use logical coordinates to remain resolution-independent.
+    - **Python**: 2000x1500 logical space.
+    - **Android**: 4000x4000 logical space.
+    - **Mapping**: Data is mapped 1:1 into the top-left quadrant during standard ingestion. The Ghost Blueprint Engine further normalizes these into a 1200x800 SVG frame using a `/ 4` scaling factor.
+- **Multi-Pass Integrity**: Relational integrity is ensured by a multi-pass strategy (Foundational -> Spatial -> Logs) which builds in-memory ID maps to bridge Python's UUID strings and Android's `Long` primary keys.
+
+For detailed architecture, see the [Importer Package README](app/src/main/java/com/example/myapplication/data/importer/README.md).
+
 ---
 *Documentation love letter from Scribe 📜*

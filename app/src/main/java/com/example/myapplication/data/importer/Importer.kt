@@ -21,15 +21,24 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Importer handles the migration and ingestion of classroom data from external sources.
+ * Importer: The primary bridge for modern, unified classroom data ingestion.
  *
- * It primarily bridges the gap between the Python desktop application (which generates JSON data)
- * and the Android application's Room database. It manages:
- * 1. **Schema Mapping**: Converting Python-style DTOs ([ClassroomDataDto]) into Android entities.
- * 2. **Security**: Handling Fernet-encrypted or plaintext data files automatically.
- * 3. **ID Resolution**: Mapping string-based student IDs from the desktop app to auto-incrementing
- *    Long IDs in the local SQLite database.
- * 4. **Asset & URI Support**: Importing data from bundled assets or user-selected files.
+ * This class is responsible for migrating and ingesting classroom data from external sources,
+ * primarily focusing on the modern, versioned JSON schema (currently v10) used by both the
+ * Python desktop application and the Android mobile app.
+ *
+ * ### Architectural Roles:
+ * 1. **Modern Schema Gateway**: Unlike [JsonImporter], which handles individual, fragmented
+ *    JSON files, this class processes unified [ClassroomDataDto] objects which encapsulate
+ *    students, furniture, and all log types in a single structure.
+ * 2. **Referential Integrity Guard**: Implements a strict multi-pass strategy to ensure that
+ *    relational data is correctly linked in the Room database (e.g., student IDs are resolved
+ *    before their behavior logs are processed).
+ * 3. **Security Boundary**: Orchestrates the decryption of Fernet-encrypted backup files
+ *    using [SecurityUtil], facilitating a seamless transition from desktop-level encryption
+ *    to hardware-backed Android KeyStore protection.
+ * 4. **Cross-Platform Parity**: Handles the implicit coordinate transformation, mapping
+ *    logical units between the two application platforms.
  *
  * @param context Application context.
  * @param db The [AppDatabase] instance for persistence.
@@ -141,10 +150,18 @@ class Importer(
 
     /**
      * The core processing logic that maps a deserialized [ClassroomDataDto] into Room entities.
-     * This method performs a multi-pass import to ensure referential integrity (e.g. students
-     * must be imported before their behavior logs can be linked).
      *
-     * Optimized for performance using Room transactions, bulk insertions, and in-memory ID caching.
+     * ### Multi-Pass Ingestion Strategy:
+     * To maintain referential integrity in the local SQLite database, this method executes
+     * four distinct passes within a single Room transaction:
+     * 1. **Pass 1: Students**: Imports student entities and builds an in-memory ID map.
+     *    Android's auto-incrementing `Long` IDs are mapped back to Python's UUID strings.
+     * 2. **Pass 2: Furniture**: Imports classroom objects (desks, tables) with spatial data.
+     * 3. **Pass 3: Behavior & Quiz Logs**: Resolves student IDs using the map from Pass 1 and
+     *    populates the respective log tables.
+     * 4. **Pass 4: Homework Logs**: Finishes by ingesting homework completion history.
+     *
+     * Optimized for performance using bulk insertions and minimized database round-trips.
      */
     private suspend fun importClassroomDataFromJson(jsonString: String) {
         val classroomData = json.decodeFromString<ClassroomDataDto>(jsonString)
