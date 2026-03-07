@@ -45,9 +45,10 @@ fun GhostChronosLayer(
             RuntimeShader(GhostChronosShader.CHRONOS_HEATMAP)
         } else null
     }
+    val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && brush != null) {
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iIntensity", heatmapGrid)
@@ -56,7 +57,7 @@ fun GhostChronosLayer(
             shader.setFloatUniform("iOffset", canvasOffset.x, canvasOffset.y)
             shader.setFloatUniform("iScale", canvasScale)
 
-            drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = brush)
         }
     }
 }

@@ -39,6 +39,7 @@ fun GhostIrisLayer(
     )
 
     val shader = remember { RuntimeShader(GhostIrisShader.NEURAL_IRIS) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
@@ -53,6 +54,6 @@ fun GhostIrisLayer(
 
         shader.setFloatUniform("iComplexity", params.complexity)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

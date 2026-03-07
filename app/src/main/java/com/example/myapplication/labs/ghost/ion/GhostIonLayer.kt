@@ -56,6 +56,7 @@ fun GhostIonLayer(
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostIonShader.ION_FIELD) }
+        val brush = remember(shader) { ShaderBrush(shader) }
 
         Canvas(modifier = modifier.fillMaxSize()) {
             shader.setFloatUniform("iResolution", size.width, size.height)
@@ -87,7 +88,7 @@ fun GhostIonLayer(
             shader.setFloatUniform("iPoints", pointsArray)
             shader.setIntUniform("iPointCount", pointCount)
 
-            drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = brush)
         }
     }
 }

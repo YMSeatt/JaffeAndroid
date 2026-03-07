@@ -70,17 +70,25 @@ fun GhostEntropyLayer(
         studentEntropies.maxOrNull() ?: 0f
     }
 
+    // BOLT: Cache RenderEffect to avoid O(1) allocation in the graphicsLayer block per frame.
+    // Tied to maxEntropy as that's the primary driver of the effect's state.
+    val cachedRenderEffect = remember(maxEntropy) {
+        if (maxEntropy > 0.1f && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RenderEffect.createRuntimeShaderEffect(entropyShader, "contents")
+                .asComposeRenderEffect()
+        } else null
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
-                if (maxEntropy > 0.1f) {
+                if (maxEntropy > 0.1f && cachedRenderEffect != null) {
                     entropyShader.setFloatUniform("iResolution", size.width, size.height)
                     entropyShader.setFloatUniform("iTime", time)
                     entropyShader.setFloatUniform("iEntropy", maxEntropy)
 
-                    renderEffect = RenderEffect.createRuntimeShaderEffect(entropyShader, "contents")
-                        .asComposeRenderEffect()
+                    renderEffect = cachedRenderEffect
                 }
             }
     ) {

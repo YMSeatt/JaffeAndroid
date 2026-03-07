@@ -70,6 +70,7 @@ fun GhostFluxLayer(
     }
 
     val shader = remember { RuntimeShader(GhostFluxShader.NEURAL_FLOW) }
+    val brush = remember(shader) { ShaderBrush(shader) }
     val studentsToDisplay = remember(students) { students.take(20) }
 
     // Pre-calculate log counts to avoid O(S * L) in the Canvas draw loop
@@ -106,6 +107,6 @@ fun GhostFluxLayer(
         shader.setFloatUniform("iPoints", points)
         shader.setFloatUniform("iWeights", weights)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

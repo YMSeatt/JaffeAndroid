@@ -50,6 +50,7 @@ fun GhostSpectraLayer(
     )
 
     val shader = remember { RuntimeShader(GhostSpectraShader.SPECTRA_PRISM) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(
         modifier = modifier
@@ -69,6 +70,6 @@ fun GhostSpectraLayer(
         shader.setFloatUniform("iDensity", density)
         shader.setFloatUniform("iAgitation", agitation)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }
