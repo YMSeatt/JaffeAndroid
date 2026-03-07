@@ -32,6 +32,30 @@ import java.time.ZoneOffset
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * JsonImporter: A legacy bridge for fragmented classroom data ingestion.
+ *
+ * This class facilitates the import of classroom data from individual, specialized JSON files.
+ * It is primarily used to support older Python desktop application exports or scenarios where
+ * data is provided as a collection of discrete files (e.g., behaviors, groups, and students
+ * in separate files) rather than a unified v10 backup.
+ *
+ * ### Architectural Roles:
+ * 1. **Fragmented Data Bridge**: Unlike the unified [Importer], this class coordinates the
+ *    sequential ingestion of multiple URIs, ensuring that foundational data (like student groups)
+ *    is imported before dependent data (like students).
+ * 2. **String-ID Resolution**: Relies on [StudentDao.getStudentByStringId] to link logs to students,
+ *    facilitating the ingestion of historical logs where local auto-increment IDs are unknown.
+ * 3. **Template Migration**: Handles the conversion of Python-style homework templates into
+ *    Android-compatible [HomeworkMarkType] structures.
+ *
+ * @param context Application context.
+ * @param studentDao DAO for student operations.
+ * @param furnitureDao DAO for furniture operations.
+ * @param behaviorEventDao DAO for behavior events.
+ * @param homeworkLogDao DAO for homework logs.
+ * @param studentGroupDao DAO for student groups.
+ */
 @Singleton
 class JsonImporter @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -51,6 +75,15 @@ class JsonImporter @Inject constructor(
         coerceInputValues = true
     }
 
+    /**
+     * Executes a coordinated bulk import from multiple source URIs.
+     *
+     * The ingestion order is critical to maintaining relational integrity:
+     * 1. **Student Groups**: Must exist so students can be assigned to them.
+     * 2. **Classroom Data**: Ingests students and furniture.
+     * 3. **Custom Categories**: Populates dropdown menus for behaviors and homework.
+     * 4. **Templates**: (Optional) Ingests reusable assignment structures.
+     */
     suspend fun importData(
         classroomDataUri: Uri,
         studentGroupsUri: Uri,
