@@ -58,6 +58,7 @@ fun GhostPortalLayer(
     if (intensity <= 0.01f) return
 
     val shader = remember { RuntimeShader(GhostPortalShader.PORTAL_WORMHOLE) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
@@ -67,6 +68,6 @@ fun GhostPortalLayer(
         shader.setFloatUniform("iColor", color.red, color.green, color.blue)
         shader.setFloatUniform("iIntensity", intensity)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

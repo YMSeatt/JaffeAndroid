@@ -84,6 +84,7 @@ fun GhostPhantasmLayer(
     val agitationLevel = processedLogs.third
 
     val shader = remember { RuntimeShader(GhostPhantasmShader.PHANTASM_BLOBS) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     // Pre-allocate arrays to avoid GC pressure during high-frequency Canvas drawing
     val pointsArray = remember { FloatArray(40) }
@@ -130,6 +131,6 @@ fun GhostPhantasmLayer(
         shader.setFloatUniform("iWeights", weightsArray)
         shader.setFloatUniform("iColors", colorsArray)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

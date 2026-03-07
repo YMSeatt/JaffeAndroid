@@ -49,6 +49,7 @@ fun GhostWarpLayer(
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostWarpShader.NEURAL_WARP) }
+        val brush = remember(shader) { ShaderBrush(shader) }
 
         Canvas(modifier = modifier.fillMaxSize()) {
             shader.setFloatUniform("iResolution", size.width, size.height)
@@ -81,7 +82,7 @@ fun GhostWarpLayer(
             shader.setFloatUniform("iPoints", pointsArray)
             shader.setIntUniform("iPointCount", pointCount)
 
-            drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = brush)
         }
     }
 }

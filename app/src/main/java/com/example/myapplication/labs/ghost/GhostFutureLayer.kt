@@ -53,15 +53,16 @@ fun GhostFutureLayer(
             RuntimeShader(GhostFutureShader.TEMPORAL_WARP)
         } else null
     }
+    val futureBrush = remember(futureShader) { futureShader?.let { ShaderBrush(it) } }
 
     Box(modifier = modifier.fillMaxSize()) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && futureShader != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && futureShader != null && futureBrush != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 futureShader.setFloatUniform("iResolution", size.width, size.height)
                 futureShader.setFloatUniform("iTime", time)
                 futureShader.setFloatUniform("iIntensity", 1.0f)
 
-                drawRect(brush = ShaderBrush(futureShader))
+                drawRect(brush = futureBrush)
 
                 // Draw Predicted Events as floating nodes
                 simulatedEvents.forEach { event ->

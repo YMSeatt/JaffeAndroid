@@ -22,6 +22,7 @@ fun GhostNebulaLayer(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val nebulaShader = remember { RuntimeShader(GhostNebulaShader.NEBULA_CORE) }
+    val nebulaBrush = remember(nebulaShader) { ShaderBrush(nebulaShader) }
     val (globalIntensity, clusters) = remember(students, behaviorLogs) {
         GhostNebulaEngine.calculateNebula(students, behaviorLogs)
     }
@@ -52,6 +53,6 @@ fun GhostNebulaLayer(
         nebulaShader.setFloatUniform("iClusters", clusterData)
         nebulaShader.setIntUniform("iClusterCount", clusters.size.coerceAtMost(10))
 
-        drawRect(brush = ShaderBrush(nebulaShader))
+        drawRect(brush = nebulaBrush)
     }
 }

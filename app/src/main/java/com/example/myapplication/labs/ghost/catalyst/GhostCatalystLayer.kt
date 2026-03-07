@@ -47,11 +47,18 @@ fun GhostCatalystLayer(
     )
 
     val reactionShader = remember { RuntimeShader(GhostCatalystShader.REACTION_FIELD) }
-    val bondShader = remember { RuntimeShader(GhostCatalystShader.IONIC_BOND) }
+    val reactionBrush = remember(reactionShader) { ShaderBrush(reactionShader) }
 
     val reactionRate = remember(reactions) {
         (reactions.size.toFloat() / 20f).coerceIn(0.1f, 1.0f)
     }
+
+    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
+
+    // BOLT: Pool shaders and brushes to avoid O(R) allocations in the draw loop
+    // while ensuring unique instances for correct uniform capturing per draw call.
+    val bondShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val bondBrushPool = remember { mutableListOf<ShaderBrush>() }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
@@ -63,25 +70,35 @@ fun GhostCatalystLayer(
         reactionShader.setFloatUniform("iColor", 0.0f, 1.0f, 0.8f) // Cyan/Cyan-Green
         reactionShader.setFloatUniform("iRate", reactionRate)
 
-        drawRect(brush = ShaderBrush(reactionShader))
+        drawRect(brush = reactionBrush)
 
         // 2. Draw Ionic Bonds between catalysts and reactants
+        var bondIdx = 0
         reactions.forEach { reaction ->
-            val catalyst = students.find { it.id.toLong() == reaction.catalystId } ?: return@forEach
-            val reactant = students.find { it.id.toLong() == reaction.reactantId } ?: return@forEach
+            val catalyst = studentMap[reaction.catalystId] ?: return@forEach
+            val reactant = studentMap[reaction.reactantId] ?: return@forEach
 
             val startX = (catalyst.xPosition.value * canvasScale) + canvasOffset.x
             val startY = (catalyst.yPosition.value * canvasScale) + canvasOffset.y
             val endX = (reactant.xPosition.value * canvasScale) + canvasOffset.x
             val endY = (reactant.yPosition.value * canvasScale) + canvasOffset.y
 
-            bondShader.setFloatUniform("iResolution", width, height)
-            bondShader.setFloatUniform("iTime", iTime)
-            bondShader.setFloatUniform("iColor", 0.9f, 0.1f, 0.5f) // Magenta
-            bondShader.setFloatUniform("iIntensity", reaction.intensity)
+            if (bondIdx >= bondShaderPool.size) {
+                val s = RuntimeShader(GhostCatalystShader.IONIC_BOND)
+                bondShaderPool.add(s)
+                bondBrushPool.add(ShaderBrush(s))
+            }
+            val shader = bondShaderPool[bondIdx]
+            val brush = bondBrushPool[bondIdx]
+            bondIdx++
+
+            shader.setFloatUniform("iResolution", width, height)
+            shader.setFloatUniform("iTime", iTime)
+            shader.setFloatUniform("iColor", 0.9f, 0.1f, 0.5f) // Magenta
+            shader.setFloatUniform("iIntensity", reaction.intensity)
 
             drawLine(
-                brush = ShaderBrush(bondShader),
+                brush = brush,
                 start = Offset(startX, startY),
                 end = Offset(endX, endY),
                 strokeWidth = 4f * canvasScale

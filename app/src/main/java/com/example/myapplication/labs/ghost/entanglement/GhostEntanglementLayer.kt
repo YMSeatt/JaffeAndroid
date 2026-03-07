@@ -76,30 +76,46 @@ fun GhostEntanglementLayer(
         pairs.take(3) // Limit to top 3 pairs for visual clarity
     }
 
+    // BOLT: Pool shaders and brushes to avoid O(P) allocations in the draw loop
+    // while ensuring unique instances for correct uniform capturing per draw call.
+    val entanglementShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val entanglementBrushPool = remember { mutableListOf<ShaderBrush>() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
-        entangledPairs.forEach { (studentA, studentB) ->
-            val shader = RuntimeShader(GhostEntanglementShader.QUANTUM_RIPPLES)
-            shader.setFloatUniform("iResolution", screenWidth, screenHeight)
-            shader.setFloatUniform("iTime", time)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            var pairIdx = 0
+            entangledPairs.forEach { (studentA, studentB) ->
+                if (pairIdx >= entanglementShaderPool.size) {
+                    val s = RuntimeShader(GhostEntanglementShader.QUANTUM_RIPPLES)
+                    entanglementShaderPool.add(s)
+                    entanglementBrushPool.add(ShaderBrush(s))
+                }
+                val shader = entanglementShaderPool[pairIdx]
+                val brush = entanglementBrushPool[pairIdx]
+                pairIdx++
 
-            // Map logical 4000x4000 coordinates to screen pixels (Simplified)
-            // In a real integration, use canvasScale and canvasOffset from ViewModel
-            val scaleX = screenWidth / 4000f
-            val scaleY = screenHeight / 4000f
+                shader.setFloatUniform("iResolution", screenWidth, screenHeight)
+                shader.setFloatUniform("iTime", time)
 
-            val posA_x = studentA.xPosition.value * scaleX
-            val posA_y = studentA.yPosition.value * scaleY
-            val posB_x = studentB.xPosition.value * scaleX
-            val posB_y = studentB.yPosition.value * scaleY
+                // Map logical 4000x4000 coordinates to screen pixels (Simplified)
+                // In a real integration, use canvasScale and canvasOffset from ViewModel
+                val scaleX = screenWidth / 4000f
+                val scaleY = screenHeight / 4000f
 
-            shader.setFloatUniform("iEntangledPosA", posA_x, posA_y)
-            shader.setFloatUniform("iEntangledPosB", posB_x, posB_y)
-            shader.setFloatUniform("iCoherence", 0.9f)
+                val posA_x = studentA.xPosition.value * scaleX
+                val posA_y = studentA.yPosition.value * scaleY
+                val posB_x = studentB.xPosition.value * scaleX
+                val posB_y = studentB.yPosition.value * scaleY
 
-            // Entanglement Color: Cyan for positive-leaning synchronicity
-            shader.setFloatUniform("iColor", 0.0f, 1.0f, 1.0f)
+                shader.setFloatUniform("iEntangledPosA", posA_x, posA_y)
+                shader.setFloatUniform("iEntangledPosB", posB_x, posB_y)
+                shader.setFloatUniform("iCoherence", 0.9f)
 
-            drawRect(brush = ShaderBrush(shader))
+                // Entanglement Color: Cyan for positive-leaning synchronicity
+                shader.setFloatUniform("iColor", 0.0f, 1.0f, 1.0f)
+
+                drawRect(brush = brush)
+            }
         }
     }
 }

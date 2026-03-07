@@ -50,6 +50,7 @@ fun GhostSingularityLayer(
     val radius = 60f // Base radius of the event horizon
 
     val shader = remember { RuntimeShader(GhostSingularityShader.GRAVITATIONAL_LENSING) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     // Haptic Feedback Loop: Monitor student proximity to the singularity
     LaunchedEffect(students, singularityPos, isSingularityActive) {
@@ -95,6 +96,6 @@ fun GhostSingularityLayer(
         val intensity = 1.0f + (0.2f * (1.0f + kotlin.math.sin(time * 2.0f)))
         shader.setFloatUniform("iIntensity", intensity)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

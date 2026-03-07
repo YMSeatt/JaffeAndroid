@@ -37,11 +37,24 @@ fun GhostOsmosisLayer(
         GhostOsmosisEngine.calculateOsmosis(students)
     }
 
+    // BOLT: Pool shaders and brushes to avoid O(G) allocations in the draw loop
+    // while ensuring unique instances for correct uniform capturing per draw call.
+    val diffusionShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val diffusionBrushPool = remember { mutableListOf<ShaderBrush>() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            val shader = RuntimeShader(GhostOsmosisShader.DIFFUSION_FIELD)
-
+            var gradientIdx = 0
             gradients.forEach { gradient ->
+                if (gradientIdx >= diffusionShaderPool.size) {
+                    val s = RuntimeShader(GhostOsmosisShader.DIFFUSION_FIELD)
+                    diffusionShaderPool.add(s)
+                    diffusionBrushPool.add(ShaderBrush(s))
+                }
+                val shader = diffusionShaderPool[gradientIdx]
+                val brush = diffusionBrushPool[gradientIdx]
+                gradientIdx++
+
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iColor", gradient.color.first, gradient.color.second, gradient.color.third)
@@ -52,7 +65,7 @@ fun GhostOsmosisLayer(
                 // with more uniforms, but for this PoC, we draw points to demonstrate the field.
                 val radius = 200f // Patch size
                 drawCircle(
-                    brush = ShaderBrush(shader),
+                    brush = brush,
                     radius = radius,
                     center = androidx.compose.ui.geometry.Offset(
                         gradient.x / 4000f * size.width,

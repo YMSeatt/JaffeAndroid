@@ -60,10 +60,15 @@ fun GhostVectorLayer(
         engine.calculateVectors(nodes, edges)
     }
 
-    val vectorShader = remember { RuntimeShader(GhostVectorShader.VECTOR_NEEDLE) }
     val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
 
+    // BOLT: Pool shaders and brushes to avoid O(N) allocations in the draw loop
+    // while ensuring unique instances for correct uniform capturing per draw call.
+    val vectorShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val vectorBrushPool = remember { mutableListOf<ShaderBrush>() }
+
     Canvas(modifier = modifier.fillMaxSize()) {
+        var vectorIdx = 0
         vectors.forEach { vector ->
             val student = studentMap[vector.studentId]
             // Only render if there's a significant social force
@@ -73,11 +78,20 @@ fun GhostVectorLayer(
                 val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y +
                               (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-                vectorShader.setFloatUniform("iResolution", size.width, size.height)
-                vectorShader.setFloatUniform("iTime", time)
-                vectorShader.setFloatUniform("iCenter", centerX, centerY)
-                vectorShader.setFloatUniform("iAngle", vector.angle)
-                vectorShader.setFloatUniform("iMagnitude", vector.magnitude)
+                if (vectorIdx >= vectorShaderPool.size) {
+                    val s = RuntimeShader(GhostVectorShader.VECTOR_NEEDLE)
+                    vectorShaderPool.add(s)
+                    vectorBrushPool.add(ShaderBrush(s))
+                }
+                val shader = vectorShaderPool[vectorIdx]
+                val brush = vectorBrushPool[vectorIdx]
+                vectorIdx++
+
+                shader.setFloatUniform("iResolution", size.width, size.height)
+                shader.setFloatUniform("iTime", time)
+                shader.setFloatUniform("iCenter", centerX, centerY)
+                shader.setFloatUniform("iAngle", vector.angle)
+                shader.setFloatUniform("iMagnitude", vector.magnitude)
 
                 // Color shift based on force intensity: Cyan for low/mid, Magenta for high tension
                 val color = if (vector.magnitude > 80f) {
@@ -85,12 +99,12 @@ fun GhostVectorLayer(
                 } else {
                     Color(0xFF00E5FF) // Bright Cyan
                 }
-                vectorShader.setFloatUniform("iColor", color.red, color.green, color.blue)
+                shader.setFloatUniform("iColor", color.red, color.green, color.blue)
 
                 // Define a localized drawing area for the vector needle
                 val drawAreaSize = 500f * canvasScale
                 drawRect(
-                    brush = ShaderBrush(vectorShader),
+                    brush = brush,
                     topLeft = Offset(centerX - drawAreaSize / 2f, centerY - drawAreaSize / 2f),
                     size = androidx.compose.ui.geometry.Size(drawAreaSize, drawAreaSize)
                 )

@@ -54,15 +54,16 @@ fun GhostEchoLayer(
             null
         }
     }
+    val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (shader != null) {
+        if (shader != null && brush != null) {
             try {
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iAmplitude", amplitude)
 
-                drawRect(brush = ShaderBrush(shader))
+                drawRect(brush = brush)
             } catch (e: Exception) {
                 // Fallback: draw nothing if shader fails to compile or run
             }

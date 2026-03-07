@@ -52,8 +52,9 @@ fun GhostSparkLayer(
             RuntimeShader(GhostSparkShader.NEURAL_SPARK)
         } else null
     }
+    val sparkBrush = remember(sparkShader) { sparkShader?.let { ShaderBrush(it) } }
 
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && sparkShader != null) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && sparkShader != null && sparkBrush != null) {
         val activeSparks = engine.sparks.take(100) // Pass up to 100 sparks to the shader
 
         Canvas(modifier = modifier.fillMaxSize()) {
@@ -113,7 +114,7 @@ fun GhostSparkLayer(
             sparkShader.setFloatUniform("iLives", paddedLives)
             sparkShader.setFloatUniform("iSizes", paddedSizes)
 
-            drawRect(brush = ShaderBrush(sparkShader))
+            drawRect(brush = sparkBrush)
         }
     }
 }

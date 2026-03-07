@@ -47,6 +47,7 @@ fun GhostAuroraLayer(
     )
 
     val shader = remember { RuntimeShader(GhostAuroraShader.CLASSROOM_AURORA) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
@@ -66,6 +67,6 @@ fun GhostAuroraLayer(
         )
         shader.setFloatUniform("iSpeed", params.speed)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

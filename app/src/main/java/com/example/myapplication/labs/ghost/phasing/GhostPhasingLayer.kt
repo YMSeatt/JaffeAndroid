@@ -46,6 +46,7 @@ fun GhostPhasingLayer(
             RuntimeShader(GhostPhasingShader.NEURAL_VOID)
         } else null
     }
+    val voidBrush = remember(voidShader) { voidShader?.let { androidx.compose.ui.graphics.ShaderBrush(it) } }
 
     val transitionShader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -55,12 +56,12 @@ fun GhostPhasingLayer(
 
     Box(modifier = modifier.fillMaxSize()) {
         // Backstage Background (Neural Void)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && phase > 0.01f && voidShader != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && phase > 0.01f && voidShader != null && voidBrush != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
                 voidShader.setFloatUniform("iResolution", size.width, size.height)
                 voidShader.setFloatUniform("iTime", time)
                 voidShader.setFloatUniform("iIntensity", phase)
-                drawRect(brush = androidx.compose.ui.graphics.ShaderBrush(voidShader))
+                drawRect(brush = voidBrush)
             }
         }
 
