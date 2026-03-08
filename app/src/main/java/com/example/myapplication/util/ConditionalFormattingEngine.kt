@@ -326,6 +326,34 @@ object ConditionalFormattingEngine {
     /**
      * Determines if a specific rule's condition is met for the given student and context.
      *
+     * This evaluation happens inside the Stage 2 transformation of the seating chart update
+     * pipeline. It is designed to be highly efficient, leveraging BOLT optimizations to
+     * avoid redundant computation.
+     *
+     * ### Evaluation Logic:
+     * 1. **Global Mode Filter**: Rules with [Condition.activeModes] only execute if the
+     *    current UI mode matches one of the specified modes.
+     * 2. **Global Time Filter**: Rules with [Condition.activeTimes] only execute if the
+     *    current system time falls within the specified ranges.
+     * 3. **Behavioral Analysis**: Rules using `behavior_count` leverage manual loops and early
+     *    returns to quickly count incidents within the sliding time window.
+     * 4. **Academic Analysis**: Rules using `quiz_score_threshold` or `quiz_mark_count`
+     *    evaluate historical data and use [decodedMarksCache] to minimize JSON overhead.
+     * 5. **Live Session Analysis**: Rules using `live_quiz_*` or `live_homework_*` check
+     *    real-time session state from the [liveQuizScores] and [liveHomeworkScores] maps.
+     *
+     * @param student The student UI data being rendered.
+     * @param rule The pre-decoded rule to evaluate.
+     * @param behaviorLog Complete list of behavior events for context.
+     * @param quizLog Complete list of quiz logs for context.
+     * @param homeworkLog Complete list of homework logs for context.
+     * @param isLiveQuizActive Whether a live quiz session is currently in progress.
+     * @param liveQuizScores Map of student ID to their current session data.
+     * @param isLiveHomeworkActive Whether a live homework check is currently in progress.
+     * @param liveHomeworkScores Map of student ID to their current session data.
+     * @param currentMode The current UI mode.
+     * @param currentTimeMillis The current system time (cached).
+     * @param timeContext Pre-calculated day and time strings.
      * @return True if the condition matches, false otherwise.
      */
     private fun checkCondition(

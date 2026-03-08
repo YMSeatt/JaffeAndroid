@@ -57,9 +57,15 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
          * The legacy, hardcoded shared key used by the Python desktop application
          * and earlier versions of the Android app.
          *
-         * **Role in Ecosystem**: This key serves as the cryptographic bridge for cross-platform
-         * data sync. It allows the Android app to decrypt classroom data exported from the
-         * Python app, which still relies on this shared secret (see `Python/encryption_key.py`).
+         * **Role in Ecosystem (Cryptographic Glue)**: This key serves as the primary bridge
+         * for cross-platform data synchronization. It allows the Android app to decrypt
+         * classroom data exported from the Python application, which still relies on this
+         * shared secret (see `Python/encryption_key.py`).
+         *
+         * **Security Strategy**: To minimize the risk of maintaining this hardcoded key, the
+         * application uses it strictly for ingestion. Once data is successfully decrypted
+         * during an import, it is immediately re-encrypted using modern, hardware-backed keys
+         * managed by the Android KeyStore (`fernet.key.v2`).
          */
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
