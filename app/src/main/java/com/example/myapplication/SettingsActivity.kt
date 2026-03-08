@@ -1,6 +1,7 @@
 package com.example.myapplication
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -32,6 +33,9 @@ class SettingsActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of settings (e.g., SMTP passwords, PII)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+
         setContent {
             val appTheme by settingsViewModel.appTheme.collectAsState()
             val noAnimations by settingsViewModel.noAnimations.collectAsState()
