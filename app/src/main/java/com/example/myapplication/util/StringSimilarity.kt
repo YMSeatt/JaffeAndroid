@@ -27,10 +27,21 @@ object StringSimilarity {
 
     /**
      * Calculates the Levenshtein distance between two strings.
-     * This represents the minimum number of single-character edits (insertions, deletions or substitutions)
-     * required to change one word into the other.
      *
-     * BOLT: Uses ThreadLocal buffers to avoid O(N) allocations per call.
+     * The Levenshtein distance represents the minimum number of single-character edits
+     * (insertions, deletions, or substitutions) required to change one string into another.
+     *
+     * ### BOLT Optimization:
+     * This method is frequently called during [com.example.myapplication.data.importer.Importer]
+     * operations when fuzzy-matching hundreds of student names from layout templates.
+     * To prevent O(N) memory allocations per call, it utilizes a **ThreadLocal Buffer Reuse**
+     * strategy. Reusable [IntArray] buffers are maintained per-thread, avoiding the overhead
+     * of constant row allocations and reducing pressure on the Android Garbage Collector.
+     *
+     * @param s1 The first string to compare.
+     * @param s2 The second string to compare.
+     * @param ignoreCase Whether to perform a case-insensitive comparison.
+     * @return The integer distance (0 for identical strings).
      */
     fun levenshteinDistance(s1: CharSequence, s2: CharSequence, ignoreCase: Boolean = false): Int {
         if (s1 == s2) return 0
