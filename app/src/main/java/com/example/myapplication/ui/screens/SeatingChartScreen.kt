@@ -234,6 +234,7 @@ fun SeatingChartScreen(
     var isZenithActive by remember { mutableStateOf(false) }
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
+    var isHorizonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -335,6 +336,7 @@ fun SeatingChartScreen(
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
+    val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
     val ghostZenithEngine = remember { GhostZenithEngine(context) }
     val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
     val ghostLensEngine = remember { GhostLensEngine() }
@@ -356,11 +358,15 @@ fun SeatingChartScreen(
             if (GhostConfig.HOLOGRAM_MODE_ENABLED) {
                 ghostHologramEngine.start()
             }
+            if (GhostConfig.HORIZON_MODE_ENABLED) {
+                ghostHorizonEngine.start()
+            }
         }
         onDispose {
             ghostVoiceAssistant.destroy()
             ghostEchoEngine.stop()
             ghostHologramEngine.stop()
+            ghostHorizonEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
         }
     }
@@ -574,6 +580,8 @@ fun SeatingChartScreen(
                 onToggleEntropy = { isEntropyActive = !isEntropyActive },
                 isZenithActive = isZenithActive,
                 onToggleZenith = { isZenithActive = !isZenithActive },
+                isHorizonActive = isHorizonActive,
+                onToggleHorizon = { isHorizonActive = !isHorizonActive },
                 isEmergenceActive = isEmergenceActive,
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
@@ -714,6 +722,7 @@ fun SeatingChartScreen(
                 )
 
         ) {
+            GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
             GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
@@ -1546,6 +1555,8 @@ fun SeatingChartTopAppBar(
     onToggleEntropy: () -> Unit,
     isZenithActive: Boolean,
     onToggleZenith: () -> Unit,
+    isHorizonActive: Boolean,
+    onToggleHorizon: () -> Unit,
     isEmergenceActive: Boolean,
     onToggleEmergence: () -> Unit,
     isCatalystActive: Boolean,
@@ -1853,6 +1864,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.HORIZON_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isHorizonActive) "Static Sky 👻" else "Ghost Horizon 👻") },
+                                onClick = {
+                                    onToggleHorizon()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
                         }
                         if (GhostConfig.EMERGENCE_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {

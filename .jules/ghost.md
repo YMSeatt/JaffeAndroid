@@ -158,4 +158,22 @@ In 2027, teachers don't just record history; they simulate the future. **Ghost F
 - **Probabilistic Forecasting**: Using `GhostOracle` as a heuristic engine allows for a lightweight, on-device simulation that feels "intelligent" without requiring massive compute.
 
 ---
+
+## 🌅 Experiment: Ghost Horizon (Context-Aware Atmospheric Depth)
+**Date:** 2027-08-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, UIs won't just be static "Dark" or "Light" modes; they will adapt to the physical environment of the classroom. "Ghost Horizon" is a context-aware visualization layer that uses the device's physical sensors to drive a "Neural Day/Night" cycle.
+
+### 🛠️ The Tech
+- **Android Sensor APIs**: Utilizes `Sensor.TYPE_LIGHT` (Lux) and `Sensor.TYPE_PRESSURE` (hPa).
+- **AGSL Atmospheric Shader**: Implements a dynamic color-shifting gradient that moves between "Amber Ghost" (Low Light) and "Solarized Cyan" (Bright Light).
+- **Barometric Verticality**: Maps air pressure to the vertical offset of the horizon line, simulating a shift in perspective based on the teacher's physical elevation/standing height.
+
+### 🔦 The Discovery
+- **Sensor Fusion for UI**: We discovered that mapping raw physical environment data to shader uniforms creates a "calm" UI that feels naturally integrated into the room rather than being a disconnected digital surface.
+- **Low-Pass Filtering**: Aggressive filtering (0.9-0.95 alpha) is required for light and pressure sensors to avoid jarring visual shifts from small physical movements or light flickers.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
