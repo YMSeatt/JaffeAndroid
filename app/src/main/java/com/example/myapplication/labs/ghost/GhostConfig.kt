@@ -102,4 +102,7 @@ object GhostConfig {
 
     /** Enables "Ghost Catalyst" behavioral chain reaction mapping. */
     const val CATALYST_MODE_ENABLED = true
+
+    /** Enables "Ghost Horizon" context-aware atmospheric visualization. */
+    const val HORIZON_MODE_ENABLED = true
 }
