@@ -143,6 +143,9 @@ object GhostEntanglementEngine {
 
     /**
      * Helper to calculate student synchronicity metrics.
+     *
+     * **BOLT Optimization**: Replaced functional operators with manual loops to minimize
+     * object allocations and list traversals during neural analysis.
      */
     fun calculateNodeMetrics(
         behaviorLogs: List<BehaviorEvent>,
@@ -151,27 +154,59 @@ object GhostEntanglementEngine {
     ): Pair<Float, Float> {
         // behaviorSync: Measures the "tempo" of behavior logs
         val bSync = if (behaviorLogs.isEmpty()) 0.5f else {
-            val timestamps = behaviorLogs.map { it.timestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }.sorted()
-            if (timestamps.size < 2) 0.5f else {
-                val intervals = mutableListOf<Long>()
-                for (i in 0 until timestamps.size - 1) {
-                    intervals.add(timestamps[i+1] - timestamps[i])
+            val n = behaviorLogs.size
+            val timestamps = LongArray(n)
+            for (i in 0 until n) {
+                timestamps[i] = behaviorLogs[i].timestamp
+            }
+            timestamps.sort()
+
+            if (n < 2) 0.5f else {
+                var totalInterval = 0.0
+                val intervals = DoubleArray(n - 1)
+                for (i in 0 until n - 1) {
+                    val interval = (timestamps[i + 1] - timestamps[i]).toDouble()
+                    intervals[i] = interval
+                    totalInterval += interval
                 }
-                val avgInterval = intervals.average()
+                val avgInterval = totalInterval / (n - 1)
+
                 // Higher sync for consistent intervals (lower variance)
-                val variance = intervals.map { (it - avgInterval) * (it - avgInterval) }.average()
-                exp(-variance / (1000f * 1000f * 60f)).toFloat().coerceIn(0f, 1f)
+                var totalVariance = 0.0
+                for (interval in intervals) {
+                    val diff = interval - avgInterval
+                    totalVariance += diff * diff
+                }
+                val variance = totalVariance / (n - 1)
+                exp(-variance / (1000.0 * 1000.0 * 60.0)).toFloat().coerceIn(0f, 1f)
             }
         }
 
         // academicParity: Measures overall performance level
         val aParity = if (quizLogs.isEmpty() && homeworkLogs.isEmpty()) 0.5f else {
-            val qAvg = if (quizLogs.isNotEmpty()) {
-                quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }.average().toFloat()
-            } else 0.5f
-            val hAvg = if (homeworkLogs.isNotEmpty()) {
-                homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toFloat() / homeworkLogs.size
-            } else 0.5f
+            val qAvg = if (quizLogs.isEmpty()) 0.5f else {
+                var totalRatio = 0.0
+                var count = 0
+                for (log in quizLogs) {
+                    val v = log.markValue
+                    val m = log.maxMarkValue
+                    if (v != null && m != null && m > 0) {
+                        totalRatio += (v / m)
+                        count++
+                    }
+                }
+                if (count > 0) (totalRatio / count).toFloat() else 0.5f
+            }
+
+            val hAvg = if (homeworkLogs.isEmpty()) 0.5f else {
+                var doneCount = 0
+                for (log in homeworkLogs) {
+                    if (log.status.contains("Done", ignoreCase = true)) {
+                        doneCount++
+                    }
+                }
+                doneCount.toFloat() / homeworkLogs.size
+            }
             (qAvg + hAvg) / 2f
         }
 

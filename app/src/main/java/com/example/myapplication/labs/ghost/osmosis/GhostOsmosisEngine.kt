@@ -209,27 +209,57 @@ object GhostOsmosisEngine {
         return gradients
     }
 
+    /**
+     * Calculates the 'Academic Potential' and 'Behavioral Concentration' for a student.
+     *
+     * **BOLT Optimization**: Replaced functional operators (filter, map, average, count) with
+     * manual loops to avoid redundant object allocations and multiple list traversals
+     * per student during the high-frequency seating chart update pipeline.
+     */
     fun calculateStudentPotentials(
         behaviorLogs: List<BehaviorEvent>,
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): Pair<Float, Float> {
         val kPotential = if (quizLogs.isEmpty() && homeworkLogs.isEmpty()) 0.5f else {
-            val qAvg = if (quizLogs.isNotEmpty()) {
-                quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }.average().toFloat()
-            } else 0.5f
+            val qAvg = if (quizLogs.isEmpty()) 0.5f else {
+                var totalRatio = 0.0
+                var count = 0
+                for (log in quizLogs) {
+                    val v = log.markValue
+                    val m = log.maxMarkValue
+                    if (v != null && m != null && m > 0) {
+                        totalRatio += (v / m)
+                        count++
+                    }
+                }
+                if (count > 0) (totalRatio / count).toFloat() else 0.5f
+            }
 
-            val hAvg = if (homeworkLogs.isNotEmpty()) {
-                homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toFloat() / homeworkLogs.size
-            } else 0.5f
+            val hAvg = if (homeworkLogs.isEmpty()) 0.5f else {
+                var doneCount = 0
+                for (log in homeworkLogs) {
+                    if (log.status.contains("Done", ignoreCase = true)) {
+                        doneCount++
+                    }
+                }
+                doneCount.toFloat() / homeworkLogs.size
+            }
 
             (qAvg + hAvg) / 2f
         }
 
         val bConcentration = if (behaviorLogs.isEmpty()) 0f else {
-            val pos = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-            val neg = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
-            (pos - neg).toFloat() / behaviorLogs.size.coerceAtLeast(1)
+            var pos = 0
+            var neg = 0
+            for (event in behaviorLogs) {
+                if (event.type.contains("Negative", ignoreCase = true)) {
+                    neg++
+                } else {
+                    pos++
+                }
+            }
+            (pos - neg).toFloat() / behaviorLogs.size
         }
 
         return Pair(kPotential.coerceIn(0f, 1f), bConcentration.coerceIn(-1f, 1f))

@@ -54,7 +54,7 @@ fun GhostEntanglementLayer(
         // Convert StudentUiItem to EntangledNode for calculation
         val nodes = students.map { student ->
             GhostEntanglementEngine.EntangledNode(
-                id = student.id,
+                id = student.id.toLong(),
                 x = student.xPosition.value,
                 y = student.yPosition.value,
                 behaviorSync = 0.7f, // Mock: In real app, calculate from logs
