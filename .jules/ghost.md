@@ -176,4 +176,22 @@ In 2027, UIs won't just be static "Dark" or "Light" modes; they will adapt to th
 - **Low-Pass Filtering**: Aggressive filtering (0.9-0.95 alpha) is required for light and pressure sensors to avoid jarring visual shifts from small physical movements or light flickers.
 
 ---
+
+## 🌸 Experiment: Ghost Flora (Neural Botanical Visualization)
+**Date:** 2027-09-12
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, the classroom isn't just a grid; it's a living ecosystem. **Ghost Flora** translates student data into biological metaphors. We moved from static charts to "living" data. When a student thrives, their digital flower blooms; when they struggle, it wilts. This provides an intuitive, non-verbal "vibe check" for the teacher, turning data into a beautiful garden.
+
+### 🛠️ The Tech
+- **Procedural AGSL Generation**: Implemented a `NEURAL_BLOOM` shader using polar warping and fractal noise to create unique blossoms.
+- **Botanical Growth Engine**: Maps behavioral logs to "Sunlight" (Positive) and "Wilting" (Negative) state variables.
+- **Python Data Bridge**: `Python/ghost_flora_analysis.py` provides parity for classroom-wide botanical state analysis.
+
+### 🔦 The Discovery
+- **Biological Intuition**: We discovered that "Wilting" (brownish hues and shrinking petals) is a more powerful emotional cue for teachers than red bar charts.
+- **Deterministic Variety**: By seeding petal counts with student IDs, we create a diverse "garden" that still remains consistent for each student.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
