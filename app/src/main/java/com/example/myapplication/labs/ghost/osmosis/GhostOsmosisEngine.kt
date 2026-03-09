@@ -19,6 +19,8 @@ import kotlin.math.sqrt
 object GhostOsmosisEngine {
     private const val CANVAS_SIZE = 4000f
     private const val DIFFUSION_RADIUS = 1000f // Effective radius for osmosis
+    /** BOLT: Pre-calculated constant for Gaussian weight (2 * 400^2) */
+    private const val GAUSSIAN_DENOMINATOR = 320000f
 
     data class OsmoticNode(
         val id: Long,
@@ -73,6 +75,7 @@ object GhostOsmosisEngine {
 
         var totalDiffusion = 0.0
         var interactions = 0
+        val diffusionRadiusSq = diffusionRadius * diffusionRadius
 
         for (i in students.indices) {
             for (j in i + 1 until students.size) {
@@ -81,15 +84,16 @@ object GhostOsmosisEngine {
 
                 val dx = s1.x - s2.x
                 val dy = s1.y - s2.y
-                val dist = sqrt(dx * dx + dy * dy)
+                val distSq = dx * dx + dy * dy
 
-                if (dist < diffusionRadius) {
+                if (distSq < diffusionRadiusSq) {
                     // Calculate 'Osmotic Pressure' (difference in potential)
                     val kDiff = abs(s1.knowledgePotential - s2.knowledgePotential)
                     val bDiff = abs(s1.behaviorConcentration - s2.behaviorConcentration)
 
                     // Weight by proximity (Gaussian)
-                    val weight = exp(-(dist * dist) / (2 * 400f * 400f))
+                    // BOLT: Removed sqrt and used pre-calculated denominator
+                    val weight = exp(-distSq / GAUSSIAN_DENOMINATOR)
                     totalDiffusion += (kDiff + bDiff) * weight
                     interactions++
                 }
@@ -159,6 +163,7 @@ object GhostOsmosisEngine {
     ): List<DiffusionGradient> {
         val gradients = mutableListOf<DiffusionGradient>()
         val step = CANVAS_SIZE / gridSize
+        val diffusionRadiusSq = DIFFUSION_RADIUS * DIFFUSION_RADIUS
 
         for (iy in 0 until gridSize) {
             for (ix in 0 until gridSize) {
@@ -172,11 +177,12 @@ object GhostOsmosisEngine {
                 students.forEach { student ->
                     val dx = gx - student.x
                     val dy = gy - student.y
-                    val dist = sqrt(dx * dx + dy * dy)
+                    val distSq = dx * dx + dy * dy
 
-                    if (dist < DIFFUSION_RADIUS) {
+                    if (distSq < diffusionRadiusSq) {
                         // Gaussian decay for diffusion weight
-                        val weight = exp(-(dist * dist) / (2 * 400f * 400f))
+                        // BOLT: Removed sqrt and used pre-calculated denominator
+                        val weight = exp(-distSq / GAUSSIAN_DENOMINATOR)
                         totalKnowledge += student.knowledgePotential * weight
                         totalBehavior += student.behaviorConcentration * weight
                         totalWeight += weight

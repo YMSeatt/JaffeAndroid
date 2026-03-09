@@ -145,6 +145,8 @@ import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
+import com.example.myapplication.labs.ghost.GhostHorizonEngine
+import com.example.myapplication.labs.ghost.GhostHorizonLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import androidx.lifecycle.viewmodel.compose.viewModel

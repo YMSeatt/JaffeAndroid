@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -257,7 +258,6 @@ fun ExportDialog(
                             includeMasterLog = includeMasterLog,
                             includeIndividualStudentSheets = includeIndividualStudentSheets,
                             includeStudentInfoSheet = includeIndividualStudentSheets, // Defaulting info sheet to same as individual sheets for now
-                            includeStudentInfoSheet = includeIndividualStudentSheets,
                             includeAttendanceSheet = includeAttendanceSheet,
                             encrypt = encryptFile
                         )
