@@ -44,16 +44,17 @@ class GhostCatalystEngine {
         val reactions = mutableListOf<Reaction>()
         val radiusSq = radius * radius
 
-        // Sort events by timestamp to process chronologically
-        val sortedEvents = events.sortedBy { it.timestamp }
+        // BOLT: Removed redundant sortedBy call as DAO provides logs in sorted order (DESC).
+        // Using asReversed() to process chronologically without O(N log N) overhead.
+        val chronologicalEvents = events.asReversed()
         val studentMap = students.associateBy { it.id }
 
-        for (i in sortedEvents.indices) {
-            val catalystEvent = sortedEvents[i]
+        for (i in chronologicalEvents.indices) {
+            val catalystEvent = chronologicalEvents[i]
             val catalystStudent = studentMap[catalystEvent.studentId] ?: continue
 
-            for (j in i + 1 until sortedEvents.size) {
-                val reactantEvent = sortedEvents[j]
+            for (j in i + 1 until chronologicalEvents.size) {
+                val reactantEvent = chronologicalEvents[j]
 
                 // Temporal Pruning
                 if (reactantEvent.timestamp > catalystEvent.timestamp + timeWindowMs) break
