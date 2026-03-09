@@ -145,6 +145,7 @@ import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
+import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -234,6 +235,7 @@ fun SeatingChartScreen(
     var isZenithActive by remember { mutableStateOf(false) }
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
+    var isFloraActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
@@ -582,6 +584,8 @@ fun SeatingChartScreen(
                 onToggleZenith = { isZenithActive = !isZenithActive },
                 isHorizonActive = isHorizonActive,
                 onToggleHorizon = { isHorizonActive = !isHorizonActive },
+                isFloraActive = isFloraActive,
+                onToggleFlora = { isFloraActive = !isFloraActive },
                 isEmergenceActive = isEmergenceActive,
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
@@ -811,6 +815,17 @@ fun SeatingChartScreen(
                         isActive = isCatalystActive
                     )
                 }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLORA_MODE_ENABLED && isFloraActive) {
+                GhostFloraLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isFloraActive
+                )
             }
 
 
@@ -1562,6 +1577,8 @@ fun SeatingChartTopAppBar(
     onToggleZenith: () -> Unit,
     isHorizonActive: Boolean,
     onToggleHorizon: () -> Unit,
+    isFloraActive: Boolean,
+    onToggleFlora: () -> Unit,
     isEmergenceActive: Boolean,
     onToggleEmergence: () -> Unit,
     isCatalystActive: Boolean,
@@ -1799,6 +1816,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.FLORA_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isFloraActive) "Winter Phase 👻" else "Ghost Flora 👻") },
+                                onClick = {
+                                    onToggleFlora()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                             )
                         }
                         if (GhostConfig.FUTURE_MODE_ENABLED) {

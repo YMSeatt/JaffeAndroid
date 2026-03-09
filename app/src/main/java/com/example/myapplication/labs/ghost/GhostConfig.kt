@@ -105,4 +105,7 @@ object GhostConfig {
 
     /** Enables "Ghost Horizon" context-aware atmospheric visualization. */
     const val HORIZON_MODE_ENABLED = true
+
+    /** Enables "Ghost Flora" procedural botanical visualization. */
+    const val FLORA_MODE_ENABLED = true
 }
