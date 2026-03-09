@@ -84,5 +84,16 @@ Maintaining data portability between the Python desktop application and the Andr
 
 For detailed architecture, see the [Importer Package README](app/src/main/java/com/example/myapplication/data/importer/README.md).
 
+## 🧠 ViewModel Architecture & Performance
+
+The ViewModel layer manages the application's UI state and coordinates between the Compose UI and the relational Room database.
+
+- **Unidirectional Data Flow (UDF)**: ViewModels expose state via `LiveData` or `StateFlow` and receive user actions via public methods, ensuring a predictable data cycle.
+- **The Central Coordinator**: `SeatingChartViewModel` acts as the primary hub, merging streams from students, logs, groups, and conditional formatting rules into a unified UI state.
+- **BOLT (Performance-Obsessed) Patterns**:
+    - **Identity Preservation**: Persistent caches of UI items (e.g., `StudentUiItem`) allow Compose to perform property-level "diff-and-patch" updates, maintaining 60fps even during complex drag gestures.
+    - **Memoized Pipelines**: Stage 2 of the student update cycle utilizes identity-based caching to avoid redundant re-calculations of formatting or log descriptions when irrelevant data (like item positions) changes.
+    - **Optimistic UI**: The icon components update their local `MutableState` immediately during gestures, while the ViewModel handles the asynchronous database synchronization in the background.
+
 ---
 *Documentation love letter from Scribe 📜*

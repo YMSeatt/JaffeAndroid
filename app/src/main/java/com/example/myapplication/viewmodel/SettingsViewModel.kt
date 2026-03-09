@@ -56,6 +56,19 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import javax.inject.Inject
 
+/**
+ * SettingsViewModel: Manages application configuration, data migration, and archival.
+ *
+ * This ViewModel handles:
+ * 1. **User Preferences**: Synchronizing local settings (e.g., UI timeouts, theme, font styles)
+ *    with the [AppPreferencesRepository].
+ * 2. **Database Lifecycle**: Managing the archival of historical data into dedicated `archives/`
+ *    directories and restoring from backups.
+ * 3. **Data Ingestion**: Coordinating the import of classroom data from cross-platform JSON
+ *    exports using the [JsonImporter].
+ * 4. **System Category Management**: Providing interfaces to manage custom behaviors,
+ *    homework types, and quiz mark templates.
+ */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val application: Application,
@@ -81,6 +94,13 @@ class SettingsViewModel @Inject constructor(
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
 
+    /**
+     * Creates a point-in-time backup of the current database.
+     *
+     * **Hardening Strategy**: Archives are stored in a dedicated 'archives' subdirectory
+     * within the app's private internal storage. This allows for easier exclusion from
+     * standard Android cloud backups if desired and protects student PII.
+     */
     fun archiveCurrentYear() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
@@ -99,6 +119,14 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Scans the app's internal storage for archived database files.
+     *
+     * **Privacy Fix**: Includes a one-time migration to move legacy archives from
+     * the root internal directory into the hardened `archives/` subdirectory.
+     *
+     * @return A list of archive filenames (e.g., "archive_2024-05-01.db").
+     */
     fun listArchivedDatabases(): List<String> {
         val context = application
         val archiveDir = File(context.filesDir, "archives")
@@ -123,6 +151,10 @@ class SettingsViewModel @Inject constructor(
             ?.map { it.name } ?: emptyList()
     }
 
+    /**
+     * Switches the application's active database to a specific archive.
+     * This is used for viewing historical data without overwriting the live classroom state.
+     */
     fun loadArchivedDatabase(fileName: String) {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
@@ -131,6 +163,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Resets the application to use the primary production database.
+     */
     fun restoreLiveDatabase() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
@@ -139,6 +174,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Imports a complete classroom snapshot from fragmented JSON files.
+     *
+     * This method orchestrates the [JsonImporter] to process students, groups, behaviors,
+     * and templates exported from the Python desktop application.
+     */
     suspend fun importFromJson(uri: Uri) {
         val directory = DocumentFile.fromTreeUri(application, uri)
 
@@ -527,6 +568,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Copies the active database file to an external location.
+     */
     suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
@@ -541,6 +585,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Overwrites the active database with a file from an external source.
+     * Triggers a [restoreComplete] event upon success.
+     */
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         AppDatabase.getDatabase(application).close()
@@ -570,6 +618,11 @@ class SettingsViewModel @Inject constructor(
         _restoreComplete.postValue(true) // This will trigger the restart
     }
 
+    /**
+     * Force-restarts the application.
+     * Used after a database restoration to ensure all components are re-initialized
+     * with the new data source.
+     */
     fun triggerRebirth() {
         val packageManager = application.packageManager
         val intent = packageManager.getLaunchIntentForPackage(application.packageName)
@@ -720,6 +773,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Prepares the database file for sharing via system intents.
+     * Copies the DB to the cache directory and provides a content URI.
+     */
     suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         val cacheDir = application.cacheDir
@@ -742,6 +799,10 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
+    /**
+     * Persists a seating chart screenshot to the app's private cache.
+     * @return A content URI for sharing the image.
+     */
     suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
         val context = application
         val filename = "screenshot_${System.currentTimeMillis()}.png"
