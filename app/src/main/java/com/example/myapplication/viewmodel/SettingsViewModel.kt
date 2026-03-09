@@ -74,7 +74,8 @@ class SettingsViewModel @Inject constructor(
     private val homeworkTemplateDao: HomeworkTemplateDao,
     private val systemBehaviorDao: com.example.myapplication.data.SystemBehaviorDao,
     private val behaviorEventDao: BehaviorEventDao,
-    private val homeworkLogDao: HomeworkLogDao
+    private val homeworkLogDao: HomeworkLogDao,
+    private val securityUtil: SecurityUtil
 ) : ViewModel() {
 
     private val _restoreComplete = MutableLiveData<Boolean>()
@@ -528,9 +529,14 @@ class SettingsViewModel @Inject constructor(
 
     suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         application.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            FileInputStream(dbFile).use { inputStream ->
-                inputStream.copyTo(outputStream)
+            val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
+            if (encrypt) {
+                val encryptedToken = securityUtil.encrypt(dbBytes)
+                outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
+            } else {
+                outputStream.write(dbBytes)
             }
         }
     }
@@ -539,8 +545,26 @@ class SettingsViewModel @Inject constructor(
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         AppDatabase.getDatabase(application).close()
         application.contentResolver.openInputStream(uri)?.use { inputStream ->
+            val inputBytes = inputStream.readBytes()
+
+            val decryptedBytes = if (inputBytes.size >= 6 &&
+                inputBytes[0] == 'g'.toByte() &&
+                inputBytes[1] == 'A'.toByte() &&
+                inputBytes[2] == 'A'.toByte() &&
+                inputBytes[3] == 'A'.toByte() &&
+                inputBytes[4] == 'A'.toByte() &&
+                inputBytes[5] == 'A'.toByte()) {
+                try {
+                    securityUtil.decryptToByteArray(String(inputBytes, Charsets.UTF_8))
+                } catch (e: Exception) {
+                    inputBytes
+                }
+            } else {
+                inputBytes
+            }
+
             FileOutputStream(dbFile, false).use { outputStream ->
-                inputStream.copyTo(outputStream)
+                outputStream.write(decryptedBytes)
             }
         }
         _restoreComplete.postValue(true) // This will trigger the restart
@@ -700,7 +724,17 @@ class SettingsViewModel @Inject constructor(
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         val cacheDir = application.cacheDir
         val sharedDbFile = java.io.File(cacheDir, "seating_chart_database.db")
-        dbFile.copyTo(sharedDbFile, overwrite = true)
+
+        val encrypt = preferencesRepository.encryptDataFilesFlow.first()
+        val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
+
+        if (encrypt) {
+            val encryptedToken = securityUtil.encrypt(dbBytes)
+            sharedDbFile.writeText(encryptedToken)
+        } else {
+            sharedDbFile.writeBytes(dbBytes)
+        }
+
         return@withContext androidx.core.content.FileProvider.getUriForFile(
             application,
             "com.example.myapplication.fileprovider",
