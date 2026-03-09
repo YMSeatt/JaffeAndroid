@@ -29,6 +29,7 @@ import java.util.Locale
 @Composable
 fun ExportDialog(
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit,
     onExport: (ExportOptions, Boolean) -> Unit
 ) {
@@ -50,8 +51,10 @@ fun ExportDialog(
     var includeSummarySheet by remember { mutableStateOf(true) }
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
+    val encryptDataFilesPref by settingsViewModel.encryptDataFiles.collectAsState()
     var includeIndividualStudentSheets by remember { mutableStateOf(true) }
     var includeAttendanceSheet by remember { mutableStateOf(false) }
+    var encryptFile by remember { mutableStateOf(encryptDataFilesPref) }
 
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
@@ -226,6 +229,14 @@ fun ExportDialog(
                     Checkbox(checked = includeAttendanceSheet, onCheckedChange = { includeAttendanceSheet = it })
                     Text("Attendance Sheet")
                 }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = encryptFile, onCheckedChange = { encryptFile = it })
+                    Column {
+                        Text("Protect with Encryption (Fernet)")
+                        Text("Adds cryptographic layer to the exported file.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -245,7 +256,10 @@ fun ExportDialog(
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
                             includeIndividualStudentSheets = includeIndividualStudentSheets,
-                            includeAttendanceSheet = includeAttendanceSheet
+                            includeStudentInfoSheet = includeIndividualStudentSheets, // Defaulting info sheet to same as individual sheets for now
+                            includeStudentInfoSheet = includeIndividualStudentSheets,
+                            includeAttendanceSheet = includeAttendanceSheet,
+                            encrypt = encryptFile
                         )
                         onExport(options, false)
                     }
@@ -268,7 +282,8 @@ fun ExportDialog(
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
                             includeIndividualStudentSheets = includeIndividualStudentSheets,
-                            includeAttendanceSheet = includeAttendanceSheet
+                            includeAttendanceSheet = includeAttendanceSheet,
+                            encrypt = encryptFile
                         )
                         onExport(options, true)
                     }

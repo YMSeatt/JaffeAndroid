@@ -1246,15 +1246,20 @@ fun SeatingChartScreen(
             }
 
             if (showExportDialog) {
-                ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options, share ->
-                    seatingChartViewModel.pendingExportOptions = options
-                    if (share) {
-                        onShowEmailDialogChange(true)
-                    } else {
-                        createDocumentLauncher.launch("seating_chart_export.xlsx")
+                ExportDialog(
+                    viewModel = seatingChartViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismissRequest = { showExportDialog = false },
+                    onExport = { options, share ->
+                        seatingChartViewModel.pendingExportOptions = options
+                        if (share) {
+                            onShowEmailDialogChange(true)
+                        } else {
+                            createDocumentLauncher.launch("seating_chart_export.xlsx")
+                        }
+                        showExportDialog = false
                     }
-                    showExportDialog = false
-                })
+                )
             }
 
             if (showEmailDialog) {
