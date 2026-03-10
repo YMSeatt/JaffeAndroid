@@ -6,14 +6,23 @@ import kotlinx.serialization.Serializable
 
 /**
  * Represents a student in the seating chart.
- * Contains basic information, positioning on the chart, and highly customizable UI styling.
+ *
+ * This entity serves as the central anchor for the classroom's relational data model. It stores
+ * basic demographics, seating chart coordinates, and a wide array of visual customization
+ * properties that drive the reactive UI.
+ *
+ * ### Multi-Platform Identity
+ * To support seamless data migration between the Python desktop application and the Android app:
+ * - **`id` (Long)**: The primary key for the local Room database, optimized for SQLite performance.
+ * - **`stringId` (String)**: A persistent UUID-based identifier. This is the "cryptographic glue"
+ *   used to maintain referential integrity when importing or exporting JSON data across platforms.
  */
 @Serializable
 @Entity(tableName = "students")
 data class Student(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    /** Unique string identifier, often used for synchronization with external data (e.g., "student_123"). */
+    /** Persistent UUID identifier used for cross-platform data synchronization. */
     val stringId: String? = null,
     val firstName: String,
     val lastName: String,
