@@ -157,6 +157,16 @@ class Exporter(
 
         val filteredQuizLogs = quizLogs
 
+        // BOLT: Pre-calculate dynamic homework keys once to avoid redundant O(N) scans in createSheet
+        val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
+        val dynamicHomeworkKeys = mutableSetOf<String>()
+        for (log in filteredHomeworkLogs) {
+            log.marksData?.let { json ->
+                dynamicHomeworkKeys.addAll(parseMarksData(json).keys)
+            }
+        }
+        val sortedDynamicKeys = dynamicHomeworkKeys.filter { it !in knownHomeworkKeys }.sorted()
+
         val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
             when (it) {
                 is BehaviorEvent -> it.timestamp
@@ -172,27 +182,27 @@ class Exporter(
         // Create sheets
         if (options.separateSheets) {
             if (options.includeBehaviorLogs) {
-                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
             }
             if (options.includeQuizLogs) {
-                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
             }
             if (options.includeHomeworkLogs) {
-                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
             }
             if (options.includeMasterLog) {
-                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
             }
         } else {
-            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeSummarySheet) {
-            createSummarySheet(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createSummarySheet(workbook, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
         }
 
         if (options.includeIndividualStudentSheets) {
-            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeStudentInfoSheet) {
@@ -250,7 +260,8 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        context: FormattingContext
+        context: FormattingContext,
+        dynamicHomeworkKeys: List<String>
     ) {
         val sheet = workbook.createSheet(sheetName)
 
@@ -264,22 +275,6 @@ class Exporter(
             headers.add("Log Type")
         }
 
-        // Collect dynamic keys from Homework Logs if relevant
-        // BOLT: Avoid filterIsInstance loop and use a more efficient collection strategy
-        val dynamicHomeworkKeys = if (sheetName == "Homework Log" || isMasterLog) {
-            val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
-            val keys = mutableSetOf<String>()
-            for (item in data) {
-                if (item is HomeworkLog) {
-                    item.marksData?.let { json ->
-                        keys.addAll(parseMarksData(json).keys)
-                    }
-                }
-            }
-            keys.filter { it !in knownHomeworkKeys }.sorted()
-        } else {
-            emptyList()
-        }
 
         when (sheetName) {
             "Behavior Log" -> headers.add("Behavior")
@@ -512,7 +507,9 @@ class Exporter(
      * All summaries are sorted by student last name to ensure a professional report layout.
      *
      * @param workbook The Apache POI Workbook instance.
-     * @param data All log entries included in the export.
+     * @param behaviorLogs Filtered behavior incidents.
+     * @param homeworkLogs Filtered homework logs.
+     * @param quizLogs Filtered quiz logs.
      * @param students Map of students for name resolution.
      * @param quizMarkTypes Configuration for score calculation.
      * @param customHomeworkTypes Configuration for homework point aggregation.
@@ -521,7 +518,9 @@ class Exporter(
      */
     private suspend fun createSummarySheet(
         workbook: Workbook,
-        data: List<Any>,
+        behaviorLogs: List<BehaviorEvent>,
+        homeworkLogs: List<HomeworkLog>,
+        quizLogs: List<QuizLog>,
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
@@ -532,7 +531,6 @@ class Exporter(
         var currentRow = 0
 
         // Behavior Summary
-        val behaviorLogs = data.filterIsInstance<BehaviorEvent>()
         if (behaviorLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Behavior Summary by Student")
@@ -561,7 +559,6 @@ class Exporter(
         }
 
         // Quiz Summary
-        val quizLogs = data.filterIsInstance<QuizLog>()
         if (quizLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Quiz Averages by Student")
@@ -609,7 +606,6 @@ class Exporter(
         }
 
         // Homework Summary
-        val homeworkLogs = data.filterIsInstance<HomeworkLog>()
         if (homeworkLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Homework Completion by Student")
@@ -658,21 +654,22 @@ class Exporter(
     /**
      * Creates a separate worksheet for each student that has associated log entries.
      *
-     * This method is optimized for large classrooms by grouping all provided logs
-     * by student ID in a single pass before creating the worksheets. Sheet names
-     * are sanitized to comply with Excel's naming restrictions (max 31 characters,
-     * restricted special symbols).
+     * This method is optimized for large classrooms by grouping the pre-sorted master log
+     * by student ID in a single pass before creating the worksheets. This maintains
+     * chronological order within each student's sheet without redundant sorting.
      */
     private suspend fun createIndividualStudentSheets(
         workbook: Workbook,
-        data: List<Any>,
+        allLogs: List<Any>,
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        context: FormattingContext
+        context: FormattingContext,
+        dynamicHomeworkKeys: List<String>
     ) {
-        val logsByStudent = data.groupBy {
+        // BOLT: Group by student on already-sorted list to maintain chronological order without re-sorting
+        val logsByStudent = allLogs.groupBy {
             when (it) {
                 is BehaviorEvent -> it.studentId
                 is HomeworkLog -> it.studentId
@@ -685,7 +682,7 @@ class Exporter(
             val student = students[studentId]
             if (student != null) {
                 val studentSheetName = "${student.firstName}_${student.lastName}".replace(Regex("[^a-zA-Z0-9_]"), "_").take(31)
-                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context)
+                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context, dynamicHomeworkKeys)
             }
         }
     }
