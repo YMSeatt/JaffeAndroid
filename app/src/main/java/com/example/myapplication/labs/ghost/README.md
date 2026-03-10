@@ -152,6 +152,13 @@ A Proof of Concept for **Behavioral Chain Reaction Mapping**. It treats the clas
 - **Social Bonds**: Visualizes "Ionic Bonds" (glowing AGSL lines) between catalysts and reactants.
 - **Macroscopic Analysis**: Integrated with `Python/ghost_catalyst_analysis.py` to calculate classroom Reaction Rates and Activation Energy.
 
+### 27. Ghost Flora (`flora/GhostFloraLayer.kt`, `flora/GhostFloraShader.kt`, `flora/GhostFloraEngine.kt`)
+A Proof of Concept for **Neural Botanical Visualization**. It implements a digital classroom ecosystem where students are represented by data-driven flowers.
+- **Growth Dynamics**: Flower scale and petal length scale with academic performance (Quiz + Homework).
+- **Vitality Gradient**: Colors shift from Cyan (Positive) to Magenta (Negative) based on behavioral balance.
+- **Complexity**: Petal density and noise distortion reflect the frequency of classroom activity.
+- **Python Parity**: Integrated with `Python/ghost_flora_analysis.py` for logical parity and ecosystem-wide climate analysis.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
