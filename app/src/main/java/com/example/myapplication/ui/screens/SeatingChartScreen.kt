@@ -145,6 +145,7 @@ import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
+import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
 import com.example.myapplication.labs.ghost.GhostHorizonEngine
 import com.example.myapplication.labs.ghost.GhostHorizonLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
@@ -236,6 +237,7 @@ fun SeatingChartScreen(
     var isZenithActive by remember { mutableStateOf(false) }
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
+    var isFloraActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
@@ -588,6 +590,8 @@ fun SeatingChartScreen(
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
                 onToggleCatalyst = { isCatalystActive = !isCatalystActive },
+                isFloraActive = isFloraActive,
+                onToggleFlora = { isFloraActive = !isFloraActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -813,6 +817,18 @@ fun SeatingChartScreen(
                         isActive = isCatalystActive
                     )
                 }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLORA_MODE_ENABLED && isFloraActive) {
+                GhostFloraLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    homeworkLogs = allHomeworkLogs,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isFloraActive
+                )
             }
 
 
@@ -1568,6 +1584,8 @@ fun SeatingChartTopAppBar(
     onToggleEmergence: () -> Unit,
     isCatalystActive: Boolean,
     onToggleCatalyst: () -> Unit,
+    isFloraActive: Boolean,
+    onToggleFlora: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1901,6 +1919,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.FLORA_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isFloraActive) "De-Flora 👻" else "Ghost Flora 👻") },
+                                onClick = {
+                                    onToggleFlora()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                             )
                         }
                     }
