@@ -54,8 +54,8 @@ object GhostBlueprintEngine {
              */
             val x = (student.xPosition.value / 4f) + 200f
             val y = (student.yPosition.value / 4f) + 100f
-            val name = student.fullName.value
-            val initials = student.initials.value
+            val name = escapeXml(student.fullName.value)
+            val initials = escapeXml(student.initials.value)
 
             svg.append("  <g transform=\"translate($x,$y)\" filter=\"url(#glow)\">\n")
             svg.append("    <rect x=\"-30\" y=\"-30\" width=\"60\" height=\"60\" fill=\"none\" stroke=\"#00ffff\" stroke-width=\"2\" rx=\"5\" />\n")
@@ -68,7 +68,7 @@ object GhostBlueprintEngine {
         furniture.forEach { item ->
             val x = (item.xPosition.value / 4f) + 200f
             val y = (item.yPosition.value / 4f) + 100f
-            val name = item.name.value
+            val name = escapeXml(item.name.value)
 
             svg.append("  <g transform=\"translate($x,$y)\" filter=\"url(#glow)\">\n")
             svg.append("    <rect x=\"-25\" y=\"-25\" width=\"50\" height=\"50\" fill=\"none\" stroke=\"#00ffff\" stroke-width=\"1.5\" stroke-dasharray=\"5,5\" rx=\"3\" />\n")
@@ -78,5 +78,18 @@ object GhostBlueprintEngine {
 
         svg.append("</svg>")
         return svg.toString()
+    }
+
+    /**
+     * Sanitizes user-provided strings for safe embedding in the SVG XML.
+     * Prevents SVG Injection and XSS by escaping special characters.
+     */
+    private fun escapeXml(input: String?): String {
+        if (input == null) return ""
+        return input.replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("'", "&apos;")
     }
 }
