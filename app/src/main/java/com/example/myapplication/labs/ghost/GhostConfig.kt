@@ -108,4 +108,7 @@ object GhostConfig {
 
     /** Enables "Ghost Horizon" context-aware atmospheric visualization. */
     const val HORIZON_MODE_ENABLED = true
+
+    /** Enables "Ghost Pulsar" harmonic synchronicity visualization. */
+    const val PULSAR_MODE_ENABLED = true
 }
