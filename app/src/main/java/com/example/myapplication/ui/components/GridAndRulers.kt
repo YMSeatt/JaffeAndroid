@@ -24,6 +24,19 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
 import kotlin.math.floor
 
+/**
+ * Renders the background grid, coordinate rulers, and draggable alignment guides.
+ *
+ * This component performs complex coordinate transformations to ensure that the
+ * grid and rulers remain accurate across all pan and zoom levels.
+ *
+ * ### Coordinate Transformation Strategy:
+ * 1. **Grid & Guides**: These are drawn within a `withTransform` block, mapping them directly
+ *    to the logical "World Space" (0-4000).
+ * 2. **Rulers**: These are drawn in "Screen Space" (pixels) so they remain fixed to the
+ *    edges of the device, but their labels are calculated by reverse-mapping the screen
+ *    pixels back to logical world coordinates based on the current [scale] and [offset].
+ */
 @Composable
 fun GridAndRulers(
     settingsViewModel: SettingsViewModel,
