@@ -29,26 +29,45 @@ object GhostIonEngine {
 
     /**
      * Analyzes the current state to generate ionization points.
+     *
+     * BOLT: Optimized using pre-grouped logs and manual loops to reduce complexity
+     * from O(N*L) to O(N + L) and minimize allocations.
      */
     fun calculateIonization(
         students: List<StudentUiItem>,
         behaviorLogs: List<BehaviorEvent>,
         batteryTemp: Float = 30.0f
     ): List<IonPoint> {
+        val groupedLogs = behaviorLogs.groupBy { it.studentId }
+        val tempFactor = (batteryTemp - 25f).coerceIn(0f, 20f) / 20f
+
         return students.map { student ->
-            val logs = behaviorLogs.filter { it.studentId == student.id.toLong() }
-            val recentLogs = logs.takeLast(5)
+            val sid = student.id.toLong()
+            val logs = groupedLogs[sid]
+            // BOLT: Use take(5) instead of takeLast(5) because logs are sorted DESC (newest first).
+            val recentLogs = if (logs != null) {
+                if (logs.size > 5) logs.subList(0, 5) else logs
+            } else emptyList()
 
             // Calculate charge based on behavior balance
-            val positives = recentLogs.count { it.type.contains("Positive", ignoreCase = true) || it.type.contains("Participating", ignoreCase = true) }
-            val negatives = recentLogs.count { it.type.contains("Negative", ignoreCase = true) || it.type.contains("Disruptive", ignoreCase = true) }
+            // BOLT: Single-pass manual loop to avoid multiple traversals and allocations
+            var positives = 0
+            var negatives = 0
+            for (log in recentLogs) {
+                val type = log.type
+                if (type.contains("Positive", ignoreCase = true) || type.contains("Participating", ignoreCase = true)) {
+                    positives++
+                } else if (type.contains("Negative", ignoreCase = true) || type.contains("Disruptive", ignoreCase = true)) {
+                    negatives++
+                }
+            }
 
-            val charge = if (recentLogs.isEmpty()) 0f else (positives - negatives).toFloat() / recentLogs.size.toFloat()
+            val logCount = recentLogs.size
+            val charge = if (logCount == 0) 0f else (positives - negatives).toFloat() / logCount.toFloat()
 
             // Density scales with activity and "heat" (battery temp)
             // Baseline temp assumed 30°C. Higher temp = higher ion density.
-            val tempFactor = (batteryTemp - 25f).coerceIn(0f, 20f) / 20f
-            val density = (recentLogs.size.toFloat() / 5f * 0.7f + tempFactor * 0.3f).coerceIn(0f, 1.0f)
+            val density = (logCount.toFloat() / 5f * 0.7f + tempFactor * 0.3f).coerceIn(0f, 1.0f)
 
             IonPoint(
                 x = student.xPosition.value,
@@ -70,9 +89,15 @@ object GhostIonEngine {
 
     /**
      * Calculates the global "Ion Balance" of the classroom.
+     *
+     * BOLT: Use manual loop to avoid intermediate list allocation from map().
      */
     fun calculateGlobalBalance(points: List<IonPoint>): Float {
         if (points.isEmpty()) return 0f
-        return points.map { it.charge }.average().toFloat()
+        var sum = 0f
+        for (p in points) {
+            sum += p.charge
+        }
+        return sum / points.size
     }
 }
