@@ -52,9 +52,14 @@ fun GhostEntropyLayer(
 
     // Calculate entropy for each student
     val studentEntropies = remember(students, behaviorLogs, quizLogs) {
+        // BOLT: Pre-group logs to avoid O(N*L) complexity during student mapping
+        val groupedBehaviors = behaviorLogs.groupBy { it.studentId }
+        val groupedQuizzes = quizLogs.groupBy { it.studentId }
+
         students.take(20).map { student ->
-            val sLogs = behaviorLogs.filter { it.studentId == student.id.toLong() }
-            val sQuizzes = quizLogs.filter { it.studentId == student.id.toLong() }
+            val sid = student.id.toLong()
+            val sLogs = groupedBehaviors[sid] ?: emptyList()
+            val sQuizzes = groupedQuizzes[sid] ?: emptyList()
 
             val bEntropy = GhostEntropyEngine.calculateBehaviorEntropy(sLogs)
             val aVariance = GhostEntropyEngine.calculateAcademicVariance(sQuizzes)

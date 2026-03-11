@@ -40,6 +40,8 @@ object GhostSpectraEngine {
      * Higher density occurs when there is a high variance in student performance
      * or behavior, representing a "diffraction" of the class into different groups.
      *
+     * BOLT: Optimized using a manual loop and HashSet to avoid intermediate list allocations.
+     *
      * @param behaviorLogs Historical behavioral events.
      * @return A normalized value (0.0 to 1.0) for the iDensity uniform.
      */
@@ -47,11 +49,14 @@ object GhostSpectraEngine {
         if (behaviorLogs.isEmpty()) return 0.2f
 
         // Count different types of behaviors to measure "spectral diversity"
-        val behaviorTypes = behaviorLogs.map { it.type }.distinct().size
+        val behaviorTypes = HashSet<String>()
+        for (log in behaviorLogs) {
+            behaviorTypes.add(log.type)
+        }
         val totalLogs = behaviorLogs.size
 
         // More behavior types = higher dispersion (more "colors" in the class)
-        val diversityRatio = (behaviorTypes.toFloat() / 10f).coerceAtMost(1.0f)
+        val diversityRatio = (behaviorTypes.size.toFloat() / 10f).coerceAtMost(1.0f)
 
         // Log volume also contributes to "mass" and thus refractive density
         val volumeFactor = (totalLogs.toFloat() / 100f).coerceAtMost(1.0f)
@@ -63,6 +68,9 @@ object GhostSpectraEngine {
      * Calculates the Classroom Agitation level.
      * Higher agitation occurs with recent negative behavioral events.
      *
+     * BOLT: Optimized using a manual loop with early break (DESC sorted logs) to reduce
+     * complexity from O(L) to O(Recent).
+     *
      * @param behaviorLogs Historical behavioral events.
      * @return A normalized value (0.0 to 1.0) for the iAgitation uniform.
      */
@@ -71,16 +79,20 @@ object GhostSpectraEngine {
 
         val now = System.currentTimeMillis()
         val recentWindow = 24 * 60 * 60 * 1000L // Last 24 hours
+        val cutoff = now - recentWindow
 
-        val recentNegativeLogs = behaviorLogs.filter {
-            it.timestamp > (now - recentWindow) && it.type.contains("Negative", ignoreCase = true)
+        var recentNegativeCount = 0
+        for (log in behaviorLogs) {
+            if (log.timestamp <= cutoff) break // BOLT: Optimization for DESC sorted logs
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                recentNegativeCount++
+            }
         }
 
-        if (recentNegativeLogs.isEmpty()) return 0.1f
+        if (recentNegativeCount == 0) return 0.1f
 
         // Agitation scales with the frequency of negative events in the recent window
-        val count = recentNegativeLogs.size
-        return (count.toFloat() / 10f).coerceIn(0.1f, 1.0f)
+        return (recentNegativeCount.toFloat() / 10f).coerceIn(0.1f, 1.0f)
     }
 
     /**
