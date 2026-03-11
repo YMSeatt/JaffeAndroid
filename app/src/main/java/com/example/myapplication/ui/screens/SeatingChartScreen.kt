@@ -246,10 +246,19 @@ fun SeatingChartScreen(
     val hudViewModel: GhostHUDViewModel = viewModel()
     val context = LocalContext.current
 
-    // Portal State
+    // Portal State: Manages the visibility and position of the Ghost Portal during drag-and-drop.
     var isDraggingPortalActive by remember { mutableStateOf(false) }
     var portalPosition by remember { mutableStateOf(Offset.Zero) }
 
+    /**
+     * Implementation of [DragAndDropTarget] that facilitates inter-app data transfer
+     * via the Ghost Portal.
+     *
+     * ### Inter-app Teleportation:
+     * When a drag event containing "student_data" enters the portal, it triggers a visual
+     * response. Dropping the item on the portal completes the "teleportation," simulating
+     * data transfer between compatible classroom management apps.
+     */
     val portalTarget = remember {
         object : DragAndDropTarget {
             override fun onStarted(event: DragAndDropEvent) {
@@ -418,7 +427,11 @@ fun SeatingChartScreen(
         }
     }
 
-    // Phasing Transition Animation
+    /**
+     * Phasing Transition: Animates the 'phaseLevel' uniform for the Ghost Phasing AGSL shader.
+     * This transition creates a glitchy chromatic aberration effect as the UI "phases"
+     * into the hidden data layer.
+     */
     val phaseLevel by animateFloatAsState(
         targetValue = if (isPhasingActive) 1f else 0f,
         animationSpec = tween(1500, easing = LinearOutSlowInEasing),
@@ -429,7 +442,11 @@ fun SeatingChartScreen(
         ghostPhasingEngine.updatePhase(phaseLevel)
     }
 
-    // Phantasm Heartbeat Effect
+    /**
+     * Phantasm Heartbeat: Drives a periodic 'heartbeat' pulse in the Ghost Phantasm meta-ball
+     * layer. The pulse frequency and intensity are dynamically scaled based on the ratio
+     * of negative behavior events in the classroom (the "Agitation Level").
+     */
     LaunchedEffect(isPhantasmActive, allBehaviorEvents) {
         if (isPhantasmActive) {
             val agitation = if (allBehaviorEvents.isEmpty()) 0.2f
@@ -702,6 +719,17 @@ fun SeatingChartScreen(
             }
         }
 
+        /**
+         * Root Layout Container: Orchestrates the layered composition of the seating chart.
+         * The order of items in this Box determines their Z-index.
+         *
+         * ### Layer Order (Bottom to Top):
+         * 1. **Atmospheric Layers**: Horizon, Zenith, Phasing background.
+         * 2. **Social Dynamics (Experimental)**: Warp, Future, Aurora, Nebula, etc.
+         * 3. **Environmental Framework**: Grid, Rulers, Guides.
+         * 4. **Core Content**: Students and Furniture (wrapped in Pan/Zoom container).
+         * 5. **Refraction & HUD Layers**: Ghost Lens, HUD, Oracle, Voice Assist overlays.
+         */
         Box(
             modifier = Modifier
                 .padding(paddingValues)
@@ -1391,6 +1419,17 @@ fun SeatingChartScreen(
 }
 
 
+/**
+ * Renders the core interactive layer of the seating chart, including students and furniture.
+ *
+ * This component manages the **Pan and Zoom** transformations using the `graphicsLayer`
+ * and coordinate normalization for the 4000x4000 logical canvas.
+ *
+ * @param scale The current zoom factor.
+ * @param offset The current pan offset (in screen pixels).
+ * @param onTransformChange Callback for updating pan/zoom state during gestures.
+ * @param zenithScope Optional scope for applying 3D spatial elevation in Zenith mode.
+ */
 @Composable
 fun SeatingChartContent(
     scale: Float,

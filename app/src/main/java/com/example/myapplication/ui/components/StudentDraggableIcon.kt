@@ -183,6 +183,14 @@ fun StudentDraggableIcon(
                     .onSizeChanged { cardSize = it }
                     .then(portalModifier)
                     .pointerInput(studentUiItem.id) {
+                        /**
+                         * Gesture Handler: Implements high-responsiveness dragging.
+                         *
+                         * By updating the [MutableState] properties of the [StudentUiItem]
+                         * directly during the 'onDrag' phase, we ensure that the UI follows
+                         * the finger at 60fps, even if the background database update is
+                         * slightly delayed.
+                         */
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
@@ -194,6 +202,11 @@ fun StudentDraggableIcon(
                                 studentUiItem.yPosition.value = offsetY
                             },
                             onDragEnd = {
+                                /**
+                                 * Grid Snapping Logic: If enabled, aligns the final logical
+                                 * coordinates to the nearest grid intersection before
+                                 * committing to the database.
+                                 */
                                 val finalX = if (gridSnapEnabled) {
                                     (offsetX / gridSize).roundToInt() * gridSize
                                 } else {
@@ -205,6 +218,7 @@ fun StudentDraggableIcon(
                                     offsetY.roundToInt()
                                 }
 
+                                // Sync the final, potentially snapped position to the database.
                                 viewModel.updateStudentPosition(
                                     studentUiItem.id,
                                     studentUiItem.xPosition.value,
