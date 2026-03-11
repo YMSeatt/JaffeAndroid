@@ -129,6 +129,7 @@ import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
+import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
@@ -238,6 +239,7 @@ fun SeatingChartScreen(
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
     var isFloraActive by remember { mutableStateOf(false) }
+    var isPulsarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
@@ -609,6 +611,8 @@ fun SeatingChartScreen(
                 onToggleCatalyst = { isCatalystActive = !isCatalystActive },
                 isFloraActive = isFloraActive,
                 onToggleFlora = { isFloraActive = !isFloraActive },
+                isPulsarActive = isPulsarActive,
+                onTogglePulsar = { isPulsarActive = !isPulsarActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -856,6 +860,16 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset,
                     isActive = isFloraActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PULSAR_MODE_ENABLED && isPulsarActive) {
+                GhostPulsarLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isPulsarActive
                 )
             }
 
@@ -1625,6 +1639,8 @@ fun SeatingChartTopAppBar(
     onToggleCatalyst: () -> Unit,
     isFloraActive: Boolean,
     onToggleFlora: () -> Unit,
+    isPulsarActive: Boolean,
+    onTogglePulsar: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1968,6 +1984,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.PULSAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isPulsarActive) "Stabilize Harmonics 👻" else "Ghost Pulsar 👻") },
+                                onClick = {
+                                    onTogglePulsar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }

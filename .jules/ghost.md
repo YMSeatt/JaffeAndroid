@@ -176,4 +176,22 @@ In 2027, UIs won't just be static "Dark" or "Light" modes; they will adapt to th
 - **Low-Pass Filtering**: Aggressive filtering (0.9-0.95 alpha) is required for light and pressure sensors to avoid jarring visual shifts from small physical movements or light flickers.
 
 ---
+
+## 💓 Experiment: Ghost Pulsar (Harmonic Synchronicity)
+**Date:** 2027-09-12
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, the "Rhythm of the Classroom" is a tangible metric. **Ghost Pulsar** visualizes the harmonic synchronicity between students. By analyzing the frequency and timing of behavioral events, it identifies "Neural Resonance" patterns — students whose classroom engagement peaks and troughs in sync. This helps teachers identify synchronized clusters that might indicate strong collaboration or shared distractions.
+
+### 🛠️ The Tech
+- **Harmonic Engine**: `GhostPulsarEngine` calculates individual student "Classroom Rhythms" (frequency/phase) from behavioral log density using a 10-minute sliding window.
+- **AGSL Wave Interference**: Implemented a sophisticated wave interference shader in `GhostPulsarShader`. Each student acts as a wave source, creating ripples that interfere with others to form "Harmonic Bonds."
+- **Python Rhythm Analysis**: `ghost_pulsar_analyzer.py` provides a Fourier-like analysis of exported JSON data to identify classroom-wide rhythms and synchronized pairs.
+
+### 🔦 The Discovery
+- **Wave Metaphor for Social Energy**: We discovered that visualizing social energy as waves is more intuitive than static lines for representing temporal synchronicity. The interference patterns naturally highlight students who are "out of phase" with the rest of the room.
+- **Phase as Timing**: Mapping the time-of-day and log frequency to phase allows for a dynamic visualization that changes even without new logs, maintaining a sense of a living ecosystem.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
