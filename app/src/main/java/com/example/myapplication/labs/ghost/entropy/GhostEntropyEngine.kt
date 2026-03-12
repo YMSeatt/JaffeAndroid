@@ -55,18 +55,34 @@ object GhostEntropyEngine {
 
     /**
      * Calculates the normalized variance of academic performance.
+     *
+     * BOLT: Optimized to O(N) single-pass without intermediate list allocations.
      */
     fun calculateAcademicVariance(quizLogs: List<QuizLog>): Float {
         if (quizLogs.size < 2) return 0f
 
-        val scores = quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }
-        if (scores.size < 2) return 0f
+        var sum = 0.0
+        var sumSq = 0.0
+        var count = 0
 
-        val mean = scores.average().toFloat()
-        val variance = scores.map { (it - mean) * (it - mean) }.average().toFloat()
+        for (log in quizLogs) {
+            val v = log.markValue
+            val m = log.maxMarkValue
+            if (v != null && m != null && m > 0) {
+                val score = v / m
+                sum += score
+                sumSq += score * score
+                count++
+            }
+        }
+
+        if (count < 2) return 0f
+
+        val mean = sum / count
+        val variance = (sumSq / count) - (mean * mean)
 
         // Max variance for values in 0..1 is 0.25. Normalize to 0..1.
-        return (variance / 0.25f).coerceIn(0f, 1f)
+        return (variance.toFloat() / 0.25f).coerceIn(0f, 1f)
     }
 
     /**
