@@ -111,4 +111,7 @@ object GhostConfig {
 
     /** Enables "Ghost Pulsar" harmonic synchronicity visualization. */
     const val PULSAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Magnetar" social magnetism and field polarity visualization. */
+    const val MAGNETAR_MODE_ENABLED = true
 }

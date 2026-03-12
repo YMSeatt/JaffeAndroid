@@ -194,4 +194,23 @@ In 2027, the "Rhythm of the Classroom" is a tangible metric. **Ghost Pulsar** vi
 - **Phase as Timing**: Mapping the time-of-day and log frequency to phase allows for a dynamic visualization that changes even without new logs, maintaining a sense of a living ecosystem.
 
 ---
+
+## 🧲 Experiment: Ghost Magnetar (Social Magnetic Field)
+**Date:** 2027-10-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, classroom dynamics are viewed as a complex electromagnetic field. **Ghost Magnetar** treats students as magnetic dipoles based on their behavioral "polarity" (Positive = North, Negative = South). By integrating the device's physical magnetometer, the social field orientation reacts to the teacher's physical movement in the room, making social dynamics tangible.
+
+### 🛠️ The Tech
+- **Android Magnetometer API**: Real-time integration of `Sensor.TYPE_MAGNETIC_FIELD`.
+- **AGSL Field Line Shader**: Renders flowing "streamlines" between North and South poles using vector field summation.
+- **Neural Polarity Engine**: Calculates dipole strength and field vectors from behavioral log density.
+- **Python Bridge**: `ghost_magnetar_analysis.py` for offline magnetic field mapping and parity.
+
+### 🔦 The Discovery
+- **Physical-Digital Binding**: Tying the field orientation to the physical magnetometer creates a powerful sense of presence, as the "Social North" shifts as the teacher turns.
+- **Visual Flux**: Using streamlines provides a macroscopic view of social "tension" (dense lines) vs "harmony" (balanced flow) that is more intuitive than discrete heatmaps.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
