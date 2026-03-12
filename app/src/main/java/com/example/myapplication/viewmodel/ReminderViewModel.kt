@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
 import com.example.myapplication.data.Reminder
-import com.example.myapplication.data.ReminderDao
+import com.example.myapplication.data.ReminderRepository
 import com.example.myapplication.util.ReminderManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +25,7 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class ReminderViewModel @Inject constructor(
-    private val reminderDao: ReminderDao,
+    private val reminderRepository: ReminderRepository,
     private val reminderManager: ReminderManager
 ) : ViewModel() {
 
@@ -35,7 +35,7 @@ class ReminderViewModel @Inject constructor(
     val allReminders: LiveData<List<Reminder>>
 
     init {
-        allReminders = reminderDao.getAllReminders().asLiveData()
+        allReminders = reminderRepository.getAllReminders().asLiveData()
     }
 
     /**
@@ -52,7 +52,7 @@ class ReminderViewModel @Inject constructor(
      */
     fun insert(reminder: Reminder) {
         viewModelScope.launch(Dispatchers.IO) {
-            val id = reminderDao.insert(reminder)
+            val id = reminderRepository.insert(reminder)
             val newReminder = reminder.copy(id = id)
             reminderManager.scheduleReminder(newReminder)
         }
@@ -63,7 +63,7 @@ class ReminderViewModel @Inject constructor(
      */
     fun update(reminder: Reminder) {
         viewModelScope.launch(Dispatchers.IO) {
-            reminderDao.update(reminder)
+            reminderRepository.update(reminder)
             reminderManager.scheduleReminder(reminder)
         }
     }
@@ -75,7 +75,7 @@ class ReminderViewModel @Inject constructor(
      */
     fun delete(id: Long) {
         viewModelScope.launch(Dispatchers.IO) {
-            reminderDao.delete(id)
+            reminderRepository.delete(id)
             reminderManager.cancelReminder(id)
         }
     }
