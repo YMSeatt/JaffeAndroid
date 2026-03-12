@@ -130,6 +130,8 @@ import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
 import com.example.myapplication.labs.ghost.GhostPulseLayer
 import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
@@ -240,6 +242,7 @@ fun SeatingChartScreen(
     var isCatalystActive by remember { mutableStateOf(false) }
     var isFloraActive by remember { mutableStateOf(false) }
     var isPulsarActive by remember { mutableStateOf(false) }
+    var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
@@ -352,6 +355,7 @@ fun SeatingChartScreen(
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
+    val ghostMagnetarEngine = remember { GhostMagnetarEngine(context) }
     val ghostZenithEngine = remember { GhostZenithEngine(context) }
     val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
     val ghostLensEngine = remember { GhostLensEngine() }
@@ -373,6 +377,9 @@ fun SeatingChartScreen(
             if (GhostConfig.HOLOGRAM_MODE_ENABLED) {
                 ghostHologramEngine.start()
             }
+            if (GhostConfig.MAGNETAR_MODE_ENABLED) {
+                ghostMagnetarEngine.start()
+            }
             if (GhostConfig.HORIZON_MODE_ENABLED) {
                 ghostHorizonEngine.start()
             }
@@ -381,6 +388,7 @@ fun SeatingChartScreen(
             ghostVoiceAssistant.destroy()
             ghostEchoEngine.stop()
             ghostHologramEngine.stop()
+            ghostMagnetarEngine.stop()
             ghostHorizonEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
         }
@@ -605,6 +613,8 @@ fun SeatingChartScreen(
                 onToggleZenith = { isZenithActive = !isZenithActive },
                 isHorizonActive = isHorizonActive,
                 onToggleHorizon = { isHorizonActive = !isHorizonActive },
+                isMagnetarActive = isMagnetarActive,
+                onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isEmergenceActive = isEmergenceActive,
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
@@ -870,6 +880,17 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset,
                     isActive = isPulsarActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MAGNETAR_MODE_ENABLED && isMagnetarActive) {
+                GhostMagnetarLayer(
+                    engine = ghostMagnetarEngine,
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isMagnetarActive
                 )
             }
 
@@ -1641,6 +1662,8 @@ fun SeatingChartTopAppBar(
     onToggleFlora: () -> Unit,
     isPulsarActive: Boolean,
     onTogglePulsar: () -> Unit,
+    isMagnetarActive: Boolean,
+    onToggleMagnetar: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1994,6 +2017,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.MAGNETAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isMagnetarActive) "De-Polarize 👻" else "Ghost Magnetar 👻") },
+                                onClick = {
+                                    onToggleMagnetar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
                         }
                     }
