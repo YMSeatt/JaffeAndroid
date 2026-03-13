@@ -124,15 +124,24 @@ class MainActivity : ComponentActivity() {
         // HARDEN: Cleanup temporary files on startup to protect privacy
         lifecycleScope.launch(Dispatchers.IO) {
             val cacheDir = applicationContext.cacheDir
-            val tempFiles = cacheDir.listFiles { _, name ->
-                name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg") || name.endsWith(".db")
-            }
-            tempFiles?.forEach { file ->
-                try {
-                    file.delete()
-                } catch (e: Exception) {
-                    // Ignore deletion errors
+            val sharedDir = File(cacheDir, "shared")
+
+            val cleanup = { dir: File ->
+                val tempFiles = dir.listFiles { _, name ->
+                    name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg") || name.endsWith(".db")
                 }
+                tempFiles?.forEach { file ->
+                    try {
+                        file.delete()
+                    } catch (e: Exception) {
+                        // Ignore deletion errors
+                    }
+                }
+            }
+
+            cleanup(cacheDir)
+            if (sharedDir.exists()) {
+                cleanup(sharedDir)
             }
         }
 

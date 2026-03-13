@@ -1355,8 +1355,10 @@ fun SeatingChartScreen(
                         activity?.let { mainActivity ->
                             mainActivity.lifecycleScope.launch {
                                 val emailUtil = EmailUtil(mainActivity)
-                                // HARDEN: Create temporary file in the app's private cache directory
-                                val file = File.createTempFile("export_", ".xlsx", mainActivity.cacheDir)
+                                // HARDEN: Create temporary file in the restricted shared cache directory
+                                val sharedDir = File(mainActivity.cacheDir, "shared")
+                                if (!sharedDir.exists()) sharedDir.mkdirs()
+                                val file = File.createTempFile("export_", ".xlsx", sharedDir)
                                 val uri = FileProvider.getUriForFile(
                                     mainActivity,
                                     "com.example.myapplication.fileprovider",
