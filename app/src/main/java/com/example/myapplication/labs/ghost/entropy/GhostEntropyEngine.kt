@@ -35,15 +35,21 @@ object GhostEntropyEngine {
     /**
      * Calculates the Shannon Entropy of behavior types for a student.
      * Ported to Python/ghost_entropy_analyzer.py.
+     *
+     * BOLT: Optimized to O(L) single-pass manual loop to avoid functional operator overhead.
      */
     fun calculateBehaviorEntropy(logs: List<BehaviorEvent>): Float {
         if (logs.isEmpty()) return 0f
 
-        val counts = logs.groupingBy { it.type }.eachCount()
+        val counts = mutableMapOf<String, Int>()
+        for (log in logs) {
+            val type = log.type
+            counts[type] = (counts[type] ?: 0) + 1
+        }
         val total = logs.size.toFloat()
 
         var entropy = 0f
-        counts.values.forEach { count ->
+        for (count in counts.values) {
             val p = count / total
             entropy -= (p * ln(p))
         }

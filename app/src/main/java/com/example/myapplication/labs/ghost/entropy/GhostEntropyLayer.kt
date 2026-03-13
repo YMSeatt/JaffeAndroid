@@ -50,30 +50,18 @@ fun GhostEntropyLayer(
         label = "time"
     )
 
-    // Calculate entropy for each student
-    val studentEntropies = remember(students, behaviorLogs, quizLogs) {
-        // BOLT: Pre-group logs to avoid O(N*L) complexity during student mapping
-        val groupedBehaviors = behaviorLogs.groupBy { it.studentId }
-        val groupedQuizzes = quizLogs.groupBy { it.studentId }
-
-        students.take(20).map { student ->
-            val sid = student.id.toLong()
-            val sLogs = groupedBehaviors[sid] ?: emptyList()
-            val sQuizzes = groupedQuizzes[sid] ?: emptyList()
-
-            val bEntropy = GhostEntropyEngine.calculateBehaviorEntropy(sLogs)
-            val aVariance = GhostEntropyEngine.calculateAcademicVariance(sQuizzes)
-
-            GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
+    // BOLT: Entropy is now pre-calculated in the SeatingChartViewModel's memoized Stage 2
+    // and synced to StudentUiItem, eliminating the redundant O(N*L) calculation here.
+    val maxEntropy = remember(students) {
+        var maxE = 0f
+        for (i in 0 until students.size.coerceAtMost(20)) {
+            val e = students[i].behaviorEntropy.value
+            if (e > maxE) maxE = e
         }
+        maxE
     }
 
     val entropyShader = remember { RuntimeShader(GhostEntropyShader.ENTROPY_DISTORTION) }
-
-    // We'll use a simplified version for the PoC: Global entropy based on the most chaotic student
-    val maxEntropy = remember(studentEntropies) {
-        studentEntropies.maxOrNull() ?: 0f
-    }
 
     // BOLT: Cache RenderEffect to avoid O(1) allocation in the graphicsLayer block per frame.
     // Tied to maxEntropy as that's the primary driver of the effect's state.
