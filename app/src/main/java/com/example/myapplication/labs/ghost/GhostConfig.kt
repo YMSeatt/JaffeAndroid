@@ -114,4 +114,7 @@ object GhostConfig {
 
     /** Enables "Ghost Magnetar" social magnetism and field polarity visualization. */
     const val MAGNETAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Cortex" neural intent and somatic haptic exploration. */
+    const val CORTEX_MODE_ENABLED = true
 }

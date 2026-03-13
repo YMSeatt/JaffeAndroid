@@ -213,4 +213,23 @@ In 2027, classroom dynamics are viewed as a complex electromagnetic field. **Gho
 - **Visual Flux**: Using streamlines provides a macroscopic view of social "tension" (dense lines) vs "harmony" (balanced flow) that is more intuitive than discrete heatmaps.
 
 ---
+
+## 🧠 Experiment: Ghost Cortex (Neural Intent & Somatic Exploration)
+**Date:** 2027-11-20
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, teachers don't just see data; they feel it. "Ghost Cortex" is a multi-sensory PoC that bridges the gap between digital metrics and physical sensation. By mapping classroom "Neural Tension" to high-fidelity haptic feedback, teachers can "touch" the classroom's vibe, allowing for an intuitive, eyes-free understanding of student engagement and academic entropy.
+
+### 🛠️ The Tech
+- **Android 15/16 Haptic Primitives:** Leverages `VibrationEffect.Composition` with advanced primitives like `PRIMITIVE_SPIN`, `PRIMITIVE_THUD`, and `PRIMITIVE_QUICK_FALL` to communicate data complexity.
+- **AGSL Somatic Shader:** Implements an organic, fractal-noise driven ripple effect that visualizes "Neural Intent" and correlates 1:1 with tactile pulses.
+- **Predictive Back Navigation:** Demonstrates the future of fluid UI transitions by integrating `OnBackInvokedCallback` (via Compose `BackHandler`) in the "Neural History" sandbox view.
+
+### 🔦 The Discovery
+- **Somatic Mapping:** We found that mapping the magnitude of behavioral turbulence and academic entropy to the *complexity* (not just intensity) of haptic patterns allows for much higher information density than simple vibrations.
+- **Visual-Tactile Resonance:** Synchronizing AGSL ripple frequency with haptic ticks creates a powerful "Somatic Field" effect that makes the UI feel physically present.
+- **NaN Resilience:** Discovered that generative neural metrics require strict default sanitization to prevent floating-point anomalies from disrupting the sensory experience.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
