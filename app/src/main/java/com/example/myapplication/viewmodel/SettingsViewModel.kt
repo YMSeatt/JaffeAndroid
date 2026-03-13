@@ -775,12 +775,13 @@ class SettingsViewModel @Inject constructor(
 
     /**
      * Prepares the database file for sharing via system intents.
-     * Copies the DB to the cache directory and provides a content URI.
+     * Copies the DB to the hardened shared cache directory and provides a content URI.
      */
     suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
-        val cacheDir = application.cacheDir
-        val sharedDbFile = java.io.File(cacheDir, "seating_chart_database.db")
+        val sharedDir = java.io.File(application.cacheDir, "shared")
+        if (!sharedDir.exists()) sharedDir.mkdirs()
+        val sharedDbFile = java.io.File(sharedDir, "seating_chart_database.db")
 
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
@@ -800,14 +801,15 @@ class SettingsViewModel @Inject constructor(
     }
 
     /**
-     * Persists a seating chart screenshot to the app's private cache.
+     * Persists a seating chart screenshot to the app's hardened shared cache.
      * @return A content URI for sharing the image.
      */
     suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
         val context = application
         val filename = "screenshot_${System.currentTimeMillis()}.png"
-        val cacheDir = context.cacheDir
-        val screenshotFile = File(cacheDir, filename)
+        val sharedDir = File(context.cacheDir, "shared")
+        if (!sharedDir.exists()) sharedDir.mkdirs()
+        val screenshotFile = File(sharedDir, filename)
 
         try {
             FileOutputStream(screenshotFile).use { outputStream ->
@@ -827,8 +829,9 @@ class SettingsViewModel @Inject constructor(
     suspend fun saveBlueprint(svgContent: String): Uri? = withContext(Dispatchers.IO) {
         val context = application
         val filename = "blueprint_${System.currentTimeMillis()}.svg"
-        val cacheDir = context.cacheDir
-        val blueprintFile = File(cacheDir, filename)
+        val sharedDir = File(context.cacheDir, "shared")
+        if (!sharedDir.exists()) sharedDir.mkdirs()
+        val blueprintFile = File(sharedDir, filename)
 
         try {
             FileOutputStream(blueprintFile).use { outputStream ->

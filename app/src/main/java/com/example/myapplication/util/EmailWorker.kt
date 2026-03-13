@@ -97,8 +97,10 @@ class EmailWorker(
 
         when (requestType) {
             "daily_report" -> {
-                // HARDEN: Use unique temporary filename in private cache directory
-                val file = File.createTempFile("daily_report_", ".xlsx", applicationContext.cacheDir)
+                // HARDEN: Use unique temporary filename in restricted shared cache directory
+                val sharedDir = File(applicationContext.cacheDir, "shared")
+                if (!sharedDir.exists()) sharedDir.mkdirs()
+                val file = File.createTempFile("daily_report_", ".xlsx", sharedDir)
                 try {
                     val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: "Daily Report - ${dateFormat.format(Date())}"
                     val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: "Please find the daily report attached."
@@ -226,8 +228,10 @@ class EmailWorker(
                 }
             }
             "on_stop_export" -> {
-                // HARDEN: Use unique temporary filename in private cache directory
-                val file = File.createTempFile("on_stop_export_", ".xlsx", applicationContext.cacheDir)
+                // HARDEN: Use unique temporary filename in restricted shared cache directory
+                val sharedDir = File(applicationContext.cacheDir, "shared")
+                if (!sharedDir.exists()) sharedDir.mkdirs()
+                val file = File.createTempFile("on_stop_export_", ".xlsx", sharedDir)
                 try {
                     val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                     val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
