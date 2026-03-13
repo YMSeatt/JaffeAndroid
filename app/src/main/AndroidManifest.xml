@@ -47,6 +47,11 @@
             android:exported="false"
             android:label="Help"
             android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".labs.ghost.cortex.GhostCortexActivity"
+            android:exported="false"
+            android:label="Neural History"
+            android:theme="@style/Theme.MyApplication" />
         <receiver
             android:name=".util.ReminderReceiver"
             android:exported="false" />

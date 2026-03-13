@@ -153,6 +153,9 @@ import com.example.myapplication.labs.ghost.GhostHorizonEngine
 import com.example.myapplication.labs.ghost.GhostHorizonLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
+import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
+import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
+import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -244,6 +247,7 @@ fun SeatingChartScreen(
     var isPulsarActive by remember { mutableStateOf(false) }
     var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
+    var isCortexActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -358,6 +362,7 @@ fun SeatingChartScreen(
     val ghostMagnetarEngine = remember { GhostMagnetarEngine(context) }
     val ghostZenithEngine = remember { GhostZenithEngine(context) }
     val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
+    val ghostCortexEngine = remember { GhostCortexEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
@@ -623,6 +628,10 @@ fun SeatingChartScreen(
                 onToggleFlora = { isFloraActive = !isFloraActive },
                 isPulsarActive = isPulsarActive,
                 onTogglePulsar = { isPulsarActive = !isPulsarActive },
+                isCortexActive = isCortexActive,
+                onToggleCortex = { isCortexActive = !isCortexActive },
+                isMagnetarActive = isMagnetarActive,
+                onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -771,6 +780,7 @@ fun SeatingChartScreen(
 
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
+            GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
             GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
@@ -1664,6 +1674,8 @@ fun SeatingChartTopAppBar(
     onToggleFlora: () -> Unit,
     isPulsarActive: Boolean,
     onTogglePulsar: () -> Unit,
+    isCortexActive: Boolean,
+    onToggleCortex: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1911,6 +1923,24 @@ fun SeatingChartTopAppBar(
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
                         }
+                if (GhostConfig.CORTEX_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isCortexActive) "De-Sensitize Cortex 👻" else "Neural Cortex 👻") },
+                        onClick = {
+                            onToggleCortex()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Neural History 👻") },
+                        onClick = {
+                            context.startActivity(Intent(context, GhostCortexActivity::class.java))
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                }
                         if (GhostConfig.SPARK_MODE_ENABLED) {
                             DropdownMenuItem(
                                 text = { Text(if (isSparkActive) "Static State 👻" else "Ghost Spark 👻") },
