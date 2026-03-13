@@ -49,7 +49,8 @@ fun Student.toStudentUiItem(
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
-    altitude: Float
+    altitude: Float,
+    behaviorEntropy: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -78,7 +79,8 @@ fun Student.toStudentUiItem(
         temporaryTask = mutableStateOf(temporaryTask),
         irisParams = mutableStateOf(irisParams),
         osmoticNode = mutableStateOf(osmoticNode),
-        altitude = mutableStateOf(altitude)
+        altitude = mutableStateOf(altitude),
+        behaviorEntropy = mutableStateOf(behaviorEntropy)
     )
 }
 
@@ -113,7 +115,8 @@ fun Student.updateStudentUiItem(
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
-    altitude: Float
+    altitude: Float,
+    behaviorEntropy: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -141,6 +144,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.irisParams, irisParams)
     updateIfChanged(item.osmoticNode, osmoticNode)
     updateIfChanged(item.altitude, altitude)
+    updateIfChanged(item.behaviorEntropy, behaviorEntropy)
 }
 
 /**
