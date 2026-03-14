@@ -157,8 +157,12 @@ class Exporter(
 
         val filteredQuizLogs = quizLogs
 
-        // BOLT: Pre-calculate dynamic homework keys once to avoid redundant O(N) scans in createSheet
-        val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
+        // BOLT: Pre-calculate dynamic homework keys once to avoid redundant O(N) scans in createSheet.
+        // Use HashSet with pre-defined capacity to avoid intermediate list allocations.
+        val knownHomeworkKeys = HashSet<String>(customHomeworkTypes.size + customHomeworkStatuses.size).apply {
+            customHomeworkTypes.forEach { add(it.name) }
+            customHomeworkStatuses.forEach { add(it.name) }
+        }
         val dynamicHomeworkKeys = mutableSetOf<String>()
         for (log in filteredHomeworkLogs) {
             log.marksData?.let { json ->
@@ -167,7 +171,12 @@ class Exporter(
         }
         val sortedDynamicKeys = dynamicHomeworkKeys.filter { it !in knownHomeworkKeys }.sorted()
 
-        val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
+        // BOLT: Optimize log list merging to avoid redundant intermediate lists.
+        val allLogs = ArrayList<Any>(filteredBehaviorEvents.size + filteredHomeworkLogs.size + filteredQuizLogs.size).apply {
+            addAll(filteredBehaviorEvents)
+            addAll(filteredHomeworkLogs)
+            addAll(filteredQuizLogs)
+        }.sortedBy {
             when (it) {
                 is BehaviorEvent -> it.timestamp
                 is HomeworkLog -> it.loggedAt
@@ -261,50 +270,54 @@ class Exporter(
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
         context: FormattingContext,
-        dynamicHomeworkKeys: List<String>
+        dynamicHomeworkKeys: List<String>,
+        precalculatedHeaders: List<String>? = null,
+        precalculatedHeaderIndices: Map<String, Int>? = null
     ) {
         val sheet = workbook.createSheet(sheetName)
 
         sheet.createFreezePane(0, 1)
 
+        val headers = precalculatedHeaders ?: run {
+            val h = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
+            val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log" ||
+                    (sheetName != "Behavior Log" && sheetName != "Quiz Log" && sheetName != "Homework Log")
 
-        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
-        val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log"
+            if (isMasterLog) {
+                h.add("Log Type")
+            }
 
-        if (isMasterLog) {
-            headers.add("Log Type")
+            when (sheetName) {
+                "Behavior Log" -> h.add("Behavior")
+                "Quiz Log" -> {
+                    h.add("Quiz Name")
+                    h.add("Num Questions")
+                    quizMarkTypes.forEach { h.add(it.name) }
+                    h.add("Quiz Score (%)")
+                }
+                "Homework Log" -> {
+                    h.add("Homework Type/Session Name")
+                    h.add("Num Items")
+                    customHomeworkTypes.forEach { h.add(it.name) }
+                    customHomeworkStatuses.forEach { h.add(it.name) }
+                    dynamicHomeworkKeys.forEach { h.add(it) }
+                    h.add("Homework Score (Total Pts)")
+                    h.add("Homework Effort")
+                }
+                else -> {
+                    h.add("Item Name")
+                    quizMarkTypes.forEach { h.add(it.name) }
+                    h.add("Quiz Score (%)")
+                    customHomeworkTypes.forEach { h.add(it.name) }
+                    customHomeworkStatuses.forEach { h.add(it.name) }
+                    dynamicHomeworkKeys.forEach { h.add(it) }
+                    h.add("Homework Score (Total Pts)")
+                    h.add("Homework Effort")
+                }
+            }
+            h.add("Comment")
+            h
         }
-
-
-        when (sheetName) {
-            "Behavior Log" -> headers.add("Behavior")
-            "Quiz Log" -> {
-                headers.add("Quiz Name")
-                headers.add("Num Questions")
-                quizMarkTypes.forEach { headers.add(it.name) }
-                headers.add("Quiz Score (%)")
-            }
-            "Homework Log" -> {
-                headers.add("Homework Type/Session Name")
-                headers.add("Num Items")
-                customHomeworkTypes.forEach { headers.add(it.name) }
-                customHomeworkStatuses.forEach { headers.add(it.name) }
-                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
-                headers.add("Homework Score (Total Pts)")
-                headers.add("Homework Effort")
-            }
-            else -> { // Master Log or Combined Log
-                headers.add("Item Name")
-                quizMarkTypes.forEach { headers.add(it.name) }
-                headers.add("Quiz Score (%)")
-                customHomeworkTypes.forEach { headers.add(it.name) }
-                customHomeworkStatuses.forEach { headers.add(it.name) }
-                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
-                headers.add("Homework Score (Total Pts)")
-                headers.add("Homework Effort")
-            }
-        }
-        headers.add("Comment")
 
         val headerRow = sheet.createRow(0)
         headers.forEachIndexed { index, header ->
@@ -314,7 +327,7 @@ class Exporter(
         }
 
         // Cache indices in a Map for O(1) lookup
-        val headerIndices = headers.withIndex().associate { it.value to it.index }
+        val headerIndices = precalculatedHeaderIndices ?: headers.withIndex().associate { it.value to it.index }
         val behaviorCol = headerIndices["Behavior"] ?: -1
         val quizNameCol = headerIndices["Quiz Name"] ?: -1
         val itemNameCol = headerIndices["Item Name"] ?: -1
@@ -678,11 +691,36 @@ class Exporter(
             }
         }
 
+        // BOLT: Pre-calculate common headers and indices once for all student sheets.
+        val studentHeaders = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name", "Log Type", "Item Name")
+        quizMarkTypes.forEach { studentHeaders.add(it.name) }
+        studentHeaders.add("Quiz Score (%)")
+        customHomeworkTypes.forEach { studentHeaders.add(it.name) }
+        customHomeworkStatuses.forEach { studentHeaders.add(it.name) }
+        dynamicHomeworkKeys.forEach { studentHeaders.add(it) }
+        studentHeaders.add("Homework Score (Total Pts)")
+        studentHeaders.add("Homework Effort")
+        studentHeaders.add("Comment")
+
+        val studentHeaderIndices = studentHeaders.withIndex().associate { it.value to it.index }
+
         logsByStudent.forEach { (studentId, studentLogs) ->
             val student = students[studentId]
             if (student != null) {
-                val studentSheetName = "${student.firstName}_${student.lastName}".replace(Regex("[^a-zA-Z0-9_]"), "_").take(31)
-                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context, dynamicHomeworkKeys)
+                val studentSheetName = SHEET_NAME_CLEANER.replace("${student.firstName}_${student.lastName}", "_").take(31)
+                createSheet(
+                    workbook = workbook,
+                    sheetName = studentSheetName,
+                    data = studentLogs,
+                    students = students,
+                    quizMarkTypes = quizMarkTypes,
+                    customHomeworkTypes = customHomeworkTypes,
+                    customHomeworkStatuses = customHomeworkStatuses,
+                    context = context,
+                    dynamicHomeworkKeys = dynamicHomeworkKeys,
+                    precalculatedHeaders = studentHeaders,
+                    precalculatedHeaderIndices = studentHeaderIndices
+                )
             }
         }
     }
@@ -831,11 +869,16 @@ class Exporter(
      */
     private fun sanitize(value: String?): String {
         if (value.isNullOrBlank()) return ""
-        val triggers = charArrayOf('=', '+', '-', '@')
-        return if (value[0] in triggers) {
+        return if (value[0] in TRIGGERS) {
             "'$value"
         } else {
             value
         }
+    }
+
+    companion object {
+        /** BOLT: Pre-allocate triggers array and Regex to avoid object churn. */
+        private val TRIGGERS = charArrayOf('=', '+', '-', '@')
+        private val SHEET_NAME_CLEANER = Regex("[^a-zA-Z0-9_]")
     }
 }
