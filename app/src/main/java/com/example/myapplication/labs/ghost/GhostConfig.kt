@@ -106,6 +106,9 @@ object GhostConfig {
     /** Enables "Ghost Flora" neural botanical visualization. */
     const val FLORA_MODE_ENABLED = true
 
+    /** Enables "Ghost Tectonics" social stability visualization. */
+    const val TECTONICS_MODE_ENABLED = true
+
     /** Enables "Ghost Horizon" context-aware atmospheric visualization. */
     const val HORIZON_MODE_ENABLED = true
 

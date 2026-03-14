@@ -149,6 +149,7 @@ import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
 import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
+import com.example.myapplication.labs.ghost.tectonics.GhostTectonicLayer
 import com.example.myapplication.labs.ghost.GhostHorizonEngine
 import com.example.myapplication.labs.ghost.GhostHorizonLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
@@ -244,6 +245,7 @@ fun SeatingChartScreen(
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
     var isFloraActive by remember { mutableStateOf(false) }
+    var isTectonicsActive by remember { mutableStateOf(false) }
     var isPulsarActive by remember { mutableStateOf(false) }
     var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
@@ -626,6 +628,8 @@ fun SeatingChartScreen(
                 onToggleCatalyst = { isCatalystActive = !isCatalystActive },
                 isFloraActive = isFloraActive,
                 onToggleFlora = { isFloraActive = !isFloraActive },
+                isTectonicsActive = isTectonicsActive,
+                onToggleTectonics = { isTectonicsActive = !isTectonicsActive },
                 isPulsarActive = isPulsarActive,
                 onTogglePulsar = { isPulsarActive = !isPulsarActive },
                 isCortexActive = isCortexActive,
@@ -880,6 +884,16 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset,
                     isActive = isFloraActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TECTONICS_MODE_ENABLED && isTectonicsActive) {
+                GhostTectonicLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isTectonicsActive
                 )
             }
 
@@ -1672,6 +1686,8 @@ fun SeatingChartTopAppBar(
     onToggleCatalyst: () -> Unit,
     isFloraActive: Boolean,
     onToggleFlora: () -> Unit,
+    isTectonicsActive: Boolean,
+    onToggleTectonics: () -> Unit,
     isPulsarActive: Boolean,
     onTogglePulsar: () -> Unit,
     isCortexActive: Boolean,
@@ -2019,6 +2035,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.TECTONICS_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isTectonicsActive) "Stabilize Lithosphere 👻" else "Ghost Tectonics 👻") },
+                                onClick = {
+                                    onToggleTectonics()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Red) }
                             )
                         }
                         if (GhostConfig.CATALYST_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
