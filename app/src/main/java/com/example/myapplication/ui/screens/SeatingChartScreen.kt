@@ -157,6 +157,7 @@ import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
 import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
 import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
+import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -250,6 +251,7 @@ fun SeatingChartScreen(
     var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
+    var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
@@ -634,6 +636,8 @@ fun SeatingChartScreen(
                 onTogglePulsar = { isPulsarActive = !isPulsarActive },
                 isCortexActive = isCortexActive,
                 onToggleCortex = { isCortexActive = !isCortexActive },
+                isQuasarActive = isQuasarActive,
+                onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 onExportBlueprint = {
@@ -785,6 +789,13 @@ fun SeatingChartScreen(
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
             GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
+            GhostQuasarLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isQuasarActive
+            )
             GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
@@ -1692,6 +1703,8 @@ fun SeatingChartTopAppBar(
     onTogglePulsar: () -> Unit,
     isCortexActive: Boolean,
     onToggleCortex: () -> Unit,
+    isQuasarActive: Boolean,
+    onToggleQuasar: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1955,6 +1968,16 @@ fun SeatingChartTopAppBar(
                             showMoreMenu = false
                         },
                         leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                }
+                if (GhostConfig.QUASAR_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isQuasarActive) "Collapse Quasar 👻" else "Ghost Quasar 👻") },
+                        onClick = {
+                            onToggleQuasar()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                     )
                 }
                         if (GhostConfig.SPARK_MODE_ENABLED) {

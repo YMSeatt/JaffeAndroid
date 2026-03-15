@@ -232,4 +232,22 @@ In 2027, teachers don't just see data; they feel it. "Ghost Cortex" is a multi-s
 - **NaN Resilience:** Discovered that generative neural metrics require strict default sanitization to prevent floating-point anomalies from disrupting the sensory experience.
 
 ---
+
+## 🌟 Experiment: Ghost Quasar (High-Energy Student Nodes)
+**Date:** 2027-12-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, certain students become "Quasars" — focal points of intense behavioral or academic activity that outshine the surrounding classroom data. **Ghost Quasar** identifies these high-energy nodes and visualizes them as pulsing "Accretion Disks," allowing teachers to immediately see who is driving the classroom's momentum or turbulence.
+
+### 🛠️ The Tech
+- **GhostQuasarEngine**: A spatiotemporal analyzer that identifies students with high log density in short windows.
+- **AGSL Accretion Shader**: Implements a complex, swirling disk effect with procedural pulsing and core glow.
+- **Python High-Energy Bridge**: `ghost_quasar_analysis.py` provides a model for analyzing high-energy data clusters in exported JSON.
+
+### 🔦 The Discovery
+- **Momentum vs Status**: Unlike heatmaps, Quasars focus on "Energy" (rate of change), making them better at identifying emerging patterns before they become static problems.
+- **Polarity Mapping**: Using Cyan/Magenta to represent Positive/Negative energy within the same "Accretion" metaphor maintains visual consistency with the Ghost suite.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
