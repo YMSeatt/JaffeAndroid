@@ -262,11 +262,20 @@ class SeatingChartViewModel @Inject constructor(
     private val updateTrigger = MutableSharedFlow<Unit>(replay = 1)
     private var updateJob: Job? = null
 
+    /**
+     * Updates the exposed undo stack state for the UI.
+     *
+     * BOLT: Optimized to use [descendingIterator] on the [ArrayDeque] to build the
+     * oldest-to-newest list in a single pass with only one list allocation.
+     */
     private fun updateUndoStackState() {
-        // BOLT: ArrayDeque.toList() returns elements in first-to-last order.
-        // Since we use push() (addFirst), the newest command is first.
-        // The UI (and the previous Stack implementation) expects oldest-to-newest order.
-        _undoStackState.value = commandUndoStack.toList().reversed()
+        val size = commandUndoStack.size
+        val list = ArrayList<Command>(size)
+        val iterator = commandUndoStack.descendingIterator()
+        while (iterator.hasNext()) {
+            list.add(iterator.next())
+        }
+        _undoStackState.value = list
     }
     /**
      * Stores optimistic student positions during drag operations.
@@ -349,6 +358,8 @@ class SeatingChartViewModel @Inject constructor(
         val behaviorLogsIdentity: Int,
         val homeworkLogsIdentity: Int,
         val quizLogsIdentity: Int,
+        val sessionQuizLogsIdentity: Int,
+        val sessionHomeworkLogsIdentity: Int,
         val rulesIdentity: Int,
         val relevantPrefsHash: Int,
         val sessionActive: Boolean,
@@ -515,16 +526,25 @@ class SeatingChartViewModel @Inject constructor(
                 // the cache for all other students.
                 val behaviorEvents = allBehaviorEvents.value ?: emptyList()
                 if (behaviorEvents !== memoizedBehaviorEvents) {
-                    val newGrouped = behaviorEvents.groupBy { it.studentId }
-                    val oldGrouped = behaviorLogsByStudentCache
+                    val newGrouped = mutableMapOf<Long, MutableList<BehaviorEvent>>()
+                    for (event in behaviorEvents) {
+                        newGrouped.getOrPut(event.studentId) { mutableListOf() }.add(event)
+                    }
 
-                    // BOLT: Incremental update of behavior metrics
-                    newGrouped.forEach { (studentId, logs) ->
-                        // BOLT: Identity check (===) for optimized incremental update
-                        if (oldGrouped[studentId] !== logs) {
+                    val oldGrouped = behaviorLogsByStudentCache
+                    val finalGrouped = mutableMapOf<Long, List<BehaviorEvent>>()
+
+                    newGrouped.forEach { (studentId, newList) ->
+                        val oldList = oldGrouped[studentId]
+                        if (oldList == newList) {
+                            finalGrouped[studentId] = oldList
+                        } else {
+                            finalGrouped[studentId] = newList
+
+                            // BOLT: Incremental update of behavior metrics only for changed students
                             var nNeg = 0
                             var lastPosTs = -1L
-                            for (log in logs) {
+                            for (log in newList) {
                                 if (log.type.contains("Negative", ignoreCase = true)) {
                                     nNeg++
                                 } else if (log.timestamp > lastPosTs) {
@@ -537,15 +557,13 @@ class SeatingChartViewModel @Inject constructor(
                     }
 
                     // BOLT: Prune stale metric caches for students whose logs were cleared/deleted
-                    if (newGrouped.size < oldGrouped.size) {
-                        val currentLogStudentIds = newGrouped.keys
+                    if (finalGrouped.size < oldGrouped.size) {
+                        val currentLogStudentIds = finalGrouped.keys
                         negativeCountsCache.keys.retainAll(currentLogStudentIds)
                         lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
                     }
 
-                    behaviorLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
-                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
-                    }
+                    behaviorLogsByStudentCache = finalGrouped
                     memoizedBehaviorEvents = behaviorEvents
                 }
                 val behaviorLogsByStudent = behaviorLogsByStudentCache
@@ -566,10 +584,13 @@ class SeatingChartViewModel @Inject constructor(
 
                 val homeworkLogs = allHomeworkLogs.value ?: emptyList()
                 if (homeworkLogs !== memoizedHomeworkLogs) {
-                    val newGrouped = homeworkLogs.groupBy { it.studentId }
+                    val newGrouped = mutableMapOf<Long, MutableList<HomeworkLog>>()
+                    for (log in homeworkLogs) {
+                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                    }
                     val oldGrouped = homeworkLogsByStudentCache
-                    homeworkLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
-                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
+                    homeworkLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
+                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
                     }
                     memoizedHomeworkLogs = homeworkLogs
                 }
@@ -577,10 +598,13 @@ class SeatingChartViewModel @Inject constructor(
 
                 val quizLogs = allQuizLogs.value ?: emptyList()
                 if (quizLogs !== memoizedQuizLogs) {
-                    val newGrouped = quizLogs.groupBy { it.studentId }
+                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
+                    for (log in quizLogs) {
+                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                    }
                     val oldGrouped = quizLogsByStudentCache
-                    quizLogsByStudentCache = newGrouped.mapValues { (sid, list) ->
-                        if (oldGrouped[sid] == list) oldGrouped[sid]!! else list
+                    quizLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
+                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
                     }
                     memoizedQuizLogs = quizLogs
                 }
@@ -589,14 +613,28 @@ class SeatingChartViewModel @Inject constructor(
                 val sessionActive = isSessionActive.value == true
                 val currentSessionQuizLogs = if (sessionActive) sessionQuizLogs.value ?: emptyList() else emptyList()
                 if (currentSessionQuizLogs !== memoizedSessionQuizLogs) {
-                    sessionQuizLogsByStudentCache = currentSessionQuizLogs.groupBy { it.studentId }
+                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
+                    for (log in currentSessionQuizLogs) {
+                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                    }
+                    val oldGrouped = sessionQuizLogsByStudentCache
+                    sessionQuizLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
+                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    }
                     memoizedSessionQuizLogs = currentSessionQuizLogs
                 }
                 val sessionQuizLogsGrouped = sessionQuizLogsByStudentCache
 
                 val currentSessionHomeworkLogs = if (sessionActive) sessionHomeworkLogs.value ?: emptyList() else emptyList()
                 if (currentSessionHomeworkLogs !== memoizedSessionHomeworkLogs) {
-                    sessionHomeworkLogsByStudentCache = currentSessionHomeworkLogs.groupBy { it.studentId }
+                    val newGrouped = mutableMapOf<Long, MutableList<HomeworkLog>>()
+                    for (log in currentSessionHomeworkLogs) {
+                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                    }
+                    val oldGrouped = sessionHomeworkLogsByStudentCache
+                    sessionHomeworkLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
+                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    }
                     memoizedSessionHomeworkLogs = currentSessionHomeworkLogs
                 }
                 val sessionHomeworkLogsGrouped = sessionHomeworkLogsByStudentCache
@@ -723,6 +761,8 @@ class SeatingChartViewModel @Inject constructor(
                         behaviorLogsIdentity = System.identityHashCode(behaviorList),
                         homeworkLogsIdentity = System.identityHashCode(homeworkList),
                         quizLogsIdentity = System.identityHashCode(quizList),
+                        sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped[student.id]),
+                        sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped[student.id]),
                         rulesIdentity = System.identityHashCode(decodedRules),
                         relevantPrefsHash = relevantPrefsHash,
                         sessionActive = sessionActive,
