@@ -48,11 +48,6 @@ fun GhostTectonicLayer(
         label = "time"
     )
 
-    // Calculate tectonic nodes (stress field)
-    val tectonicNodes = remember(students, behaviorLogs) {
-        GhostTectonicEngine.calculateTectonicState(students, behaviorLogs)
-    }
-
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostTectonicShader.SOCIAL_TECTONICS) }
         val brush = remember(shader) { ShaderBrush(shader) }
@@ -63,17 +58,17 @@ fun GhostTectonicLayer(
 
             // Pass up to 20 nodes to the shader (GPU uniform limit)
             val nodeData = FloatArray(20 * 3)
-            val count = min(tectonicNodes.size, 20)
+            val count = min(students.size, 20)
 
             for (i in 0 until count) {
-                val node = tectonicNodes[i]
+                val student = students[i]
                 // Map logical world coordinates to screen coordinates
-                val screenX = (node.x * canvasScale) + canvasOffset.x
-                val screenY = (node.y * canvasScale) + canvasOffset.y
+                val screenX = (student.xPosition.value * canvasScale) + canvasOffset.x
+                val screenY = (student.yPosition.value * canvasScale) + canvasOffset.y
 
                 nodeData[i * 3] = screenX
                 nodeData[i * 3 + 1] = screenY
-                nodeData[i * 3 + 2] = node.stress
+                nodeData[i * 3 + 2] = student.tectonicStress.value
             }
 
             shader.setFloatUniform("iNodes", nodeData)
