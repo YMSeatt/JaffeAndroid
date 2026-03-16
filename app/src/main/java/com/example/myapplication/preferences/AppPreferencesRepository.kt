@@ -25,21 +25,67 @@ import javax.inject.Inject
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
-// Default values for student box appearance
+/** Default width for a student's visual representation in DP. */
 const val DEFAULT_STUDENT_BOX_WIDTH_DP = 120
+/** Default height for a student's visual representation in DP. */
 const val DEFAULT_STUDENT_BOX_HEIGHT_DP = 60
-const val DEFAULT_STUDENT_BOX_BG_COLOR_HEX = "#FFFFFFFF" // White, recommend referencing theme colors if possible
-const val DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX = "#FF000000" // Black for outline, adjust as needed
-const val DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX = "#FF000000"    // Black for text
-const val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP = 1 // Default outline thickness in Dp
+/** Default background color (White) for a student box. */
+const val DEFAULT_STUDENT_BOX_BG_COLOR_HEX = "#FFFFFFFF"
+/** Default outline color (Black) for a student box. */
+const val DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX = "#FF000000"
+/** Default text color (Black) for student labels. */
+const val DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX = "#FF000000"
+/** Default outline thickness for student boxes in DP. */
+const val DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP = 1
+/** Default corner radius for student boxes in DP. */
 const val DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP = 8
+/** Default internal padding for student boxes in DP. */
 const val DEFAULT_STUDENT_BOX_PADDING_DP = 4
-const val DEFAULT_STUDENT_FONT_FAMILY = "sans-serif" // Android default
-const val DEFAULT_STUDENT_FONT_SIZE_SP = 16 // Example size in SP
-const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000" // Black
+/** Default font family for student UI text. */
+const val DEFAULT_STUDENT_FONT_FAMILY = "sans-serif"
+/** Default font size for student UI text in SP. */
+const val DEFAULT_STUDENT_FONT_SIZE_SP = 16
+/** Default font color for student UI text. */
+const val DEFAULT_STUDENT_FONT_COLOR_HEX = "#FF000000"
+/** Default limit for the number of recent behavior incidents to display. */
 const val DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT = 3
-const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0 // 0 means no timeout
+/** Default timeout (0 = infinite) for how long a log entry remains visible in the UI. */
+const val DEFAULT_LOG_DISPLAY_TIMEOUT = 0
 
+/**
+ * A unified state container representing the user's current configuration preferences.
+ * This class is used to provide a cohesive view of application settings to the UI.
+ *
+ * @property recentBehaviorIncidentsLimit Max number of behavior logs to track in the recent list.
+ * @property recentHomeworkLogsLimit Max number of homework logs to track in the recent list.
+ * @property recentLogsLimit Max number of generic logs to track in the recent list.
+ * @property maxRecentLogsToDisplay Number of log entries visible on the student icon.
+ * @property useInitialsForBehavior Whether to use short initials for behavior types in the UI.
+ * @property useInitialsForHomework Whether to use short initials for homework types in the UI.
+ * @property useInitialsForQuiz Whether to use short initials for quiz types in the UI.
+ * @property behaviorInitialsMap Mapping of behavior names to their short initials.
+ * @property homeworkInitialsMap Mapping of homework names to their short initials.
+ * @property quizInitialsMap Mapping of quiz names to their short initials.
+ * @property studentLogsLastCleared Mapping of student ID to timestamp of when their logs were last cleared.
+ * @property behaviorDisplayTimeout Duration in seconds behavior logs stay visible (0 = infinite).
+ * @property homeworkDisplayTimeout Duration in seconds homework logs stay visible (0 = infinite).
+ * @property quizDisplayTimeout Duration in seconds quiz logs stay visible (0 = infinite).
+ * @property defaultStudentStyle The baseline visual style for student boxes.
+ * @property autoExpandStudentBoxes Whether boxes should grow to accommodate log text.
+ * @property editModeEnabled Whether the seating chart is in interactive move mode.
+ * @property gridSnapEnabled Whether items snap to the grid during movement.
+ * @property gridSize The size of the alignment grid in DP.
+ * @property noAnimations Whether to disable visual transitions for performance.
+ * @property passwordAutoLockEnabled Whether the app should lock after a period of inactivity.
+ * @property passwordAutoLockTimeoutMinutes Minutes of inactivity before auto-locking.
+ * @property liveQuizQuestionsGoal Target number of questions for a live session.
+ * @property liveQuizInitialColor Start color for progress gradients in live quizzes.
+ * @property liveQuizFinalColor Target color for progress gradients in live quizzes.
+ * @property quizLogFontColor Primary color for quiz log text.
+ * @property homeworkLogFontColor Primary color for homework log text.
+ * @property quizLogFontBold Whether quiz log text should be rendered in bold.
+ * @property homeworkLogFontBold Whether homework log text should be rendered in bold.
+ */
 data class UserPreferences(
     val recentBehaviorIncidentsLimit: Int,
     val recentHomeworkLogsLimit: Int,
@@ -72,11 +118,27 @@ data class UserPreferences(
     val homeworkLogFontBold: Boolean
 )
 
+/**
+ * AppPreferencesRepository: The single source of truth for application settings.
+ *
+ * This repository manages user configuration and preference state using Jetpack DataStore.
+ * It provides reactive [Flow] streams for all settings and atomic [suspend] methods for
+ * updates, ensuring a Unidirectional Data Flow.
+ *
+ * ### Shield (Security Boundary):
+ * This repository coordinates with [SecurityUtil] to ensure that sensitive preferences
+ * (e.g., email passwords, SMTP settings, schedules) are encrypted at rest within the
+ * DataStore. It transparently handles encryption on write and decryption on read.
+ */
 class AppPreferencesRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val securityUtil: SecurityUtil
 ) {
 
+    /**
+     * Central registry for DataStore preference keys.
+     * Use these keys to access or modify specific settings in the repository.
+     */
     object PreferencesKeys {
         val RECENT_LOGS_LIMIT = intPreferencesKey("recent_logs_limit")
         val RECENT_HOMEWORK_LOGS_LIMIT = intPreferencesKey("recent_homework_logs_limit")
@@ -91,7 +153,7 @@ class AppPreferencesRepository @Inject constructor(
         val APP_THEME = stringPreferencesKey("app_theme")
         val SHOW_RECENT_BEHAVIOR = booleanPreferencesKey("show_recent_behavior")
 
-        // New keys for default student box appearance
+        // Keys for default student box appearance
         val DEFAULT_STUDENT_BOX_WIDTH = intPreferencesKey("default_student_box_width")
         val DEFAULT_STUDENT_BOX_HEIGHT = intPreferencesKey("default_student_box_height")
         val DEFAULT_STUDENT_BOX_BG_COLOR = stringPreferencesKey("default_student_box_bg_color")
@@ -137,7 +199,6 @@ class AppPreferencesRepository @Inject constructor(
         val EMAIL_SCHEDULES = stringSetPreferencesKey("email_schedules")
         val EMAIL_PASSWORD = stringPreferencesKey("email_password")
 
-        // New timeout preferences for specific log types
         val BEHAVIOR_DISPLAY_TIMEOUT = intPreferencesKey("behavior_display_timeout")
         val HOMEWORK_DISPLAY_TIMEOUT = intPreferencesKey("homework_display_timeout")
         val QUIZ_DISPLAY_TIMEOUT = intPreferencesKey("quiz_display_timeout")
@@ -145,9 +206,8 @@ class AppPreferencesRepository @Inject constructor(
         val CANVAS_BACKGROUND_COLOR = stringPreferencesKey("canvas_background_color")
         val GUIDES_STAY_WHEN_RULERS_HIDDEN = booleanPreferencesKey("guides_stay_when_rulers_hidden")
 
-        // Live Homework Session Preferences
-        val LIVE_HOMEWORK_SESSION_MODE = stringPreferencesKey("live_homework_session_mode") // "Yes/No" or "Select"
-        val LIVE_HOMEWORK_SELECT_OPTIONS = stringPreferencesKey("live_homework_select_options") // JSON or delimited string
+        val LIVE_HOMEWORK_SESSION_MODE = stringPreferencesKey("live_homework_session_mode")
+        val LIVE_HOMEWORK_SELECT_OPTIONS = stringPreferencesKey("live_homework_select_options")
         val SMTP_SETTINGS = stringPreferencesKey("smtp_settings")
         val PASSWORD_AUTO_LOCK_ENABLED = booleanPreferencesKey("password_auto_lock_enabled")
         val PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES = intPreferencesKey("password_auto_lock_timeout_minutes")
@@ -161,105 +221,127 @@ class AppPreferencesRepository @Inject constructor(
         val HOMEWORK_LOG_FONT_BOLD = booleanPreferencesKey("homework_log_font_bold")
     }
 
+    /** Reactive stream of the target number of questions for live quiz sessions. */
     val liveQuizQuestionsGoalFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIVE_QUIZ_QUESTIONS_GOAL] ?: 5
         }
 
+    /** Updates the target number of questions for live quiz sessions. */
     suspend fun updateLiveQuizQuestionsGoal(goal: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.LIVE_QUIZ_QUESTIONS_GOAL] = goal
         }
     }
 
+    /** Reactive stream of the starting color for progress bars in live sessions. */
     val liveQuizInitialColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIVE_QUIZ_INITIAL_COLOR] ?: "#FFFF0000"
         }
 
+    /** Updates the starting color for progress bars in live sessions. */
     suspend fun updateLiveQuizInitialColor(color: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.LIVE_QUIZ_INITIAL_COLOR] = color
         }
     }
 
+    /** Reactive stream of the target completion color for progress bars in live sessions. */
     val liveQuizFinalColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIVE_QUIZ_FINAL_COLOR] ?: "#FF00FF00"
         }
 
+    /** Updates the target completion color for progress bars in live sessions. */
     suspend fun updateLiveQuizFinalColor(color: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.LIVE_QUIZ_FINAL_COLOR] = color
         }
     }
 
+    /** Reactive stream of the font color used for quiz log entries. */
     val quizLogFontColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.QUIZ_LOG_FONT_COLOR] ?: "#FF006400"
         }
 
+    /** Updates the font color used for quiz log entries. */
     suspend fun updateQuizLogFontColor(color: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.QUIZ_LOG_FONT_COLOR] = color
         }
     }
 
+    /** Reactive stream of the font color used for homework log entries. */
     val homeworkLogFontColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.HOMEWORK_LOG_FONT_COLOR] ?: "#FF800080"
         }
 
+    /** Updates the font color used for homework log entries. */
     suspend fun updateHomeworkLogFontColor(color: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_LOG_FONT_COLOR] = color
         }
     }
 
+    /** Reactive stream indicating if quiz log text should be bold. */
     val quizLogFontBoldFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.QUIZ_LOG_FONT_BOLD] ?: true
         }
 
+    /** Updates whether quiz log text should be bold. */
     suspend fun updateQuizLogFontBold(bold: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.QUIZ_LOG_FONT_BOLD] = bold
         }
     }
 
+    /** Reactive stream indicating if homework log text should be bold. */
     val homeworkLogFontBoldFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.HOMEWORK_LOG_FONT_BOLD] ?: true
         }
 
+    /** Updates whether homework log text should be bold. */
     suspend fun updateHomeworkLogFontBold(bold: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_LOG_FONT_BOLD] = bold
         }
     }
 
+    /** Reactive stream indicating if the auto-lock feature is enabled. */
     val passwordAutoLockEnabledFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.PASSWORD_AUTO_LOCK_ENABLED] ?: false
         }
 
+    /** Updates whether the auto-lock feature is enabled. */
     suspend fun updatePasswordAutoLockEnabled(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.PASSWORD_AUTO_LOCK_ENABLED] = enabled
         }
     }
 
+    /** Reactive stream of the inactivity timeout (minutes) for the auto-lock feature. */
     val passwordAutoLockTimeoutMinutesFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES] ?: 15
         }
 
+    /** Updates the inactivity timeout (minutes) for the auto-lock feature. */
     suspend fun updatePasswordAutoLockTimeoutMinutes(minutes: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.PASSWORD_AUTO_LOCK_TIMEOUT_MINUTES] = minutes
         }
     }
 
+    /**
+     * Reactive stream of all automated email schedules.
+     * Decodes and decrypts schedule metadata from DataStore.
+     */
     val emailSchedulesFlow: Flow<List<EmailSchedule>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.EMAIL_SCHEDULES] ?: emptySet()).mapNotNull {
@@ -272,6 +354,10 @@ class AppPreferencesRepository @Inject constructor(
             }
         }
 
+    /**
+     * Updates the set of automated email schedules.
+     * Encrypts schedule metadata before persisting to DataStore.
+     */
     suspend fun updateEmailSchedules(schedules: List<EmailSchedule>) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.EMAIL_SCHEDULES] = schedules.map {
@@ -281,21 +367,25 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if bold fonts are used globally in student boxes. */
     val useBoldFontFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.USE_BOLD_FONT] ?: false
         }
 
+    /** Updates whether bold fonts are used globally in student boxes. */
     suspend fun updateUseBoldFont(useBoldFont: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_BOLD_FONT] = useBoldFont
         }
     }
+    /** Reactive stream of the last directory path used for exporting Excel reports. */
     val lastExportPathFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_EXPORT_PATH]?.let { securityUtil.decryptSafe(it) }
         }
 
+    /** Updates the last used export path, encrypting the string for privacy. */
     suspend fun updateLastExportPath(path: String) {
         val encryptedPath = securityUtil.encrypt(path)
         context.dataStore.edit { settings ->
@@ -303,17 +393,23 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if Fernet encryption is enabled for export files. */
     val encryptDataFilesFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.ENCRYPT_DATA_FILES] ?: true
         }
 
+    /** Updates whether Fernet encryption is enabled for export files. */
     suspend fun updateEncryptDataFiles(encrypt: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.ENCRYPT_DATA_FILES] = encrypt
         }
     }
 
+    /**
+     * Reactive stream of log-clearing timestamps for all students.
+     * Used to filter out historical logs that were cleared by the teacher.
+     */
     val studentLogsLastClearedFlow: Flow<Map<Long, Long>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet())
@@ -331,6 +427,10 @@ class AppPreferencesRepository @Inject constructor(
                 }.toMap()
         }
 
+    /**
+     * Updates the clear-log timestamp for a specific student.
+     * Encrypts the mapping string before storage.
+     */
     suspend fun updateStudentLogsLastCleared(studentId: Long, timestamp: Long) {
         context.dataStore.edit { settings ->
             val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
@@ -341,6 +441,7 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Removes the clear-log record for a student. */
     suspend fun removeStudentLogsLastCleared(studentId: Long) {
         context.dataStore.edit { settings ->
             val currentCleared = settings[PreferencesKeys.STUDENT_LOGS_LAST_CLEARED] ?: emptySet()
@@ -350,112 +451,131 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if the seating chart is currently in edit mode. */
     val editModeEnabledFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.EDIT_MODE_ENABLED] ?: false
         }
 
+    /** Updates whether the seating chart is in edit mode. */
     suspend fun updateEditModeEnabled(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.EDIT_MODE_ENABLED] = enabled
         }
     }
 
+    /** Reactive stream indicating if student boxes should auto-expand for logs. */
     val autoExpandStudentBoxesFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.AUTO_EXPAND_STUDENT_BOXES] ?: true // Default to true
+            preferences[PreferencesKeys.AUTO_EXPAND_STUDENT_BOXES] ?: true
         }
 
+    /** Updates whether student boxes should auto-expand for logs. */
     suspend fun updateAutoExpandStudentBoxes(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.AUTO_EXPAND_STUDENT_BOXES] = enabled
         }
     }
 
+    /** Reactive stream of the max number of generic logs to track. */
     val recentLogsLimitFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.RECENT_LOGS_LIMIT] ?: 3 // Default to 3
+            preferences[PreferencesKeys.RECENT_LOGS_LIMIT] ?: 3
         }
 
+    /** Updates the max number of generic logs to track. */
     suspend fun updateRecentLogsLimit(limit: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.RECENT_LOGS_LIMIT] = limit
         }
     }
 
+    /** Reactive stream of the max number of homework logs to track. */
     val recentHomeworkLogsLimitFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.RECENT_HOMEWORK_LOGS_LIMIT] ?: 3 // Default to 3
+            preferences[PreferencesKeys.RECENT_HOMEWORK_LOGS_LIMIT] ?: 3
         }
 
+    /** Updates the max number of homework logs to track. */
     suspend fun updateRecentHomeworkLogsLimit(limit: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.RECENT_HOMEWORK_LOGS_LIMIT] = limit
         }
     }
 
-    // New flow and update function for recent behavior incidents limit
+    /** Reactive stream of the max number of behavior incidents to track. */
     val recentBehaviorIncidentsLimitFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.RECENT_BEHAVIOR_INCIDENTS_LIMIT] ?: DEFAULT_RECENT_BEHAVIOR_INCIDENTS_LIMIT
         }
 
+    /** Updates the max number of behavior incidents to track. */
     suspend fun updateRecentBehaviorIncidentsLimit(limit: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.RECENT_BEHAVIOR_INCIDENTS_LIMIT] = limit
         }
     }
 
+    /** Reactive stream of the number of recent logs to display on the student icon. */
     val maxRecentLogsToDisplayFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.MAX_RECENT_LOGS_TO_DISPLAY] ?: 1 // Default to 1
+            preferences[PreferencesKeys.MAX_RECENT_LOGS_TO_DISPLAY] ?: 1
         }
 
+    /** Updates the number of recent logs to display on the student icon. */
     suspend fun updateMaxRecentLogsToDisplay(limit: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.MAX_RECENT_LOGS_TO_DISPLAY] = limit
         }
     }
 
+    /** Reactive stream indicating if initials should be used for behavior logs. */
     val useInitialsForBehaviorFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.USE_INITIALS_FOR_BEHAVIOR] ?: false // Default to false
+            preferences[PreferencesKeys.USE_INITIALS_FOR_BEHAVIOR] ?: false
         }
 
+    /** Updates whether to use initials for behavior logs. */
     suspend fun updateUseInitialsForBehavior(useInitials: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_INITIALS_FOR_BEHAVIOR] = useInitials
         }
     }
 
+    /** Reactive stream indicating if initials should be used for homework logs. */
     val useInitialsForHomeworkFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.USE_INITIALS_FOR_HOMEWORK] ?: false
         }
 
+    /** Updates whether to use initials for homework logs. */
     suspend fun updateUseInitialsForHomework(useInitials: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_INITIALS_FOR_HOMEWORK] = useInitials
         }
     }
 
+    /** Reactive stream indicating if initials should be used for quiz logs. */
     val useInitialsForQuizFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.USE_INITIALS_FOR_QUIZ] ?: false
         }
 
+    /** Updates whether to use initials for quiz logs. */
     suspend fun updateUseInitialsForQuiz(useInitials: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_INITIALS_FOR_QUIZ] = useInitials
         }
     }
 
+    /** Reactive stream of the homework initials mapping. Decrypted for use. */
     val homeworkInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             val value = preferences[PreferencesKeys.HOMEWORK_INITIALS_MAP] ?: ""
             securityUtil.decryptSafe(value)
         }
 
+    /** Updates the homework initials mapping. Encrypted for storage. */
     suspend fun updateHomeworkInitialsMap(map: String) {
         val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
@@ -463,12 +583,14 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of the quiz initials mapping. Decrypted for use. */
     val quizInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             val value = preferences[PreferencesKeys.QUIZ_INITIALS_MAP] ?: ""
             securityUtil.decryptSafe(value)
         }
 
+    /** Updates the quiz initials mapping. Encrypted for storage. */
     suspend fun updateQuizInitialsMap(map: String) {
         val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
@@ -476,28 +598,33 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if student full names (vs first names) are displayed. */
     val useFullNameForStudentFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.USE_FULL_NAME_FOR_STUDENT] ?: false // Default to false
+            preferences[PreferencesKeys.USE_FULL_NAME_FOR_STUDENT] ?: false
         }
 
+    /** Updates whether student full names are displayed. */
     suspend fun updateUseFullNameForStudent(useFullName: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.USE_FULL_NAME_FOR_STUDENT] = useFullName
         }
     }
 
+    /** Reactive stream of the current application theme name. */
     val appThemeFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            preferences[PreferencesKeys.APP_THEME] ?: AppTheme.SYSTEM.name // Default to System
+            preferences[PreferencesKeys.APP_THEME] ?: AppTheme.SYSTEM.name
         }
 
+    /** Updates the application theme. */
     suspend fun updateAppTheme(theme: AppTheme) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.APP_THEME] = theme.name
         }
     }
 
+    /** Reactive stream of defined behavior types. Decrypted for use. */
     val behaviorTypesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.BEHAVIOR_TYPES_LIST] ?: emptySet()).map {
@@ -505,6 +632,7 @@ class AppPreferencesRepository @Inject constructor(
             }.toSet()
         }
 
+    /** Updates the list of behavior types. Encrypted for storage. */
     suspend fun updateBehaviorTypes(types: Set<String>) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.BEHAVIOR_TYPES_LIST] = types.map {
@@ -513,6 +641,7 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of defined homework assignment types. Decrypted for use. */
     val homeworkAssignmentTypesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] ?: emptySet()).map {
@@ -520,6 +649,7 @@ class AppPreferencesRepository @Inject constructor(
             }.toSet()
         }
 
+    /** Updates the list of homework assignment types. Encrypted for storage. */
     suspend fun updateHomeworkAssignmentTypes(types: Set<String>) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_ASSIGNMENT_TYPES_LIST] = types.map {
@@ -528,6 +658,7 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of defined homework statuses. Decrypted for use. */
     val homeworkStatusesListFlow: Flow<Set<String>> = context.dataStore.data
         .map { preferences ->
             (preferences[PreferencesKeys.HOMEWORK_STATUSES_LIST] ?: emptySet()).map {
@@ -535,6 +666,7 @@ class AppPreferencesRepository @Inject constructor(
             }.toSet()
         }
 
+    /** Updates the list of homework statuses. Encrypted for storage. */
     suspend fun updateHomeworkStatuses(statuses: Set<String>) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_STATUSES_LIST] = statuses.map {
@@ -543,155 +675,188 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if recent behavior log summaries are shown. */
     val showRecentBehaviorFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SHOW_RECENT_BEHAVIOR] ?: true
         }
 
+    /** Updates whether recent behavior log summaries are shown. */
     suspend fun updateShowRecentBehavior(show: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.SHOW_RECENT_BEHAVIOR] = show
         }
     }
 
-    // Flows and update functions for default student box appearance
+    /** Reactive stream of the default student box width. */
     val defaultStudentBoxWidthFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_WIDTH] ?: DEFAULT_STUDENT_BOX_WIDTH_DP
         }
 
+    /** Updates the default student box width. */
     suspend fun updateDefaultStudentBoxWidth(width: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_WIDTH] = width
         }
     }
 
+    /** Reactive stream of the default student box height. */
     val defaultStudentBoxHeightFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_HEIGHT] ?: DEFAULT_STUDENT_BOX_HEIGHT_DP
         }
 
+    /** Updates the default student box height. */
     suspend fun updateDefaultStudentBoxHeight(height: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_HEIGHT] = height
         }
     }
 
+    /** Reactive stream of the default student box background color. */
     val defaultStudentBoxBackgroundColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_BG_COLOR] ?: DEFAULT_STUDENT_BOX_BG_COLOR_HEX
         }
 
+    /** Updates the default student box background color. */
     suspend fun updateDefaultStudentBoxBackgroundColor(colorHex: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_BG_COLOR] = colorHex
         }
     }
 
+    /** Reactive stream of the default student box outline color. */
     val defaultStudentBoxOutlineColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_COLOR] ?: DEFAULT_STUDENT_BOX_OUTLINE_COLOR_HEX
         }
 
+    /** Updates the default student box outline color. */
     suspend fun updateDefaultStudentBoxOutlineColor(colorHex: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_COLOR] = colorHex
         }
     }
 
+    /** Reactive stream of the default student box text color. */
     val defaultStudentBoxTextColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_TEXT_COLOR] ?: DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
         }
 
+    /** Updates the default student box text color. */
     suspend fun updateDefaultStudentBoxTextColor(colorHex: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_TEXT_COLOR] = colorHex
         }
     }
 
+    /** Reactive stream of the default student box outline thickness. */
     val defaultStudentBoxOutlineThicknessFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] ?: DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP
         }
 
+    /** Updates the default student box outline thickness. */
     suspend fun updateDefaultStudentBoxOutlineThickness(thickness: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS] = thickness
         }
     }
 
+    /** Reactive stream of the default student box corner radius. */
     val defaultStudentBoxCornerRadiusFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_CORNER_RADIUS] ?: DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP
         }
 
+    /** Updates the default student box corner radius. */
     suspend fun updateDefaultStudentBoxCornerRadius(cornerRadius: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_CORNER_RADIUS] = cornerRadius
         }
     }
 
+    /** Reactive stream of the default student box internal padding. */
     val defaultStudentBoxPaddingFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_BOX_PADDING] ?: DEFAULT_STUDENT_BOX_PADDING_DP
         }
 
+    /** Updates the default student box internal padding. */
     suspend fun updateDefaultStudentBoxPadding(padding: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_BOX_PADDING] = padding
         }
     }
 
+    /** Reactive stream of the default font family for student UI text. */
     val defaultStudentFontFamilyFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_FAMILY] ?: DEFAULT_STUDENT_FONT_FAMILY
         }
 
+    /** Updates the default font family for student UI text. */
     suspend fun updateDefaultStudentFontFamily(fontFamily: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_FONT_FAMILY] = fontFamily
         }
     }
 
+    /** Reactive stream of the default font size for student UI text. */
     val defaultStudentFontSizeFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_SIZE] ?: DEFAULT_STUDENT_FONT_SIZE_SP
         }
 
+    /** Updates the default font size for student UI text. */
     suspend fun updateDefaultStudentFontSize(fontSize: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_FONT_SIZE] = fontSize
         }
     }
 
+    /** Reactive stream of the default font color for student UI text. */
     val defaultStudentFontColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] ?: DEFAULT_STUDENT_FONT_COLOR_HEX
         }
 
+    /** Updates the default font color for student UI text. */
     suspend fun updateDefaultStudentFontColor(colorHex: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.DEFAULT_STUDENT_FONT_COLOR] = colorHex
         }
     }
 
+    /** Reactive stream indicating if password protection is enabled. */
     val passwordEnabledFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.PASSWORD_ENABLED] ?: false
         }
 
+    /** Updates whether password protection is enabled. */
     suspend fun updatePasswordEnabled(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.PASSWORD_ENABLED] = enabled
         }
     }
 
+    /**
+     * Reactive stream of the password hash.
+     * Decrypts the hash from DataStore for verification.
+     */
     val passwordHashFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.PASSWORD_HASH]?.let { securityUtil.decryptSafe(it) }
         }
 
+    /**
+     * Updates the password hash.
+     * Encrypts the hash before storage.
+     */
     suspend fun updatePasswordHash(hash: String) {
         val encryptedHash = securityUtil.encrypt(hash)
         context.dataStore.edit { settings ->
@@ -699,32 +864,39 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of the duration (seconds) that quiz names remain "sticky" in the UI. */
     val stickyQuizNameDurationSecondsFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.STICKY_QUIZ_NAME_DURATION_SECONDS] ?: 0
         }
 
+    /** Updates the duration that quiz names remain "sticky" in the UI. */
     suspend fun updateStickyQuizNameDurationSeconds(duration: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.STICKY_QUIZ_NAME_DURATION_SECONDS] = duration
         }
     }
 
+    /** Reactive stream of the duration (seconds) that homework names remain "sticky" in the UI. */
     val stickyHomeworkNameDurationSecondsFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] ?: 0
         }
+
+    /** Updates the duration that homework names remain "sticky" in the UI. */
     suspend fun updateStickyHomeworkNameDurationSeconds(duration: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.STICKY_HOMEWORK_NAME_DURATION_SECONDS] = duration
         }
     }
 
+    /** Reactive stream of the name of the last quiz logged. Decrypted for use. */
     val lastQuizNameFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_QUIZ_NAME]?.let { securityUtil.decryptSafe(it) }
         }
 
+    /** Updates the name of the last quiz logged. Encrypted for storage. */
     suspend fun updateLastQuizName(name: String) {
         val encryptedName = securityUtil.encrypt(name)
         context.dataStore.edit { settings ->
@@ -733,16 +905,19 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of the timestamp when the last quiz was logged. */
     val lastQuizTimestampFlow: Flow<Long?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_QUIZ_TIMESTAMP]
         }
 
+    /** Reactive stream of the name of the last homework logged. Decrypted for use. */
     val lastHomeworkNameFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_HOMEWORK_NAME]?.let { securityUtil.decryptSafe(it) }
         }
 
+    /** Updates the name of the last homework logged. Encrypted for storage. */
     suspend fun updateLastHomeworkName(name: String) {
         val encryptedName = securityUtil.encrypt(name)
         context.dataStore.edit { settings ->
@@ -751,17 +926,20 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of the timestamp when the last homework was logged. */
     val lastHomeworkTimestampFlow: Flow<Long?> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LAST_HOMEWORK_TIMESTAMP]
         }
 
+    /** Reactive stream of the behavior initials mapping. Decrypted for use. */
     val behaviorInitialsMapFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             val value = preferences[PreferencesKeys.BEHAVIOR_INITIALS_MAP] ?: ""
             securityUtil.decryptSafe(value)
         }
 
+    /** Updates the behavior initials mapping. Encrypted for storage. */
     suspend fun updateBehaviorInitialsMap(map: String) {
         val encryptedMap = securityUtil.encrypt(map)
         context.dataStore.edit { settings ->
@@ -769,72 +947,85 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if visual animations are disabled. */
     val noAnimationsFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.NO_ANIMATIONS] ?: false
         }
 
+    /** Updates whether to disable visual animations. */
     suspend fun updateNoAnimations(noAnimations: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.NO_ANIMATIONS] = noAnimations
         }
     }
 
+    /** Reactive stream of the interval (ms) for autosaving classroom state. */
     val autosaveIntervalFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.AUTOSAVE_INTERVAL] ?: 30000
         }
 
+    /** Updates the autosave interval. */
     suspend fun updateAutosaveInterval(interval: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.AUTOSAVE_INTERVAL] = interval
         }
     }
 
+    /** Reactive stream indicating if items snap to the grid during movement. */
     val gridSnapEnabledFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.GRID_SNAP_ENABLED] ?: false
         }
 
+    /** Updates whether items snap to the grid. */
     suspend fun updateGridSnapEnabled(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.GRID_SNAP_ENABLED] = enabled
         }
     }
 
+    /** Reactive stream of the grid size (DP) for the seating chart. */
     val gridSizeFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.GRID_SIZE] ?: 20
         }
 
+    /** Updates the grid size. */
     suspend fun updateGridSize(size: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.GRID_SIZE] = size
         }
     }
 
+    /** Reactive stream indicating if coordinate rulers are visible. */
     val showRulersFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SHOW_RULERS] ?: false
         }
 
+    /** Updates whether coordinate rulers are visible. */
     suspend fun updateShowRulers(show: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.SHOW_RULERS] = show
         }
     }
 
+    /** Reactive stream indicating if the alignment grid is visible. */
     val showGridFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SHOW_GRID] ?: false
         }
 
+    /** Updates whether the alignment grid is visible. */
     suspend fun updateShowGrid(show: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.SHOW_GRID] = show
         }
     }
 
+    /** Reactive stream providing a unified baseline style for student boxes. */
     val defaultStudentStyleFlow: Flow<DefaultStudentStyle> = context.dataStore.data
         .map { preferences ->
             DefaultStudentStyle(
@@ -852,12 +1043,14 @@ class AppPreferencesRepository @Inject constructor(
             )
         }
 
+    /** Reactive stream of the default email address for reports. Decrypted for use. */
     val defaultEmailAddressFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             val value = preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: "behaviorlogger@gmail.com"
             securityUtil.decryptSafe(value)
         }
 
+    /** Updates the default email address. Encrypted for storage. */
     suspend fun updateDefaultEmailAddress(email: String) {
         val encryptedEmail = securityUtil.encrypt(email)
         context.dataStore.edit { settings ->
@@ -865,56 +1058,66 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream indicating if reports should be automatically emailed on app close. */
     val autoSendEmailOnCloseFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.AUTO_SEND_EMAIL_ON_CLOSE] ?: false
         }
 
+    /** Updates whether to auto-send emails on close. */
     suspend fun updateAutoSendEmailOnClose(enabled: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.AUTO_SEND_EMAIL_ON_CLOSE] = enabled
         }
     }
 
+    /** Reactive stream of the display timeout (seconds) for behavior logs. */
     val behaviorDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.BEHAVIOR_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
         }
 
+    /** Updates the display timeout for behavior logs. */
     suspend fun updateBehaviorDisplayTimeout(timeout: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.BEHAVIOR_DISPLAY_TIMEOUT] = timeout
         }
     }
 
+    /** Reactive stream of the display timeout (seconds) for homework logs. */
     val homeworkDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.HOMEWORK_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
         }
 
+    /** Updates the display timeout for homework logs. */
     suspend fun updateHomeworkDisplayTimeout(timeout: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.HOMEWORK_DISPLAY_TIMEOUT] = timeout
         }
     }
 
+    /** Reactive stream of the display timeout (seconds) for quiz logs. */
     val quizDisplayTimeoutFlow: Flow<Int> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.QUIZ_DISPLAY_TIMEOUT] ?: DEFAULT_LOG_DISPLAY_TIMEOUT
         }
 
+    /** Updates the display timeout for quiz logs. */
     suspend fun updateQuizDisplayTimeout(timeout: Int) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.QUIZ_DISPLAY_TIMEOUT] = timeout
         }
     }
 
+    /** Reactive stream of the SMTP email password. Decrypted for use. */
     val emailPasswordFlow: Flow<String?> = context.dataStore.data
         .map { preferences ->
             val encryptedPassword = preferences[PreferencesKeys.EMAIL_PASSWORD]
             encryptedPassword?.let { securityUtil.decryptSafe(it) }
         }
 
+    /** Updates the SMTP email password. Encrypted for storage. */
     suspend fun updateEmailPassword(password: String) {
         val encryptedPassword = securityUtil.encrypt(password)
         context.dataStore.edit { settings ->
@@ -922,45 +1125,53 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of the background color for the seating chart canvas. */
     val canvasBackgroundColorFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.CANVAS_BACKGROUND_COLOR] ?: "#FFFFFFFF"
         }
 
+    /** Updates the seating chart canvas background color. */
     suspend fun updateCanvasBackgroundColor(color: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.CANVAS_BACKGROUND_COLOR] = color
         }
     }
 
+    /** Reactive stream indicating if alignment guides remain visible when rulers are hidden. */
     val guidesStayWhenRulersHiddenFlow: Flow<Boolean> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.GUIDES_STAY_WHEN_RULERS_HIDDEN] ?: false
         }
 
+    /** Updates whether alignment guides remain visible when rulers are hidden. */
     suspend fun updateGuidesStayWhenRulersHidden(stay: Boolean) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.GUIDES_STAY_WHEN_RULERS_HIDDEN] = stay
         }
     }
 
+    /** Reactive stream of the current live homework session mode ("Yes/No" or "Select"). */
     val liveHomeworkSessionModeFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.LIVE_HOMEWORK_SESSION_MODE] ?: "Yes/No"
         }
 
+    /** Updates the live homework session mode. */
     suspend fun updateLiveHomeworkSessionMode(mode: String) {
         context.dataStore.edit { settings ->
             settings[PreferencesKeys.LIVE_HOMEWORK_SESSION_MODE] = mode
         }
     }
 
+    /** Reactive stream of options for "Select" mode live homework sessions. Decrypted for use. */
     val liveHomeworkSelectOptionsFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
             val value = preferences[PreferencesKeys.LIVE_HOMEWORK_SELECT_OPTIONS] ?: "Done,Not Done,Signed,Returned"
             securityUtil.decryptSafe(value)
         }
 
+    /** Updates options for "Select" mode live homework sessions. Encrypted for storage. */
     suspend fun updateLiveHomeworkSelectOptions(options: String) {
         val encryptedOptions = securityUtil.encrypt(options)
         context.dataStore.edit { settings ->
@@ -968,6 +1179,7 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /** Reactive stream of SMTP server configuration. Decrypted and deserialized for use. */
     val smtpSettingsFlow: Flow<SmtpSettings> = context.dataStore.data
         .map { preferences ->
             preferences[PreferencesKeys.SMTP_SETTINGS]?.let {
@@ -980,6 +1192,7 @@ class AppPreferencesRepository @Inject constructor(
             } ?: SmtpSettings()
         }
 
+    /** Updates SMTP server configuration. Serialized and encrypted for storage. */
     suspend fun updateSmtpSettings(smtpSettings: SmtpSettings) {
         val json = Json.encodeToString(smtpSettings)
         val encrypted = securityUtil.encrypt(json)
@@ -988,6 +1201,11 @@ class AppPreferencesRepository @Inject constructor(
         }
     }
 
+    /**
+     * A combined reactive stream providing a unified [UserPreferences] object.
+     * This flow emits whenever any individual constituent preference changes,
+     * providing the UI with a consistent snapshot of the application state.
+     */
     val userPreferencesFlow: Flow<UserPreferences> = combine(
         recentBehaviorIncidentsLimitFlow,
         recentHomeworkLogsLimitFlow,
@@ -1053,6 +1271,16 @@ class AppPreferencesRepository @Inject constructor(
     }
 }
 
+/**
+ * Defines the available visual themes for the application.
+ */
 enum class AppTheme {
-    LIGHT, DARK, SYSTEM, DYNAMIC
+    /** Forced light mode. */
+    LIGHT,
+    /** Forced dark mode. */
+    DARK,
+    /** Follows the Android system theme (Day/Night). */
+    SYSTEM,
+    /** Follows Android 12+ dynamic color (Material You) if available. */
+    DYNAMIC
 }
