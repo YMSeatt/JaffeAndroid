@@ -68,4 +68,27 @@ class ReminderRepositoryTest {
 
         coVerify { dao.delete(1L) }
     }
+
+    @Test
+    fun `getReminderById should decrypt fields`() = runBlocking {
+        val encryptedReminder = Reminder(id = 1, title = "encrypted_title", description = "encrypted_desc", timestamp = 12345L)
+        val decryptedReminder = Reminder(id = 1, title = "decrypted_title", description = "decrypted_desc", timestamp = 12345L)
+
+        coEvery { dao.getReminderById(1L) } returns encryptedReminder
+        every { securityUtil.decryptSafe("encrypted_title") } returns "decrypted_title"
+        every { securityUtil.decryptSafe("encrypted_desc") } returns "decrypted_desc"
+
+        val result = repository.getReminderById(1L)
+
+        assertEquals(decryptedReminder, result)
+    }
+
+    @Test
+    fun `getReminderById should return null if not found`() = runBlocking {
+        coEvery { dao.getReminderById(1L) } returns null
+
+        val result = repository.getReminderById(1L)
+
+        assertEquals(null, result)
+    }
 }
