@@ -47,5 +47,6 @@ data class StudentUiItem(
     val irisParams: MutableState<com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?>,
     val osmoticNode: MutableState<com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?>,
     val altitude: MutableState<Float>,
-    val behaviorEntropy: MutableState<Float>
+    val behaviorEntropy: MutableState<Float>,
+    val tectonicStress: MutableState<Float>
 )

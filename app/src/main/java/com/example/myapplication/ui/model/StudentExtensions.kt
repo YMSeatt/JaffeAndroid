@@ -50,7 +50,8 @@ fun Student.toStudentUiItem(
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
     altitude: Float,
-    behaviorEntropy: Float
+    behaviorEntropy: Float,
+    tectonicStress: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -80,7 +81,8 @@ fun Student.toStudentUiItem(
         irisParams = mutableStateOf(irisParams),
         osmoticNode = mutableStateOf(osmoticNode),
         altitude = mutableStateOf(altitude),
-        behaviorEntropy = mutableStateOf(behaviorEntropy)
+        behaviorEntropy = mutableStateOf(behaviorEntropy),
+        tectonicStress = mutableStateOf(tectonicStress)
     )
 }
 
@@ -116,7 +118,8 @@ fun Student.updateStudentUiItem(
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
     altitude: Float,
-    behaviorEntropy: Float
+    behaviorEntropy: Float,
+    tectonicStress: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -145,6 +148,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.osmoticNode, osmoticNode)
     updateIfChanged(item.altitude, altitude)
     updateIfChanged(item.behaviorEntropy, behaviorEntropy)
+    updateIfChanged(item.tectonicStress, tectonicStress)
 }
 
 /**

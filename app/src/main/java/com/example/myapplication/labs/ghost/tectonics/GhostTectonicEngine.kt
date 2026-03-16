@@ -43,48 +43,81 @@ object GhostTectonicEngine {
     /**
      * Calculates the tectonic state of the classroom.
      * Ported to Python for parity in `ghost_tectonics_analysis.py`.
+     *
+     * BOLT: Optimized overload that accepts raw Student entities and pre-calculated
+     * negative counts. Replaced functional operators with manual loops to eliminate
+     * intermediate allocations (filter, groupBy, associate, map).
+     */
+    fun calculateTectonicState(
+        students: List<com.example.myapplication.data.Student>,
+        negativeCounts: Map<Long, Int>
+    ): List<TectonicNode> {
+        val n = students.size
+        if (n == 0) return emptyList()
+
+        val baseStresses = FloatArray(n)
+        for (i in 0 until n) {
+            val logCount = negativeCounts[students[i].id] ?: 0
+            baseStresses[i] = (logCount * NEGATIVE_LOG_WEIGHT).coerceAtMost(0.5f)
+        }
+
+        val nodes = ArrayList<TectonicNode>(n)
+        val stressRadiusSq = STRESS_RADIUS * STRESS_RADIUS
+
+        for (i in 0 until n) {
+            val s1 = students[i]
+            var proximityStress = 0f
+
+            for (j in 0 until n) {
+                if (i == j) continue
+                val s2 = students[j]
+
+                val dx = s1.xPosition - s2.xPosition
+                val dy = s1.yPosition - s2.yPosition
+                val distSq = dx * dx + dy * dy
+
+                if (distSq < stressRadiusSq) {
+                    val dist = sqrt(distSq)
+                    // Stress radiates and decays with distance
+                    proximityStress += (baseStresses[j] * (1f - dist / STRESS_RADIUS)) * 0.5f
+                }
+            }
+
+            val totalStress = (baseStresses[i] + proximityStress).coerceIn(0f, 1f)
+            nodes.add(TectonicNode(s1.id, s1.xPosition, s1.yPosition, totalStress))
+        }
+        return nodes
+    }
+
+    /**
+     * BOLT: Compatibility overload for tests and legacy callers.
      */
     fun calculateTectonicState(
         students: List<StudentUiItem>,
         behaviorLogs: List<BehaviorEvent>
     ): List<TectonicNode> {
-        val negativeLogsByStudent = behaviorLogs
-            .filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
-
-        // 1. Calculate base stress per student from their own logs
-        val baseStressMap = students.associate { student ->
-            val logCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
-            student.id.toLong() to (logCount * NEGATIVE_LOG_WEIGHT).coerceAtMost(0.5f)
-        }
-
-        // 2. Calculate social pressure from proximity to other high-stress nodes
-        return students.map { s1 ->
-            var proximityStress = 0f
-            val s1Id = s1.id.toLong()
-
-            students.forEach { s2 ->
-                val s2Id = s2.id.toLong()
-                if (s1Id != s2Id) {
-                    val dx = s1.xPosition.value - s2.xPosition.value
-                    val dy = s1.yPosition.value - s2.yPosition.value
-                    val dist = sqrt(dx * dx + dy * dy)
-
-                    if (dist < STRESS_RADIUS) {
-                        val s2BaseStress = baseStressMap[s2Id] ?: 0f
-                        // Stress radiates and decays with distance
-                        proximityStress += (s2BaseStress * (1f - dist / STRESS_RADIUS)) * 0.5f
-                    }
-                }
+        val negativeCounts = mutableMapOf<Long, Int>()
+        for (log in behaviorLogs) {
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                negativeCounts[log.studentId] = (negativeCounts[log.studentId] ?: 0) + 1
             }
-
-            val totalStress = ((baseStressMap[s1Id] ?: 0f) + proximityStress).coerceIn(0f, 1f)
-            TectonicNode(s1Id, s1.xPosition.value, s1.yPosition.value, totalStress)
         }
+
+        val rawStudents = students.map { ui ->
+            com.example.myapplication.data.Student(
+                id = ui.id.toLong(),
+                firstName = "", lastName = "", gender = "",
+                xPosition = ui.xPosition.value,
+                yPosition = ui.yPosition.value
+            )
+        }
+        return calculateTectonicState(rawStudents, negativeCounts)
     }
 
     /**
      * Performs a macroscopic seismic analysis of the classroom.
+     *
+     * BOLT: Optimized to use squared distance comparisons to avoid expensive sqrt calls.
      */
     fun analyzeSeismicRisk(nodes: List<TectonicNode>): SeismicAnalysis {
         if (nodes.isEmpty()) return SeismicAnalysis(0f, 0f, 0, RiskLevel.STABLE)
@@ -92,6 +125,7 @@ object GhostTectonicEngine {
         var totalStress = 0f
         var peakStress = 0f
         var faultLines = 0
+        val stressRadiusSq = STRESS_RADIUS * STRESS_RADIUS
 
         for (i in nodes.indices) {
             val n1 = nodes[i]
@@ -102,10 +136,10 @@ object GhostTectonicEngine {
                 val n2 = nodes[j]
                 val dx = n1.x - n2.x
                 val dy = n1.y - n2.y
-                val dist = sqrt(dx * dx + dy * dy)
+                val distSq = dx * dx + dy * dy
 
                 // A "Fault Line" exists between two high-stress nodes in close proximity
-                if (dist < STRESS_RADIUS && n1.stress > 0.4f && n2.stress > 0.4f) {
+                if (distSq < stressRadiusSq && n1.stress > 0.4f && n2.stress > 0.4f) {
                     faultLines++
                 }
             }
