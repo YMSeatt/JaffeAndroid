@@ -123,4 +123,7 @@ object GhostConfig {
 
     /** Enables "Ghost Quasar" high-energy student node visualization. */
     const val QUASAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Helix" neural DNA and genomic trajectory visualization. */
+    const val HELIX_MODE_ENABLED = true
 }
