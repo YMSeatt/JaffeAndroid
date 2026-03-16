@@ -158,6 +158,8 @@ import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
 import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
 import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -250,6 +252,7 @@ fun SeatingChartScreen(
     var isPulsarActive by remember { mutableStateOf(false) }
     var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
+    var isHelixActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
@@ -622,6 +625,8 @@ fun SeatingChartScreen(
                 onToggleZenith = { isZenithActive = !isZenithActive },
                 isHorizonActive = isHorizonActive,
                 onToggleHorizon = { isHorizonActive = !isHorizonActive },
+                isHelixActive = isHelixActive,
+                onToggleHelix = { isHelixActive = !isHelixActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isEmergenceActive = isEmergenceActive,
@@ -1521,6 +1526,7 @@ fun SeatingChartContent(
     quizLogFontBold: Boolean,
     homeworkLogFontBold: Boolean,
     isIrisActive: Boolean = false,
+    isHelixActive: Boolean = false,
     allBehaviorEvents: List<BehaviorEvent> = emptyList(),
     allQuizLogs: List<com.example.myapplication.data.QuizLog> = emptyList(),
     allHomeworkLogs: List<com.example.myapplication.data.HomeworkLog> = emptyList(),
@@ -1578,6 +1584,7 @@ fun SeatingChartContent(
                     canvasOffset = offset,
                     isIrisActive = isIrisActive,
                     irisParams = irisParams,
+                    isHelixActive = isHelixActive,
                     isZenithActive = isZenithActive,
                     altitude = altitude,
                     zenithScope = zenithScope,
@@ -1691,6 +1698,8 @@ fun SeatingChartTopAppBar(
     onToggleZenith: () -> Unit,
     isHorizonActive: Boolean,
     onToggleHorizon: () -> Unit,
+    isHelixActive: Boolean,
+    onToggleHelix: () -> Unit,
     isEmergenceActive: Boolean,
     onToggleEmergence: () -> Unit,
     isCatalystActive: Boolean,
@@ -1950,6 +1959,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.HELIX_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isHelixActive) "Sequencing Off 👻" else "Ghost Helix 👻") },
+                                onClick = {
+                                    onToggleHelix()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                             )
                         }
                 if (GhostConfig.CORTEX_MODE_ENABLED) {

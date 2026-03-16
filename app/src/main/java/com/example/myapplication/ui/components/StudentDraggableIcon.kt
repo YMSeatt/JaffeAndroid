@@ -62,6 +62,8 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostIrisEngine
 import com.example.myapplication.labs.ghost.GhostIrisLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -108,6 +110,7 @@ fun StudentDraggableIcon(
     irisParams: GhostIrisEngine.IrisParameters? = null,
     isZenithActive: Boolean = false,
     altitude: Float = 0f,
+    isHelixActive: Boolean = false,
     zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
@@ -265,6 +268,22 @@ fun StudentDraggableIcon(
                             params = irisParams,
                             modifier = Modifier.matchParentSize()
                         )
+                    }
+
+                    if (isHelixActive) {
+                        val sequence = remember(studentUiItem.id) {
+                             GhostHelixEngine.sequenceStudentData(
+                                 studentUiItem.id.toLong(),
+                                 emptyList(), // In a real scenario, these would be passed down
+                                 emptyList()
+                             )
+                        }
+                        GhostHelixLayer(
+                            sequence = sequence,
+                            modifier = Modifier.matchParentSize()
+                        ) {
+                            // Helix wraps the content
+                        }
                     }
 
                     val backgroundColors = studentUiItem.displayBackgroundColor.value

@@ -250,4 +250,23 @@ In 2027, certain students become "Quasars" — focal points of intense behaviora
 - **Polarity Mapping**: Using Cyan/Magenta to represent Positive/Negative energy within the same "Accretion" metaphor maintains visual consistency with the Ghost suite.
 
 ---
+
+## 🧬 Experiment: Ghost Helix (Neural DNA Visualization)
+**Date:** 2028-01-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, student data is no longer just a collection of logs; it is a living genetic code. **Ghost Helix** visualizes the "Neural DNA" of a student as a pulsing, data-encoded double helix. Each "base pair" represents a behavioral or academic event, with the pitch, twist, and glow reflecting the student's classroom trajectory and "genetic" behavioral markers.
+
+### 🛠️ The Tech
+- **AGSL 3D Projection**: Simulating a rotating 3D double helix using 2D AGSL shaders with depth-aware shading.
+- **DNA Encoding Engine**: A logic engine that sequences behavior logs into "Neural Base Pairs" (Adenine/Positive, Thymine/Negative, etc.).
+- **Android 15/16 Graphics**: Utilizing high-precision shader uniforms for fluid, 60fps animation.
+- **Python Genomic Bridge**: `Python/ghost_helix_analysis.py` to demonstrate offline "sequencing" of classroom dynamics.
+
+### 🔦 The Discovery
+- **Visual Genomics**: We discovered that mapping "Stability" to procedural jitter creates a visceral sense of "genetic turbulence" for students with inconsistent behavioral patterns.
+- **Data Persistence**: Representing logs as "Base Pairs" in a helix provides a clear temporal order while maintaining a futuristic aesthetic.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
