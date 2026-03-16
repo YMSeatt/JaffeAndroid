@@ -77,8 +77,6 @@ class ReminderManager @Inject constructor(@ApplicationContext private val contex
 
         val intent = Intent(context, ReminderReceiver::class.java).apply {
             putExtra("reminder_id", reminder.id)
-            putExtra("reminder_title", reminder.title)
-            putExtra("reminder_description", reminder.description)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(

@@ -77,3 +77,10 @@
 - **Vulnerability:** Temporary export files (`.xlsx`), screenshots (`.png`), and blueprints (`.svg`) containing student PII were stored in the app's cache directory and could persist indefinitely.
 - **Fix:** Implemented an automated cleanup routine in `MainActivity.kt` that purges these temporary file types from the cache directory on application startup.
 - **Location:** `app/src/main/java/com/example/myapplication/MainActivity.kt`
+
+## 🛡️ Privacy Hardening: ID-Only Intent Protocol for Reminders
+- **Vulnerability:** Teacher reminders (containing student PII) were passed as plain-text extras in `AlarmManager` intents. These intents are persisted by the system, potentially exposing PII to system logs or backups.
+- **Fix:**
+    - Transitioned to an **ID-Only Intent Protocol**. Alarms now only carry the `reminder_id`.
+    - `ReminderReceiver` fetches and decrypts the PII from the secure database only when the alarm triggers.
+- **Location:** `app/src/main/java/com/example/myapplication/util/ReminderManager.kt`, `app/src/main/java/com/example/myapplication/util/ReminderReceiver.kt`

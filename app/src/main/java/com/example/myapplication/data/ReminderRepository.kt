@@ -33,6 +33,13 @@ class ReminderRepository @Inject constructor(
     }
 
     /**
+     * Retrieves a single reminder by ID, decrypting sensitive fields.
+     */
+    suspend fun getReminderById(id: Long): Reminder? {
+        return reminderDao.getReminderById(id)?.let { decryptReminder(it) }
+    }
+
+    /**
      * Encrypts and inserts a new reminder into the database.
      */
     suspend fun insert(reminder: Reminder): Long {
