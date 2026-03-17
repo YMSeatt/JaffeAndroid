@@ -250,6 +250,22 @@ class SeatingChartViewModel @Inject constructor(
      */
     val prophecies: StateFlow<List<GhostOracle.Prophecy>> = _prophecies.asStateFlow()
 
+    private val _chronosHeatmap = MutableStateFlow(FloatArray(100))
+    /** BOLT: Global behavioral heatmap pre-calculated in background. */
+    val chronosHeatmap: StateFlow<FloatArray> = _chronosHeatmap.asStateFlow()
+
+    private val _spectralDensity = MutableStateFlow(0.2f)
+    /** BOLT: Global spectral density pre-calculated in background. */
+    val spectralDensity: StateFlow<Float> = _spectralDensity.asStateFlow()
+
+    private val _agitation = MutableStateFlow(0f)
+    /** BOLT: Global classroom agitation pre-calculated in background. */
+    val agitation: StateFlow<Float> = _agitation.asStateFlow()
+
+    private val _latticeEdges = MutableStateFlow<List<com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.Edge>>(emptyList())
+    /** BOLT: Social lattice edges pre-calculated in background. */
+    val latticeEdges: StateFlow<List<com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.Edge>> = _latticeEdges.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -729,9 +745,31 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val decodedRules = decodedRulesCache
 
+                // BOLT: Reconcile positions with optimistic updates for background engines
+                val studentsForEngines = students.map { student ->
+                    val pendingPos = pendingStudentPositions[student.id.toInt()]
+                    if (pendingPos != null) {
+                        student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                    } else {
+                        student
+                    }
+                }
+
+                // BOLT: Calculate global Ghost metrics in the background pipeline
+                _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
+                    students = studentsForEngines,
+                    behaviorLogsByStudent = behaviorLogsByStudent
+                )
+                _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
+                _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
+                _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine().computeLattice(
+                    nodes = studentsForEngines.map { com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.LatticeNode(it.id, it.xPosition, it.yPosition) },
+                    negativeCounts = negativeCountsCache
+                )
+
                 // BOLT: Calculate tectonic stress nodes in the background pipeline
                 val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
-                    students = students,
+                    students = studentsForEngines,
                     negativeCounts = negativeCountsCache
                 )
                 val tectonicStressMap = tectonicNodes.associate { it.id to it.stress }

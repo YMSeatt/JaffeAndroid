@@ -20,12 +20,16 @@ import com.example.myapplication.data.BehaviorEvent
  * As it passes over the classroom, it refacts the UI into a spectral visualization of
  * student data, driven by the [GhostSpectraEngine].
  *
- * @param behaviorLogs Current classroom behavioral logs used to calculate spectral properties.
+ * BOLT: Optimized to receive pre-calculated [density] and [agitation] metrics.
+ *
+ * @param density Pre-calculated classroom spectral density.
+ * @param agitation Pre-calculated classroom agitation level.
  * @param modifier Standard Compose [Modifier].
  */
 @Composable
 fun GhostSpectraLayer(
-    behaviorLogs: List<BehaviorEvent>,
+    density: Float,
+    agitation: Float,
     modifier: Modifier = Modifier
 ) {
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.SPECTRA_MODE_ENABLED) return
@@ -33,10 +37,6 @@ fun GhostSpectraLayer(
 
     // Interactive state for the prism position
     var prismX by remember { mutableFloatStateOf(0.5f) } // Normalized 0.0 to 1.0
-
-    // Engine-driven properties
-    val density = remember(behaviorLogs) { GhostSpectraEngine.calculateSpectralDensity(behaviorLogs) }
-    val agitation = remember(behaviorLogs) { GhostSpectraEngine.calculateAgitation(behaviorLogs) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "spectraPulse")
     val time by infiniteTransition.animateFloat(
