@@ -20,23 +20,17 @@ import com.example.myapplication.labs.ghost.GhostConfig
  * [GhostLatticeEngine]. It utilizes high-performance AGSL shaders to draw glowing, pulsing
  * connections between student nodes.
  *
- * **Visual Dynamics:**
- * - **Collaboration**: Glowing cyan/green lines indicate positive synergy.
- * - **Friction**: Pulsing red lines with high-frequency interference indicate social tension.
- * - **Neutral**: Deep blue lines represent standard proximity-based connections.
- *
- * The lattice dynamically adjusts as students are moved, with connection strength and
- * visuals driven by real-time spatial data and historical logs.
+ * BOLT: Optimized to receive pre-calculated [edges] from background pipeline.
  *
  * @param students The list of student UI items, providing current positions and dimensions.
- * @param behaviorLogs Historical behavior logs used to categorize relationships.
+ * @param edges Pre-calculated social connection edges.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan offset of the seating chart.
  */
 @Composable
 fun GhostLatticeLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    edges: List<GhostLatticeEngine.Edge>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -44,18 +38,12 @@ fun GhostLatticeLayer(
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.LATTICE_MODE_ENABLED) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    val engine = remember { GhostLatticeEngine() }
     val infiniteTransition = rememberInfiniteTransition(label = "latticeTime")
     val time by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 100f,
         animationSpec = infiniteRepeatable(animation = tween(100000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
         label = "time"
     )
-
-    val edges = remember(students, behaviorLogs) {
-        val nodes = students.map { GhostLatticeEngine.LatticeNode(it.id.toLong(), it.xPosition.value, it.yPosition.value) }
-        engine.computeLattice(nodes, behaviorLogs)
-    }
 
     val shader = remember { RuntimeShader(GhostLatticeShader.NEURAL_LATTICE) }
     val brush = remember(shader) { ShaderBrush(shader) }

@@ -222,6 +222,11 @@ fun SeatingChartScreen(
     val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
 
+    val chronosHeatmap by seatingChartViewModel.chronosHeatmap.collectAsState()
+    val spectralDensity by seatingChartViewModel.spectralDensity.collectAsState()
+    val agitation by seatingChartViewModel.agitation.collectAsState()
+    val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
+
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
@@ -937,7 +942,8 @@ fun SeatingChartScreen(
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
                 GhostSpectraLayer(
-                    behaviorLogs = allBehaviorEvents
+                    density = spectralDensity,
+                    agitation = agitation
                 )
             }
 
@@ -979,7 +985,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
                 GhostLatticeLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    edges = latticeEdges,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
@@ -1100,8 +1106,7 @@ fun SeatingChartScreen(
 
                 if (GhostConfig.CHRONOS_MODE_ENABLED && isChronosActive) {
                     GhostChronosLayer(
-                        students = students,
-                        events = allBehaviorEvents,
+                        heatmapGrid = chronosHeatmap,
                         canvasScale = scale,
                         canvasOffset = offset
                     )

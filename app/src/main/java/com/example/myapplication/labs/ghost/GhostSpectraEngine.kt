@@ -99,6 +99,8 @@ object GhostSpectraEngine {
      * Performs spectroscopy analysis on a single student's behavioral history.
      * Parity-matched with the logic in `Python/ghost_spectra_analyzer.py`.
      *
+     * BOLT: Optimized to use a manual loop instead of `filter` to reduce allocations.
+     *
      * @param studentId The ID of the student.
      * @param studentLogs The list of logs associated with this student.
      * @return A [StudentSpectra] object containing the analysis results.
@@ -108,13 +110,18 @@ object GhostSpectraEngine {
             return StudentSpectra(studentId, 0f, 0f, SpectralState.STABLE)
         }
 
-        val negativeLogs = studentLogs.filter { it.type.contains("Negative", ignoreCase = true) }
+        var negativeCount = 0
+        for (log in studentLogs) {
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                negativeCount++
+            }
+        }
 
         // Normalized intensity based on log volume (Threshold: 20 logs = 1.0)
         val intensity = (studentLogs.size.toFloat() / 20f).coerceAtMost(1.5f)
 
         // Spectral shift (ratio of negative logs)
-        val shift = negativeLogs.size.toFloat() / studentLogs.size.toFloat()
+        val shift = negativeCount.toFloat() / studentLogs.size.toFloat()
 
         val state = when {
             shift > 0.5f -> SpectralState.INFRARED

@@ -14,11 +14,12 @@ import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostChronosLayer: Renders the behavioral heatmap.
+ *
+ * BOLT: Optimized to receive pre-calculated [heatmapGrid] from background pipeline.
  */
 @Composable
 fun GhostChronosLayer(
-    students: List<StudentUiItem>,
-    events: List<BehaviorEvent>,
+    heatmapGrid: FloatArray,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -35,10 +36,6 @@ fun GhostChronosLayer(
         ),
         label = "time"
     )
-
-    val heatmapGrid = remember(students, events) {
-        GhostChronosEngine.calculateHeatmap(students, events)
-    }
 
     val shader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
