@@ -126,4 +126,7 @@ object GhostConfig {
 
     /** Enables "Ghost Helix" neural DNA and genomic trajectory visualization. */
     const val HELIX_MODE_ENABLED = true
+
+    /** Enables "Ghost Supernova" classroom criticality and data-reset visualization. */
+    const val SUPERNOVA_MODE_ENABLED = true
 }

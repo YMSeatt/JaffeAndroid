@@ -258,6 +258,7 @@ fun SeatingChartScreen(
     var isMagnetarActive by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isHelixActive by remember { mutableStateOf(false) }
+    var isSupernovaActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
@@ -378,6 +379,7 @@ fun SeatingChartScreen(
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
+    val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
 
     DisposableEffect(Unit) {
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
@@ -467,6 +469,14 @@ fun SeatingChartScreen(
 
     LaunchedEffect(phaseLevel) {
         ghostPhasingEngine.updatePhase(phaseLevel)
+    }
+
+    LaunchedEffect(isSupernovaActive, allBehaviorEvents) {
+        if (isSupernovaActive) {
+            ghostSupernovaEngine.updatePressure(allBehaviorEvents)
+        } else {
+            ghostSupernovaEngine.reset()
+        }
     }
 
     /**
@@ -650,6 +660,8 @@ fun SeatingChartScreen(
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
+                isSupernovaActive = isSupernovaActive,
+                onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
@@ -799,6 +811,7 @@ fun SeatingChartScreen(
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
             GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
+            GhostSupernovaLayer(engine = ghostSupernovaEngine, isActive = isSupernovaActive)
             GhostQuasarLayer(
                 students = students,
                 behaviorLogs = allBehaviorEvents,
@@ -1717,6 +1730,8 @@ fun SeatingChartTopAppBar(
     onTogglePulsar: () -> Unit,
     isCortexActive: Boolean,
     onToggleCortex: () -> Unit,
+    isSupernovaActive: Boolean,
+    onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
     onToggleQuasar: () -> Unit,
     isMagnetarActive: Boolean,
@@ -2132,6 +2147,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.SUPERNOVA_MODE_ENABLED) {
+                             DropdownMenuItem(
+                                text = { Text(if (isSupernovaActive) "Stabilize Singularity 👻" else "Ghost Supernova 👻") },
+                                onClick = {
+                                    onToggleSupernova()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                     }
