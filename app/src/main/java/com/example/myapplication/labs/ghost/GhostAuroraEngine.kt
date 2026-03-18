@@ -37,22 +37,31 @@ object GhostAuroraEngine {
         timeWindow: Long = 10 * 60 * 1000L
     ): AuroraParams {
         val now = System.currentTimeMillis()
-        val recentBehaviors = behaviorLogs.filter { now - it.timestamp < timeWindow }
+
+        // BOLT: Replace multiple filter and count calls with a single-pass loop.
+        // O(B + Q + H) instead of multiple iterations.
+        var negativeCount = 0
+        var positiveCount = 0
+
+        for (log in behaviorLogs) {
+            if (now - log.timestamp < timeWindow) {
+                if (log.type.contains("Negative", ignoreCase = true)) {
+                    negativeCount++
+                } else {
+                    positiveCount++
+                }
+            }
+        }
+
+        val academicCount = quizLogs.size + homeworkLogs.size
+        val eventSum = negativeCount + positiveCount + academicCount
+        val total = eventSum.coerceAtLeast(1)
 
         // Intensity scales with log frequency (up to 20 logs for max intensity)
-        val eventCount = recentBehaviors.size + quizLogs.size + homeworkLogs.size
-        val intensity = (eventCount.toFloat() / 20f).coerceIn(0.2f, 1.0f)
+        val intensity = (eventSum.toFloat() / 20f).coerceIn(0.2f, 1.0f)
 
         // Speed matches intensity
         val speed = 0.5f + (intensity * 1.5f)
-
-        // Color logic: Balance of positive vs negative
-        val negativeCount = recentBehaviors.count { it.type.contains("Negative", ignoreCase = true) }
-        val positiveCount = recentBehaviors.count { !it.type.contains("Negative", ignoreCase = true) }
-        val academicCount = quizLogs.size + homeworkLogs.size
-
-        val eventSum = negativeCount + positiveCount + academicCount
-        val total = eventSum.coerceAtLeast(1)
 
         val negRatio = negativeCount.toFloat() / total
         val posRatio = positiveCount.toFloat() / total
