@@ -54,65 +54,57 @@ fun GhostSparkLayer(
     }
     val sparkBrush = remember(sparkShader) { sparkShader?.let { ShaderBrush(it) } }
 
+    // BOLT: Pre-allocate and remember the FloatArrays used for shader uniforms
+    // to eliminate per-frame GC pressure.
+    val uniformPositions = remember { FloatArray(200) }
+    val uniformColors = remember { FloatArray(300) }
+    val uniformLives = remember { FloatArray(100) }
+    val uniformSizes = remember { FloatArray(100) }
+
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && sparkShader != null && sparkBrush != null) {
-        val activeSparks = engine.sparks.take(100) // Pass up to 100 sparks to the shader
+        val activeSparks = engine.sparks
 
         Canvas(modifier = modifier.fillMaxSize()) {
+            val numParticles = activeSparks.size.coerceAtMost(100)
             sparkShader.setFloatUniform("iResolution", size.width, size.height)
             sparkShader.setFloatUniform("iTime", time)
-            sparkShader.setIntUniform("iNumParticles", activeSparks.size)
+            sparkShader.setIntUniform("iNumParticles", numParticles)
 
-            val positions = FloatArray(activeSparks.size * 2)
-            val colors = FloatArray(activeSparks.size * 3)
-            val lives = FloatArray(activeSparks.size)
-            val sizes = FloatArray(activeSparks.size)
+            // BOLT: Replace take(100) list allocation with direct index-based loop.
+            for (i in 0 until numParticles) {
+                val spark = activeSparks[i]
 
-            activeSparks.forEachIndexed { index, spark ->
                 // Transform logical coordinates to screen space for the shader
-                positions[index * 2] = (spark.x * canvasScale) + canvasOffset.x
-                positions[index * 2 + 1] = (spark.y * canvasScale) + canvasOffset.y
+                uniformPositions[i * 2] = (spark.x * canvasScale) + canvasOffset.x
+                uniformPositions[i * 2 + 1] = (spark.y * canvasScale) + canvasOffset.y
 
                 // Map color types to RGB (Cyan, Magenta, Purple)
                 when (spark.colorType) {
                     0 -> { // Positive: Cyan
-                        colors[index * 3] = 0.0f
-                        colors[index * 3 + 1] = 0.8f
-                        colors[index * 3 + 2] = 0.9f
+                        uniformColors[i * 3] = 0.0f
+                        uniformColors[i * 3 + 1] = 0.8f
+                        uniformColors[i * 3 + 2] = 0.9f
                     }
                     1 -> { // Negative: Magenta
-                        colors[index * 3] = 0.9f
-                        colors[index * 3 + 1] = 0.1f
-                        colors[index * 3 + 2] = 0.6f
+                        uniformColors[i * 3] = 0.9f
+                        uniformColors[i * 3 + 1] = 0.1f
+                        uniformColors[i * 3 + 2] = 0.6f
                     }
                     else -> { // Academic: Purple
-                        colors[index * 3] = 0.6f
-                        colors[index * 3 + 1] = 0.4f
-                        colors[index * 3 + 2] = 0.9f
+                        uniformColors[i * 3] = 0.6f
+                        uniformColors[i * 3 + 1] = 0.4f
+                        uniformColors[i * 3 + 2] = 0.9f
                     }
                 }
 
-                lives[index] = spark.life
-                sizes[index] = spark.size
+                uniformLives[i] = spark.life
+                uniformSizes[i] = spark.size
             }
 
-            // Pad the arrays to meet the shader's uniform size (100)
-            val paddedPositions = FloatArray(200).apply {
-                positions.copyInto(this)
-            }
-            val paddedColors = FloatArray(300).apply {
-                colors.copyInto(this)
-            }
-            val paddedLives = FloatArray(100).apply {
-                lives.copyInto(this)
-            }
-            val paddedSizes = FloatArray(100).apply {
-                sizes.copyInto(this)
-            }
-
-            sparkShader.setFloatUniform("iPoints", paddedPositions)
-            sparkShader.setFloatUniform("iColors", paddedColors)
-            sparkShader.setFloatUniform("iLives", paddedLives)
-            sparkShader.setFloatUniform("iSizes", paddedSizes)
+            sparkShader.setFloatUniform("iPoints", uniformPositions)
+            sparkShader.setFloatUniform("iColors", uniformColors)
+            sparkShader.setFloatUniform("iLives", uniformLives)
+            sparkShader.setFloatUniform("iSizes", uniformSizes)
 
             drawRect(brush = sparkBrush)
         }

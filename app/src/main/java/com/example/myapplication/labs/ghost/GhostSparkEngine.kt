@@ -1,10 +1,9 @@
 package com.example.myapplication.labs.ghost
 
-import androidx.compose.runtime.mutableStateListOf
 import com.example.myapplication.ui.model.StudentUiItem
+import java.util.ArrayDeque
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
@@ -15,18 +14,33 @@ import kotlin.random.Random
  * field, providing a macroscopic view of social energy and contagion.
  */
 class GhostSparkEngine {
-    data class Spark(
-        var x: Float,
-        var y: Float,
-        var vx: Float,
-        var vy: Float,
-        var life: Float, // 1.0 down to 0.0
-        val colorType: Int, // 0: Positive (Cyan), 1: Negative (Magenta), 2: Academic (Purple)
-        val size: Float
-    )
+    class Spark(
+        var x: Float = 0f,
+        var y: Float = 0f,
+        var vx: Float = 0f,
+        var vy: Float = 0f,
+        var life: Float = 0f, // 1.0 down to 0.0
+        var colorType: Int = 0, // 0: Positive (Cyan), 1: Negative (Magenta), 2: Academic (Purple)
+        var size: Float = 0f
+    ) {
+        fun reset(x: Float, y: Float, vx: Float, vy: Float, colorType: Int, size: Float) {
+            this.x = x
+            this.y = y
+            this.vx = vx
+            this.vy = vy
+            this.life = 1.0f
+            this.colorType = colorType
+            this.size = size
+        }
+    }
 
-    private val _sparks = mutableStateListOf<Spark>()
+    // BOLT: Replaced SnapshotStateList with ArrayList to eliminate Compose tracking overhead
+    // for high-frequency physics objects. Redraw is triggered by the global 'time' animation.
+    private val _sparks = ArrayList<Spark>(300)
     val sparks: List<Spark> get() = _sparks
+
+    // BOLT: Object pool to eliminate O(Burst) allocations during emissions
+    private val sparkPool = ArrayDeque<Spark>(300)
 
     private val maxSparks = 300
     private val canvasSize = 4000f
@@ -50,17 +64,17 @@ class GhostSparkEngine {
             if (_sparks.size < maxSparks) {
                 val angle = Random.nextFloat() * 2f * Math.PI.toFloat()
                 val speed = Random.nextFloat() * 15f + 5f
-                _sparks.add(
-                    Spark(
-                        x = x,
-                        y = y,
-                        vx = cos(angle) * speed,
-                        vy = sin(angle) * speed,
-                        life = 1.0f,
-                        colorType = colorType,
-                        size = Random.nextFloat() * 12f + 4f
-                    )
+
+                val spark = sparkPool.poll() ?: Spark()
+                spark.reset(
+                    x = x,
+                    y = y,
+                    vx = cos(angle) * speed,
+                    vy = sin(angle) * speed,
+                    colorType = colorType,
+                    size = Random.nextFloat() * 12f + 4f
                 )
+                _sparks.add(spark)
             }
         }
     }
@@ -72,6 +86,18 @@ class GhostSparkEngine {
      * @param deltaTime Scaling factor for physics (default 1.0 for 60fps).
      */
     fun update(students: List<StudentUiItem>, deltaTime: Float = 1.0f) {
+        if (_sparks.isEmpty()) return
+
+        // BOLT: Pre-fetch student positions into local arrays to avoid repeated
+        // MutableState reads inside the N*S inner loop.
+        val studentX = FloatArray(students.size)
+        val studentY = FloatArray(students.size)
+        for (i in students.indices) {
+            val s = students[i]
+            studentX[i] = s.xPosition.value
+            studentY[i] = s.yPosition.value
+        }
+
         val iterator = _sparks.iterator()
         while (iterator.hasNext()) {
             val spark = iterator.next()
@@ -81,18 +107,18 @@ class GhostSparkEngine {
             spark.vy *= 0.96f
 
             // 2. Social Gravity: Sparks are slightly attracted to student "energy nodes"
-            students.forEach { student ->
-                val dx = student.xPosition.value - spark.x
-                val dy = student.yPosition.value - spark.y
+            for (i in studentX.indices) {
+                val dx = studentX[i] - spark.x
+                val dy = studentY[i] - spark.y
                 val distSq = dx * dx + dy * dy
 
-                // Avoid singularity and apply range limit
+                // BOLT: Eliminate O(S*N) sqrt() by refactoring force calculation.
+                // Original: force = (2.5 / dist) * dt. vx += (dx / dist) * force
+                // Refactored: vx += dx * (2.5 / dist^2) * dt
                 if (distSq in 400.0f..900000.0f) {
-                    val dist = sqrt(distSq)
-                    // Inverse linear attraction
-                    val force = (2.5f / dist) * deltaTime
-                    spark.vx += (dx / dist) * force
-                    spark.vy += (dy / dist) * force
+                    val forceFactor = (2.5f / distSq) * deltaTime
+                    spark.vx += dx * forceFactor
+                    spark.vy += dy * forceFactor
                 }
             }
 
@@ -109,6 +135,7 @@ class GhostSparkEngine {
 
             if (spark.life <= 0f) {
                 iterator.remove()
+                sparkPool.offer(spark)
             }
         }
     }
@@ -117,6 +144,7 @@ class GhostSparkEngine {
      * Clears all active sparks.
      */
     fun reset() {
+        sparkPool.addAll(_sparks)
         _sparks.clear()
     }
 }

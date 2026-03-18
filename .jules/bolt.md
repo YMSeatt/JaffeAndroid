@@ -35,3 +35,14 @@
     - Implemented a student ID-to-Item map (`associateBy`) in `GhostLatticeLayer` to transform O(E * S) lookups into O(E).
     - Optimized `StringSimilarity.levenshteinDistance` to reuse two `IntArray` rows, eliminating per-row allocations.
 - **Impact:** Significant reduction in object churn and GC pressure, ensuring 60fps performance even when multiple experimental visualizers are active.
+
+## High-Frequency Particle Physics and Allocation Optimization
+- **Discovery:** The `GhostSparkLayer` was allocating 8 `FloatArray`s and a `List` (`take(100)`) per frame, creating significant GC pressure. Additionally, `GhostSparkEngine` physics performed expensive `sqrt` calls and repeated `MutableState` reads in its $O(S \times N)$ nested loop.
+- **Fix:**
+    - Implemented a `Spark` object pool to eliminate per-event allocations.
+    - Pre-allocated and `remember`ed `FloatArray` buffers for shader uniforms.
+    - Replaced `SnapshotStateList` with `ArrayList` for physics-only state.
+    - Eliminated $O(S \times N)$ `sqrt` calls by refactoring force calculations to use squared distances.
+    - Pre-fetched `MutableState` student positions into local arrays for the physics loop.
+    - Collapsed multiple `filter`/`count` passes in `GhostAuroraEngine` into a single-pass loop.
+- **Impact:** Eliminated per-frame allocations in the particle system and significantly reduced CPU overhead for physics updates, enabling stable 60fps performance for experimental visualizations.
