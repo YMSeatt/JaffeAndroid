@@ -1,9 +1,6 @@
 package com.example.myapplication.labs.ghost.quasar
 
-import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.data.BehaviorEvent
-import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 
 /**
  * GhostQuasarEngine: Identifies "Quasar Students" — high-energy nodes in the classroom ecosystem.
@@ -11,56 +8,69 @@ import androidx.compose.runtime.mutableStateOf
  * A student becomes a Quasar if they meet specific criteria for behavioral log density
  * or rapid academic shifts, creating a visual "Gravity Well" and "Accretion Disk"
  * on the seating chart.
+ *
+ * BOLT: Optimized for single-pass O(Recent) analysis using manual loops and early exits.
  */
 object GhostQuasarEngine {
 
+    /**
+     * Identifies Quasars from the behavioral log stream.
+     *
+     * BOLT: This method is optimized to run in O(Recent) time by assuming the input list
+     * is sorted descending by timestamp. It performs a single pass to aggregate energy
+     * and polarity for all students within a 30-minute sliding window.
+     *
+     * @param behaviorLogs The stream of behavior events (sorted DESC).
+     * @param currentTime Current system time.
+     * @return A map of Student ID to Quasar metrics: Pair(Energy, Polarity).
+     */
+    fun identifyQuasars(
+        behaviorLogs: List<BehaviorEvent>,
+        currentTime: Long = System.currentTimeMillis()
+    ): Map<Long, Pair<Float, Float>> {
+        val window = 30 * 60 * 1000L // 30 minutes
+        val cutoff = currentTime - window
+
+        // studentId -> (total_count, positive_count, negative_count)
+        val stats = mutableMapOf<Long, IntArray>()
+
+        for (log in behaviorLogs) {
+            if (log.timestamp < cutoff) break // BOLT: Early exit for O(Recent) performance
+
+            val counts = stats.getOrPut(log.studentId) { IntArray(3) }
+            counts[0]++ // Total
+            if (log.type.contains("Positive", ignoreCase = true)) {
+                counts[1]++
+            } else if (log.type.contains("Negative", ignoreCase = true)) {
+                counts[2]++
+            }
+        }
+
+        val results = mutableMapOf<Long, Pair<Float, Float>>()
+        for ((studentId, counts) in stats) {
+            val total = counts[0]
+            if (total >= 3) { // Threshold for Quasar status
+                val energy = (total.toFloat() / 10f).coerceAtMost(1.0f)
+                val pos = counts[1]
+                val neg = counts[2]
+                val relevantTotal = (pos + neg).coerceAtLeast(1)
+                val polarity = (pos - neg).toFloat() / relevantTotal.toFloat()
+                results[studentId] = energy to polarity
+            }
+        }
+
+        return results
+    }
+
+    /**
+     * Legacy structure for compatibility or specialized analysis.
+     */
     data class QuasarState(
         val studentId: Long,
         val x: Float,
         val y: Float,
-        val energy: Float, // 0.0 to 1.0
+        val energy: Float,
         val luminosity: Float,
-        val behaviorPolarity: Float // -1.0 (Negative) to 1.0 (Positive)
+        val behaviorPolarity: Float
     )
-
-    /**
-     * Identifies Quasars from a list of students and their behavioral logs.
-     * Logic:
-     * 1. Count logs in the last 30 minutes.
-     * 2. Calculate "Energy" based on log frequency.
-     * 3. Calculate "Luminosity" based on behavioral balance.
-     */
-    fun identifyQuasars(
-        students: List<StudentUiItem>,
-        behaviorLogs: List<BehaviorEvent>,
-        currentTime: Long = System.currentTimeMillis()
-    ): List<QuasarState> {
-        val window = 30 * 60 * 1000L // 30 minutes
-        val logsByStudent = behaviorLogs.filter { currentTime - it.timestamp < window }
-            .groupBy { it.studentId }
-
-        return students.mapNotNull { student ->
-            val studentLogs = logsByStudent[student.id.toLong()] ?: return@mapNotNull null
-
-            if (studentLogs.size < 3) return@mapNotNull null // Threshold for a Quasar
-
-            val energy = (studentLogs.size.toFloat() / 10f).coerceAtMost(1.0f)
-
-            val positiveCount = studentLogs.count { it.type.contains("Positive", ignoreCase = true) }
-            val negativeCount = studentLogs.count { it.type.contains("Negative", ignoreCase = true) }
-            val total = (positiveCount + negativeCount).coerceAtLeast(1)
-
-            val behaviorPolarity = (positiveCount - negativeCount).toFloat() / total.toFloat()
-            val luminosity = 0.5f + (energy * 0.5f)
-
-            QuasarState(
-                studentId = student.id.toLong(),
-                x = student.xPosition.value,
-                y = student.yPosition.value,
-                energy = energy,
-                luminosity = luminosity,
-                behaviorPolarity = behaviorPolarity
-            )
-        }
-    }
 }
