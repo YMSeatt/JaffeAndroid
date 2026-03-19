@@ -78,5 +78,7 @@ data class StudentUiItem(
     val osmoticNode: MutableState<com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?>,
     val altitude: MutableState<Float>,
     val behaviorEntropy: MutableState<Float>,
-    val tectonicStress: MutableState<Float>
+    val tectonicStress: MutableState<Float>,
+    val quasarEnergy: MutableState<Float>,
+    val quasarPolarity: MutableState<Float>
 )

@@ -51,7 +51,9 @@ fun Student.toStudentUiItem(
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
     altitude: Float,
     behaviorEntropy: Float,
-    tectonicStress: Float
+    tectonicStress: Float,
+    quasarEnergy: Float,
+    quasarPolarity: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -82,7 +84,9 @@ fun Student.toStudentUiItem(
         osmoticNode = mutableStateOf(osmoticNode),
         altitude = mutableStateOf(altitude),
         behaviorEntropy = mutableStateOf(behaviorEntropy),
-        tectonicStress = mutableStateOf(tectonicStress)
+        tectonicStress = mutableStateOf(tectonicStress),
+        quasarEnergy = mutableStateOf(quasarEnergy),
+        quasarPolarity = mutableStateOf(quasarPolarity)
     )
 }
 
@@ -119,7 +123,9 @@ fun Student.updateStudentUiItem(
     osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
     altitude: Float,
     behaviorEntropy: Float,
-    tectonicStress: Float
+    tectonicStress: Float,
+    quasarEnergy: Float,
+    quasarPolarity: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -149,6 +155,8 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.altitude, altitude)
     updateIfChanged(item.behaviorEntropy, behaviorEntropy)
     updateIfChanged(item.tectonicStress, tectonicStress)
+    updateIfChanged(item.quasarEnergy, quasarEnergy)
+    updateIfChanged(item.quasarPolarity, quasarPolarity)
 }
 
 /**

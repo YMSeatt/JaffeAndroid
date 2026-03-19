@@ -398,7 +398,9 @@ class SeatingChartViewModel @Inject constructor(
         val behaviorConcentration: Float,
         val altitude: Float,
         val behaviorEntropy: Float,
-        val tectonicStress: Float
+        val tectonicStress: Float,
+        val quasarEnergy: Float,
+        val quasarPolarity: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -774,6 +776,11 @@ class SeatingChartViewModel @Inject constructor(
                 )
                 val tectonicStressMap = tectonicNodes.associate { it.id to it.stress }
 
+                // BOLT: Calculate Quasar metrics in the background pipeline
+                val quasarMetricsMap = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
+                    behaviorLogs = behaviorEvents
+                )
+
                 // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute
                 val anyTimeBasedRules = decodedRules.any { it.condition.activeTimes?.isNotEmpty() == true }
                 val effectiveTimeKey = if (anyTimeBasedRules) currentTimeString else "STATIC_TIME"
@@ -971,6 +978,7 @@ class SeatingChartViewModel @Inject constructor(
                         )
 
                         val tStress = tectonicStressMap[student.id] ?: 0f
+                        val qMetrics = quasarMetricsMap[student.id] ?: (0f to 0f)
 
                         StudentDerivedData(
                             behaviorDescription,
@@ -985,7 +993,9 @@ class SeatingChartViewModel @Inject constructor(
                             bConcentration,
                             altitude,
                             entropyScore,
-                            tStress
+                            tStress,
+                            qMetrics.first,
+                            qMetrics.second
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -1049,7 +1059,9 @@ class SeatingChartViewModel @Inject constructor(
                             osmoticNode = osmoticNode,
                             altitude = derivedData.altitude,
                             behaviorEntropy = derivedData.behaviorEntropy,
-                            tectonicStress = derivedData.tectonicStress
+                            tectonicStress = derivedData.tectonicStress,
+                            quasarEnergy = derivedData.quasarEnergy,
+                            quasarPolarity = derivedData.quasarPolarity
                         )
                         existingItem
                     } else {
@@ -1074,7 +1086,9 @@ class SeatingChartViewModel @Inject constructor(
                             osmoticNode = osmoticNode,
                             altitude = derivedData.altitude,
                             behaviorEntropy = derivedData.behaviorEntropy,
-                            tectonicStress = derivedData.tectonicStress
+                            tectonicStress = derivedData.tectonicStress,
+                            quasarEnergy = derivedData.quasarEnergy,
+                            quasarPolarity = derivedData.quasarPolarity
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem
