@@ -191,11 +191,11 @@ class ExporterTest {
 
         // Student with malicious name and nickname
         val students = listOf(
-            Student(id = 1, firstName = "=SUM(1,2)", lastName = "+1+1", nickname = "-Hacker", stringId = "1")
+            Student(id = 1, firstName = "=SUM(1,2)", lastName = " +1+1", nickname = "-Hacker", stringId = "1")
         )
         // Malicious comment and behavior type
         val behaviorEvents = listOf(
-            BehaviorEvent(id = 1, studentId = 1, type = "@malicious", timestamp = System.currentTimeMillis(), comment = "=cmd|' /c calc'!A0")
+            BehaviorEvent(id = 1, studentId = 1, type = "@malicious", timestamp = System.currentTimeMillis(), comment = "%Percent")
         )
 
         val options = ExportOptions(
@@ -227,15 +227,15 @@ class ExporterTest {
         val behaviorSheet = workbook.getSheet("Behavior Log")
         val behaviorRow = behaviorSheet.getRow(1)
         assertEquals("'=SUM(1,2)", behaviorRow.getCell(4).stringCellValue)
-        assertEquals("'+1+1", behaviorRow.getCell(5).stringCellValue)
+        assertEquals("' +1+1", behaviorRow.getCell(5).stringCellValue)
         assertEquals("'@malicious", behaviorRow.getCell(6).stringCellValue)
-        assertEquals("'=cmd|' /c calc'!A0", behaviorRow.getCell(7).stringCellValue)
+        assertEquals("'%Percent", behaviorRow.getCell(7).stringCellValue)
 
         // Check Student Info sheet
         val infoSheet = workbook.getSheet("Students Info")
         val infoRow = infoSheet.getRow(1)
         assertEquals("'=SUM(1,2)", infoRow.getCell(0).stringCellValue)
-        assertEquals("'+1+1", infoRow.getCell(1).stringCellValue)
+        assertEquals("' +1+1", infoRow.getCell(1).stringCellValue)
         assertEquals("'-Hacker", infoRow.getCell(2).stringCellValue)
 
         tempFile.delete()

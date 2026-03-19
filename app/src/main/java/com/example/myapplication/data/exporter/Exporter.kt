@@ -867,9 +867,10 @@ class Exporter(
      *
      * This prevents Excel Formula Injection (CSV Injection) vulnerabilities.
      */
-    private fun sanitize(value: String?): String {
+    internal fun sanitize(value: String?): String {
         if (value.isNullOrBlank()) return ""
-        return if (value[0] in TRIGGERS) {
+        val trimmed = value.trim()
+        return if (trimmed.isNotEmpty() && trimmed[0] in TRIGGERS) {
             "'$value"
         } else {
             value
@@ -878,7 +879,7 @@ class Exporter(
 
     companion object {
         /** BOLT: Pre-allocate triggers array and Regex to avoid object churn. */
-        private val TRIGGERS = charArrayOf('=', '+', '-', '@')
+        private val TRIGGERS = charArrayOf('=', '+', '-', '@', '%')
         private val SHEET_NAME_CLEANER = Regex("[^a-zA-Z0-9_]")
     }
 }
