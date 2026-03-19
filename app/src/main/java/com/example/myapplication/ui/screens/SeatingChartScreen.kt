@@ -160,6 +160,7 @@ import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
+import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -259,6 +260,7 @@ fun SeatingChartScreen(
     var isHorizonActive by remember { mutableStateOf(false) }
     var isHelixActive by remember { mutableStateOf(false) }
     var isSupernovaActive by remember { mutableStateOf(false) }
+    var isVortexActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
@@ -656,6 +658,8 @@ fun SeatingChartScreen(
                 onTogglePulsar = { isPulsarActive = !isPulsarActive },
                 isCortexActive = isCortexActive,
                 onToggleCortex = { isCortexActive = !isCortexActive },
+                isVortexActive = isVortexActive,
+                onToggleVortex = { isVortexActive = !isVortexActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isMagnetarActive = isMagnetarActive,
@@ -812,6 +816,13 @@ fun SeatingChartScreen(
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
             GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
             GhostSupernovaLayer(engine = ghostSupernovaEngine, isActive = isSupernovaActive)
+            GhostVortexLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isVortexActive
+            )
             GhostQuasarLayer(
                 students = students,
                 behaviorLogs = allBehaviorEvents,
@@ -1730,6 +1741,8 @@ fun SeatingChartTopAppBar(
     onTogglePulsar: () -> Unit,
     isCortexActive: Boolean,
     onToggleCortex: () -> Unit,
+    isVortexActive: Boolean,
+    onToggleVortex: () -> Unit,
     isSupernovaActive: Boolean,
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
@@ -2000,6 +2013,16 @@ fun SeatingChartTopAppBar(
                         },
                         leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Green) }
                     )
+                    if (GhostConfig.VORTEX_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isVortexActive) "Stabilize Spindrift 👻" else "Ghost Vortex 👻") },
+                            onClick = {
+                                onToggleVortex()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Neural History 👻") },
                         onClick = {
