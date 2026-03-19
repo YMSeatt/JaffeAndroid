@@ -129,4 +129,7 @@ object GhostConfig {
 
     /** Enables "Ghost Supernova" classroom criticality and data-reset visualization. */
     const val SUPERNOVA_MODE_ENABLED = true
+
+    /** Enables the "Ghost Vortex" rotational social momentum visualization. */
+    const val VORTEX_MODE_ENABLED = true
 }
