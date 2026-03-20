@@ -132,4 +132,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Vortex" rotational social momentum visualization. */
     const val VORTEX_MODE_ENABLED = true
+
+    /** Enables the "Ghost Ray" neural directional pointer. */
+    const val RAY_MODE_ENABLED = true
 }

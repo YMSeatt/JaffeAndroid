@@ -156,6 +156,8 @@ import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
 import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
 import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
 import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
+import com.example.myapplication.labs.ghost.ray.GhostRayEngine
+import com.example.myapplication.labs.ghost.ray.GhostRayLayer
 import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
@@ -261,6 +263,7 @@ fun SeatingChartScreen(
     var isHelixActive by remember { mutableStateOf(false) }
     var isSupernovaActive by remember { mutableStateOf(false) }
     var isVortexActive by remember { mutableStateOf(false) }
+    var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
@@ -382,6 +385,7 @@ fun SeatingChartScreen(
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
+    val ghostRayEngine = remember { GhostRayEngine(context) }
 
     DisposableEffect(Unit) {
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
@@ -411,6 +415,7 @@ fun SeatingChartScreen(
             ghostHologramEngine.stop()
             ghostMagnetarEngine.stop()
             ghostHorizonEngine.stop()
+            ghostRayEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
         }
     }
@@ -822,6 +827,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isVortexActive
+            )
+            GhostRayLayer(
+                engine = ghostRayEngine,
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isRayActive
             )
             GhostQuasarLayer(
                 students = students,
@@ -2031,6 +2043,14 @@ fun SeatingChartTopAppBar(
                         },
                         leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Ghost Ray Calibration 👻") },
+                        onClick = {
+                            context.startActivity(Intent(context, com.example.myapplication.labs.ghost.ray.GhostRayActivity::class.java))
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.FlashlightOn, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
                 }
                 if (GhostConfig.QUASAR_MODE_ENABLED) {
                     DropdownMenuItem(
@@ -2221,6 +2241,17 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAY_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isRayActive) "Disable Ghost Ray" else "Enable Ghost Ray") },
+                            onClick = {
+                                isRayActive = !isRayActive
+                                if (isRayActive) ghostRayEngine.start() else ghostRayEngine.stop()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.FlashlightOn, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     DropdownMenuItem(
