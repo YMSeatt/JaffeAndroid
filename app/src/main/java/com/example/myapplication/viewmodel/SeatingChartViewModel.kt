@@ -323,7 +323,14 @@ class SeatingChartViewModel @Inject constructor(
 
     /** BOLT: Incremental caches for behavior metrics used by AI engines. */
     private val negativeCountsCache = ConcurrentHashMap<Long, Int>()
+    private val positiveCountsCache = ConcurrentHashMap<Long, Int>()
     private val lastPositiveTimestampsCache = ConcurrentHashMap<Long, Long>()
+
+    /** BOLT: Incremental caches for expensive Ghost Lab calculations. */
+    private val irisParamsCache = ConcurrentHashMap<Long, com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters>()
+    private val studentPotentialsCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
+    private val altitudeCache = ConcurrentHashMap<Long, Float>()
+    private val entropyScoreCache = ConcurrentHashMap<Long, Float>()
 
     /** BOLT: Memoization for AI prophecies to avoid O(N^2) every frame. */
     private var memoizedProphecies: List<GhostOracle.Prophecy> = emptyList()
@@ -540,6 +547,9 @@ class SeatingChartViewModel @Inject constructor(
             withContext(Dispatchers.Default) {
                 // --- Stage 1: Data Pre-processing (Memoized) ---
 
+                // BOLT: Track students whose logs have changed to incrementally update Ghost metrics.
+                val changedLogStudentIds = HashSet<Long>()
+
                 // Group flat behavior logs by student ID to optimize O(1) lookup in the student loop.
                 // BOLT: Identity-preserving grouping prevents adding a log for one student from invalidating
                 // the cache for all other students.
@@ -559,18 +569,24 @@ class SeatingChartViewModel @Inject constructor(
                             finalGrouped[studentId] = oldList
                         } else {
                             finalGrouped[studentId] = newList
+                            changedLogStudentIds.add(studentId)
 
                             // BOLT: Incremental update of behavior metrics only for changed students
                             var nNeg = 0
+                            var nPos = 0
                             var lastPosTs = -1L
                             for (log in newList) {
                                 if (log.type.contains("Negative", ignoreCase = true)) {
                                     nNeg++
-                                } else if (log.timestamp > lastPosTs) {
-                                    lastPosTs = log.timestamp
+                                } else {
+                                    nPos++
+                                    if (log.timestamp > lastPosTs) {
+                                        lastPosTs = log.timestamp
+                                    }
                                 }
                             }
                             negativeCountsCache[studentId] = nNeg
+                            positiveCountsCache[studentId] = nPos
                             lastPositiveTimestampsCache[studentId] = lastPosTs
                         }
                     }
@@ -579,7 +595,9 @@ class SeatingChartViewModel @Inject constructor(
                     if (finalGrouped.size < oldGrouped.size) {
                         val currentLogStudentIds = finalGrouped.keys
                         negativeCountsCache.keys.retainAll(currentLogStudentIds)
+                        positiveCountsCache.keys.retainAll(currentLogStudentIds)
                         lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
+                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
                     }
 
                     behaviorLogsByStudentCache = finalGrouped
@@ -607,10 +625,26 @@ class SeatingChartViewModel @Inject constructor(
                     for (log in homeworkLogs) {
                         newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
+
                     val oldGrouped = homeworkLogsByStudentCache
-                    homeworkLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
-                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    val finalGrouped = mutableMapOf<Long, List<HomeworkLog>>()
+
+                    newGrouped.forEach { (studentId, newList) ->
+                        val oldList = oldGrouped[studentId]
+                        if (oldList == newList) {
+                            finalGrouped[studentId] = oldList
+                        } else {
+                            finalGrouped[studentId] = newList
+                            changedLogStudentIds.add(studentId)
+                        }
                     }
+
+                    if (finalGrouped.size < oldGrouped.size) {
+                        val currentLogStudentIds = finalGrouped.keys
+                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    }
+
+                    homeworkLogsByStudentCache = finalGrouped
                     memoizedHomeworkLogs = homeworkLogs
                 }
                 val homeworkLogsByStudent = homeworkLogsByStudentCache
@@ -621,10 +655,26 @@ class SeatingChartViewModel @Inject constructor(
                     for (log in quizLogs) {
                         newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
+
                     val oldGrouped = quizLogsByStudentCache
-                    quizLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
-                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    val finalGrouped = mutableMapOf<Long, List<QuizLog>>()
+
+                    newGrouped.forEach { (studentId, newList) ->
+                        val oldList = oldGrouped[studentId]
+                        if (oldList == newList) {
+                            finalGrouped[studentId] = oldList
+                        } else {
+                            finalGrouped[studentId] = newList
+                            changedLogStudentIds.add(studentId)
+                        }
                     }
+
+                    if (finalGrouped.size < oldGrouped.size) {
+                        val currentLogStudentIds = finalGrouped.keys
+                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    }
+
+                    quizLogsByStudentCache = finalGrouped
                     memoizedQuizLogs = quizLogs
                 }
                 val quizLogsByStudent = quizLogsByStudentCache
@@ -792,12 +842,39 @@ class SeatingChartViewModel @Inject constructor(
                 val defaultTextColor = com.example.myapplication.util.safeParseColor(defaultStyle.textColor)
                 val defaultFontColor = com.example.myapplication.util.safeParseColor(defaultStyle.fontColor)
 
+                // BOLT: Incremental update for Ghost metrics based on changed log identities.
+                for (student in students) {
+                    if (changedLogStudentIds.contains(student.id) || !irisParamsCache.containsKey(student.id)) {
+                        val bLogs = behaviorLogsByStudent[student.id] ?: emptyList()
+                        val qLogs = quizLogsByStudent[student.id] ?: emptyList()
+                        val hLogs = homeworkLogsByStudent[student.id] ?: emptyList()
+
+                        irisParamsCache[student.id] = com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
+                            student.id, bLogs, qLogs, hLogs
+                        )
+                        studentPotentialsCache[student.id] = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
+                            bLogs, qLogs, hLogs
+                        )
+                        altitudeCache[student.id] = com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
+                            qLogs, bLogs
+                        )
+                        val bEntropy = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateBehaviorEntropy(bLogs)
+                        val aVariance = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateAcademicVariance(qLogs)
+                        entropyScoreCache[student.id] = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
+                    }
+                }
+
                 // BOLT: Clean up caches for deleted students only if number of students decreased.
                 // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
                 if (studentUiItemCache.size > students.size) {
                     val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
-                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
-                    studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
+                    val currentStudentLongIds = students.mapTo(HashSet(students.size)) { it.id }
+                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentLongIds }
+                    studentDerivedDataCache.keys.retainAll { it in currentStudentLongIds }
+                    irisParamsCache.keys.retainAll { it in currentStudentLongIds }
+                    studentPotentialsCache.keys.retainAll { it in currentStudentLongIds }
+                    altitudeCache.keys.retainAll { it in currentStudentLongIds }
+                    entropyScoreCache.keys.retainAll { it in currentStudentLongIds }
                 }
 
                 // --- Stage 2: Per-Student Transformation ---
@@ -948,34 +1025,13 @@ class SeatingChartViewModel @Inject constructor(
                             defaultFontColor = defaultFontColor
                         )
 
-                        // 2f. BOLT: Pre-calculate Ghost Lab data for high-performance rendering
-                        val irisParams = com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
-                            student.id,
-                            behaviorList ?: emptyList(),
-                            quizList ?: emptyList(),
-                            homeworkList ?: emptyList()
+                        // 2f. BOLT: Retrieve Ghost Lab metrics from Stage 1 caches.
+                        val irisParams = irisParamsCache[student.id] ?: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters(
+                            (student.id * 12345.678f) % 1000f, Color.White, Color.Blue, 0.5f
                         )
-
-                        val (kPotential, bConcentration) = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
-                            behaviorList ?: emptyList(),
-                            quizList ?: emptyList(),
-                            homeworkList ?: emptyList()
-                        )
-
-                        val altitude = com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
-                            quizLogs = quizList ?: emptyList(),
-                            behaviorLogs = behaviorList ?: emptyList()
-                        )
-
-                        val bEntropy = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateBehaviorEntropy(
-                            behaviorList ?: emptyList()
-                        )
-                        val aVariance = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateAcademicVariance(
-                            quizList ?: emptyList()
-                        )
-                        val entropyScore = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(
-                            bEntropy, aVariance
-                        )
+                        val potentials = studentPotentialsCache[student.id] ?: (0.5f to 0f)
+                        val altitude = altitudeCache[student.id] ?: 0.5f
+                        val entropyScore = entropyScoreCache[student.id] ?: 0f
 
                         val tStress = tectonicStressMap[student.id] ?: 0f
                         val qMetrics = quasarMetricsMap[student.id] ?: (0f to 0f)
@@ -989,8 +1045,8 @@ class SeatingChartViewModel @Inject constructor(
                             liveQuizProgressColor,
                             styles,
                             irisParams,
-                            kPotential,
-                            bConcentration,
+                            potentials.first,
+                            potentials.second,
                             altitude,
                             entropyScore,
                             tStress,
