@@ -135,4 +135,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Ray" neural directional pointer. */
     const val RAY_MODE_ENABLED = true
+
+    /** Enables the "Ghost Orbit" classroom galaxy visualization. */
+    const val ORBIT_MODE_ENABLED = true
 }
