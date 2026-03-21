@@ -163,6 +163,7 @@ import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
+import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -263,6 +264,7 @@ fun SeatingChartScreen(
     var isHelixActive by remember { mutableStateOf(false) }
     var isSupernovaActive by remember { mutableStateOf(false) }
     var isVortexActive by remember { mutableStateOf(false) }
+    var isOrbitActive by remember { mutableStateOf(false) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
@@ -665,6 +667,8 @@ fun SeatingChartScreen(
                 onToggleCortex = { isCortexActive = !isCortexActive },
                 isVortexActive = isVortexActive,
                 onToggleVortex = { isVortexActive = !isVortexActive },
+                isOrbitActive = isOrbitActive,
+                onToggleOrbit = { isOrbitActive = !isOrbitActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isMagnetarActive = isMagnetarActive,
@@ -827,6 +831,11 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isVortexActive
+            )
+            GhostOrbitLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                isActive = isOrbitActive
             )
             GhostRayLayer(
                 engine = ghostRayEngine,
@@ -1755,6 +1764,8 @@ fun SeatingChartTopAppBar(
     onToggleCortex: () -> Unit,
     isVortexActive: Boolean,
     onToggleVortex: () -> Unit,
+    isOrbitActive: Boolean,
+    onToggleOrbit: () -> Unit,
     isSupernovaActive: Boolean,
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
@@ -1991,6 +2002,16 @@ fun SeatingChartTopAppBar(
                                 text = { Text(if (isWarpActive) "Stabilize Spacetime 👻" else "Neural Warp 👻") },
                                 onClick = {
                                     onToggleWarp()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ORBIT_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isOrbitActive) "Stabilize Galaxy 👻" else "Ghost Orbit 👻") },
+                                onClick = {
+                                    onToggleOrbit()
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
