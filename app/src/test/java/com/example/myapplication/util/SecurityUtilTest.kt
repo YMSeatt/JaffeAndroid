@@ -165,4 +165,28 @@ class SecurityUtilTest {
         assertTrue("Should verify legacy SHA3-512 hash from Python", SecurityUtil.verifyPassword(pass, legacySha3))
         assertFalse("Should fail for wrong password with SHA3-512", SecurityUtil.verifyPassword("wrong", legacySha3))
     }
+
+    @Test
+    fun `test needsUpgrade logic`() {
+        val password = "password123"
+
+        // 1. Current hash should NOT need upgrade
+        val currentHash = SecurityUtil.hashPassword(password)
+        assertFalse("Current hash (600k) should not need upgrade", SecurityUtil.needsUpgrade(currentHash))
+
+        // 2. Hash with 100k iterations should need upgrade
+        val oldPbkdf2Hash = "pbkdf2:100000:salt:hash"
+        assertTrue("Hash with 100k iterations should need upgrade", SecurityUtil.needsUpgrade(oldPbkdf2Hash))
+
+        // 3. Legacy algorithm hashes should need upgrade
+        val legacySha256 = "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f"
+        assertTrue("Legacy SHA-256 hash should need upgrade", SecurityUtil.needsUpgrade(legacySha256))
+
+        val legacySalted = "salt:hash"
+        assertTrue("Legacy salted SHA-512 hash should need upgrade", SecurityUtil.needsUpgrade(legacySalted))
+
+        // 4. Malformed hash or empty string
+        assertFalse("Empty string should not trigger upgrade (handled by password enabled check)", SecurityUtil.needsUpgrade(""))
+        assertTrue("Malformed PBKDF2 hash should need upgrade", SecurityUtil.needsUpgrade("pbkdf2:not-an-int:salt:hash"))
+    }
 }

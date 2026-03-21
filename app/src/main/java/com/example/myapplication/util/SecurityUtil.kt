@@ -49,7 +49,11 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
         // PBKDF2 Configuration
         private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val PBKDF2_ITERATIONS = 100000
+        /**
+         * The recommended iteration count for PBKDF2-HMAC-SHA256.
+         * OWASP currently recommends a minimum of 600,000 iterations for defense-in-depth.
+         */
+        private const val PBKDF2_ITERATIONS = 600000
         private const val PBKDF2_KEY_LENGTH = 256
         private const val PBKDF2_PREFIX = "pbkdf2"
 
@@ -89,6 +93,27 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
             val hashHex = hash.toHex()
 
             return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
+        }
+
+        /**
+         * Checks if the stored hash requires an upgrade.
+         *
+         * A hash requires an upgrade if:
+         * 1. It uses a legacy algorithm (unsalted or non-PBKDF2).
+         * 2. It uses PBKDF2 but with an iteration count less than [PBKDF2_ITERATIONS].
+         *
+         * @param storedHash The hash string retrieved from persistent storage.
+         * @return True if the hash should be re-generated, false otherwise.
+         */
+        fun needsUpgrade(storedHash: String): Boolean {
+            if (storedHash.isBlank()) return false
+            if (!storedHash.startsWith("$PBKDF2_PREFIX:")) return true
+
+            val parts = storedHash.split(":")
+            if (parts.size != 4) return true
+            val iterations = parts[1].toIntOrNull() ?: return true
+
+            return iterations < PBKDF2_ITERATIONS
         }
 
         /**

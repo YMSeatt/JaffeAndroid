@@ -539,27 +539,42 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    suspend fun checkPassword(password: String): Boolean {
+    /**
+     * Verifies the provided password against the stored hash.
+     *
+     * **Security Hardening**:
+     * 1. Performs verification on [Dispatchers.Default] to avoid blocking the UI thread.
+     * 2. Automatically upgrades the stored hash if [SecurityUtil.needsUpgrade] returns true
+     *    (e.g., if the iteration count is outdated or a legacy algorithm is used).
+     */
+    suspend fun checkPassword(password: String): Boolean = withContext(Dispatchers.Default) {
         val storedHash = preferencesRepository.passwordHashFlow.first()
         if (storedHash.isNullOrEmpty()) {
-            return password.isBlank()
+            return@withContext password.isBlank()
         }
 
         if (SecurityUtil.verifyPassword(password, storedHash)) {
-            // If it matches but is in a legacy format (unsalted or old salted), upgrade it automatically
-            if (!storedHash.startsWith("pbkdf2:")) {
+            // If it matches but needs an upgrade, re-hash it transparently using current standards.
+            if (SecurityUtil.needsUpgrade(storedHash)) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
             }
-            return true
+            return@withContext true
         }
 
-        return false
+        return@withContext false
     }
 
+    /**
+     * Sets a new application password.
+     * Hashing is performed on [Dispatchers.Default] for performance and security.
+     */
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
-                preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
+                val hashed = withContext(Dispatchers.Default) {
+                    SecurityUtil.hashPassword(password)
+                }
+                preferencesRepository.updatePasswordHash(hashed)
                 updatePasswordEnabled(true)
             } else {
                 preferencesRepository.updatePasswordHash("")
