@@ -39,7 +39,6 @@ fun GhostVectorLayer(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val engine = remember { GhostVectorEngine() }
-    val latticeEngine = remember { GhostLatticeEngine() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "vectorTime")
     val time by infiniteTransition.animateFloat(
@@ -56,7 +55,7 @@ fun GhostVectorLayer(
         val nodes = students.map {
             GhostLatticeEngine.LatticeNode(it.id.toLong(), it.xPosition.value, it.yPosition.value)
         }
-        val edges = latticeEngine.computeLattice(nodes, behaviorLogs)
+        val edges = GhostLatticeEngine.computeLattice(nodes, behaviorLogs)
         engine.calculateVectors(nodes, edges)
     }
 

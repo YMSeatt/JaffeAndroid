@@ -797,13 +797,18 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val decodedRules = decodedRulesCache
 
-                // BOLT: Reconcile positions with optimistic updates for background engines
-                val studentsForEngines = students.map { student ->
-                    val pendingPos = pendingStudentPositions[student.id.toInt()]
-                    if (pendingPos != null) {
-                        student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
-                    } else {
-                        student
+                // BOLT: Reconcile positions with optimistic updates for background engines.
+                // Short-circuit the mapping if no student dragging is in progress.
+                val studentsForEngines = if (pendingStudentPositions.isEmpty()) {
+                    students
+                } else {
+                    students.map { student ->
+                        val pendingPos = pendingStudentPositions[student.id.toInt()]
+                        if (pendingPos != null) {
+                            student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                        } else {
+                            student
+                        }
                     }
                 }
 
@@ -814,8 +819,8 @@ class SeatingChartViewModel @Inject constructor(
                 )
                 _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
                 _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
-                _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine().computeLattice(
-                    nodes = studentsForEngines.map { com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.LatticeNode(it.id, it.xPosition, it.yPosition) },
+                _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
+                    students = studentsForEngines,
                     negativeCounts = negativeCountsCache
                 )
 
@@ -868,13 +873,12 @@ class SeatingChartViewModel @Inject constructor(
                 // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
                 if (studentUiItemCache.size > students.size) {
                     val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
-                    val currentStudentLongIds = students.mapTo(HashSet(students.size)) { it.id }
-                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentLongIds }
-                    studentDerivedDataCache.keys.retainAll { it in currentStudentLongIds }
-                    irisParamsCache.keys.retainAll { it in currentStudentLongIds }
-                    studentPotentialsCache.keys.retainAll { it in currentStudentLongIds }
-                    altitudeCache.keys.retainAll { it in currentStudentLongIds }
-                    entropyScoreCache.keys.retainAll { it in currentStudentLongIds }
+                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
+                    studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
+                    irisParamsCache.keys.retainAll { it in currentStudentIds }
+                    studentPotentialsCache.keys.retainAll { it in currentStudentIds }
+                    altitudeCache.keys.retainAll { it in currentStudentIds }
+                    entropyScoreCache.keys.retainAll { it in currentStudentIds }
                 }
 
                 // --- Stage 2: Per-Student Transformation ---
