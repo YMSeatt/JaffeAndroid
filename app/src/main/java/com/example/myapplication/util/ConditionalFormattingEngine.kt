@@ -298,7 +298,7 @@ object ConditionalFormattingEngine {
         currentTimeMillis: Long,
         timeContext: FormattingTimeContext
     ): List<DecodedConditionalFormattingRule> {
-        val matchingRules = mutableListOf<DecodedConditionalFormattingRule>()
+        var matchingRules: MutableList<DecodedConditionalFormattingRule>? = null
 
         for (rule in rules) {
             if (checkCondition(
@@ -316,11 +316,14 @@ object ConditionalFormattingEngine {
                     timeContext
                 )
             ) {
+                if (matchingRules == null) {
+                    matchingRules = mutableListOf()
+                }
                 matchingRules.add(rule)
             }
         }
 
-        return matchingRules
+        return matchingRules ?: java.util.Collections.emptyList()
     }
 
     /**
