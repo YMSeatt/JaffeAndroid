@@ -11,6 +11,13 @@ import kotlin.math.sin
  * This engine analyzes behavioral event frequency for each student to determine
  * their individual "Classroom Rhythm". Students with similar rhythms exhibit
  * interference patterns in the [GhostPulsarLayer].
+ *
+ * ### Rhythmic Model:
+ * - **Frequency**: Calculated as logs-per-minute within a 10-minute window.
+ * - **Phase**: Derived from the system clock and frequency, ensuring that
+ *   synchronized students (those with similar frequencies) pulse in unison.
+ * - **Interference**: When two student nodes have a frequency delta < 0.2,
+ *   a "Harmonic Bond" is detected, triggering visual constructive interference.
  */
 object GhostPulsarEngine {
 

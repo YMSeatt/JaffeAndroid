@@ -11,6 +11,12 @@ import kotlin.math.max
  * This engine tracks the "Core Pressure" of the classroom. When high-intensity
  * behavioral activity (especially negative friction) reaches critical mass,
  * it triggers a Supernova event—a visual and logical "reset" of the classroom energy.
+ *
+ * ### Lifecycle Stages:
+ * 1. **IDLE**: Core pressure accumulates based on behavioral events.
+ * 2. **CONTRACTION**: The seating chart visually shrinks as pressure peaks.
+ * 3. **EXPLOSION**: A rapid AGSL pulse "clears" the visual field.
+ * 4. **NEBULA**: A slow, cooling background effect signals a return to stability.
  */
 class GhostSupernovaEngine {
 
@@ -32,7 +38,11 @@ class GhostSupernovaEngine {
 
     /**
      * Updates the core pressure based on behavioral logs.
-     * Negative logs exert 2x pressure compared to positive logs.
+     *
+     * ### Balancing Logic:
+     * Negative logs exert **2.5x more pressure** than positive logs (0.1f vs 0.04f),
+     * reflecting the disproportionate impact of disruption on classroom stability.
+     * Pressure decays naturally as logs fall out of the 15-minute analysis window.
      */
     fun updatePressure(behaviorLogs: List<BehaviorEvent>) {
         if (_stage.value != SupernovaStage.IDLE) return

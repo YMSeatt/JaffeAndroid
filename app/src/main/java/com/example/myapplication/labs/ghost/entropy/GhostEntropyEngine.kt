@@ -15,6 +15,14 @@ import kotlin.math.sqrt
  * This engine models students as "high-entropy" nodes based on the predictability of
  * their behavioral events and academic performance variance. Higher entropy implies
  * a "turbulent" or "chaotic" student state.
+ *
+ * ### Thermodynamic Metaphor:
+ * - **Behavioral Entropy**: Shannon entropy applied to the distribution of behavior
+ *   types. Higher diversity of behaviors (positive, negative, etc.) increases
+ *   unpredictability.
+ * - **Academic Variance**: Normalized statistical variance in quiz scores.
+ * - **Entropy Score**: Weighted combination (60% Behavioral, 40% Academic) used
+ *    to drive AGSL "Thermal Distortion" effects.
  */
 object GhostEntropyEngine {
 

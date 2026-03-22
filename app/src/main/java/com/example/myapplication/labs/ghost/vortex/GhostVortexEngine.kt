@@ -10,6 +10,12 @@ import kotlin.math.sqrt
  * This engine detects "Vortex" centers — areas where multiple students with
  * high behavioral activity are clustered together. It calculates the "Angular Momentum"
  * (intensity) of these vortices to drive spatial distortion effects.
+ *
+ * ### Physics Model:
+ * The engine implements a "Social Whirlpool" model where student density and log
+ * frequency act as localized pressure points. When multiple high-activity nodes
+ * are in close proximity, their collective "Energy" is summed and normalized
+ * to create a rotational field.
  */
 object GhostVortexEngine {
 
@@ -45,7 +51,14 @@ object GhostVortexEngine {
         // BOLT: Group logs by studentId for O(N + L) efficiency.
         val logsByStudent = recentLogs.groupBy { it.studentId }
 
-        // Calculate student "Energy" (density of recent logs)
+        /**
+         * Calculate student "Energy" (density of recent logs).
+         *
+         * ### Architectural Intent:
+         * Energy is a proxy for student engagement levels. High log frequency
+         * (especially negative logs) increases the "Rotational Inertia" of the
+         * classroom grid.
+         */
         val studentEnergy = students.associate { student ->
             val logs = logsByStudent[student.id.toLong()] ?: emptyList()
             val posCount = logs.count { !it.type.contains("Negative", ignoreCase = true) }
@@ -58,7 +71,11 @@ object GhostVortexEngine {
         }
 
         val vortices = mutableListOf<VortexPoint>()
-        val clusterThreshold = 800f // Radius to consider students part of the same vortex
+        /**
+         * Radius (in logical units) to consider students part of the same vortex.
+         * Calibrated for the 4000x4000 logical canvas to capture small group dynamics.
+         */
+        val clusterThreshold = 800f
 
         // Simple clustering: Identify high-energy nodes and check neighbors
         students.forEach { student ->

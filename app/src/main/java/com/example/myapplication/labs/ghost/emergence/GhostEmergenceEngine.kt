@@ -8,6 +8,13 @@ import com.example.myapplication.ui.model.StudentUiItem
  *
  * It treats the classroom as a 10x10 grid (optimized for GPU uniform limits)
  * where "Vitality" emerges and diffuses based on student logs.
+ *
+ * ### Simulation Rules:
+ * 1. **Impulse**: Behavioral events act as local energy injections (Positive = +0.15f,
+ *    Negative = -0.2f).
+ * 2. **Diffusion**: Vitality flows to neighboring grid cells at a 0.1f rate,
+ *    simulating social contagion.
+ * 3. **Decay**: Grid energy naturally dissipates at a 0.95f rate per update cycle.
  */
 class GhostEmergenceEngine {
     companion object {

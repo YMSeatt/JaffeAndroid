@@ -8,10 +8,16 @@ import kotlin.math.*
  * GhostOrbitEngine: Simulates a "Classroom Galaxy" where student engagement
  * translates into orbital dynamics.
  *
- * Metrics:
- * - **Speed**: Driven by the frequency of recent logs (Engagement).
- * - **Radius**: Driven by the balance of positive vs. negative logs (Stability).
- * - **Social Gravity**: Students with high positive reinforcement act as attractors.
+ * This engine maps behavioral interactions to gravitational forces, creating
+ * a procedural solar system out of classroom data.
+ *
+ * ### Orbital Physics:
+ * - **Speed**: Driven by the frequency of recent logs (Engagement). High-activity
+ *   students exhibit higher angular velocity.
+ * - **Radius**: Driven by log polarity (Stability). Students with high positive
+ *   ratios stay closer to the "Core" or their assigned "Social Sun".
+ * - **Social Gravity**: Students with significant positive history (5+ logs) act
+ *   as gravitational attractors, pulling others into their orbital field.
  */
 object GhostOrbitEngine {
 

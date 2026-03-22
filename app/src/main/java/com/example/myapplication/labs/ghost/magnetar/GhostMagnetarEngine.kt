@@ -16,6 +16,14 @@ import kotlin.math.abs
  *
  * This engine maps behavioral logs to magnetic dipoles (Positive = North, Negative = South)
  * and integrates the device's physical Magnetometer to skew the field orientation.
+ *
+ * ### Field Model:
+ * The engine implements an **Inverse-Square Magnetic Field** ($1/r^2$) where
+ * students act as discrete dipoles.
+ * - **North (+)**: Aligned with positive behavioral history.
+ * - **South (-)**: Aligned with negative behavioral history.
+ * - **Social Weight**: Negative behaviors exert **1.5x more magnetic pull**
+ *   than positive behaviors, simulating their higher impact on social cohesion.
  */
 class GhostMagnetarEngine(context: Context) : SensorEventListener {
 

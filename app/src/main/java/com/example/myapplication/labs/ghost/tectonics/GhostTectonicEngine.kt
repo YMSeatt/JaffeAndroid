@@ -13,6 +13,14 @@ import kotlin.math.sqrt
  * This engine calculates "Social Stress" and identifies "Fault Lines" based on
  * student proximity and behavioral history. High stress areas are prone to
  * "Seismic Events" (behavioral outbursts).
+ *
+ * ### Geological Metaphor:
+ * - **Social Stress**: A cumulative metric where negative behavior (0.15f weight)
+ *   increases localized pressure. Stress radiates and decays vertically and
+ *   horizontally from each student.
+ * - **Fault Lines**: Formed between high-stress clusters (>0.4f stress) in close
+ *   proximity (<600 logical units).
+ * - **Seismic Events**: Predicted behavioral outbursts in critical zones.
  */
 object GhostTectonicEngine {
 
