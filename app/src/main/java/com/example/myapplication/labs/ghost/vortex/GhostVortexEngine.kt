@@ -33,80 +33,100 @@ object GhostVortexEngine {
     /**
      * Identifies behavioral vortices based on student proximity and log density.
      *
+     * BOLT: Optimized overload for Student entities and pre-grouped logs.
+     * Replaces expensive functional operators with manual loops and uses squared
+     * distance checks to avoid unnecessary sqrt calls.
+     *
      * @param students List of students and their current positions.
-     * @param behaviorLogs Historical behavior events.
+     * @param behaviorLogsByStudent Historical behavior events grouped by studentId.
      * @param windowMillis Time window for analysis (default 10 minutes).
      * @return A list of detected [VortexPoint]s.
      */
     fun identifyVortices(
-        students: List<StudentUiItem>,
-        behaviorLogs: List<BehaviorEvent>,
+        students: List<com.example.myapplication.data.Student>,
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>,
         windowMillis: Long = 600_000L
     ): List<VortexPoint> {
         if (students.isEmpty()) return emptyList()
 
         val currentTime = System.currentTimeMillis()
-        val recentLogs = behaviorLogs.filter { currentTime - it.timestamp < windowMillis }
+        val startTime = currentTime - windowMillis
 
-        // BOLT: Group logs by studentId for O(N + L) efficiency.
-        val logsByStudent = recentLogs.groupBy { it.studentId }
+        // BOLT: Use a mutable map for energy calculation instead of associate to avoid object churn
+        val studentEnergy = mutableMapOf<Long, Pair<Float, Float>>()
 
-        /**
-         * Calculate student "Energy" (density of recent logs).
-         *
-         * ### Architectural Intent:
-         * Energy is a proxy for student engagement levels. High log frequency
-         * (especially negative logs) increases the "Rotational Inertia" of the
-         * classroom grid.
-         */
-        val studentEnergy = students.associate { student ->
-            val logs = logsByStudent[student.id.toLong()] ?: emptyList()
-            val posCount = logs.count { !it.type.contains("Negative", ignoreCase = true) }
-            val negCount = logs.count { it.type.contains("Negative", ignoreCase = true) }
+        for (student in students) {
+            val logs = behaviorLogsByStudent[student.id] ?: continue
+            var posCount = 0
+            var negCount = 0
+            var recentCount = 0
 
-            val netPolarity = if (negCount > posCount) -1.0f else 1.0f
-            val intensity = (logs.size.toFloat() / 5.0f).coerceIn(0f, 1.0f)
+            // BOLT: Manual loop with early break assuming logs are DESC sorted by timestamp
+            for (log in logs) {
+                if (log.timestamp < startTime) break
+                recentCount++
+                if (log.type.contains("Negative", ignoreCase = true)) {
+                    negCount++
+                } else {
+                    posCount++
+                }
+            }
 
-            student.id to (intensity to netPolarity)
+            if (recentCount > 0) {
+                val netPolarity = if (negCount > posCount) -1.0f else 1.0f
+                val intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f)
+                studentEnergy[student.id] = intensity to netPolarity
+            }
         }
 
         val vortices = mutableListOf<VortexPoint>()
-        /**
-         * Radius (in logical units) to consider students part of the same vortex.
-         * Calibrated for the 4000x4000 logical canvas to capture small group dynamics.
-         */
-        val clusterThreshold = 800f
+        val clusterThresholdSq = 800f * 800f
 
-        // Simple clustering: Identify high-energy nodes and check neighbors
-        students.forEach { student ->
-            val energy = studentEnergy[student.id]?.first ?: 0f
+        // BOLT: Optimized clustering using indexed loops and squared distances
+        for (i in students.indices) {
+            val student = students[i]
+            val energyPair = studentEnergy[student.id] ?: continue
+            val energy = energyPair.first
+
             if (energy > 0.4f) {
                 // Check if this student is already near an identified vortex
-                val nearExisting = vortices.any { v ->
-                    val dx = v.x - student.xPosition.value
-                    val dy = v.y - student.yPosition.value
-                    sqrt(dx * dx + dy * dy) < clusterThreshold
+                var nearExisting = false
+                for (v in vortices) {
+                    val dx = v.x - student.xPosition
+                    val dy = v.y - student.yPosition
+                    if (dx * dx + dy * dy < clusterThresholdSq) {
+                        nearExisting = true
+                        break
+                    }
                 }
 
                 if (!nearExisting) {
                     // Find neighbors to calculate cluster momentum
-                    val neighbors = students.filter { other ->
-                        if (other.id == student.id) return@filter false
-                        val dx = other.xPosition.value - student.xPosition.value
-                        val dy = other.yPosition.value - student.yPosition.value
-                        sqrt(dx * dx + dy * dy) < clusterThreshold
+                    var neighborEnergySum = 0f
+                    var neighborPolaritySum = 0f
+                    var neighborCount = 0
+
+                    for (j in students.indices) {
+                        if (i == j) continue
+                        val other = students[j]
+                        val dx = other.xPosition - student.xPosition
+                        val dy = other.yPosition - student.yPosition
+                        if (dx * dx + dy * dy < clusterThresholdSq) {
+                            val otherEnergyPair = studentEnergy[other.id] ?: continue
+                            neighborEnergySum += otherEnergyPair.first
+                            neighborPolaritySum += otherEnergyPair.second
+                            neighborCount++
+                        }
                     }
 
-                    if (neighbors.isNotEmpty()) {
-                        val neighborEnergy = neighbors.sumOf { (studentEnergy[it.id]?.first ?: 0f).toDouble() }.toFloat()
-                        val avgPolarity = (neighbors.sumOf { (studentEnergy[it.id]?.second ?: 1.0f).toDouble() }.toFloat() + (studentEnergy[student.id]?.second ?: 1.0f)) / (neighbors.size + 1)
-
-                        val momentum = ((energy + neighborEnergy) / (neighbors.size + 1)).coerceIn(0.1f, 1.0f)
+                    if (neighborCount > 0) {
+                        val avgPolarity = (neighborPolaritySum + energyPair.second) / (neighborCount + 1)
+                        val momentum = ((energy + neighborEnergySum) / (neighborCount + 1)).coerceIn(0.1f, 1.0f)
 
                         vortices.add(
                             VortexPoint(
-                                x = student.xPosition.value,
-                                y = student.yPosition.value,
+                                x = student.xPosition,
+                                y = student.yPosition,
                                 momentum = momentum,
                                 radius = 400f + (momentum * 600f),
                                 polarity = if (avgPolarity >= 0) 1.0f else -1.0f
@@ -118,5 +138,28 @@ object GhostVortexEngine {
         }
 
         return vortices.sortedByDescending { it.momentum }.take(5)
+    }
+
+    /**
+     * Compatibility overload for UI layers and legacy callers.
+     * BOLT: Internally wraps students to avoid redundant mapping if possible.
+     */
+    fun identifyVortices(
+        students: List<StudentUiItem>,
+        behaviorLogs: List<BehaviorEvent>,
+        windowMillis: Long = 600_000L
+    ): List<VortexPoint> {
+        if (students.isEmpty()) return emptyList()
+
+        val behaviorLogsByStudent = behaviorLogs.groupBy { it.studentId }
+        val rawStudents = students.map { ui ->
+            com.example.myapplication.data.Student(
+                id = ui.id.toLong(),
+                firstName = "", lastName = "", gender = "",
+                xPosition = ui.xPosition.value,
+                yPosition = ui.yPosition.value
+            )
+        }
+        return identifyVortices(rawStudents, behaviorLogsByStudent, windowMillis)
     }
 }
