@@ -164,6 +164,8 @@ import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
+import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
+import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -265,6 +267,8 @@ fun SeatingChartScreen(
     var isSupernovaActive by remember { mutableStateOf(false) }
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
+    var isArchitectActive by remember { mutableStateOf(false) }
+    var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
     var isQuasarActive by remember { mutableStateOf(false) }
@@ -671,6 +675,9 @@ fun SeatingChartScreen(
                 onToggleOrbit = { isOrbitActive = !isOrbitActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
+                isArchitectActive = isArchitectActive,
+                onToggleArchitect = { isArchitectActive = !isArchitectActive },
+                onArchitectGoalChange = { architectGoal = it },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isSupernovaActive = isSupernovaActive,
@@ -823,6 +830,15 @@ fun SeatingChartScreen(
 
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
+            GhostArchitectLayer(
+                students = students,
+                edges = latticeEdges,
+                behaviorLogs = allBehaviorEvents,
+                goal = architectGoal,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isArchitectActive
+            )
             GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
             GhostSupernovaLayer(engine = ghostSupernovaEngine, isActive = isSupernovaActive)
             GhostVortexLayer(
@@ -1770,6 +1786,9 @@ fun SeatingChartTopAppBar(
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
     onToggleQuasar: () -> Unit,
+    isArchitectActive: Boolean,
+    onToggleArchitect: () -> Unit,
+    onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1884,6 +1903,33 @@ fun SeatingChartTopAppBar(
             }
 
             // Tactical HUD Toggle
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ARCHITECT_MODE_ENABLED) {
+                Box {
+                    var showArchitectGoals by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        onToggleArchitect()
+                        if (!isArchitectActive) showArchitectGoals = true
+                    }) {
+                        Icon(
+                            Icons.Default.Chair,
+                            contentDescription = "Neural Architect",
+                            tint = if (isArchitectActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(expanded = showArchitectGoals, onDismissRequest = { showArchitectGoals = false }) {
+                        GhostArchitectEngine.StrategicGoal.entries.forEach { goal ->
+                            DropdownMenuItem(
+                                text = { Text(goal.name.toTitleCase()) },
+                                onClick = {
+                                    onArchitectGoalChange(goal)
+                                    showArchitectGoals = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HUD_MODE_ENABLED) {
                 IconButton(onClick = onToggleHud) {
                     Icon(

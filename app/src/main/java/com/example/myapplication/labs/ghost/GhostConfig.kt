@@ -138,4 +138,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Orbit" classroom galaxy visualization. */
     const val ORBIT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Architect" strategic layout generative engine. */
+    const val ARCHITECT_MODE_ENABLED = true
 }
