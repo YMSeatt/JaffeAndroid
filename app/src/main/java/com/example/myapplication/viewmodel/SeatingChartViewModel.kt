@@ -266,6 +266,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Social lattice edges pre-calculated in background. */
     val latticeEdges: StateFlow<List<com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.Edge>> = _latticeEdges.asStateFlow()
 
+    private val _vortices = MutableStateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>>(emptyList())
+    /** BOLT: Behavioral vortices pre-calculated in background. */
+    val vortices: StateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>> = _vortices.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -822,6 +826,12 @@ class SeatingChartViewModel @Inject constructor(
                 _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                     students = studentsForEngines,
                     negativeCounts = negativeCountsCache
+                )
+
+                // BOLT: Calculate behavioral vortices in the background pipeline
+                _vortices.value = com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.identifyVortices(
+                    students = studentsForEngines,
+                    behaviorLogsByStudent = behaviorLogsByStudent
                 )
 
                 // BOLT: Calculate tectonic stress nodes in the background pipeline

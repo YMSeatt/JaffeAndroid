@@ -16,30 +16,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
-import com.example.myapplication.data.BehaviorEvent
-import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostVortexLayer: A Compose layer that renders the Ghost Vortex visualization.
  *
- * This layer integrates [GhostVortexEngine] for analysis and [GhostVortexShader]
- * for spatial distortion effects. It uses high-performance AGSL shaders (API 33+).
+ * BOLT: Optimized to use pre-calculated vortices from the ViewModel and reuse
+ * RuntimeShader instances to eliminate per-frame allocations.
  */
 @Composable
 fun GhostVortexLayer(
-    students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    vortices: List<GhostVortexEngine.VortexPoint>,
     canvasScale: Float,
     canvasOffset: Offset,
     isActive: Boolean
 ) {
-    if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-    val vortices = remember(students, behaviorLogs) {
-        GhostVortexEngine.identifyVortices(students, behaviorLogs)
-    }
-
-    if (vortices.isEmpty()) return
+    if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || vortices.isEmpty()) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "vortexRotation")
     val time by infiniteTransition.animateFloat(
@@ -52,16 +43,24 @@ fun GhostVortexLayer(
         label = "time"
     )
 
+    // BOLT: Reuse shader instances. Since we cap vortices at 5, we can pre-allocate a small pool.
+    val shaderPool = remember {
+        List(5) { RuntimeShader(GhostVortexShader.SOCIAL_WHIRLPOOL) }
+    }
+
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
         val height = size.height
 
-        vortices.forEach { vortex ->
+        vortices.forEachIndexed { index, vortex ->
+            if (index >= shaderPool.size) return@forEachIndexed
+
+            val shader = shaderPool[index]
+
             // Map student coordinates to screen pixels
             val screenX = vortex.x * canvasScale + canvasOffset.x
             val screenY = vortex.y * canvasScale + canvasOffset.y
 
-            val shader = RuntimeShader(GhostVortexShader.SOCIAL_WHIRLPOOL)
             shader.setFloatUniform("iResolution", width, height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iVortexPos", screenX, screenY)

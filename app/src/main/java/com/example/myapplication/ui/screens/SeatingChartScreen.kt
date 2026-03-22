@@ -230,6 +230,7 @@ fun SeatingChartScreen(
     val spectralDensity by seatingChartViewModel.spectralDensity.collectAsState()
     val agitation by seatingChartViewModel.agitation.collectAsState()
     val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
+    val vortices by seatingChartViewModel.vortices.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -826,8 +827,7 @@ fun SeatingChartScreen(
             GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
             GhostSupernovaLayer(engine = ghostSupernovaEngine, isActive = isSupernovaActive)
             GhostVortexLayer(
-                students = students,
-                behaviorLogs = allBehaviorEvents,
+                vortices = vortices,
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isVortexActive
