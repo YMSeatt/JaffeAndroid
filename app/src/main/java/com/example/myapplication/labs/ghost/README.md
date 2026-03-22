@@ -159,6 +159,120 @@ A Proof of Concept for **Neural Botanical Visualization**. It implements a digit
 - **Complexity**: Petal density and noise distortion reflect the frequency of classroom activity.
 - **Python Parity**: Integrated with `Python/ghost_flora_analysis.py` for logical parity and ecosystem-wide climate analysis.
 
+### 28. Ghost Tectonics (`tectonics/GhostTectonicEngine.kt`, `GhostTectonicLayer.kt`, `GhostTectonicShader.kt`)
+A social stability visualization using a **Geological Metaphor**.
+- **Social Stress**: Calculates localized stress based on student proximity and negative behavioral history.
+- **Fault Lines**: Identifies "Fault Lines" between high-stress nodes where behavioral outbursts are statistically more likely.
+- **Seismic Analysis**: Generates macroscopic reports (Risk Levels: Stable to Critical) with logic parity in `Python/ghost_tectonics_analysis.py`.
+- **AGSL Cracks**: Renders procedural "Seismic Cracks" in the classroom floor using a displacement shader.
+
+### 29. Ghost Horizon (`GhostHorizonEngine.kt`, `GhostHorizonLayer.kt`, `GhostHorizonShader.kt`)
+A **Context-Aware Atmospheric Engine** that adapts the UI to the physical environment.
+- **Sensor Fusion**: Integrates ambient light (Lux) and barometric pressure (hPa) sensors to drive background aesthetics.
+- **Atmospheric Factor**: Dynamically shifts the UI color palette from "Amber/Ghost" (Dark) to "Solarized Cyan" (Bright) based on classroom lighting.
+- **Neural Horizon**: Renders a reactive background horizon that tilts and shifts with environmental pressure changes.
+
+### 30. Ghost Pulsar (`pulsar/GhostPulsarEngine.kt`, `pulsar/GhostPulsarLayer.kt`, `pulsar/GhostPulsarShader.kt`)
+Visualizes **Harmonic Synchronicity** and classroom rhythms.
+- **Rhythm Analysis**: Calculates a "Frequency" (logs per minute) and "Phase" for each student to determine their individual "Classroom Rhythm".
+- **Harmonic Bonds**: Detects synchronicity between students with matching behavioral rhythms (Logic parity with `Python/ghost_pulsar_analyzer.py`).
+- **Interference Patterns**: Renders glowing AGSL pulses that exhibit visual interference when synchronized students are near each other.
+
+### 31. Ghost Magnetar (`magnetar/GhostMagnetarEngine.kt`, `magnetar/GhostMagnetarLayer.kt`, `magnetar/GhostMagnetarShader.kt`)
+Models classroom dynamics as a **Social Magnetic Field**.
+- **Magnetic Dipoles**: Assigns polarity to students (Positive = North, Negative = South). Negative behaviors exert stronger "Social Gravity" (1.5x weight).
+- **Sensor Integration**: Skews the virtual magnetic field based on the device's physical magnetometer heading.
+- **Field Analysis**: Calculates quadrant-based field intensities ($1/r^2$ model) and generates Markdown reports aligned with `Python/ghost_magnetar_analysis.py`.
+
+### 32. Ghost Cortex (`cortex/GhostCortexEngine.kt`, `cortex/GhostCortexLayer.kt`, `cortex/GhostCortexShader.kt`)
+A **Somatic Exploration Engine** that translates data into physical sensation.
+- **Neural Tension**: Calculates a student's tension score by combining academic entropy and behavioral turbulence.
+- **Neural Haptics**: Utilizes Android 15's `VibrationEffect.Composition` to trigger nuanced haptic pulses (Ticks, Clicks, Thuds, Spins) that match the student's tension level.
+- **Tactile Mapping**: Allows teachers to "feel" the classroom's data landscape through the device's actuators.
+
+### 33. Ghost Quasar (`quasar/GhostQuasarEngine.kt`, `quasar/GhostQuasarLayer.kt`, `quasar/GhostQuasarShader.kt`)
+Identifies **High-Energy Focal Points** in the classroom ecosystem.
+- **Luminosity Mapping**: Flags students as "Quasars" based on rapid bursts of behavioral or academic activity.
+- **Accretion Disks**: Renders rotating, glowing rings around Quasar nodes using high-performance AGSL shaders.
+- **BOLT Optimization**: Uses a single-pass O(Recent) analysis loop with early-exits for real-time tracking of high-energy shifts.
+
+### 34. Ghost Helix (`helix/GhostHelixEngine.kt`, `helix/GhostHelixLayer.kt`, `helix/GhostHelixShader.kt`)
+Visualizes student trajectories as **Neural DNA**.
+- **Genetic Sequencing**: Transforms behavior and academic logs into a unique 4-base sequence (Adenine, Thymine, Cytosine, Guanine).
+- **Genetic Trajectory**: Calculates a stability score and trajectory vector (Logic parity with `Python/ghost_helix_analysis.py`).
+- **3D Double Helix**: Renders a pulsing, rotating DNA helix around student icons, where the twist rate scales with academic momentum.
+
+### 35. Ghost Supernova (`supernova/GhostSupernovaEngine.kt`, `supernova/GhostSupernovaLayer.kt`, `supernova/GhostSupernovaShader.kt`)
+A visual metaphor for **Classroom Criticality**.
+- **Core Pressure**: Tracks cumulative classroom friction. Reaching critical mass triggers a 4-stage "Supernova" event (Contraction -> Explosion -> Nebula -> Idle).
+- **Criticality Index**: Calculates classroom-wide explosion risk based on negative log density (Logic parity with `Python/ghost_supernova_analysis.py`).
+- **AGSL Nebula**: Renders a beautiful, expanding gas cloud shader that "resets" the visual energy of the seating chart.
+
+### 36. Ghost Vortex (`vortex/GhostVortexEngine.kt`, `vortex/GhostVortexLayer.kt`, `vortex/GhostVortexShader.kt`)
+Detects **Rotational Social Momentum**.
+- **Social Whirlpools**: Identifies clusters of high-activity students that create localized social vortices.
+- **Angular Momentum**: Calculates the intensity and polarity (Synergy vs. Distraction) of vortices.
+- **Spatial Swirl**: Renders a high-performance AGSL swirl distortion that physically "warps" the seating chart UI around the vortex centers.
+
+### 37. Ghost Ray (`ray/GhostRayEngine.kt`, `ray/GhostRayActivity.kt`, `ray/GhostRayShader.kt`)
+A **Neural Directional Pointer** for spatial navigation.
+- **Sensor Fusion**: Uses the device's rotation vector sensor to project a volumetric beam into the seating chart canvas.
+- **Intersection Haptics**: Triggers tactile "Thuds" when the ray intersects with student icons, enabling eyes-free navigation.
+- **Volumetric Beam**: Renders a glowing AGSL beam that reacts to device orientation in real-time.
+
+### 38. Ghost Orbit (`orbit/GhostOrbitEngine.kt`, `orbit/GhostOrbitLayer.kt`, `orbit/GhostOrbitShader.kt`)
+Visualizes classroom social dynamics as a **Classroom Galaxy**.
+- **Orbital Dynamics**: Maps students to orbits where Speed is driven by log frequency (Engagement) and Radius is driven by log polarity (Stability).
+- **Social Suns**: High-positive-engagement students act as gravitational "Suns" that other students orbit around.
+- **Gravity Wells**: Renders procedural AGSL nebula and gravity well effects driven by orbital energy.
+
+### 39. Ghost Entropy (`entropy/GhostEntropyEngine.kt`, `entropy/GhostEntropyLayer.kt`, `entropy/GhostEntropyShader.kt`)
+Measures **Behavioral Uncertainty** and academic variance.
+- **Shannon Entropy**: Calculates the unpredictability of student behavior types using a normalized entropy model.
+- **Neural Turbulence**: Visualizes high-entropy nodes with "Heat Distortion" and "Thermal Noise" shaders.
+- **Entropy Analysis**: Generates macroscopic reports identifying "High-Entropy Nodes" (Logic parity with `Python/ghost_entropy_analyzer.py`).
+
+### 40. Ghost Zenith (`zenith/GhostZenithEngine.kt`, `zenith/GhostZenithLayer.kt`, `zenith/GhostZenithShader.kt`)
+Implements **Spatial Depth and Parallax Mapping**.
+- **Neural Elevation**: Calculates a student's "Altitude" (buoyancy) based on academic performance and behavioral stability.
+- **3D Parallax**: Uses device tilt sensors to shift the seating chart layers, creating a sense of 3D depth.
+- **Zenith Shadows**: Renders dynamic shadows under student icons that scale with their calculated altitude.
+
+### 41. Ghost Emergence (`emergence/GhostEmergenceEngine.kt`, `emergence/GhostEmergenceLayer.kt`, `emergence/GhostEmergenceShader.kt`)
+A **Cellular Automata Simulation** for emergent behavior patterns.
+- **Vitality Grid**: Simulates behavior diffusion and decay on a 10x10 grid using localized rules (Impulse, Diffusion, Decay).
+- **Emergent Patterns**: Identifies "Growth Dominant" clusters vs. "Decay Voids" (Logic parity with `Python/ghost_emergence_analysis.py`).
+- **Vitality Layer**: Renders the emergent field as a glowing, fluid background layer using an AGSL shader.
+
+### 42. Ghost Spark (`GhostSparkEngine.kt`, `GhostSparkLayer.kt`, `GhostSparkShader.kt`)
+A high-performance **Neural Particle System**.
+- **Data Sparks**: Emits autonomous particles when logs are recorded, which then drift through the classroom's "Social Gravity" field.
+- **Social Gravity**: Sparks are attracted to or repelled by student icons based on their energy levels.
+- **BOLT Physics**: Optimized for 60fps with 300+ particles using spark object pooling and minimized Compose tracking overhead.
+
+### 43. Ghost Pulse (`GhostPulseEngine.kt`, `GhostPulseLayer.kt`)
+Visualizes **Neural Resonance** and activity clusters.
+- **Temporal Resonance**: Identifies students who receive behavior logs within the same time window.
+- **Activity Ripples**: Renders synchronized, expanding AGSL ripples from resonant student nodes, color-coded by behavior type.
+- **O(Recent) Performance**: Uses DESC-sorted logs to identify resonant pulses in sub-millisecond time.
+
+### 44. Ghost Link (`GhostLinkEngine.kt`)
+Generates futuristic **Neural Dossiers**.
+- **Stochastic AI Analysis**: Transforms student metadata into a high-fidelity Markdown report featuring predictive trajectories.
+- **Neural Metrics**: Calculates "Cognitive Resonance", "Collaborative Flux", and "Academic Entropy" with deterministic seeding per student ID.
+- **Logic Parity**: Maintains strict architectural alignment with the `Python/ghost_link.py` R&D prototype.
+
+### 45. Ghost Flux (`GhostFluxEngine.kt`, `GhostFluxLayer.kt`, `GhostFluxShader.kt`)
+Visualizes classroom engagement as **Neural Flow**.
+- **Classroom Tempo**: Calculates a normalized flow intensity driven by log density and a sinusoidal "Tempo" factor (Logic parity with `Python/ghost_flux_simulator.py`).
+- **Neural Haptics**: Synchronizes AGSL flow distortions with Android 15 "Flux Surge" haptic effects.
+- **Flow Visualization**: Renders a fluid, glowing stream that flows between student icons based on interaction frequency.
+
+### 46. Ghost Future (`GhostFutureEngine.kt`)
+A stochastic engine for **Neural Classroom Simulation**.
+- **Simulated Trajectories**: Uses heuristics and predictions from [GhostOracle] to generate a series of "Simulated Events" representing a likely future trajectory of the classroom.
+- **Probabilistic Modeling**: Influences event probability based on historical negative counts and identified social friction.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

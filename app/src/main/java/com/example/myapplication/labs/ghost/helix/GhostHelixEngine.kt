@@ -9,6 +9,12 @@ import com.example.myapplication.data.QuizLog
  * This engine transforms raw classroom logs into a "Genetic Sequence" that drives
  * the Ghost Helix visualization. Each student has a unique DNA signature derived
  * from their behavioral and academic history.
+ *
+ * ### Genetic Mapping:
+ * - **Adenine (A)**: Positive behavior events.
+ * - **Thymine (T)**: Negative behavior events.
+ * - **Cytosine (C)**: High academic performance (>60%).
+ * - **Guanine (G)**: Academic turbulence or performance drops.
  */
 object GhostHelixEngine {
 
