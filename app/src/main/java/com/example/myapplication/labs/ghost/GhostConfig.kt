@@ -141,4 +141,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Architect" strategic layout generative engine. */
     const val ARCHITECT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Vision" sensor-driven AR viewport. */
+    const val VISION_MODE_ENABLED = true
 }
