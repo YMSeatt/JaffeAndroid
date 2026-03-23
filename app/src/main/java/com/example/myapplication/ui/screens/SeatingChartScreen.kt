@@ -166,6 +166,9 @@ import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
+import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
+import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -269,6 +272,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var isVisionActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -384,6 +388,7 @@ fun SeatingChartScreen(
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
+    val ghostVisionEngine = remember { GhostVisionEngine(context) }
     val ghostMagnetarEngine = remember { GhostMagnetarEngine(context) }
     val ghostZenithEngine = remember { GhostZenithEngine(context) }
     val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
@@ -415,6 +420,9 @@ fun SeatingChartScreen(
             if (GhostConfig.HORIZON_MODE_ENABLED) {
                 ghostHorizonEngine.start()
             }
+            if (GhostConfig.VISION_MODE_ENABLED) {
+                ghostVisionEngine.start()
+            }
         }
         onDispose {
             ghostVoiceAssistant.destroy()
@@ -422,6 +430,7 @@ fun SeatingChartScreen(
             ghostHologramEngine.stop()
             ghostMagnetarEngine.stop()
             ghostHorizonEngine.stop()
+            ghostVisionEngine.stop()
             ghostRayEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
         }
@@ -679,6 +688,8 @@ fun SeatingChartScreen(
                 isArchitectActive = isArchitectActive,
                 onToggleArchitect = { isArchitectActive = !isArchitectActive },
                 onArchitectGoalChange = { architectGoal = it },
+                isVisionActive = isVisionActive,
+                onToggleVision = { isVisionActive = !isVisionActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isSupernovaActive = isSupernovaActive,
@@ -859,6 +870,11 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isRayActive
+            )
+            GhostVisionLayer(
+                engine = ghostVisionEngine,
+                students = students,
+                isActive = isVisionActive
             )
             GhostQuasarLayer(
                 students = students,
@@ -1789,6 +1805,8 @@ fun SeatingChartTopAppBar(
     isArchitectActive: Boolean,
     onToggleArchitect: () -> Unit,
     onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
+    isVisionActive: Boolean,
+    onToggleVision: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
     onExportBlueprint: () -> Unit
@@ -1940,6 +1958,16 @@ fun SeatingChartTopAppBar(
                 }
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VISION_MODE_ENABLED) {
+                IconButton(onClick = onToggleVision) {
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = "Ghost Vision",
+                        tint = if (isVisionActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
             // Settings (moved from overflow)
             IconButton(onClick = onNavigateToSettings) { Icon(Icons.Default.Settings, contentDescription = "Settings") }
 
@@ -1951,6 +1979,16 @@ fun SeatingChartTopAppBar(
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
+                        if (GhostConfig.VISION_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Ghost Vision AR 👻") },
+                                onClick = {
+                                    context.startActivity(Intent(context, GhostVisionActivity::class.java))
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("Neural Optimize 👻") },
                             onClick = {
