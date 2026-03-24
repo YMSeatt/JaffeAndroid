@@ -336,10 +336,15 @@ class SeatingChartViewModel @Inject constructor(
     private val altitudeCache = ConcurrentHashMap<Long, Float>()
     private val entropyScoreCache = ConcurrentHashMap<Long, Float>()
 
-    /** BOLT: Memoization for AI prophecies to avoid O(N^2) every frame. */
+    /** BOLT: Memoization for AI prophecies and global Ghost metrics to avoid redundant work. */
     private var memoizedProphecies: List<GhostOracle.Prophecy> = emptyList()
     private var prophecyStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var prophecyLogsRef: List<com.example.myapplication.data.BehaviorEvent>? = null
+
+    private var ghostMetricsBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsTectonicStressMapCache: Map<Long, Float> = emptyMap()
+    private var ghostMetricsQuasarMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -360,6 +365,8 @@ class SeatingChartViewModel @Inject constructor(
     private var memoizedRules: List<ConditionalFormattingRule>? = null
     /** Stores prioritized, decoded rule objects to avoid repetitive JSON parsing. */
     private var decodedRulesCache: List<DecodedConditionalFormattingRule> = emptyList()
+    /** BOLT: Track if any rules are time-based to avoid redundant scans in high-frequency path. */
+    private var memoizedAnyTimeBasedRules: Boolean = false
 
     private var memoizedUserPreferences: UserPreferences? = null
     private var memoizedRelevantPrefsHash: Int = 0
@@ -769,26 +776,26 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Refine cache key to only include preferences that affect Stage 2 re-calculations.
                 // This prevents irrelevant preference changes (like edit mode) from clearing the whole cache.
-                // Optimization: Pre-calculate hash only when preferences change.
+                // Optimization: Pre-calculate hash only when preferences change using manual accumulation
+                // to avoid list and iterator allocations.
                 if (prefs !== memoizedUserPreferences) {
-                    memoizedRelevantPrefsHash = listOf(
-                        prefs.recentBehaviorIncidentsLimit,
-                        prefs.recentHomeworkLogsLimit,
-                        prefs.recentLogsLimit,
-                        prefs.maxRecentLogsToDisplay,
-                        prefs.useInitialsForBehavior,
-                        prefs.useInitialsForHomework,
-                        prefs.useInitialsForQuiz,
-                        prefs.behaviorInitialsMap,
-                        prefs.homeworkInitialsMap,
-                        prefs.quizInitialsMap,
-                        prefs.behaviorDisplayTimeout,
-                        prefs.homeworkDisplayTimeout,
-                        prefs.quizDisplayTimeout,
-                        prefs.liveQuizQuestionsGoal,
-                        prefs.liveQuizInitialColor,
-                        prefs.liveQuizFinalColor
-                    ).hashCode()
+                    var h = prefs.recentBehaviorIncidentsLimit
+                    h = 31 * h + prefs.recentHomeworkLogsLimit
+                    h = 31 * h + prefs.recentLogsLimit
+                    h = 31 * h + prefs.maxRecentLogsToDisplay
+                    h = 31 * h + if (prefs.useInitialsForBehavior) 1231 else 1237
+                    h = 31 * h + if (prefs.useInitialsForHomework) 1231 else 1237
+                    h = 31 * h + if (prefs.useInitialsForQuiz) 1231 else 1237
+                    h = 31 * h + prefs.behaviorInitialsMap.hashCode()
+                    h = 31 * h + prefs.homeworkInitialsMap.hashCode()
+                    h = 31 * h + prefs.quizInitialsMap.hashCode()
+                    h = 31 * h + prefs.behaviorDisplayTimeout
+                    h = 31 * h + prefs.homeworkDisplayTimeout
+                    h = 31 * h + prefs.quizDisplayTimeout
+                    h = 31 * h + prefs.liveQuizQuestionsGoal
+                    h = 31 * h + prefs.liveQuizInitialColor.hashCode()
+                    h = 31 * h + prefs.liveQuizFinalColor.hashCode()
+                    memoizedRelevantPrefsHash = h
                     memoizedUserPreferences = prefs
                 }
                 val relevantPrefsHash = memoizedRelevantPrefsHash
@@ -798,6 +805,7 @@ class SeatingChartViewModel @Inject constructor(
                 if (rules !== memoizedRules) {
                     decodedRulesCache = ConditionalFormattingEngine.decodeRules(rules)
                     memoizedRules = rules
+                    memoizedAnyTimeBasedRules = decodedRulesCache.any { it.condition.activeTimes?.isNotEmpty() == true }
                 }
                 val decodedRules = decodedRulesCache
 
@@ -816,39 +824,45 @@ class SeatingChartViewModel @Inject constructor(
                     }
                 }
 
-                // BOLT: Calculate global Ghost metrics in the background pipeline
-                _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
-                    students = studentsForEngines,
-                    behaviorLogsByStudent = behaviorLogsByStudent
-                )
-                _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
-                _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
-                _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
-                    students = studentsForEngines,
-                    negativeCounts = negativeCountsCache
-                )
+                // BOLT: Calculate global Ghost metrics in the background pipeline (Memoized)
+                if (behaviorEvents !== ghostMetricsBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
+                    _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
+                        students = studentsForEngines,
+                        behaviorLogsByStudent = behaviorLogsByStudent
+                    )
+                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
+                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
+                    _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
+                        students = studentsForEngines,
+                        negativeCounts = negativeCountsCache
+                    )
 
-                // BOLT: Calculate behavioral vortices in the background pipeline
-                _vortices.value = com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.identifyVortices(
-                    students = studentsForEngines,
-                    behaviorLogsByStudent = behaviorLogsByStudent
-                )
+                    // BOLT: Calculate behavioral vortices in the background pipeline
+                    _vortices.value = com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.identifyVortices(
+                        students = studentsForEngines,
+                        behaviorLogsByStudent = behaviorLogsByStudent
+                    )
 
-                // BOLT: Calculate tectonic stress nodes in the background pipeline
-                val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
-                    students = studentsForEngines,
-                    negativeCounts = negativeCountsCache
-                )
-                val tectonicStressMap = tectonicNodes.associate { it.id to it.stress }
+                    // BOLT: Calculate tectonic stress nodes in the background pipeline
+                    val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
+                        students = studentsForEngines,
+                        negativeCounts = negativeCountsCache
+                    )
+                    ghostMetricsTectonicStressMapCache = tectonicNodes.associate { it.id to it.stress }
 
-                // BOLT: Calculate Quasar metrics in the background pipeline
-                val quasarMetricsMap = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
-                    behaviorLogs = behaviorEvents
-                )
+                    // BOLT: Calculate Quasar metrics in the background pipeline
+                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
+                        behaviorLogs = behaviorEvents
+                    )
+
+                    ghostMetricsBehaviorLogsRef = behaviorEvents
+                    ghostMetricsStudentsRef = studentsForEngines
+                }
+                val tectonicStressMap = ghostMetricsTectonicStressMapCache
+                val quasarMetricsMap = ghostMetricsQuasarMapCache
 
                 // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute
-                val anyTimeBasedRules = decodedRules.any { it.condition.activeTimes?.isNotEmpty() == true }
-                val effectiveTimeKey = if (anyTimeBasedRules) currentTimeString else "STATIC_TIME"
+                val effectiveTimeKey = if (memoizedAnyTimeBasedRules) currentTimeString else "STATIC_TIME"
 
                 val defaultStyle = prefs.defaultStudentStyle
                 // BOLT: Pre-parse default colors to avoid redundant string-to-color conversions in the student loop
@@ -883,12 +897,14 @@ class SeatingChartViewModel @Inject constructor(
                 // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
                 if (studentUiItemCache.size > students.size) {
                     val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
+                    val isPresent: (Long) -> Boolean = { it in currentStudentIds }
+
                     studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
-                    studentDerivedDataCache.keys.retainAll { it in currentStudentIds }
-                    irisParamsCache.keys.retainAll { it in currentStudentIds }
-                    studentPotentialsCache.keys.retainAll { it in currentStudentIds }
-                    altitudeCache.keys.retainAll { it in currentStudentIds }
-                    entropyScoreCache.keys.retainAll { it in currentStudentIds }
+                    studentDerivedDataCache.keys.retainAll(isPresent)
+                    irisParamsCache.keys.retainAll(isPresent)
+                    studentPotentialsCache.keys.retainAll(isPresent)
+                    altitudeCache.keys.retainAll(isPresent)
+                    entropyScoreCache.keys.retainAll(isPresent)
                 }
 
                 // --- Stage 2: Per-Student Transformation ---
@@ -900,25 +916,39 @@ class SeatingChartViewModel @Inject constructor(
                     val quizList = quizLogsByStudent[student.id]
                     val currentModeValue = currentMode.value ?: "behavior"
 
-                    val cacheKey = StudentCacheKey(
-                        studentDataHash = studentDataHash,
-                        behaviorLogsIdentity = System.identityHashCode(behaviorList),
-                        homeworkLogsIdentity = System.identityHashCode(homeworkList),
-                        quizLogsIdentity = System.identityHashCode(quizList),
-                        sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped[student.id]),
-                        sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped[student.id]),
-                        rulesIdentity = System.identityHashCode(decodedRules),
-                        relevantPrefsHash = relevantPrefsHash,
-                        sessionActive = sessionActive,
-                        currentMode = currentModeValue,
-                        timeKey = effectiveTimeKey,
-                        lastCleared = lastCleared
-                    )
-
                     val cached = studentDerivedDataCache[student.id]
-                    val derivedData = if (cached != null && cached.first == cacheKey) {
-                        cached.second
+                    val cachedKey = cached?.first
+                    val isCacheHit = cachedKey != null &&
+                            cachedKey.studentDataHash == studentDataHash &&
+                            cachedKey.behaviorLogsIdentity == System.identityHashCode(behaviorList) &&
+                            cachedKey.homeworkLogsIdentity == System.identityHashCode(homeworkList) &&
+                            cachedKey.quizLogsIdentity == System.identityHashCode(quizList) &&
+                            cachedKey.sessionQuizLogsIdentity == System.identityHashCode(sessionQuizLogsGrouped[student.id]) &&
+                            cachedKey.sessionHomeworkLogsIdentity == System.identityHashCode(sessionHomeworkLogsGrouped[student.id]) &&
+                            cachedKey.rulesIdentity == System.identityHashCode(decodedRules) &&
+                            cachedKey.relevantPrefsHash == relevantPrefsHash &&
+                            cachedKey.sessionActive == sessionActive &&
+                            cachedKey.currentMode == currentModeValue &&
+                            cachedKey.timeKey == effectiveTimeKey &&
+                            cachedKey.lastCleared == lastCleared
+
+                    val derivedData = if (isCacheHit) {
+                        cached!!.second
                     } else {
+                        val cacheKey = StudentCacheKey(
+                            studentDataHash = studentDataHash,
+                            behaviorLogsIdentity = System.identityHashCode(behaviorList),
+                            homeworkLogsIdentity = System.identityHashCode(homeworkList),
+                            quizLogsIdentity = System.identityHashCode(quizList),
+                            sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped[student.id]),
+                            sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped[student.id]),
+                            rulesIdentity = System.identityHashCode(decodedRules),
+                            relevantPrefsHash = relevantPrefsHash,
+                            sessionActive = sessionActive,
+                            currentMode = currentModeValue,
+                            timeKey = effectiveTimeKey,
+                            lastCleared = lastCleared
+                        )
                         // 2a. Log Filtering:
                         // Only show logs that haven't been "cleared" by the user and haven't exceeded
                         // the display timeout defined in preferences.

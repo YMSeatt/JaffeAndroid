@@ -52,8 +52,9 @@ object GhostVortexEngine {
         val currentTime = System.currentTimeMillis()
         val startTime = currentTime - windowMillis
 
-        // BOLT: Use a mutable map for energy calculation instead of associate to avoid object churn
-        val studentEnergy = mutableMapOf<Long, Pair<Float, Float>>()
+        // BOLT: Use separate maps for intensity and polarity to eliminate Pair object churn
+        val studentIntensity = mutableMapOf<Long, Float>()
+        val studentPolarity = mutableMapOf<Long, Float>()
 
         for (student in students) {
             val logs = behaviorLogsByStudent[student.id] ?: continue
@@ -75,7 +76,8 @@ object GhostVortexEngine {
             if (recentCount > 0) {
                 val netPolarity = if (negCount > posCount) -1.0f else 1.0f
                 val intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f)
-                studentEnergy[student.id] = intensity to netPolarity
+                studentIntensity[student.id] = intensity
+                studentPolarity[student.id] = netPolarity
             }
         }
 
@@ -85,8 +87,7 @@ object GhostVortexEngine {
         // BOLT: Optimized clustering using indexed loops and squared distances
         for (i in students.indices) {
             val student = students[i]
-            val energyPair = studentEnergy[student.id] ?: continue
-            val energy = energyPair.first
+            val energy = studentIntensity[student.id] ?: continue
 
             if (energy > 0.4f) {
                 // Check if this student is already near an identified vortex
@@ -112,15 +113,17 @@ object GhostVortexEngine {
                         val dx = other.xPosition - student.xPosition
                         val dy = other.yPosition - student.yPosition
                         if (dx * dx + dy * dy < clusterThresholdSq) {
-                            val otherEnergyPair = studentEnergy[other.id] ?: continue
-                            neighborEnergySum += otherEnergyPair.first
-                            neighborPolaritySum += otherEnergyPair.second
+                            val oEnergy = studentIntensity[other.id] ?: continue
+                            val oPolarity = studentPolarity[other.id] ?: continue
+                            neighborEnergySum += oEnergy
+                            neighborPolaritySum += oPolarity
                             neighborCount++
                         }
                     }
 
                     if (neighborCount > 0) {
-                        val avgPolarity = (neighborPolaritySum + energyPair.second) / (neighborCount + 1)
+                        val sPolarity = studentPolarity[student.id] ?: 0f
+                        val avgPolarity = (neighborPolaritySum + sPolarity) / (neighborCount + 1)
                         val momentum = ((energy + neighborEnergySum) / (neighborCount + 1)).coerceIn(0.1f, 1.0f)
 
                         vortices.add(
