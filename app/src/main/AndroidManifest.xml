@@ -62,6 +62,11 @@
             android:exported="false"
             android:label="Ghost Vision AR"
             android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".labs.ghost.strategist.GhostStrategistActivity"
+            android:exported="false"
+            android:label="Ghost Strategist"
+            android:theme="@style/Theme.MyApplication" />
         <receiver
             android:name=".util.ReminderReceiver"
             android:exported="false" />

@@ -144,4 +144,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Vision" sensor-driven AR viewport. */
     const val VISION_MODE_ENABLED = true
+
+    /** Enables the "Ghost Strategist" generative AI tactical engine. */
+    const val STRATEGIST_MODE_ENABLED = true
 }
