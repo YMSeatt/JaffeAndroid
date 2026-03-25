@@ -147,4 +147,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Strategist" generative AI tactical engine. */
     const val STRATEGIST_MODE_ENABLED = true
+
+    /** Enables the "Ghost Glyph" neural gesture logging. */
+    const val GLYPH_MODE_ENABLED = true
 }

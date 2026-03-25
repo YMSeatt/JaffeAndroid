@@ -166,6 +166,8 @@ import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
+import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
@@ -273,6 +275,7 @@ fun SeatingChartScreen(
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
+    var isGlyphActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -685,6 +688,8 @@ fun SeatingChartScreen(
                 onToggleOrbit = { isOrbitActive = !isOrbitActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
+                isGlyphActive = isGlyphActive,
+                onToggleGlyph = { isGlyphActive = !isGlyphActive },
                 isArchitectActive = isArchitectActive,
                 onToggleArchitect = { isArchitectActive = !isArchitectActive },
                 onArchitectGoalChange = { architectGoal = it },
@@ -875,6 +880,18 @@ fun SeatingChartScreen(
                 engine = ghostVisionEngine,
                 students = students,
                 isActive = isVisionActive
+            )
+            GhostGlyphLayer(
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isGlyphActive,
+                onLogBehavior = { id, type ->
+                    seatingChartViewModel.addBehaviorEvent(BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis()))
+                },
+                onLogAcademic = { id, type ->
+                    seatingChartViewModel.saveQuizLog(com.example.myapplication.data.QuizLog(studentId = id, quizName = type, markValue = 100.0, maxMarkValue = 100.0, timestamp = System.currentTimeMillis()))
+                }
             )
             GhostQuasarLayer(
                 students = students,
@@ -1802,6 +1819,8 @@ fun SeatingChartTopAppBar(
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
     onToggleQuasar: () -> Unit,
+    isGlyphActive: Boolean,
+    onToggleGlyph: () -> Unit,
     isArchitectActive: Boolean,
     onToggleArchitect: () -> Unit,
     onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
@@ -2155,6 +2174,16 @@ fun SeatingChartTopAppBar(
                             showMoreMenu = false
                         },
                         leadingIcon = { Icon(Icons.Default.FlashlightOn, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                }
+                if (GhostConfig.GLYPH_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isGlyphActive) "Disable Neural Glyph 👻" else "Ghost Glyph 👻") },
+                        onClick = {
+                            onToggleGlyph()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Edit, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                     )
                 }
                 if (GhostConfig.QUASAR_MODE_ENABLED) {
