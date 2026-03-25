@@ -65,6 +65,11 @@ object GhostStrategistEngine {
         val interventions = mutableListOf<TacticalIntervention>()
         val studentMap = students.associateBy { it.id.toLong() }
 
+        // BOLT: Pre-group logs for O(1) lookup during O(S) student loop,
+        // transforming O(S * (B+Q)) into O(S + B + Q).
+        val behaviorLogsByStudent = behaviorLogs.groupBy { it.studentId }
+        val quizLogsByStudent = quizLogs.groupBy { it.studentId }
+
         // 1. Process Prophecies into Tactics:
         // Maps high-level AI predictions into concrete, wording-heavy pedagogical actions.
         prophecies.forEach { prophecy ->
@@ -103,34 +108,63 @@ object GhostStrategistEngine {
         }
 
         // 2. Data-Driven Heuristics
+        val currentTime = System.currentTimeMillis()
+        val oneHourAgo = currentTime - java.util.concurrent.TimeUnit.HOURS.toMillis(1)
+
         students.forEach { student ->
             val sId = student.id.toLong()
-            val sLogs = behaviorLogs.filter { it.studentId == sId }
-            val sQuizzes = quizLogs.filter { it.studentId == sId }
+            val sLogs = behaviorLogsByStudent[sId] ?: emptyList()
+            val sQuizzes = quizLogsByStudent[sId] ?: emptyList()
 
-            val avgQuiz = if (sQuizzes.isNotEmpty()) {
-                sQuizzes.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }.average()
-            } else 0.7
+            // BOLT: Single-pass avgQuiz calculation to avoid functional operator overhead and list allocations.
+            var quizSum = 0.0
+            var quizCount = 0
+            for (log in sQuizzes) {
+                val v = log.markValue
+                val m = log.maxMarkValue
+                if (v != null && m != null && m > 0) {
+                    quizSum += (v / m)
+                    quizCount++
+                }
+            }
+            val avgQuiz = if (quizCount > 0) (quizSum / quizCount) else 0.7
 
             // High Performer Logic (Excellence Goal)
-            if (goal == StrategistGoal.EXCELLENCE && avgQuiz > 0.9 && sLogs.count { !it.type.contains("Negative", ignoreCase = true) } > 3) {
-                interventions.add(
-                    TacticalIntervention(
-                        studentId = sId,
-                        title = "Cognitive Acceleration",
-                        description = "Neural patterns for ${student.fullName.value} indicate mastery. Suggestion: Assign a 'Peer Tutor' role or provide an 'Advanced Depth' challenge task.",
-                        urgency = 0.6f,
-                        category = InterventionCategory.ACADEMIC_ACCELERATION
+            // BOLT: Single-pass non-negative count to avoid O(L) list filtering.
+            if (goal == StrategistGoal.EXCELLENCE && avgQuiz > 0.9) {
+                var posCount = 0
+                for (log in sLogs) {
+                    if (!log.type.contains("Negative", ignoreCase = true)) {
+                        posCount++
+                    }
+                }
+                if (posCount > 3) {
+                    interventions.add(
+                        TacticalIntervention(
+                            studentId = sId,
+                            title = "Cognitive Acceleration",
+                            description = "Neural patterns for ${student.fullName.value} indicate mastery. Suggestion: Assign a 'Peer Tutor' role or provide an 'Advanced Depth' challenge task.",
+                            urgency = 0.6f,
+                            category = InterventionCategory.ACADEMIC_ACCELERATION
+                        )
                     )
-                )
+                }
             }
 
             // High Frequency Negative Logic:
-            // Detects behavioral "bursts" using a 1-hour temporal window (3,600,000ms).
+            // Detects behavioral "bursts" using a 1-hour temporal window.
             // A cluster of negatives within this window indicates a high probability of
             // escalation requiring an "Atmospheric Reset".
-            val recentNegatives = sLogs.filter { it.type.contains("Negative", ignoreCase = true) && System.currentTimeMillis() - it.timestamp < 3600000L }
-            if (recentNegatives.size > 1) {
+            // BOLT: Replaced functional filter/count with manual loop to avoid allocations.
+            var recentNegativeCount = 0
+            for (log in sLogs) {
+                if (log.timestamp >= oneHourAgo && log.type.contains("Negative", ignoreCase = true)) {
+                    recentNegativeCount++
+                    if (recentNegativeCount > 1) break
+                }
+            }
+
+            if (recentNegativeCount > 1) {
                 interventions.add(
                     TacticalIntervention(
                         studentId = sId,
