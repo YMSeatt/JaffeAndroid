@@ -37,9 +37,19 @@ object GhostStrategistEngine {
     }
 
     /**
-     * Generates a list of tactical interventions based on the current classroom state.
-     * In a production environment, this would call into AICore (Gemini Nano) with
-     * a complex pedagogical prompt.
+     * Generates a prioritized list of tactical interventions based on the current
+     * classroom state, historical logs, and AI-predicted prophecies.
+     *
+     * In a production environment, this would call into Android AICore (Gemini Nano) with
+     * a complex pedagogical prompt. This implementation uses high-fidelity heuristics to
+     * simulate that behavior.
+     *
+     * @param students The current list of students for metadata lookup.
+     * @param behaviorLogs Historical behavior data for longitudinal analysis.
+     * @param quizLogs Academic history used to identify performance trends.
+     * @param prophecies Predicted trends from [GhostOracle] (e.g., social friction).
+     * @param goal The primary pedagogical focus for the current synthesis.
+     * @return A list of unique [TacticalIntervention]s, sorted by urgency.
      */
     suspend fun generateInterventions(
         students: List<StudentUiItem>,
@@ -48,13 +58,15 @@ object GhostStrategistEngine {
         prophecies: List<GhostOracle.Prophecy>,
         goal: StrategistGoal
     ): List<TacticalIntervention> {
-        // Simulate AI Synthesis Latency
+        // BOLT: Simulate AI Synthesis Latency (1200ms) to provide a "Generative" UI feel
+        // and match expected inference times of LLMs on mobile hardware.
         delay(1200)
 
         val interventions = mutableListOf<TacticalIntervention>()
         val studentMap = students.associateBy { it.id.toLong() }
 
-        // 1. Process Prophecies into Tactics
+        // 1. Process Prophecies into Tactics:
+        // Maps high-level AI predictions into concrete, wording-heavy pedagogical actions.
         prophecies.forEach { prophecy ->
             val student = studentMap[prophecy.studentId]
             val name = student?.fullName?.value ?: "Student #${prophecy.studentId}"
@@ -113,7 +125,10 @@ object GhostStrategistEngine {
                 )
             }
 
-            // High Frequency Negative Logic
+            // High Frequency Negative Logic:
+            // Detects behavioral "bursts" using a 1-hour temporal window (3,600,000ms).
+            // A cluster of negatives within this window indicates a high probability of
+            // escalation requiring an "Atmospheric Reset".
             val recentNegatives = sLogs.filter { it.type.contains("Negative", ignoreCase = true) && System.currentTimeMillis() - it.timestamp < 3600000L }
             if (recentNegatives.size > 1) {
                 interventions.add(

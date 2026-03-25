@@ -32,8 +32,13 @@ import androidx.compose.ui.unit.sp
 /**
  * GhostStrategistLayer: Visualizes the Generative AI Co-Pilot interface.
  *
- * This layer renders the pedagogical interventions proposed by the [GhostStrategistEngine]
- * using AGSL Shaders and high-fidelity Android 15 haptics.
+ * This layer renders pedagogical interventions proposed by the [GhostStrategistEngine]
+ * using AGSL Shaders for atmospheric feedback and high-fidelity Android 15 haptics
+ * for urgent alerts.
+ *
+ * @param interventions The current list of tactical actions proposed by the AI.
+ * @param isActive Whether the strategist layer is visible on the seating chart.
+ * @param isThinking Whether the AI is currently synthesizing new interventions.
  */
 @Composable
 fun GhostStrategistLayer(
@@ -71,9 +76,15 @@ fun GhostStrategistLayer(
         label = "ThinkingAlpha"
     )
 
+    // BOLT: Re-use the Neural Stream shader to visualize the AI's "thought process".
+    // The shader provides a flowing cyan/white data stream that reacts to the 'isThinking' state.
     val shader = remember { RuntimeShader(GhostStrategistShader.NEURAL_STREAM_SHADER) }
 
-    // Trigger Android 15/16 Haptic Alerts for high-urgency interventions
+    // Trigger Android 15/16 Haptic Alerts for high-urgency interventions:
+    // Uses a sophisticated vibration composition to provide eyes-free tactical awareness.
+    // PRIMITIVE_SPIN (0.8f): Provides a sense of "rotational momentum" or "buildup".
+    // PRIMITIVE_TICK (0.5f, 200ms delay): A crisp, final alert indicating the AI has
+    // finalized a critical tactical proposal.
     LaunchedEffect(interventions) {
         if (interventions.any { it.urgency > 0.9f } && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val composition = VibrationEffect.startComposition()
@@ -138,6 +149,11 @@ fun GhostStrategistLayer(
     }
 }
 
+/**
+ * Renders an individual tactical intervention item with category-specific styling.
+ *
+ * @param intervention The tactical proposal to display.
+ */
 @Composable
 fun InterventionItem(intervention: GhostStrategistEngine.TacticalIntervention) {
     val categoryColor = when (intervention.category) {

@@ -3,10 +3,23 @@ package com.example.myapplication.labs.ghost.strategist
 import org.intellij.lang.annotations.Language
 
 /**
- * GhostStrategistShader: AGSL shaders for the AI Co-Pilot experience.
+ * GhostStrategistShader: Specialized AGSL shaders that provide atmospheric
+ * visual feedback for the AI Co-Pilot experience.
  */
 object GhostStrategistShader {
 
+    /**
+     * NEURAL_STREAM_SHADER: A procedural shader simulating a flowing data stream.
+     *
+     * This shader uses multiple layers of noise and sinusoidal pulses to create
+     * a visual metaphor for the AI's "thought process".
+     *
+     * ### Uniforms:
+     * - `uResolution`: The size of the canvas.
+     * - `uTime`: Animation clock for the flowing data movement.
+     * - `uAlpha`: Global opacity, used to fade the stream in and out.
+     * - `uIntensity`: Controls the brightness of the "data pulses".
+     */
     @Language("AGSL")
     const val NEURAL_STREAM_SHADER = """
         uniform float2 uResolution;
