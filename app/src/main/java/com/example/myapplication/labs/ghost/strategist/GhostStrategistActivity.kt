@@ -96,7 +96,7 @@ fun GhostStrategistScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    GhostStrategistEngine.StrategistGoal.values().forEach { goal ->
+                    GhostStrategistEngine.StrategistGoal.entries.forEach { goal ->
                         FilterChip(
                             selected = selectedGoal == goal,
                             onClick = { selectedGoal = goal },
