@@ -20,10 +20,14 @@ import com.example.myapplication.labs.ghost.GhostOracle
 import kotlinx.coroutines.launch
 
 /**
- * GhostStrategistActivity: A Sandbox for the AI Tactical Co-Pilot.
+ * GhostStrategistActivity: A standalone sandbox for testing the AI Tactical Co-Pilot.
  *
- * This activity demonstrates the on-device AI strategist in a controlled environment.
- * It mocks classroom data to trigger various tactical interventions.
+ * This activity facilitates R&D for the [GhostStrategistEngine] by providing a
+ * controlled environment where developers can trigger AI synthesis using mocked
+ * classroom datasets. It allows for the validation of:
+ * 1. **Heuristic Mapping**: How raw data translates into wordy tactics.
+ * 2. **Haptic Feedback**: Testing the Android 15/16 vibration compositions.
+ * 3. **Shader Integration**: Verifying the Neural Stream visualization during synthesis.
  */
 class GhostStrategistActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
