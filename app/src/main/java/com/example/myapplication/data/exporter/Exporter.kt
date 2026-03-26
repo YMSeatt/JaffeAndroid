@@ -278,10 +278,11 @@ class Exporter(
 
         sheet.createFreezePane(0, 1)
 
+        val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log" ||
+                (sheetName != "Behavior Log" && sheetName != "Quiz Log" && sheetName != "Homework Log")
+
         val headers = precalculatedHeaders ?: run {
             val h = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
-            val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log" ||
-                    (sheetName != "Behavior Log" && sheetName != "Quiz Log" && sheetName != "Homework Log")
 
             if (isMasterLog) {
                 h.add("Log Type")

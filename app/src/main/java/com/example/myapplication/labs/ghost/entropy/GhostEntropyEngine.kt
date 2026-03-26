@@ -44,22 +44,22 @@ object GhostEntropyEngine {
      * Calculates the Shannon Entropy of behavior types for a student.
      * Ported to Python/ghost_entropy_analyzer.py.
      *
-     * BOLT: Optimized to O(L) single-pass manual loop to avoid functional operator overhead.
+     * BOLT: Refactored to accept pre-calculated counts to eliminate redundant log
+     * traversals in the background update pipeline.
+     *
+     * @param typeCounts Map of behavior type names to their occurrence counts.
+     * @param totalLogs Total number of behavioral logs for the student.
      */
-    fun calculateBehaviorEntropy(logs: List<BehaviorEvent>): Float {
-        if (logs.isEmpty()) return 0f
+    fun calculateBehaviorEntropy(typeCounts: Map<String, Int>, totalLogs: Int): Float {
+        if (totalLogs == 0) return 0f
 
-        val counts = mutableMapOf<String, Int>()
-        for (log in logs) {
-            val type = log.type
-            counts[type] = (counts[type] ?: 0) + 1
-        }
-        val total = logs.size.toFloat()
-
+        val total = totalLogs.toFloat()
         var entropy = 0f
-        for (count in counts.values) {
+        for (count in typeCounts.values) {
             val p = count / total
-            entropy -= (p * ln(p))
+            if (p > 0) {
+                entropy -= (p * ln(p))
+            }
         }
 
         // Normalize: Max entropy for N types is ln(N). We'll cap at ln(5) for normalization.
@@ -70,26 +70,13 @@ object GhostEntropyEngine {
     /**
      * Calculates the normalized variance of academic performance.
      *
-     * BOLT: Optimized to O(N) single-pass without intermediate list allocations.
+     * BOLT: Refactored to accept pre-calculated statistical moments.
+     *
+     * @param sum Sum of quiz score ratios (markValue / maxMarkValue).
+     * @param sumSq Sum of squares of quiz score ratios.
+     * @param count Number of valid quiz logs included in the sums.
      */
-    fun calculateAcademicVariance(quizLogs: List<QuizLog>): Float {
-        if (quizLogs.size < 2) return 0f
-
-        var sum = 0.0
-        var sumSq = 0.0
-        var count = 0
-
-        for (log in quizLogs) {
-            val v = log.markValue
-            val m = log.maxMarkValue
-            if (v != null && m != null && m > 0) {
-                val score = v / m
-                sum += score
-                sumSq += score * score
-                count++
-            }
-        }
-
+    fun calculateAcademicVariance(sum: Double, sumSq: Double, count: Int): Float {
         if (count < 2) return 0f
 
         val mean = sum / count

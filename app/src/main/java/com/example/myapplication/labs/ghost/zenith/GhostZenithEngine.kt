@@ -73,40 +73,17 @@ class GhostZenithEngine(context: Context) : SensorEventListener {
          * Calculates the 'Altitude' of a student in the 3D neural space.
          * Students with high academic performance and positive behavior float higher.
          *
-         * @param quizLogs List of historical quiz logs.
-         * @param behaviorLogs List of historical behavior logs.
+         * BOLT: Refactored to accept pre-calculated metrics to eliminate redundant O(L)
+         * log traversals in the background update pipeline.
+         *
+         * @param academicScore Normalized academic score (0.0 to 1.0).
+         * @param behaviorScore Normalized behavior stability (0.0 to 1.0).
          * @return Normalized altitude value (0.0 to 1.0).
          */
         fun calculateStudentAltitude(
-            quizLogs: List<QuizLog>,
-            behaviorLogs: List<BehaviorEvent>
+            academicScore: Float,
+            behaviorScore: Float
         ): Float {
-            // BOLT: Replaced functional operators (filter, map, average) with manual loops
-            // to avoid redundant object allocations per student, per frame.
-            val academicScore = if (quizLogs.isEmpty()) 0.5f else {
-                var totalRatio = 0.0f
-                var validCount = 0
-                for (log in quizLogs) {
-                    val v = log.markValue
-                    val m = log.maxMarkValue
-                    if (v != null && m != null && m > 0) {
-                        totalRatio += (v.toFloat() / m.toFloat())
-                        validCount++
-                    }
-                }
-                if (validCount > 0) totalRatio / validCount else 0.5f
-            }
-
-            val behaviorScore = if (behaviorLogs.isEmpty()) 0.5f else {
-                var positiveCount = 0
-                for (event in behaviorLogs) {
-                    if (!event.type.contains("Negative", ignoreCase = true)) {
-                        positiveCount++
-                    }
-                }
-                positiveCount.toFloat() / behaviorLogs.size
-            }
-
             // Weighted average: Academic performance has more "buoyancy" in the 2027 vision
             return (academicScore * 0.7f + behaviorScore * 0.3f).coerceIn(0f, 1f)
         }
