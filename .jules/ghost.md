@@ -269,4 +269,22 @@ In 2027, student data is no longer just a collection of logs; it is a living gen
 - **Data Persistence**: Representing logs as "Base Pairs" in a helix provides a clear temporal order while maintaining a futuristic aesthetic.
 
 ---
+
+## ⚙️ Experiment: Ghost Preferences (Modern Preference Engine)
+**Date:** 2028-02-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, "One Size Fits All" is a relic of the past. **Ghost Preferences** demonstrates a fluid, reactive approach to application settings. By utilizing Jetpack DataStore, we enable a robust, modern alternative to SharedPreferences, allowing for granular control over experimental UI polish and advanced sensor-driven features.
+
+### 🛠️ The Tech
+- **Jetpack DataStore (Preferences):** Implemented `GhostPreferencesStore` for reactive, coroutine-safe persistence of experimental flags.
+- **StateFlow Architecture:** Leverages `GhostPreferencesViewModel` to expose settings as lifecycle-aware streams.
+- **Futuristic Compose UI:** A dark-themed, glowing preferences screen utilizing Material 3 components for R&D customization.
+
+### 🔦 The Discovery
+- **Reactive Polish:** We discovered that exposing preferences as `StateFlow` allows for "Instant Feedback" UI — where changes to glow intensity or haptics are reflected immediately across the entire experiment suite without requiring restarts.
+- **Isolated R&D:** By keeping experimental preferences in a separate DataStore (`ghost_settings`), we maintain a clean boundary between production logic and high-velocity R&D experiments.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
