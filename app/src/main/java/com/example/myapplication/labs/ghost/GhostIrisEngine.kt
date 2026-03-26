@@ -20,38 +20,23 @@ object GhostIrisEngine {
 
     /**
      * Generates iris parameters for a student.
+     *
+     * BOLT: Refactored to accept pre-calculated metrics to eliminate redundant O(L)
+     * log traversals in the background update pipeline.
+     *
+     * @param studentId The unique student ID.
+     * @param behaviorBalance Normalized behavior stability (0.0 to 1.0).
+     * @param avgQuiz Normalized average quiz score (0.0 to 1.0).
+     * @param totalLogs Combined count of behavior, quiz, and homework logs.
      */
     fun calculateIris(
         studentId: Long,
-        behaviorLogs: List<BehaviorEvent>,
-        quizLogs: List<QuizLog>,
-        homeworkLogs: List<HomeworkLog>
+        behaviorBalance: Float,
+        avgQuiz: Float,
+        totalLogs: Int
     ): IrisParameters {
         // Deterministic seed based on student ID
         val seed = (studentId * 12345.678f) % 1000f
-
-        // Calculate performance metrics
-        // BOLT: Single-pass calculation to avoid O(B) + O(B) + O(Q) list iterations.
-        var positiveCount = 0
-        for (event in behaviorLogs) {
-            if (!event.type.contains("Negative", ignoreCase = true)) {
-                positiveCount++
-            }
-        }
-        val behaviorBalance = if (behaviorLogs.isEmpty()) 0.5f
-            else (positiveCount.toFloat() / behaviorLogs.size).coerceIn(0f, 1f)
-
-        var quizSum = 0.0f
-        var quizCount = 0
-        for (log in quizLogs) {
-            val v = log.markValue
-            val m = log.maxMarkValue
-            if (v != null && m != null && m > 0) {
-                quizSum += (v.toFloat() / m.toFloat())
-                quizCount++
-            }
-        }
-        val avgQuiz = if (quizCount > 0) quizSum / quizCount else 0.75f
 
         // Colors based on behavior balance
         // Positive: Cyan/Blue, Negative: Red/Purple, Neutral: Green/Teal
@@ -68,7 +53,6 @@ object GhostIrisEngine {
         }
 
         // Complexity based on log density (more logs = more complex iris)
-        val totalLogs = behaviorLogs.size + quizLogs.size + homeworkLogs.size
         val complexity = (totalLogs.toFloat() / 20f).coerceIn(0.1f, 1.0f)
 
         return IrisParameters(

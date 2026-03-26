@@ -10,48 +10,36 @@ class GhostEntropyEngineTest {
 
     @Test
     fun `calculateBehaviorEntropy returns zero for empty logs`() {
-        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(emptyList())
+        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(emptyMap(), 0)
         assertThat(entropy).isEqualTo(0f)
     }
 
     @Test
     fun `calculateBehaviorEntropy returns zero for single type of logs`() {
-        val logs = listOf(
-            BehaviorEvent(studentId = 1, type = "Positive", timestamp = System.currentTimeMillis(), comment = null),
-            BehaviorEvent(studentId = 1, type = "Positive", timestamp = System.currentTimeMillis(), comment = null)
-        )
-        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(logs)
+        val typeCounts = mapOf("Positive" to 2)
+        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(typeCounts, 2)
         assertThat(entropy).isEqualTo(0f)
     }
 
     @Test
     fun `calculateBehaviorEntropy returns higher value for diverse logs`() {
-        val logs = listOf(
-            BehaviorEvent(studentId = 1, type = "Type A", timestamp = System.currentTimeMillis(), comment = null),
-            BehaviorEvent(studentId = 1, type = "Type B", timestamp = System.currentTimeMillis(), comment = null),
-            BehaviorEvent(studentId = 1, type = "Type C", timestamp = System.currentTimeMillis(), comment = null)
-        )
-        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(logs)
+        val typeCounts = mapOf("Type A" to 1, "Type B" to 1, "Type C" to 1)
+        val entropy = GhostEntropyEngine.calculateBehaviorEntropy(typeCounts, 3)
         assertThat(entropy).isGreaterThan(0f)
         assertThat(entropy).isAtMost(1.0f)
     }
 
     @Test
     fun `calculateAcademicVariance returns zero for single quiz`() {
-        val quizLogs = listOf(
-            QuizLog(studentId = 1, quizName = "Quiz 1", markValue = 10.0, markType = "Points", maxMarkValue = 10.0, loggedAt = System.currentTimeMillis(), comment = null, marksData = "{}", numQuestions = 10)
-        )
-        val variance = GhostEntropyEngine.calculateAcademicVariance(quizLogs)
+        val variance = GhostEntropyEngine.calculateAcademicVariance(1.0, 1.0, 1)
         assertThat(variance).isEqualTo(0f)
     }
 
     @Test
     fun `calculateAcademicVariance returns higher value for inconsistent scores`() {
-        val quizLogs = listOf(
-            QuizLog(studentId = 1, quizName = "Quiz 1", markValue = 10.0, markType = "Points", maxMarkValue = 10.0, loggedAt = System.currentTimeMillis(), comment = null, marksData = "{}", numQuestions = 10),
-            QuizLog(studentId = 1, quizName = "Quiz 2", markValue = 2.0, markType = "Points", maxMarkValue = 10.0, loggedAt = System.currentTimeMillis(), comment = null, marksData = "{}", numQuestions = 10)
-        )
-        val variance = GhostEntropyEngine.calculateAcademicVariance(quizLogs)
+        val sum = 1.0 + 0.2 // 10/10 and 2/10
+        val sumSq = (1.0 * 1.0) + (0.2 * 0.2)
+        val variance = GhostEntropyEngine.calculateAcademicVariance(sum, sumSq, 2)
         assertThat(variance).isGreaterThan(0f)
         assertThat(variance).isAtMost(1.0f)
     }

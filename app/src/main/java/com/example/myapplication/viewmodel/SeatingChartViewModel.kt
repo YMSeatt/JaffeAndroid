@@ -330,6 +330,16 @@ class SeatingChartViewModel @Inject constructor(
     private val positiveCountsCache = ConcurrentHashMap<Long, Int>()
     private val lastPositiveTimestampsCache = ConcurrentHashMap<Long, Long>()
 
+    /** BOLT: Incremental caches for behavior type distributions used by Entropy. */
+    private val behaviorTypeCountsCache = ConcurrentHashMap<Long, Map<String, Int>>()
+    private val behaviorScoreCache = ConcurrentHashMap<Long, Float>()
+
+    /** BOLT: Incremental caches for academic metrics. */
+    private val quizSumCache = ConcurrentHashMap<Long, Double>()
+    private val quizSumSqCache = ConcurrentHashMap<Long, Double>()
+    private val quizValidCountCache = ConcurrentHashMap<Long, Int>()
+    private val academicScoreCache = ConcurrentHashMap<Long, Float>()
+
     /** BOLT: Incremental caches for expensive Ghost Lab calculations. */
     private val irisParamsCache = ConcurrentHashMap<Long, com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters>()
     private val studentPotentialsCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
@@ -586,7 +596,9 @@ class SeatingChartViewModel @Inject constructor(
                             var nNeg = 0
                             var nPos = 0
                             var lastPosTs = -1L
+                            val typeCounts = mutableMapOf<String, Int>()
                             for (log in newList) {
+                                typeCounts[log.type] = (typeCounts[log.type] ?: 0) + 1
                                 if (log.type.contains("Negative", ignoreCase = true)) {
                                     nNeg++
                                 } else {
@@ -599,6 +611,8 @@ class SeatingChartViewModel @Inject constructor(
                             negativeCountsCache[studentId] = nNeg
                             positiveCountsCache[studentId] = nPos
                             lastPositiveTimestampsCache[studentId] = lastPosTs
+                            behaviorTypeCountsCache[studentId] = typeCounts
+                            behaviorScoreCache[studentId] = if (newList.isEmpty()) 0.5f else nPos.toFloat() / newList.size
                         }
                     }
 
@@ -608,6 +622,8 @@ class SeatingChartViewModel @Inject constructor(
                         negativeCountsCache.keys.retainAll(currentLogStudentIds)
                         positiveCountsCache.keys.retainAll(currentLogStudentIds)
                         lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
+                        behaviorTypeCountsCache.keys.retainAll(currentLogStudentIds)
+                        behaviorScoreCache.keys.retainAll(currentLogStudentIds)
                         changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
                     }
 
@@ -647,11 +663,34 @@ class SeatingChartViewModel @Inject constructor(
                         } else {
                             finalGrouped[studentId] = newList
                             changedLogStudentIds.add(studentId)
+
+                            // BOLT: Incremental update for academic metrics
+                            var sum = 0.0
+                            var sumSq = 0.0
+                            var count = 0
+                            for (log in newList) {
+                                val v = log.markValue
+                                val m = log.maxMarkValue
+                                if (v != null && m != null && m > 0.0) {
+                                    val score = v / m
+                                    sum += score
+                                    sumSq += score * score
+                                    count++
+                                }
+                            }
+                            quizSumCache[studentId] = sum
+                            quizSumSqCache[studentId] = sumSq
+                            quizValidCountCache[studentId] = count
+                            academicScoreCache[studentId] = if (count > 0) (sum / count).toFloat() else 0.75f
                         }
                     }
 
                     if (finalGrouped.size < oldGrouped.size) {
                         val currentLogStudentIds = finalGrouped.keys
+                        quizSumCache.keys.retainAll(currentLogStudentIds)
+                        quizSumSqCache.keys.retainAll(currentLogStudentIds)
+                        quizValidCountCache.keys.retainAll(currentLogStudentIds)
+                        academicScoreCache.keys.retainAll(currentLogStudentIds)
                         changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
                     }
 
@@ -878,17 +917,33 @@ class SeatingChartViewModel @Inject constructor(
                         val qLogs = quizLogsByStudent[student.id] ?: emptyList()
                         val hLogs = homeworkLogsByStudent[student.id] ?: emptyList()
 
+                        val bBalance = behaviorScoreCache[student.id] ?: 0.5f
+                        val qAvg = academicScoreCache[student.id] ?: 0.75f
+                        val totalLogs = bLogs.size + qLogs.size + hLogs.size
+
                         irisParamsCache[student.id] = com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
-                            student.id, bLogs, qLogs, hLogs
+                            studentId = student.id,
+                            behaviorBalance = bBalance,
+                            avgQuiz = qAvg,
+                            totalLogs = totalLogs
                         )
                         studentPotentialsCache[student.id] = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
                             bLogs, qLogs, hLogs
                         )
                         altitudeCache[student.id] = com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
-                            qLogs, bLogs
+                            academicScore = qAvg,
+                            behaviorScore = bBalance
                         )
-                        val bEntropy = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateBehaviorEntropy(bLogs)
-                        val aVariance = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateAcademicVariance(qLogs)
+
+                        val bEntropy = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateBehaviorEntropy(
+                            typeCounts = behaviorTypeCountsCache[student.id] ?: emptyMap(),
+                            totalLogs = bLogs.size
+                        )
+                        val aVariance = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateAcademicVariance(
+                            sum = quizSumCache[student.id] ?: 0.0,
+                            sumSq = quizSumSqCache[student.id] ?: 0.0,
+                            count = quizValidCountCache[student.id] ?: 0
+                        )
                         entropyScoreCache[student.id] = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
                     }
                 }
@@ -905,6 +960,13 @@ class SeatingChartViewModel @Inject constructor(
                     studentPotentialsCache.keys.retainAll(isPresent)
                     altitudeCache.keys.retainAll(isPresent)
                     entropyScoreCache.keys.retainAll(isPresent)
+
+                    behaviorTypeCountsCache.keys.retainAll(isPresent)
+                    behaviorScoreCache.keys.retainAll(isPresent)
+                    quizSumCache.keys.retainAll(isPresent)
+                    quizSumSqCache.keys.retainAll(isPresent)
+                    quizValidCountCache.keys.retainAll(isPresent)
+                    academicScoreCache.keys.retainAll(isPresent)
                 }
 
                 // --- Stage 2: Per-Student Transformation ---
