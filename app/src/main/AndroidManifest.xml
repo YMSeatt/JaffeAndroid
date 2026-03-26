@@ -67,6 +67,11 @@
             android:exported="false"
             android:label="Ghost Strategist"
             android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".labs.ghost.preferences.GhostPreferencesActivity"
+            android:exported="false"
+            android:label="Ghost Preferences"
+            android:theme="@style/Theme.MyApplication" />
         <receiver
             android:name=".util.ReminderReceiver"
             android:exported="false" />
