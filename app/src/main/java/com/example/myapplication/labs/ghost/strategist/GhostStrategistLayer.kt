@@ -2,9 +2,6 @@ package com.example.myapplication.labs.ghost.strategist
 
 import android.graphics.RuntimeShader
 import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -28,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.labs.ghost.util.GhostHapticManager
 
 /**
  * GhostStrategistLayer: Visualizes the Generative AI Co-Pilot interface.
@@ -49,15 +47,7 @@ fun GhostStrategistLayer(
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val context = LocalContext.current
-    val vibrator = remember {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val vibratorManager = context.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
-            vibratorManager?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            context.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? Vibrator
-        }
-    }
+    val hapticManager = remember { GhostHapticManager(context) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "StrategistPulse")
     val time by infiniteTransition.animateFloat(
@@ -80,17 +70,11 @@ fun GhostStrategistLayer(
     // The shader provides a flowing cyan/white data stream that reacts to the 'isThinking' state.
     val shader = remember { RuntimeShader(GhostStrategistShader.NEURAL_STREAM_SHADER) }
 
-    // Trigger Android 15/16 Haptic Alerts for high-urgency interventions:
-    // Uses a sophisticated vibration composition to provide eyes-free tactical awareness.
-    // PRIMITIVE_SPIN (0.8f): Provides a sense of "rotational momentum" or "buildup".
-    // PRIMITIVE_TICK (0.5f, 200ms delay): A crisp, final alert indicating the AI has
-    // finalized a critical tactical proposal.
+    // Trigger Ghost Haptic Alerts for high-urgency interventions:
+    // Replaces manual Vibrator logic with the high-fidelity GhostHapticManager.
     LaunchedEffect(interventions) {
-        if (interventions.any { it.urgency > 0.9f } && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            val composition = VibrationEffect.startComposition()
-            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_SPIN, 0.8f)
-            composition.addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.5f, 200)
-            vibrator?.vibrate(composition.compose())
+        if (interventions.any { it.urgency > 0.9f }) {
+            hapticManager.perform(GhostHapticManager.Pattern.NEURAL_THINKING)
         }
     }
 
