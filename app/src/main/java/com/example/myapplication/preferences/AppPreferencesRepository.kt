@@ -219,6 +219,35 @@ class AppPreferencesRepository @Inject constructor(
         val HOMEWORK_LOG_FONT_COLOR = stringPreferencesKey("homework_log_font_color")
         val QUIZ_LOG_FONT_BOLD = booleanPreferencesKey("quiz_log_font_bold")
         val HOMEWORK_LOG_FONT_BOLD = booleanPreferencesKey("homework_log_font_bold")
+
+        val AUTH_FAILED_ATTEMPTS = intPreferencesKey("auth_failed_attempts")
+        val AUTH_LOCKOUT_UNTIL = longPreferencesKey("auth_lockout_until")
+    }
+
+    /** Reactive stream of the number of failed password attempts. */
+    val authFailedAttemptsFlow: Flow<Int> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTH_FAILED_ATTEMPTS] ?: 0
+        }
+
+    /** Updates the number of failed password attempts. */
+    suspend fun updateAuthFailedAttempts(attempts: Int) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.AUTH_FAILED_ATTEMPTS] = attempts
+        }
+    }
+
+    /** Reactive stream of the lockout expiration timestamp. */
+    val authLockoutUntilFlow: Flow<Long> = context.dataStore.data
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTH_LOCKOUT_UNTIL] ?: 0L
+        }
+
+    /** Updates the lockout expiration timestamp. */
+    suspend fun updateAuthLockoutUntil(timestamp: Long) {
+        context.dataStore.edit { settings ->
+            settings[PreferencesKeys.AUTH_LOCKOUT_UNTIL] = timestamp
+        }
     }
 
     /** Reactive stream of the target number of questions for live quiz sessions. */

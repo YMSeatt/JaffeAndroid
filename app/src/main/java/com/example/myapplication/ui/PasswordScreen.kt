@@ -10,10 +10,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.viewmodel.SettingsViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -33,8 +35,23 @@ fun PasswordScreen(
     var passwordAttempt by remember { mutableStateOf("") }
     var showError by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    // Observe passwordEnabled to potentially show a message if no password is set
-    // val passwordEnabled by settingsViewModel.passwordEnabled.collectAsState()
+
+    val lockoutUntil by settingsViewModel.authLockoutUntil.collectAsState()
+    var remainingSeconds by remember { mutableStateOf(0L) }
+
+    LaunchedEffect(lockoutUntil) {
+        while (true) {
+            val now = System.currentTimeMillis()
+            if (now < lockoutUntil) {
+                remainingSeconds = (lockoutUntil - now) / 1000 + 1
+            } else {
+                remainingSeconds = 0
+            }
+            delay(1000)
+        }
+    }
+
+    val isLockedOut = remainingSeconds > 0
 
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -55,7 +72,7 @@ fun PasswordScreen(
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             isError = showError
         )
-        if (showError) {
+        if (showError && !isLockedOut) {
             Text(
                 "Incorrect password. Please try again.",
                 color = MaterialTheme.colorScheme.error,
@@ -63,6 +80,22 @@ fun PasswordScreen(
                 modifier = Modifier.padding(top = 4.dp)
             )
         }
+
+        if (isLockedOut) {
+            Text(
+                "Locked out due to multiple failed attempts.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                "Try again in $remainingSeconds seconds.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
         Button(
             onClick = {
@@ -74,8 +107,7 @@ fun PasswordScreen(
                     }
                 }
             },
-            // Consider disabling button if !passwordEnabled, though MainActivity should probably handle this
-            // enabled = passwordEnabled
+            enabled = !isLockedOut
         ) {
             Text("Unlock")
         }

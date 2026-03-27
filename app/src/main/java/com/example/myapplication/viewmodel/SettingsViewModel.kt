@@ -539,6 +539,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    val authFailedAttempts: StateFlow<Int> = preferencesRepository.authFailedAttemptsFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0)
+
+    val authLockoutUntil: StateFlow<Long> = preferencesRepository.authLockoutUntilFlow
+        .stateIn(viewModelScope, SharingStarted.Lazily, 0L)
+
     /**
      * Verifies the provided password against the stored hash.
      *
@@ -546,22 +552,46 @@ class SettingsViewModel @Inject constructor(
      * 1. Performs verification on [Dispatchers.Default] to avoid blocking the UI thread.
      * 2. Automatically upgrades the stored hash if [SecurityUtil.needsUpgrade] returns true
      *    (e.g., if the iteration count is outdated or a legacy algorithm is used).
+     * 3. **Throttling & Lockout**: Implements exponential backoff for failed attempts to
+     *    mitigate brute-force attacks.
      */
     suspend fun checkPassword(password: String): Boolean = withContext(Dispatchers.Default) {
+        val lockoutUntil = preferencesRepository.authLockoutUntilFlow.first()
+        if (System.currentTimeMillis() < lockoutUntil) {
+            return@withContext false
+        }
+
         val storedHash = preferencesRepository.passwordHashFlow.first()
         if (storedHash.isNullOrEmpty()) {
             return@withContext password.isBlank()
         }
 
         if (SecurityUtil.verifyPassword(password, storedHash)) {
+            // Success: Reset rate limiting state
+            preferencesRepository.updateAuthFailedAttempts(0)
+            preferencesRepository.updateAuthLockoutUntil(0)
+
             // If it matches but needs an upgrade, re-hash it transparently using current standards.
             if (SecurityUtil.needsUpgrade(storedHash)) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
             }
             return@withContext true
-        }
+        } else {
+            // Failure: Increment attempts and calculate backoff
+            val failedAttempts = preferencesRepository.authFailedAttemptsFlow.first() + 1
+            preferencesRepository.updateAuthFailedAttempts(failedAttempts)
 
-        return@withContext false
+            // Exponential backoff: Start throttling after 3 failed attempts
+            if (failedAttempts >= 3) {
+                // 3: 15s, 4: 30s, 5: 60s, 6: 120s...
+                val delaySeconds = (Math.pow(2.0, (failedAttempts - 3).toDouble()) * 15).toLong()
+                val maxDelay = 24 * 60 * 60L // Max 24 hour lockout
+                val finalDelay = delaySeconds.coerceAtMost(maxDelay)
+                preferencesRepository.updateAuthLockoutUntil(System.currentTimeMillis() + (finalDelay * 1000))
+            }
+
+            return@withContext false
+        }
     }
 
     /**
