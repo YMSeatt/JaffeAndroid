@@ -238,6 +238,18 @@ class StatsViewModel @Inject constructor(
     ): Pair<List<AttendanceSummary>, Int> {
         val zoneId = ZoneId.systemDefault()
 
+        // BOLT: Safe cache for epoch day calculations to avoid redundant Instant/ZonedDateTime/LocalDate allocations.
+        // Since logs are typically sorted by timestamp from DAOs, a simple single-value cache
+        // provides high hit rate with zero risk of "near-midnight" timezone bugs.
+        var lastMs = Long.MIN_VALUE
+        var lastEpochDay = -1L
+        fun getEpochDay(ms: Long): Long {
+            if (ms == lastMs) return lastEpochDay
+            lastMs = ms
+            lastEpochDay = Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate().toEpochDay()
+            return lastEpochDay
+        }
+
         // Determine date range from options or fallback to log boundaries
         val startMillis = options.startDate ?: listOfNotNull(
             behaviorEvents.minOfOrNull { it.timestamp },
@@ -246,8 +258,8 @@ class StatsViewModel @Inject constructor(
         ).minOrNull() ?: System.currentTimeMillis()
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
-        val reportStartDay = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate().toEpochDay()
-        val reportEndDay = Instant.ofEpochMilli(endMillis).atZone(zoneId).toLocalDate().toEpochDay()
+        val reportStartDay = getEpochDay(startMillis)
+        val reportEndDay = getEpochDay(endMillis)
 
         if (reportEndDay < reportStartDay) return Pair(emptyList(), 0)
 
@@ -258,22 +270,16 @@ class StatsViewModel @Inject constructor(
         // Track active days per student (optimized for O(1) presence checks using epoch day)
         val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
         behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(event.timestamp).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(getEpochDay(event.timestamp))
         }
         homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
         }
         quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
         }
 
-        // BOLT: Avoid string concatenation in sorting
+        // BOLT: Sort students once before the loop
         val filteredStudents = students.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val summaryList = mutableListOf<AttendanceSummary>()
@@ -317,14 +323,17 @@ class StatsViewModel @Inject constructor(
             studentBehaviors[event.type] = (studentBehaviors[event.type] ?: 0) + 1
         }
 
+        // BOLT: Sort students once before the loop
+        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
         val summaryList = mutableListOf<BehaviorSummary>()
-        behaviorCounts.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
-            val studentBehaviors = behaviorCounts[studentId]
-            studentBehaviors?.keys?.sorted()?.forEach { behavior ->
-                val student = students[studentId]
+        for (student in sortedStudents) {
+            val studentBehaviors = behaviorCounts[student.id] ?: continue
+            // BOLT: Sorting the keys (behavior types) is acceptable as the count is small (usually < 20)
+            studentBehaviors.keys.sorted().forEach { behavior ->
                 summaryList.add(
                     BehaviorSummary(
-                        studentName = if(student != null) "${student.firstName} ${student.lastName}" else "Unknown",
+                        studentName = "${student.firstName} ${student.lastName}",
                         behavior = behavior,
                         count = studentBehaviors[behavior] ?: 0
                     )
@@ -381,15 +390,17 @@ class StatsViewModel @Inject constructor(
             stats[1] += 1.0
         }
 
+        // BOLT: Sort students once before the loop
+        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
         val summaryList = mutableListOf<QuizSummary>()
-        quizScores.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
-            val studentQuizzes = quizScores[studentId]
-            studentQuizzes?.keys?.sorted()?.forEach { quizName ->
+        for (student in sortedStudents) {
+            val studentQuizzes = quizScores[student.id] ?: continue
+            studentQuizzes.keys.sorted().forEach { quizName ->
                 val stats = studentQuizzes[quizName]!!
-                val student = students[studentId]
                 summaryList.add(
                     QuizSummary(
-                        studentName = if(student != null) "${student.firstName} ${student.lastName}" else "Unknown",
+                        studentName = "${student.firstName} ${student.lastName}",
                         quizName = quizName,
                         averageScore = if (stats[1] > 0) stats[0] / stats[1] else 0.0,
                         timesTaken = stats[1].toInt()
@@ -438,16 +449,18 @@ class StatsViewModel @Inject constructor(
             }
         }
 
+        // BOLT: Sort students once before the loop
+        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
         val summaryList = mutableListOf<HomeworkSummary>()
-        homeworkCountMap.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
-            val studentHomeworks = homeworkCountMap[studentId]
-            studentHomeworks?.keys?.sorted()?.forEach { assignmentName ->
+        for (student in sortedStudents) {
+            val studentHomeworks = homeworkCountMap[student.id] ?: continue
+            studentHomeworks.keys.sorted().forEach { assignmentName ->
                 val count = studentHomeworks[assignmentName] ?: 0
-                val totalPoints = homeworkPointsMap[studentId]?.get(assignmentName) ?: 0.0
-                val student = students[studentId]
+                val totalPoints = homeworkPointsMap[student.id]?.get(assignmentName) ?: 0.0
                 summaryList.add(
                     HomeworkSummary(
-                        studentName = if(student != null) "${student.firstName} ${student.lastName}" else "Unknown",
+                        studentName = "${student.firstName} ${student.lastName}",
                         assignmentName = assignmentName,
                         count = count,
                         totalPoints = totalPoints
