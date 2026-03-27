@@ -69,14 +69,21 @@ object CollisionDetector {
         val numColumns = max(1, canvasWidth / (iconWidth + PADDING))
         val columnWidth = canvasWidth / numColumns
 
-        val grid = mutableMapOf<Int, MutableList<StudentUiItem>>()
+        // BOLT: Replace HashMap with fixed-size Array to avoid boxing and map overhead.
+        val grid = arrayOfNulls<MutableList<StudentUiItem>>(numColumns)
 
         // Step 2: Map existing students to columns
         for (student in students) {
             if (student.id.toLong() == movedStudent.id) continue
             val studentX = max(0f, student.xPosition.value)
             val col = (studentX / columnWidth).toInt().coerceIn(0, numColumns - 1)
-            grid.getOrPut(col) { mutableListOf() }.add(student)
+
+            var columnList = grid[col]
+            if (columnList == null) {
+                columnList = mutableListOf()
+                grid[col] = columnList
+            }
+            columnList.add(student)
         }
 
         val potentialSpots = mutableListOf<Pair<Float, Float>>()
