@@ -97,4 +97,75 @@ class StatsViewModelTest {
         assertThat(summary.daysAbsent).isEqualTo(1)  // day2
         assertThat(summary.attendancePercentage).isWithin(0.1).of(66.6)
     }
+
+    @Test
+    fun `calculateBehaviorSummary correctly aggregates counts in sorted order`() {
+        val studentA = Student(id = 1, firstName = "Alice", lastName = "Zuberi")
+        val studentB = Student(id = 2, firstName = "Bob", lastName = "Alpha")
+        val students = listOf(studentA, studentB).sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
+        val events = listOf(
+            BehaviorEvent(studentId = 1, type = "Talking", timestamp = 1000L, comment = null),
+            BehaviorEvent(studentId = 1, type = "Talking", timestamp = 2000L, comment = null),
+            BehaviorEvent(studentId = 2, type = "Participation", timestamp = 1500L, comment = null)
+        )
+
+        val summary = viewModel.calculateBehaviorSummary(events, students)
+
+        assertThat(summary).hasSize(2)
+        // Bob Alpha comes first because Alpha < Zuberi
+        assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
+        assertThat(summary[0].behavior).isEqualTo("Participation")
+        assertThat(summary[0].count).isEqualTo(1)
+
+        assertThat(summary[1].studentName).isEqualTo("Alice Zuberi")
+        assertThat(summary[1].behavior).isEqualTo("Talking")
+        assertThat(summary[1].count).isEqualTo(2)
+    }
+
+    @Test
+    fun `calculateQuizSummary correctly aggregates scores in sorted order`() {
+        val studentA = Student(id = 1, firstName = "Alice", lastName = "Zuberi")
+        val studentB = Student(id = 2, firstName = "Bob", lastName = "Alpha")
+        val students = listOf(studentA, studentB).sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
+        val markTypes = listOf(
+            QuizMarkType(id = 1, name = "Correct", defaultPoints = 1.0, contributesToTotal = true)
+        )
+
+        val logs = listOf(
+            QuizLog(studentId = 1, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 2}", loggedAt = 1000L),
+            QuizLog(studentId = 2, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 1}", loggedAt = 1000L)
+        )
+
+        val summary = viewModel.calculateQuizSummary(logs, students, markTypes)
+
+        assertThat(summary).hasSize(2)
+        assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
+        assertThat(summary[0].averageScore).isEqualTo(50.0)
+
+        assertThat(summary[1].studentName).isEqualTo("Alice Zuberi")
+        assertThat(summary[1].averageScore).isEqualTo(100.0)
+    }
+
+    @Test
+    fun `calculateHomeworkSummary correctly aggregates points in sorted order`() {
+        val studentA = Student(id = 1, firstName = "Alice", lastName = "Zuberi")
+        val studentB = Student(id = 2, firstName = "Bob", lastName = "Alpha")
+        val students = listOf(studentA, studentB).sortedWith(compareBy({ it.lastName }, { it.firstName }))
+
+        val logs = listOf(
+            HomeworkLog(studentId = 1, assignmentName = "History", status = "Done", marksData = "{\"effort\": \"10\"}", loggedAt = 1000L),
+            HomeworkLog(studentId = 2, assignmentName = "History", status = "Done", marksData = "{\"effort\": \"5\"}", loggedAt = 1000L)
+        )
+
+        val summary = viewModel.calculateHomeworkSummary(logs, students)
+
+        assertThat(summary).hasSize(2)
+        assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
+        assertThat(summary[0].totalPoints).isEqualTo(5.0)
+
+        assertThat(summary[1].studentName).isEqualTo("Alice Zuberi")
+        assertThat(summary[1].totalPoints).isEqualTo(10.0)
+    }
 }

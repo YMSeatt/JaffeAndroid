@@ -104,6 +104,8 @@ class StatsViewModel @Inject constructor(
     private val _statsData = MutableLiveData<StatsData>(StatsData())
     val statsData: LiveData<StatsData> = _statsData
 
+    private var updateJob: kotlinx.coroutines.Job? = null
+
     /** Legacy LiveData for backward compatibility or simple observers. */
     val behaviorSummary: LiveData<List<BehaviorSummary>> = _statsData.map { it.behaviorSummary }
     val quizSummary: LiveData<List<QuizSummary>> = _statsData.map { it.quizSummary }
@@ -144,7 +146,8 @@ class StatsViewModel @Inject constructor(
      * @param options Configuration for filtering (date range, selected students, log types).
      */
     fun updateStats(options: ExportOptions) {
-        viewModelScope.launch {
+        updateJob?.cancel()
+        updateJob = viewModelScope.launch {
             withContext(Dispatchers.Default) {
                 val startDate = options.startDate ?: 0L
                 val endDate = options.endDate ?: Long.MAX_VALUE
@@ -155,6 +158,8 @@ class StatsViewModel @Inject constructor(
                 } else {
                     studentDao.getAllStudentsNonLiveData()
                 }
+
+                val sortedStudents = students.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
                 val behaviorEvents = if (studentIds != null && studentIds.isNotEmpty()) {
                     behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
@@ -194,13 +199,11 @@ class StatsViewModel @Inject constructor(
 
                 val filteredQuizLogs = quizLogs
 
-                val studentMap = students.associateBy { it.id }
-
                 // Calculate summaries
-                val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, studentMap)
-                val quizSummaryList = calculateQuizSummary(filteredQuizLogs, studentMap, quizMarkTypes)
-                val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, studentMap)
-                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, students, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs)
+                val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, sortedStudents)
+                val quizSummaryList = calculateQuizSummary(filteredQuizLogs, sortedStudents, quizMarkTypes)
+                val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, sortedStudents)
+                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, sortedStudents, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs)
 
                 _statsData.postValue(
                     StatsData(
@@ -239,14 +242,17 @@ class StatsViewModel @Inject constructor(
         val zoneId = ZoneId.systemDefault()
 
         // BOLT: Safe cache for epoch day calculations to avoid redundant Instant/ZonedDateTime/LocalDate allocations.
-        // Since logs are typically sorted by timestamp from DAOs, a simple single-value cache
-        // provides high hit rate with zero risk of "near-midnight" timezone bugs.
-        var lastMs = Long.MIN_VALUE
+        // Since logs are typically clustered by day, caching the start and end millis of the last day
+        // eliminates thousands of object allocations per report.
+        var lastDayStartMs = Long.MIN_VALUE
+        var lastDayEndMs = Long.MIN_VALUE
         var lastEpochDay = -1L
         fun getEpochDay(ms: Long): Long {
-            if (ms == lastMs) return lastEpochDay
-            lastMs = ms
-            lastEpochDay = Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate().toEpochDay()
+            if (ms in lastDayStartMs..lastDayEndMs) return lastEpochDay
+            val localDate = Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate()
+            lastEpochDay = localDate.toEpochDay()
+            lastDayStartMs = localDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            lastDayEndMs = localDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
             return lastEpochDay
         }
 
@@ -279,11 +285,8 @@ class StatsViewModel @Inject constructor(
             studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
         }
 
-        // BOLT: Sort students once before the loop
-        val filteredStudents = students.sortedWith(compareBy({ it.lastName }, { it.firstName }))
-
         val summaryList = mutableListOf<AttendanceSummary>()
-        for (student in filteredStudents) {
+        for (student in students) {
             val presentDaysSet = studentActiveDays[student.id] ?: emptySet()
 
             // BOLT: Optimize nested loop by counting active days within the report range
@@ -315,16 +318,13 @@ class StatsViewModel @Inject constructor(
      * @param students Map for resolving student IDs to display names.
      * @return A sorted list of [BehaviorSummary] objects.
      */
-    internal fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, students: Map<Long, Student>): List<BehaviorSummary> {
+    internal fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, sortedStudents: List<Student>): List<BehaviorSummary> {
         // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists
         val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
         for (event in behaviorEvents) {
             val studentBehaviors = behaviorCounts.getOrPut(event.studentId) { mutableMapOf() }
             studentBehaviors[event.type] = (studentBehaviors[event.type] ?: 0) + 1
         }
-
-        // BOLT: Sort students once before the loop
-        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val summaryList = mutableListOf<BehaviorSummary>()
         for (student in sortedStudents) {
@@ -354,7 +354,7 @@ class StatsViewModel @Inject constructor(
      * @param quizMarkTypes Configuration for mark point values.
      * @return A sorted list of [QuizSummary] objects.
      */
-    internal fun calculateQuizSummary(quizLogs: List<QuizLog>, students: Map<Long, Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
+    internal fun calculateQuizSummary(quizLogs: List<QuizLog>, sortedStudents: List<Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
         // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
         val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
 
@@ -390,9 +390,6 @@ class StatsViewModel @Inject constructor(
             stats[1] += 1.0
         }
 
-        // BOLT: Sort students once before the loop
-        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
-
         val summaryList = mutableListOf<QuizSummary>()
         for (student in sortedStudents) {
             val studentQuizzes = quizScores[student.id] ?: continue
@@ -421,7 +418,7 @@ class StatsViewModel @Inject constructor(
      * @param students Student lookup map.
      * @return A sorted list of [HomeworkSummary] objects.
      */
-    internal fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, students: Map<Long, Student>): List<HomeworkSummary> {
+    internal fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, sortedStudents: List<Student>): List<HomeworkSummary> {
         // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop
         val homeworkCountMap = mutableMapOf<Long, MutableMap<String, Int>>()
         val homeworkPointsMap = mutableMapOf<Long, MutableMap<String, Double>>()
@@ -448,9 +445,6 @@ class StatsViewModel @Inject constructor(
                 studentPoints[log.assignmentName] = (studentPoints[log.assignmentName] ?: 0.0) + points
             }
         }
-
-        // BOLT: Sort students once before the loop
-        val sortedStudents = students.values.sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val summaryList = mutableListOf<HomeworkSummary>()
         for (student in sortedStudents) {
