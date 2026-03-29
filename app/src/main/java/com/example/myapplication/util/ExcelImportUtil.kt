@@ -32,6 +32,9 @@ import java.util.Locale
 object ExcelImportUtil {
     private const val TAG = "ExcelImportUtil"
 
+    /** BOLT: Private constants to avoid per-row allocations in the import loop. */
+    private val GENDER_GIRL_ALIASES = setOf("girl", "female", "f")
+
     /**
      * A mapping of canonical student fields to their common spreadsheet aliases.
      * This map drives the [importStudentsFromExcel] header detection logic, providing
@@ -84,7 +87,6 @@ object ExcelImportUtil {
         studentRepository: StudentRepository,
         studentGroupDao: StudentGroupDao
     ): Result<Int> = withContext(Dispatchers.IO) {
-        var importedCount = 0
         try {
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             inputStream.use { stream ->
@@ -98,9 +100,12 @@ object ExcelImportUtil {
                 val formatter = DataFormatter()
                 val colIndices = mutableMapOf<String, Int>()
 
+                // BOLT: Cache locale for use in loops
+                val locale = Locale.getDefault()
+
                 // Dynamic Header Detection (Ported from Python)
                 for (cell in headerRow) {
-                    val headerVal = formatter.formatCellValue(cell).lowercase(Locale.getDefault()).trim()
+                    val headerVal = formatter.formatCellValue(cell).lowercase(locale).trim()
                     for ((key, aliases) in commonHeaders) {
                         if (aliases.contains(headerVal)) {
                             colIndices[key] = cell.columnIndex
@@ -110,7 +115,11 @@ object ExcelImportUtil {
                 }
 
                 // Pre-load groups to avoid N+1 query problem
-                val groupMap = studentGroupDao.getAllStudentGroupsList().associateBy { it.name.lowercase(Locale.getDefault()) }
+                val groupMap = studentGroupDao.getAllStudentGroupsList().associateBy { it.name.lowercase(locale) }
+
+                // BOLT: Use a list to collect students for a single bulk insertion.
+                // This reduces database transactions from O(N) to O(1).
+                val studentsToInsert = mutableListOf<Student>()
 
                 while (rows.hasNext()) {
                     try {
@@ -153,28 +162,31 @@ object ExcelImportUtil {
                         if (firstName.isNotBlank()) {
                             // Find group ID by name if provided (Ported from Python)
                             val groupId = groupName?.let { name ->
-                                groupMap[name.lowercase(Locale.getDefault())]?.id
+                                groupMap[name.lowercase(locale)]?.id
                             }
 
                             val student = Student(
                                 firstName = firstName,
                                 lastName = lastName,
                                 nickname = nickname.ifBlank { null },
-                                gender = if (genderStr.lowercase(Locale.getDefault()) in listOf("girl", "female", "f")) "Girl" else "Boy",
+                                gender = if (genderStr.lowercase(locale) in GENDER_GIRL_ALIASES) "Girl" else "Boy",
                                 stringId = "",
                                 xPosition = 0f,
                                 yPosition = 0f,
                                 groupId = groupId
                             )
-                            studentRepository.insertStudent(student)
-                            importedCount++
+                            studentsToInsert.add(student)
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error importing student row", e)
+                        Log.e(TAG, "Error extracting student row", e)
                     }
                 }
+
+                if (studentsToInsert.isNotEmpty()) {
+                    studentRepository.insertStudents(studentsToInsert)
+                }
+                Result.success(studentsToInsert.size)
             }
-            Result.success(importedCount)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import from Excel", e)
             Result.failure(e)
