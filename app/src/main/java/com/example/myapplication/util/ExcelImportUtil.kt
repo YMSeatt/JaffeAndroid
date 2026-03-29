@@ -15,11 +15,28 @@ import java.util.Locale
 
 /**
  * Utility class for importing student data from Excel files.
- * Ported logic from the Python blueprint to support dynamic headers and flexible name parsing.
+ *
+ * This utility serves as a critical entry point for bulk data ingestion, allowing teachers
+ * to import student rosters from standard spreadsheet formats. It is a mobile-optimized
+ * port of the logic defined in the Python desktop application, ensuring consistent
+ * ingestion behavior across platforms.
+ *
+ * ### Key Features:
+ * 1. **Dynamic Header Detection**: Automatically identifies columns based on a curated set
+ *    of aliases (e.g., "surname" or "last" are both mapped to the `last_name` field).
+ * 2. **Flexible Name Parsing**: Gracefully handles combined name fields (e.g., "Doe, John"
+ *    or "John Doe") as well as split first/last name columns.
+ * 3. **Relational Group Assignment**: Automatically links students to their respective
+ *    [com.example.myapplication.data.StudentGroup] by matching group names found in the spreadsheet.
  */
 object ExcelImportUtil {
     private const val TAG = "ExcelImportUtil"
 
+    /**
+     * A mapping of canonical student fields to their common spreadsheet aliases.
+     * This map drives the [importStudentsFromExcel] header detection logic, providing
+     * resilience against varying CSV/Excel naming conventions.
+     */
     private val commonHeaders = mapOf(
         "first_name" to listOf("first", "first name", "firstname"),
         "last_name" to listOf("last", "last name", "lastname", "surname"),
@@ -30,14 +47,36 @@ object ExcelImportUtil {
     )
 
     /**
-     * Imports students from an Excel file URI.
-     * Detects headers dynamically and handles various name formats (separate or combined).
+     * Imports students from an Excel file URI and persists them to the local database.
      *
-     * @param uri The URI of the Excel file.
-     * @param context The application context.
-     * @param studentRepository The repository to insert students.
-     * @param studentGroupDao The DAO to lookup or assign student groups by name.
-     * @return A Result containing the number of students successfully imported.
+     * ### Ingestion Logic & Heuristics:
+     *
+     * #### 1. Header Resolution
+     * The method performs a single pass over the first row to match cell values against
+     * [commonHeaders]. Only matched columns are used for data extraction.
+     *
+     * #### 2. Efficient Group Matching
+     * To avoid the **N+1 query problem**, the utility pre-loads all student groups into
+     * an in-memory map. Group assignments are resolved via case-insensitive name lookups.
+     *
+     * #### 3. Name Parsing Heuristics
+     * If dedicated first/last name columns are missing, the engine attempts to split the
+     * "full name" field using the following priority:
+     * - **Comma Delimiter**: Splits "Last, First" into its constituent parts.
+     * - **Space Delimiter**: Splits "First Last" at the first space encountered.
+     * - **Fallback**: Treats the entire string as the first name if no delimiters are found.
+     *
+     * #### 4. Data Normalization
+     * - **Gender**: Strings containing "girl", "female", or "f" are normalized to "Girl";
+     *   all others default to "Boy".
+     * - **Coordinates**: New students are initialized at (0, 0). The [CollisionDetector]
+     *   will automatically reposition them when they are first added to the seating chart.
+     *
+     * @param uri The URI of the Excel file (content:// or file://).
+     * @param context The application context for content resolution.
+     * @param studentRepository The repository for student persistence.
+     * @param studentGroupDao The DAO for pre-fetching group identities.
+     * @return A [Result] containing the count of successfully imported students.
      */
     suspend fun importStudentsFromExcel(
         uri: Uri,

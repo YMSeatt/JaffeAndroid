@@ -37,5 +37,11 @@ A performance-tuned fuzzy matching utility.
 - **Levenshtein Distance**: Used to match student names when loading layout templates if database IDs have changed.
 - **Resource Reuse**: Employs `ThreadLocal` integer buffers to eliminate row allocations during similarity calculations.
 
+### 6. Excel Import Utility (`ExcelImportUtil.kt`)
+A robust entry point for bulk student data ingestion.
+- **Dynamic Header Mapping**: Uses a curated alias map to detect student fields (names, gender, groups) regardless of spreadsheet column naming.
+- **Heuristic Name Parsing**: Gracefully handles various name formats (combined vs. split) to minimize user data-cleaning effort.
+- **N+1 Avoidance**: Pre-loads student groups into memory to ensure high-performance ID resolution during batch imports.
+
 ---
 *Documentation love letter from Scribe 📜*
