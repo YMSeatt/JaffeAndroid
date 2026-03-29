@@ -171,6 +171,7 @@ import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
+import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -1998,6 +1999,16 @@ fun SeatingChartTopAppBar(
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
+                        if (GhostConfig.FILTER_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Neural Filter 👻") },
+                                onClick = {
+                                    context.startActivity(Intent(context, GhostFilterActivity::class.java))
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                         if (GhostConfig.VISION_MODE_ENABLED) {
                             DropdownMenuItem(
                                 text = { Text("Ghost Vision AR 👻") },

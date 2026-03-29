@@ -150,4 +150,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Glyph" neural gesture logging. */
     const val GLYPH_MODE_ENABLED = true
+
+    /** Enables the "Ghost Filter" optimized student list. */
+    const val FILTER_MODE_ENABLED = true
 }
