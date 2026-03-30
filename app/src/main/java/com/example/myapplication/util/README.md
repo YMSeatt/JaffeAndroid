@@ -43,5 +43,19 @@ A robust entry point for bulk student data ingestion.
 - **Heuristic Name Parsing**: Gracefully handles various name formats (combined vs. split) to minimize user data-cleaning effort.
 - **N+1 Avoidance**: Pre-loads student groups into memory to ensure high-performance ID resolution during batch imports.
 
+## 🖼️ Visual Serialization & Artifact Generation
+
+The application includes a sophisticated engine for transforming GPU-rendered UI components into shareable visual artifacts. This is used for generating seating chart snapshots and blueprints.
+
+### 1. The Capture Engine (`Screenshot.kt`)
+Traditional `View.draw(Canvas)` methods often fail to capture complex Compose layers or AGSL shaders.
+- **Hardware Copy**: Utilizes the `PixelCopy` API (API 26+) to perform a hardware-level copy of the system surface buffer. This ensures that what the user sees—including "Ghost Lab" procedural glows and animations—is accurately captured.
+- **Precision Framing**: Dynamically calculates the view's relative position within the window to ensure pixel-perfect cropping.
+
+### 2. Logical Blueprinting (`GhostBlueprintEngine.kt`)
+Bridges the gap between the 4000x4000 logical canvas and standard vector formats.
+- **SVG Serialization**: Transforms student and furniture entities into a stylized, scalable vector format suitable for professional printing or classroom planning.
+- **Coordinate Normalization**: Implements a consistent mapping formula to project large-scale canvas data into a standard 1200x800 SVG viewport.
+
 ---
 *Documentation love letter from Scribe 📜*
