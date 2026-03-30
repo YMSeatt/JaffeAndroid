@@ -19,14 +19,35 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /**
- * Captures a Bitmap of the given Composable view.
+ * captureComposable: A high-fidelity visual serialization utility.
  *
- * This function uses [PixelCopy] for Android O and above for accurate screenshots,
- * and falls back to drawing the view on a [Canvas] for older versions.
+ * This function handles the complex task of capturing a [Bitmap] representation of a
+ * [View] (typically a `ComposeView`) that may contain hardware-accelerated content,
+ * such as experimental AGSL shaders or high-performance animations.
  *
- * @param view The Composable view to capture.
- * @param window The window containing the view.
- * @return A [Bitmap] of the view, or null if the capture fails on Android O and above.
+ * ### The "Capture Paradox":
+ * In modern Android development, especially with Jetpack Compose, the standard
+ * `View.draw(Canvas)` approach often results in blank or incomplete images because
+ * it doesn't always capture layers rendered directly by the GPU.
+ *
+ * ### Implementation Strategy:
+ * 1. **Modern Devices (API 26+)**: Uses the [PixelCopy] API. This service performs
+ *    a hardware-level copy of the window's surface buffer. This is the only reliable
+ *    way to capture AGSL-heavy content from the "Ghost Lab" experiments.
+ * 2. **Coordinate Alignment**: Employs [View.getLocationInWindow] to precisely
+ *    calculate the capture [Rect], ensuring the serialized image matches the
+ *    visual bounds observed by the user.
+ * 3. **Legacy Fallback**: On older devices, it reverts to the [Canvas] drawing
+ *    model. While less accurate for complex shaders, it provides baseline compatibility.
+ *
+ * ### Lifecycle & Performance:
+ * This is a `suspend` function that utilizes [suspendCancellableCoroutine] to bridge
+ * the asynchronous [PixelCopy] callback. It must be called from a coroutine, and
+ * internally manages its execution on the Main Looper as required by the system API.
+ *
+ * @param view The specific View or ComposeView hierarchy to capture.
+ * @param window The active system [Window] providing the surface buffer.
+ * @return A [Bitmap] snapshot, or null if the hardware copy request fails.
  */
 suspend fun captureComposable(
     view: View,
