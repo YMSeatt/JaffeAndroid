@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.myapplication.labs.ghost.util.GhostGlassmorphicSurface
 
 /**
  * GhostPreferencesScreen: The R&D interface for experimental UI customization.
@@ -72,36 +73,48 @@ fun GhostPreferencesScreen(
         ) {
             GhostSectionTitle("VISUAL ENGINE")
 
-            GhostPreferenceSlider(
-                label = "Glow Intensity",
-                value = glowIntensity,
-                onValueChange = viewModel::setGlowIntensity
-            )
+            GhostGlassmorphicSurface(
+                modifier = Modifier.fillMaxWidth(),
+                glassmorphismEnabled = glassmorphismEnabled
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    GhostPreferenceSlider(
+                        label = "Glow Intensity",
+                        value = glowIntensity,
+                        onValueChange = viewModel::setGlowIntensity
+                    )
 
-            GhostPreferenceSwitch(
-                label = "Glassmorphism Effect",
-                description = "Enable experimental blurred translucent UI layers.",
-                checked = glassmorphismEnabled,
-                onCheckedChange = viewModel::setGlassmorphismEnabled
-            )
+                    GhostPreferenceSwitch(
+                        label = "Glassmorphism Effect",
+                        description = "Enable experimental blurred translucent UI layers.",
+                        checked = glassmorphismEnabled,
+                        onCheckedChange = viewModel::setGlassmorphismEnabled
+                    )
 
-            GhostPreferenceSwitch(
-                label = "Scanline Overlay",
-                description = "Apply a retro-futuristic CRT scanline filter.",
-                checked = scanlineEffectEnabled,
-                onCheckedChange = viewModel::setScanlineEffectEnabled
-            )
-
-            Divider(color = Color.Cyan.copy(alpha = 0.2f))
+                    GhostPreferenceSwitch(
+                        label = "Scanline Overlay",
+                        description = "Apply a retro-futuristic CRT scanline filter.",
+                        checked = scanlineEffectEnabled,
+                        onCheckedChange = viewModel::setScanlineEffectEnabled
+                    )
+                }
+            }
 
             GhostSectionTitle("SOMATIC SYSTEMS")
 
-            GhostPreferenceSwitch(
-                label = "Neural Haptics",
-                description = "Use high-fidelity Android 15 haptic primitives for feedback.",
-                checked = neuralHapticsEnabled,
-                onCheckedChange = viewModel::setNeuralHapticsEnabled
-            )
+            GhostGlassmorphicSurface(
+                modifier = Modifier.fillMaxWidth(),
+                glassmorphismEnabled = glassmorphismEnabled
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    GhostPreferenceSwitch(
+                        label = "Neural Haptics",
+                        description = "Use high-fidelity Android 15 haptic primitives for feedback.",
+                        checked = neuralHapticsEnabled,
+                        onCheckedChange = viewModel::setNeuralHapticsEnabled
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(48.dp))
 

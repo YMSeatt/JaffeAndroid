@@ -1,11 +1,5 @@
 package com.example.myapplication.labs.ghost.filtering
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,10 +35,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.labs.ghost.util.ghostShimmer
 
 /**
  * GhostFilterScreen: A high-performance student list featuring complex filtering.
@@ -179,29 +172,6 @@ fun StudentFilterCard(name: String, nickname: String?, initials: String) {
  */
 @Composable
 fun GhostShimmerItem() {
-    val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.6f),
-        Color.LightGray.copy(alpha = 0.2f),
-        Color.LightGray.copy(alpha = 0.6f),
-    )
-
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1000f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "translateAnim"
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset.Zero,
-        end = Offset(x = translateAnim, y = translateAnim)
-    )
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -218,7 +188,7 @@ fun GhostShimmerItem() {
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(brush)
+                    .ghostShimmer()
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column {
@@ -226,14 +196,14 @@ fun GhostShimmerItem() {
                     modifier = Modifier
                         .width(120.dp)
                         .height(20.dp)
-                        .background(brush)
+                        .ghostShimmer()
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .width(80.dp)
                         .height(14.dp)
-                        .background(brush)
+                        .ghostShimmer()
                 )
             }
         }
