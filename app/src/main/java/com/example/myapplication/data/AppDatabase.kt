@@ -793,7 +793,11 @@ abstract class AppDatabase : RoomDatabase() {
                         DATABASE_NAME
                     )
                 } else {
-                    // HARDEN: Archives are stored in a dedicated 'archives' subdirectory within internal storage
+                    // HARDEN: Archives are stored in a dedicated 'archives' subdirectory within internal storage.
+                    // Validate filename to prevent path traversal.
+                    if (dbName.contains("/") || dbName.contains("\\") || dbName.contains("..")) {
+                        throw IllegalArgumentException("Invalid database name: $dbName")
+                    }
                     val archiveFile = java.io.File(context.filesDir, "archives/$dbName")
                     Room.databaseBuilder(
                         context.applicationContext,

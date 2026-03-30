@@ -147,15 +147,22 @@ class SettingsViewModel @Inject constructor(
             }
         }
 
-        return archiveDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }
-            ?.map { it.name } ?: emptyList()
+        return archiveDir.listFiles { _, name ->
+            name.startsWith("archive_") && name.endsWith(".db") && isSafeFileName(name)
+        }?.map { it.name } ?: emptyList()
     }
 
     /**
      * Switches the application's active database to a specific archive.
      * This is used for viewing historical data without overwriting the live classroom state.
+     *
+     * **Security Hardening**: Validates the filename to prevent path traversal attacks.
      */
     fun loadArchivedDatabase(fileName: String) {
+        if (!isSafeFileName(fileName)) {
+            Log.e("SettingsViewModel", "Blocked suspicious archive filename: $fileName")
+            return
+        }
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
             AppDatabase.switchToArchive(context, fileName)
@@ -615,17 +622,26 @@ class SettingsViewModel @Inject constructor(
 
     /**
      * Copies the active database file to an external location.
+     *
+     * **Security Hardening**: Uses streaming for unencrypted backups to avoid OOM
+     * and limits resource consumption.
      */
     suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        if (!dbFile.exists()) return@withContext
+
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         application.contentResolver.openOutputStream(uri)?.use { outputStream ->
-            val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
             if (encrypt) {
+                // Encryption requires the full payload for the Fernet token
+                val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
                 val encryptedToken = securityUtil.encrypt(dbBytes)
                 outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
             } else {
-                outputStream.write(dbBytes)
+                // Stream the file directly to avoid OOM for large databases
+                FileInputStream(dbFile).use { inputStream ->
+                    inputStream.copyTo(outputStream)
+                }
             }
         }
     }
@@ -633,34 +649,87 @@ class SettingsViewModel @Inject constructor(
     /**
      * Overwrites the active database with a file from an external source.
      * Triggers a [restoreComplete] event upon success.
+     *
+     * **Security Hardening & Reliability**:
+     * 1. Implements streaming restoration with size limits (50MB) to prevent OOM/DoS.
+     * 2. Clears SQLite journal files (-wal, -shm) to ensure database integrity.
+     * 3. Only signals success to the UI if the restoration truly succeeds.
      */
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
+        val maxSizeBytes = 50 * 1024 * 1024 // 50MB limit
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+
+        // Close existing connections and clear temporary journal files before overwriting
         AppDatabase.getDatabase(application).close()
-        application.contentResolver.openInputStream(uri)?.use { inputStream ->
-            val inputBytes = inputStream.readBytes()
+        val walFile = File(dbFile.path + "-wal")
+        val shmFile = File(dbFile.path + "-shm")
+        if (walFile.exists()) walFile.delete()
+        if (shmFile.exists()) shmFile.delete()
 
-            val decryptedBytes = if (inputBytes.size >= 6 &&
-                inputBytes[0] == 'g'.toByte() &&
-                inputBytes[1] == 'A'.toByte() &&
-                inputBytes[2] == 'A'.toByte() &&
-                inputBytes[3] == 'A'.toByte() &&
-                inputBytes[4] == 'A'.toByte() &&
-                inputBytes[5] == 'A'.toByte()) {
-                try {
-                    securityUtil.decryptToByteArray(String(inputBytes, Charsets.UTF_8))
-                } catch (e: Exception) {
-                    inputBytes
+        var restorationSuccess = false
+
+        try {
+            application.contentResolver.openInputStream(uri)?.use { inputStream ->
+                // Check for Fernet encryption prefix ('gAAAAA')
+                val prefix = ByteArray(6)
+                val prefixRead = inputStream.read(prefix)
+
+                if (prefixRead == 6 &&
+                    prefix[0] == 'g'.toByte() && prefix[1] == 'A'.toByte() && prefix[2] == 'A'.toByte() &&
+                    prefix[3] == 'A'.toByte() && prefix[4] == 'A'.toByte() && prefix[5] == 'A'.toByte()) {
+
+                    // Encrypted Path: Read fully into memory BUT with strict size enforcement to prevent OOM
+                    val bos = java.io.ByteArrayOutputStream()
+                    bos.write(prefix)
+
+                    val buffer = ByteArray(8192)
+                    var read: Int
+                    var totalRead = 6L
+                    while (inputStream.read(buffer).also { read = it } != -1) {
+                        totalRead += read
+                        if (totalRead > maxSizeBytes) {
+                            Log.e("SettingsViewModel", "Restore failed: Encrypted file exceeds 50MB limit.")
+                            return@withContext
+                        }
+                        bos.write(buffer, 0, read)
+                    }
+
+                    try {
+                        val decryptedBytes = securityUtil.decryptToByteArray(String(bos.toByteArray(), Charsets.UTF_8))
+                        FileOutputStream(dbFile, false).use { it.write(decryptedBytes) }
+                        restorationSuccess = true
+                    } catch (e: Exception) {
+                        Log.e("SettingsViewModel", "Decryption failed during restoration", e)
+                    }
+                } else {
+                    // Plaintext Path: Stream directly to disk with size enforcement
+                    FileOutputStream(dbFile, false).use { outputStream ->
+                        if (prefixRead > 0) outputStream.write(prefix, 0, prefixRead)
+
+                        val buffer = ByteArray(8192)
+                        var read: Int
+                        var totalRead = if (prefixRead > 0) prefixRead.toLong() else 0L
+                        while (inputStream.read(buffer).also { read = it } != -1) {
+                            totalRead += read
+                            if (totalRead > maxSizeBytes) {
+                                Log.e("SettingsViewModel", "Restore failed: Database file exceeds 50MB limit.")
+                                outputStream.close()
+                                dbFile.delete()
+                                return@withContext
+                            }
+                            outputStream.write(buffer, 0, read)
+                        }
+                    }
+                    restorationSuccess = true
                 }
-            } else {
-                inputBytes
             }
-
-            FileOutputStream(dbFile, false).use { outputStream ->
-                outputStream.write(decryptedBytes)
-            }
+        } catch (e: Exception) {
+            Log.e("SettingsViewModel", "Error during database restoration", e)
         }
-        _restoreComplete.postValue(true) // This will trigger the restart
+
+        if (restorationSuccess) {
+            _restoreComplete.postValue(true)
+        }
     }
 
     /**
@@ -1062,5 +1131,16 @@ class SettingsViewModel @Inject constructor(
         return com.example.myapplication.util.ExcelImportUtil.importStudentsFromExcel(
             uri, application, studentRepository, studentGroupDao
         )
+    }
+
+    /**
+     * Validates that a filename is safe to use in internal storage paths.
+     * Prevents path traversal attacks (e.g., "../../data.db").
+     */
+    private fun isSafeFileName(fileName: String): Boolean {
+        if (fileName.isBlank()) return false
+        // Strictly allow only alphanumeric characters, underscores, dashes, and dots.
+        // Reject any path separators (/, \) or traversal sequences (..).
+        return fileName.matches(Regex("^[a-zA-Z0-9_\\-\\.]+$")) && !fileName.contains("..")
     }
 }
