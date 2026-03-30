@@ -2,7 +2,12 @@
 - [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
 
 ## 🚧 Active Construction
-- [NONE] No active tasks.
+- [ACTIVE] Ghost UI Polish: Reusable Neural Shimmer Modifier & Glassmorphic Surface
+  - [x] Implement `Modifier.ghostShimmer()` in `GhostModifiers.kt`
+  - [x] Implement `GhostGlassmorphicSurface` in `GhostComponents.kt`
+  - [x] Refactor `GhostFilterScreen.kt` to use the new modifier
+  - [x] Enhance `GhostPreferencesScreen.kt` with glassmorphic surface
+  - [x] Verify performance & Document
 
 ## ✅ Completed Enhancements
 - [DONE] 2028-03-01: Ghost Filter - Optimized Student List Filtering in `/labs/ghost/filtering`
