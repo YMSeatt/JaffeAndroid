@@ -12,6 +12,9 @@ import kotlin.random.Random
  */
 object GhostFutureEngine {
 
+    private val NEGATIVE_TYPES = listOf("Disruptive", "Off Task", "Conflict")
+    private val POSITIVE_TYPES = listOf("Participating", "Focused", "Helping")
+
     /**
      * Generates simulated behavior events for the next X hours.
      *
@@ -30,12 +33,17 @@ object GhostFutureEngine {
         val currentTime = System.currentTimeMillis()
         val random = Random(currentTime)
 
+        // BOLT: O(L) grouping for O(1) lookup in the student loop.
+        val logsByStudent = historicalLogs.groupBy { it.studentId }
+        val propheciesByStudent = prophecies.groupBy { it.studentId }
+
         students.forEach { student ->
+            val studentId = student.id.toLong()
             // Base probability of an event happening in the next hour
             var eventProbability = 0.2f
 
-            // Influence from Prophecies
-            val studentProphecies = prophecies.filter { it.studentId == student.id.toLong() }
+            // Influence from Prophecies - BOLT: O(1) lookup
+            val studentProphecies = propheciesByStudent[studentId] ?: emptyList()
             studentProphecies.forEach { prophecy ->
                 when (prophecy.type) {
                     GhostOracle.ProphecyType.SOCIAL_FRICTION -> eventProbability += 0.3f
@@ -46,9 +54,15 @@ object GhostFutureEngine {
             }
 
             // High historical negative count increases event probability
-            val negativeCount = historicalLogs.count {
-                it.studentId == student.id.toLong() && it.type.contains("Negative", ignoreCase = true)
+            // BOLT: Optimized count with manual loop over pre-grouped list
+            val studentLogs = logsByStudent[studentId] ?: emptyList()
+            var negativeCount = 0
+            for (log in studentLogs) {
+                if (log.type.contains("Negative", ignoreCase = true)) {
+                    negativeCount++
+                }
             }
+
             eventProbability += (negativeCount * 0.05f).coerceAtMost(0.4f)
 
             // Simulation loop for each hour
@@ -61,16 +75,13 @@ object GhostFutureEngine {
                         random.nextFloat() < 0.3f // 30% baseline negative chance
                     }
 
-                    val type = if (isNegative) {
-                        listOf("Disruptive", "Off Task", "Conflict").random(random) + " (Simulated)"
-                    } else {
-                        listOf("Participating", "Focused", "Helping").random(random) + " (Simulated)"
-                    }
+                    val typeList = if (isNegative) NEGATIVE_TYPES else POSITIVE_TYPES
+                    val type = typeList.random(random) + " (Simulated)"
 
                     simulatedEvents.add(
                         BehaviorEvent(
                             id = 0, // Mock ID
-                            studentId = student.id.toLong(),
+                            studentId = studentId,
                             type = type,
                             timestamp = currentTime + (h * 60 * 60 * 1000L * random.nextFloat()).toLong(),
                             comment = "AI Predicted Event"
