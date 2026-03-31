@@ -2432,8 +2432,9 @@ class SeatingChartViewModel @Inject constructor(
             val autoSendOnClose: Boolean = appPreferencesRepository.autoSendEmailOnCloseFlow.first()
             if (autoSendOnClose) {
                 val email: String = appPreferencesRepository.defaultEmailAddressFlow.first()
+                val encrypt: Boolean = appPreferencesRepository.encryptDataFilesFlow.first()
                 if (email.isNotBlank()) {
-                    val exportOptions = pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()
+                    val exportOptions = (pendingExportOptions ?: com.example.myapplication.data.exporter.ExportOptions()).copy(encrypt = encrypt)
                     val exportOptionsJson = Json.encodeToString(exportOptions)
                     val workRequest = OneTimeWorkRequestBuilder<EmailWorker>()
                         .setInputData(

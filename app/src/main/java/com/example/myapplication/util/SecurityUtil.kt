@@ -24,6 +24,11 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
+ * Thrown when a Fernet token is valid but has exceeded its configured time-to-live.
+ */
+class TokenExpiredException(message: String) : SecurityException(message)
+
+/**
  * SecurityUtil: The central security manager for the application.
  *
  * This class is responsible for:
@@ -82,17 +87,25 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
             SecureRandom().nextBytes(salt)
             val saltHex = salt.toHex()
 
+            val passwordChars = password.toCharArray()
             val spec = PBEKeySpec(
-                password.toCharArray(),
+                passwordChars,
                 salt,
                 PBKDF2_ITERATIONS,
                 PBKDF2_KEY_LENGTH
             )
-            val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-            val hash = factory.generateSecret(spec).encoded
-            val hashHex = hash.toHex()
+            var hash: ByteArray? = null
+            try {
+                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+                hash = factory.generateSecret(spec).encoded
+                val hashHex = hash.toHex()
 
-            return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
+                return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
+            } finally {
+                spec.clearPassword()
+                passwordChars.fill('\u0000')
+                hash?.fill(0.toByte())
+            }
         }
 
         /**
@@ -139,17 +152,27 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
                 val expectedHashHex = parts[3]
 
                 val salt = saltHex.hexToByteArray()
+                val passwordChars = password.toCharArray()
                 val spec = PBEKeySpec(
-                    password.toCharArray(),
+                    passwordChars,
                     salt,
                     iterations,
                     PBKDF2_KEY_LENGTH
                 )
-                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-                val actualHash = factory.generateSecret(spec).encoded
-                val expectedHash = expectedHashHex.hexToByteArray()
+                var actualHash: ByteArray? = null
+                var expectedHash: ByteArray? = null
+                try {
+                    val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+                    actualHash = factory.generateSecret(spec).encoded
+                    expectedHash = expectedHashHex.hexToByteArray()
 
-                return MessageDigest.isEqual(actualHash, expectedHash)
+                    return MessageDigest.isEqual(actualHash, expectedHash)
+                } finally {
+                    spec.clearPassword()
+                    passwordChars.fill('\u0000')
+                    actualHash?.fill(0.toByte())
+                    expectedHash?.fill(0.toByte())
+                }
             }
 
             return if (storedHash.contains(":")) {
@@ -330,6 +353,11 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
         return try {
             fernetCipher.decrypt(token, TTL_SECONDS)
         } catch (e: Exception) {
+            // If the token is valid but expired, do NOT fall back to the legacy key.
+            // This ensures we respect the TTL for primary security.
+            if (e is TokenExpiredException) {
+                throw e
+            }
             // Fallback to old key
             val oldToken = Token.fromString(token)
             oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
@@ -461,7 +489,7 @@ class FernetCipher(private val key: ByteArray) {
         val timestamp = buffer.long
         val currentTime = System.currentTimeMillis() / 1000
         if (ttl > 0 && currentTime > timestamp + ttl) {
-            throw SecurityException("Token has expired")
+            throw TokenExpiredException("Token has expired")
         }
 
         val iv = ByteArray(IV_SIZE)

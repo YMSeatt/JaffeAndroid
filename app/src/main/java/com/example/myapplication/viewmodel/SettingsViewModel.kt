@@ -696,8 +696,12 @@ class SettingsViewModel @Inject constructor(
 
                     try {
                         val decryptedBytes = securityUtil.decryptToByteArray(String(bos.toByteArray(), Charsets.UTF_8))
-                        FileOutputStream(dbFile, false).use { it.write(decryptedBytes) }
-                        restorationSuccess = true
+                        try {
+                            FileOutputStream(dbFile, false).use { it.write(decryptedBytes) }
+                            restorationSuccess = true
+                        } finally {
+                            decryptedBytes.fill(0.toByte())
+                        }
                     } catch (e: Exception) {
                         Log.e("SettingsViewModel", "Decryption failed during restoration", e)
                     }
