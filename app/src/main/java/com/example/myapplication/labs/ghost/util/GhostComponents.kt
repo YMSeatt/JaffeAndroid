@@ -1,5 +1,6 @@
 package com.example.myapplication.labs.ghost.util
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -23,6 +24,9 @@ import androidx.compose.ui.unit.dp
  * BOLT ⚡ Optimization: This implementation uses a separate background layer for
  * the blur effect to ensure that child content remains sharp and readable.
  *
+ * NATIVE 📱: Degrades gracefully on devices < Android 12 (API 31) where [Modifier.blur]
+ * is not natively supported by the hardware renderer.
+ *
  * @param modifier Composable modifier.
  * @param glassmorphismEnabled Whether the effect is active (from preferences).
  * @param blurRadius The radius of the background blur.
@@ -45,17 +49,25 @@ fun GhostGlassmorphicSurface(
         modifier = modifier
             .clip(RoundedCornerShape(cornerRadius))
     ) {
-        // Background Layer (Blurred)
+        // Background Layer (Blurred or Fallback)
         if (glassmorphismEnabled) {
-            Box(
-                modifier = Modifier
+            val backgroundModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Modifier
                     .matchParentSize()
                     .blur(blurRadius)
+            } else {
+                // Fallback: More opaque background for pre-API 31
+                Modifier
+                    .matchParentSize()
+            }
+
+            Box(
+                modifier = backgroundModifier
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                backgroundColor.copy(alpha = backgroundColor.alpha * 1.5f),
-                                backgroundColor
+                                backgroundColor.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) backgroundColor.alpha * 1.5f else 0.8f),
+                                backgroundColor.copy(alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) backgroundColor.alpha else 0.4f)
                             )
                         )
                     )
