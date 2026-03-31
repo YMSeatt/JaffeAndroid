@@ -55,8 +55,14 @@ fun GhostOrbitLayer(
         (behaviorLogs.size.toFloat() / 50f).coerceIn(0.1f, 1.0f)
     }
 
-    val orbitalStates = remember(students, behaviorLogs, time) {
-        GhostOrbitEngine.calculateOrbits(students, behaviorLogs, time)
+    // BOLT: Heavy calculations (grouping, filtering) are only done when data changes.
+    val orbitalParams = remember(students, behaviorLogs) {
+        GhostOrbitEngine.calculateOrbitalParameters(students, behaviorLogs)
+    }
+
+    // BOLT: Lightweight position updates run every frame.
+    val orbitalStates = remember(orbitalParams, time) {
+        GhostOrbitEngine.updateOrbitalStates(orbitalParams, time)
     }
 
     val nebulaShader = remember { RuntimeShader(GhostOrbitShader.NEURAL_NEBULA) }

@@ -10,6 +10,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.toPx
@@ -30,12 +32,22 @@ fun GhostPulsarLayer(
 ) {
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
+    val currentTimeMillis = System.currentTimeMillis()
     val harmonics = remember(students, behaviorLogs) {
-        GhostPulsarEngine.calculateHarmonics(students, behaviorLogs, System.currentTimeMillis())
+        GhostPulsarEngine.calculateHarmonics(students, behaviorLogs, currentTimeMillis)
+    }
+
+    // BOLT: Transform harmonics list to map for O(1) lookup in the draw loop.
+    val harmonicsMap = remember(harmonics) {
+        harmonics.associateBy { it.studentId }
     }
 
     val shader = remember { RuntimeShader(GhostPulsarShader.PULSAR_WAVES) }
     val brush = remember(shader) { ShaderBrush(shader) }
+
+    // BOLT: Pre-calculate density-dependent values outside the draw loop.
+    val density = LocalDensity.current
+    val studentsToDisplay = remember(students) { students.take(20) }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
@@ -54,11 +66,12 @@ fun GhostPulsarLayer(
         val phases = FloatArray(maxPoints)
         val amplitudes = FloatArray(maxPoints)
 
-        val count = students.take(maxPoints).size
-        students.take(maxPoints).forEachIndexed { index, student ->
+        val count = studentsToDisplay.size
+        studentsToDisplay.forEachIndexed { index, student ->
             // Map 4000x4000 logical coordinates to screen space
-            val lx = student.xPosition.value.dp.toPx()
-            val ly = student.yPosition.value.dp.toPx()
+            // BOLT: Use pre-calculated density from LocalDensity.current
+            val lx = with(density) { student.xPosition.value.dp.toPx() }
+            val ly = with(density) { student.yPosition.value.dp.toPx() }
 
             val sx = lx * canvasScale + canvasOffset.x
             val sy = ly * canvasScale + canvasOffset.y
@@ -66,7 +79,8 @@ fun GhostPulsarLayer(
             points[index * 2] = sx
             points[index * 2 + 1] = sy
 
-            val h = harmonics.find { it.studentId == student.id.toLong() }
+            // BOLT: O(1) lookup instead of O(N) find
+            val h = harmonicsMap[student.id.toLong()]
             val freq = h?.frequency ?: 0.1f
             // Smoothly calculate phase at 60fps based on frequency
             val phase = ((currentTime % 60_000L).toFloat() / 60_000f * freq) % 1.0f
