@@ -1,10 +1,12 @@
 package com.example.myapplication.labs.ghost
 
+import android.app.Activity
 import android.content.Context
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.view.WindowManager
 import androidx.annotation.RequiresApi
 import java.util.concurrent.Executor
@@ -103,6 +105,32 @@ class GhostPhantasmEngine(private val context: Context) {
                 } catch (e: Exception) {
                     // Fallback
                 }
+            }
+        }
+    }
+
+    /**
+     * Dynamically updates the window's privacy shield status.
+     *
+     * When [forceSecure] is true, it applies [WindowManager.LayoutParams.FLAG_SECURE],
+     * preventing screenshots and screen recordings of the sensitive seating chart and
+     * experimental student data.
+     *
+     * @param activity The activity whose window should be hardened.
+     * @param forceSecure Whether to enable the privacy shield.
+     */
+    fun updatePrivacyShield(activity: Activity?, forceSecure: Boolean) {
+        activity?.runOnUiThread {
+            try {
+                if (forceSecure) {
+                    activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    Log.d("GhostPhantasm", "Privacy Shield: ACTIVATED (FLAG_SECURE enforced)")
+                } else {
+                    activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                    Log.d("GhostPhantasm", "Privacy Shield: DEACTIVATED")
+                }
+            } catch (e: Exception) {
+                Log.e("GhostPhantasm", "Failed to update Privacy Shield", e)
             }
         }
     }
