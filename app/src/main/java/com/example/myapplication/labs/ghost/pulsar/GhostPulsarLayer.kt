@@ -14,7 +14,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
-import com.example.myapplication.util.toPx
 
 /**
  * GhostPulsarLayer: A futuristic visualization of classroom harmonics.
