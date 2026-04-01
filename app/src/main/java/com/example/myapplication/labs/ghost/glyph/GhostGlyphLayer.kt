@@ -34,7 +34,7 @@ fun GhostGlyphLayer(
     if (!isActive) return
 
     var currentPath by remember { mutableStateOf<List<Offset>>(emptyList()) }
-    var recognizedGlyph by remember { mutableStateOf(GhostGlyphEngine.GlyType.UNKNOWN) }
+    var recognizedGlyph by remember { mutableStateOf(GhostGlyphEngine.GlyphType.UNKNOWN) }
     var glyphFade by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
 
@@ -73,16 +73,16 @@ fun GhostGlyphLayer(
                         val glyph = GhostGlyphEngine.recognizeGlyph(currentPath)
                         recognizedGlyph = glyph
 
-                        if (glyph != GhostGlyphEngine.GlyType.UNKNOWN) {
+                        if (glyph != GhostGlyphEngine.GlyphType.UNKNOWN) {
                             val startPoint = currentPath.first()
                             val student = findStudentAtPoint(startPoint, students, canvasScale, canvasOffset)
 
                             student?.let {
                                 val sId = it.id.toLong()
                                 when (glyph) {
-                                    GhostGlyphEngine.GlyType.POSITIVE -> onLogBehavior(sId, "Positive (✔ Glyph)")
-                                    GhostGlyphEngine.GlyType.NEGATIVE -> onLogBehavior(sId, "Negative (✖ Glyph)")
-                                    GhostGlyphEngine.GlyType.ACADEMIC -> onLogAcademic(sId, "Academic (▲ Glyph)")
+                                    GhostGlyphEngine.GlyphType.POSITIVE -> onLogBehavior(sId, "Positive (✔ Glyph)")
+                                    GhostGlyphEngine.GlyphType.NEGATIVE -> onLogBehavior(sId, "Negative (✖ Glyph)")
+                                    GhostGlyphEngine.GlyphType.ACADEMIC -> onLogAcademic(sId, "Academic (▲ Glyph)")
                                     else -> {}
                                 }
                             }
@@ -99,7 +99,7 @@ fun GhostGlyphLayer(
                                     // BOLT: Only clear path if we haven't started a new one
                                     if (glyphFade == 0f) {
                                         currentPath = emptyList()
-                                        recognizedGlyph = GhostGlyphEngine.GlyType.UNKNOWN
+                                        recognizedGlyph = GhostGlyphEngine.GlyphType.UNKNOWN
                                     }
                                 }
                             }
@@ -122,7 +122,7 @@ fun GhostGlyphLayer(
 
                     shader.setFloatUniform("points", pointsArray)
                     shader.setIntUniform("pointCount", shaderPoints.size)
-                    shader.setFloatUniform("intensity", if (recognizedGlyph != GhostGlyphEngine.GlyType.UNKNOWN) 20f else 10f)
+                    shader.setFloatUniform("intensity", if (recognizedGlyph != GhostGlyphEngine.GlyphType.UNKNOWN) 20f else 10f)
                 }
             }
     ) {

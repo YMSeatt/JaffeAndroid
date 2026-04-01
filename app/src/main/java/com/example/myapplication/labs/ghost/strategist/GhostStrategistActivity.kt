@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.labs.ghost.GhostOracle
 import kotlinx.coroutines.launch
 
@@ -121,8 +122,8 @@ fun GhostStrategistScreen(onBack: () -> Unit) {
                             interventions = GhostStrategistEngine.generateInterventions(
                                 students = emptyList(),
                                 behaviorLogs = listOf(
-                                    BehaviorEvent(1L, "Negative behavior", System.currentTimeMillis() - 1000, null),
-                                    BehaviorEvent(1L, "Negative behavior", System.currentTimeMillis() - 2000, null)
+                                    BehaviorEvent(studentId = 1L, type = "Negative behavior", timestamp = System.currentTimeMillis() - 1000, comment = null),
+                                    BehaviorEvent(studentId = 1L, type = "Negative behavior", timestamp = System.currentTimeMillis() - 2000, comment = null)
                                 ),
                                 quizLogs = emptyList(),
                                 prophecies = listOf(
