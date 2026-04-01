@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.labs.ghost.util.ghostNeuralGlow
 import com.example.myapplication.labs.ghost.util.ghostShimmer
 
 /**
@@ -150,6 +151,11 @@ fun StudentFilterCard(name: String, nickname: String?, initials: String) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
+                    .ghostNeuralGlow(
+                        color = MaterialTheme.colorScheme.primary,
+                        intensity = 0.6f
+                    )
+                    .padding(4.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
