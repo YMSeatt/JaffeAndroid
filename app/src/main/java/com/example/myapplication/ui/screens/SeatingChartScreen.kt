@@ -202,6 +202,7 @@ import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.findActivity
 import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
@@ -403,12 +404,18 @@ fun SeatingChartScreen(
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
 
-    DisposableEffect(Unit) {
+    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive) {
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
             ghostPhantasmEngine.observeScreenRecording(ContextCompat.getMainExecutor(context)) { recording ->
                 isScreenRecording = recording
             }
         }
+
+        // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments are active
+        val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
+                                   isCortexActive || isHudActive || isArchitectActive
+        ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
+
         if (GhostConfig.GHOST_MODE_ENABLED) {
             if (GhostConfig.ECHO_MODE_ENABLED) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -437,6 +444,8 @@ fun SeatingChartScreen(
             ghostVisionEngine.stop()
             ghostRayEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
+            // Ensure privacy shield is cleared on dispose
+            ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), false)
         }
     }
 
