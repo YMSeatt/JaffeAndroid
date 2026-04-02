@@ -398,6 +398,11 @@ class SeatingChartViewModel @Inject constructor(
     /** Caches the mapping of group IDs to colors. */
     private var groupColorMapCache: Map<Long, Color?> = emptyMap()
 
+    private var memoizedStudents: List<Student>? = null
+
+    /** BOLT: Identity-based cache for student data hashes to avoid O(N) calculations. Keyed by student ID. */
+    private val studentDataHashCache = ConcurrentHashMap<Long, Pair<Student, Int>>()
+
     private data class StudentCacheKey(
         val studentDataHash: Int,
         val behaviorLogsIdentity: Int,
@@ -406,6 +411,7 @@ class SeatingChartViewModel @Inject constructor(
         val sessionQuizLogsIdentity: Int,
         val sessionHomeworkLogsIdentity: Int,
         val rulesIdentity: Int,
+        val groupsIdentity: Int,
         val relevantPrefsHash: Int,
         val sessionActive: Boolean,
         val currentMode: String,
@@ -446,6 +452,7 @@ class SeatingChartViewModel @Inject constructor(
      * A persistent cache of [FurnitureUiItem] instances.
      */
     private val furnitureUiItemCache = ConcurrentHashMap<Int, FurnitureUiItem>()
+    private var memoizedFurniture: List<Furniture>? = null
 
     // In-memory session data
     private val sessionQuizLogs = MutableLiveData<List<QuizLog>>(emptyList())
@@ -664,6 +671,36 @@ class SeatingChartViewModel @Inject constructor(
                         } else {
                             finalGrouped[studentId] = newList
                             changedLogStudentIds.add(studentId)
+                        }
+                    }
+
+                    if (finalGrouped.size < oldGrouped.size) {
+                        val currentLogStudentIds = finalGrouped.keys
+                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    }
+
+                    homeworkLogsByStudentCache = finalGrouped
+                    memoizedHomeworkLogs = homeworkLogs
+                }
+                val homeworkLogsByStudent = homeworkLogsByStudentCache
+
+                val quizLogs = allQuizLogs.value ?: emptyList()
+                if (quizLogs !== memoizedQuizLogs) {
+                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
+                    for (log in quizLogs) {
+                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                    }
+
+                    val oldGrouped = quizLogsByStudentCache
+                    val finalGrouped = mutableMapOf<Long, List<QuizLog>>()
+
+                    newGrouped.forEach { (studentId, newList) ->
+                        val oldList = oldGrouped[studentId]
+                        if (oldList == newList) {
+                            finalGrouped[studentId] = oldList
+                        } else {
+                            finalGrouped[studentId] = newList
+                            changedLogStudentIds.add(studentId)
 
                             // BOLT: Incremental update for academic metrics
                             var sum = 0.0
@@ -692,36 +729,6 @@ class SeatingChartViewModel @Inject constructor(
                         quizSumSqCache.keys.retainAll(currentLogStudentIds)
                         quizValidCountCache.keys.retainAll(currentLogStudentIds)
                         academicScoreCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
-                    }
-
-                    homeworkLogsByStudentCache = finalGrouped
-                    memoizedHomeworkLogs = homeworkLogs
-                }
-                val homeworkLogsByStudent = homeworkLogsByStudentCache
-
-                val quizLogs = allQuizLogs.value ?: emptyList()
-                if (quizLogs !== memoizedQuizLogs) {
-                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
-                    for (log in quizLogs) {
-                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
-                    }
-
-                    val oldGrouped = quizLogsByStudentCache
-                    val finalGrouped = mutableMapOf<Long, List<QuizLog>>()
-
-                    newGrouped.forEach { (studentId, newList) ->
-                        val oldList = oldGrouped[studentId]
-                        if (oldList == newList) {
-                            finalGrouped[studentId] = oldList
-                        } else {
-                            finalGrouped[studentId] = newList
-                            changedLogStudentIds.add(studentId)
-                        }
-                    }
-
-                    if (finalGrouped.size < oldGrouped.size) {
-                        val currentLogStudentIds = finalGrouped.keys
                         changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
                     }
 
@@ -765,6 +772,7 @@ class SeatingChartViewModel @Inject constructor(
                     memoizedGroups = groups
                 }
                 val groupColorMap = groupColorMapCache
+                val groupsIdentity = System.identityHashCode(groups)
 
                 val behaviorLimit = prefs.recentBehaviorIncidentsLimit
                 val homeworkLimit = prefs.recentHomeworkLogsLimit
@@ -956,10 +964,12 @@ class SeatingChartViewModel @Inject constructor(
                     }
                 }
 
-                // BOLT: Clean up caches for deleted students only if number of students decreased.
-                // This avoids O(N) allocation and set operations during high-frequency updates (e.g. dragging).
-                if (studentUiItemCache.size > students.size) {
-                    val currentStudentIds = students.mapTo(HashSet(students.size)) { it.id }
+                // BOLT: Robust cleanup of all student-associated caches when the roster changes.
+                // Detects additions/removals even if the total count remains the same.
+                if (students !== memoizedStudents) {
+                    val currentStudentIds = HashSet<Long>(students.size * 2)
+                    for (s in students) currentStudentIds.add(s.id)
+
                     val isPresent: (Long) -> Boolean = { it in currentStudentIds }
 
                     studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
@@ -975,12 +985,22 @@ class SeatingChartViewModel @Inject constructor(
                     quizSumSqCache.keys.retainAll(isPresent)
                     quizValidCountCache.keys.retainAll(isPresent)
                     academicScoreCache.keys.retainAll(isPresent)
+
+                    studentDataHashCache.keys.retainAll(isPresent)
+                    memoizedStudents = students
                 }
 
                 // --- Stage 2: Per-Student Transformation ---
                 val studentsWithBehavior = students.map { student ->
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
-                    val studentDataHash = getStudentDataHash(student)
+                    // BOLT: Use identity-based cache for student data hash to avoid O(N) calculations.
+                    val cachedHashEntry = studentDataHashCache[student.id]
+                    val studentDataHash = if (cachedHashEntry != null && cachedHashEntry.first === student) {
+                        cachedHashEntry.second
+                    } else {
+                        getStudentDataHash(student).also { studentDataHashCache[student.id] = student to it }
+                    }
+
                     val behaviorList = behaviorLogsByStudent[student.id]
                     val homeworkList = homeworkLogsByStudent[student.id]
                     val quizList = quizLogsByStudent[student.id]
@@ -996,6 +1016,7 @@ class SeatingChartViewModel @Inject constructor(
                             cachedKey.sessionQuizLogsIdentity == System.identityHashCode(sessionQuizLogsGrouped[student.id]) &&
                             cachedKey.sessionHomeworkLogsIdentity == System.identityHashCode(sessionHomeworkLogsGrouped[student.id]) &&
                             cachedKey.rulesIdentity == System.identityHashCode(decodedRules) &&
+                            cachedKey.groupsIdentity == groupsIdentity &&
                             cachedKey.relevantPrefsHash == relevantPrefsHash &&
                             cachedKey.sessionActive == sessionActive &&
                             cachedKey.currentMode == currentModeValue &&
@@ -1013,6 +1034,7 @@ class SeatingChartViewModel @Inject constructor(
                             sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped[student.id]),
                             sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped[student.id]),
                             rulesIdentity = System.identityHashCode(decodedRules),
+                            groupsIdentity = groupsIdentity,
                             relevantPrefsHash = relevantPrefsHash,
                             sessionActive = sessionActive,
                             currentMode = currentModeValue,
@@ -1207,8 +1229,21 @@ class SeatingChartViewModel @Inject constructor(
                     // updates to individual fields.
                     val existingItem = studentUiItemCache[student.id.toInt()]
                     if (existingItem != null) {
-                        studentForUi.updateStudentUiItem(
-                            item = existingItem,
+                        // BOLT: Skip Stage 3 Sync if Stage 2 was a cache hit and volatile fields haven't changed.
+                        // This eliminates ~30 property checks and several list/string allocations per student.
+                        val volatileChanged = existingItem.xPosition.value != studentForUi.xPosition ||
+                                existingItem.yPosition.value != studentForUi.yPosition ||
+                                existingItem.irisParams.value !== irisParams ||
+                                existingItem.osmoticNode.value !== osmoticNode ||
+                                existingItem.altitude.value != derivedData.altitude ||
+                                existingItem.behaviorEntropy.value != derivedData.behaviorEntropy ||
+                                existingItem.tectonicStress.value != derivedData.tectonicStress ||
+                                existingItem.quasarEnergy.value != derivedData.quasarEnergy ||
+                                existingItem.quasarPolarity.value != derivedData.quasarPolarity
+
+                        if (!isCacheHit || volatileChanged) {
+                            studentForUi.updateStudentUiItem(
+                                item = existingItem,
                             recentBehaviorDescription = behaviorDescription,
                             recentHomeworkDescription = homeworkDescription,
                             recentQuizDescription = quizDescription,
@@ -1231,8 +1266,9 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorEntropy = derivedData.behaviorEntropy,
                             tectonicStress = derivedData.tectonicStress,
                             quasarEnergy = derivedData.quasarEnergy,
-                            quasarPolarity = derivedData.quasarPolarity
-                        )
+                                quasarPolarity = derivedData.quasarPolarity
+                            )
+                        }
                         existingItem
                     } else {
                         val newItem = studentForUi.toStudentUiItem(
@@ -1966,10 +2002,11 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     private fun updateFurnitureForDisplay(furnitureList: List<Furniture>) {
-        // BOLT: Clean up cache for deleted furniture only if count decreased.
-        if (furnitureUiItemCache.size > furnitureList.size) {
+        // BOLT: Robust cleanup of furniture cache when the list changes.
+        if (furnitureList !== memoizedFurniture) {
             val currentFurnitureIds = furnitureList.map { it.id }.toSet()
             furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
+            memoizedFurniture = furnitureList
         }
 
         val mappedList = furnitureList.map { furniture ->

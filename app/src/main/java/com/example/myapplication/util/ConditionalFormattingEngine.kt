@@ -3,6 +3,7 @@ package com.example.myapplication.util
 
 import android.util.Log
 import android.util.LruCache
+import java.util.concurrent.ConcurrentHashMap
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.BehaviorEvent
@@ -184,6 +185,16 @@ object ConditionalFormattingEngine {
      * The key is the raw JSON string from [QuizLog.marksData].
      */
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
+
+    /**
+     * BOLT: Cache for lowercased behavior types to avoid per-event string allocations
+     * during high-frequency rule evaluation. Size-limited to prevent memory leaks.
+     */
+    private val lowercaseCache = LruCache<String, String>(256)
+
+    private fun boltLowercase(input: String): String {
+        return lowercaseCache.get(input) ?: input.lowercase().also { lowercaseCache.put(input, it) }
+    }
 
     /**
      * Deserializes a list of [ConditionalFormattingRule] entities into [DecodedConditionalFormattingRule] objects.
@@ -420,7 +431,7 @@ object ConditionalFormattingEngine {
                 var count = 0
                 for (event in behaviorLog) {
                     if (event.timestamp < cutoffTime) break
-                    if (behaviorNames.contains(event.type.lowercase())) {
+                    if (behaviorNames.contains(boltLowercase(event.type))) {
                         count++
                         if (count >= countThreshold) return true // BOLT: Return early if threshold met
                     }
