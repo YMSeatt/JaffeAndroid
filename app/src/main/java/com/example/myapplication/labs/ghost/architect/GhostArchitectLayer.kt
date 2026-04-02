@@ -73,7 +73,10 @@ fun GhostArchitectLayer(
         label = "LayerAlpha"
     )
 
-    // BOLT: Remembered shaders to avoid allocation in draw loop
+    // BOLT: Remembered shaders to avoid allocation in draw loop.
+    // A pool is required because RuntimeShader uniforms are not snapshotted during recording;
+    // reusing one shader for multiple draw calls in a loop would cause all items to render
+    // with the final item's uniforms.
     val blueprintShader = remember { RuntimeShader(GhostArchitectShader.BLUEPRINT_SHADER) }
     val trajectoryShaderPool = remember { List(20) { RuntimeShader(GhostArchitectShader.TRAJECTORY_SHADER) } }
 
