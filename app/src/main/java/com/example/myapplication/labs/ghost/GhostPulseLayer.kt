@@ -63,6 +63,9 @@ fun GhostPulseLayer(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         var idx = 0
+        // BOLT: Move current timestamp outside of the loop to avoid repeated system calls.
+        val timestamp = System.currentTimeMillis()
+
         resonances.forEach { resonance ->
             val student = studentMap[resonance.studentId] ?: return@forEach
 
@@ -86,7 +89,7 @@ fun GhostPulseLayer(
             shader.setFloatUniform("iIntensity", resonance.intensity)
 
             // Calculate expansion radius based on time since event
-            val age = (System.currentTimeMillis() - resonance.startTime).toFloat()
+            val age = (timestamp - resonance.startTime).toFloat()
             shader.setFloatUniform("iRadius", age * 0.8f * canvasScale)
 
             drawRect(brush = brush)

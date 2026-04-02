@@ -20,6 +20,11 @@ object GhostPulseEngine {
         val startTime: Long
     )
 
+    // BOLT: Static color constants to eliminate Triple allocations in the analysis loop.
+    private val COLOR_POSITIVE = Triple(0.2f, 1.0f, 0.4f) // Green
+    private val COLOR_NEGATIVE = Triple(1.0f, 0.2f, 0.2f) // Red
+    private val COLOR_NEUTRAL = Triple(0.2f, 0.6f, 1.0f)  // Blue
+
     /**
      * Identifies students who should pulse based on recent activity and calculates
      * their "Resonance" (sync level).
@@ -57,9 +62,9 @@ object GhostPulseEngine {
 
             // Determine color based on behavior type
             val color = when {
-                event.type.contains("Positive", ignoreCase = true) -> Triple(0.2f, 1.0f, 0.4f) // Green
-                event.type.contains("Negative", ignoreCase = true) -> Triple(1.0f, 0.2f, 0.2f) // Red
-                else -> Triple(0.2f, 0.6f, 1.0f) // Blue
+                event.type.contains("Positive", ignoreCase = true) -> COLOR_POSITIVE
+                event.type.contains("Negative", ignoreCase = true) -> COLOR_NEGATIVE
+                else -> COLOR_NEUTRAL
             }
 
             // Intensity based on how recent the event is
