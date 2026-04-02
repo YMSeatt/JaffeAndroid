@@ -864,13 +864,25 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 // BOLT: Calculate global Ghost metrics in the background pipeline (Memoized)
-                if (behaviorEvents !== ghostMetricsBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
+                // Split into log-only and position-aware blocks to avoid redundant work during dragging.
+                val logsChanged = behaviorEvents !== ghostMetricsBehaviorLogsRef
+
+                if (logsChanged) {
+                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
+                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
+
+                    // BOLT: Calculate Quasar metrics in the background pipeline
+                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
+                        behaviorLogs = behaviorEvents
+                    )
+                    ghostMetricsBehaviorLogsRef = behaviorEvents
+                }
+
+                if (logsChanged || studentsForEngines !== ghostMetricsStudentsRef) {
                     _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
-                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
-                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
                     _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                         students = studentsForEngines,
                         negativeCounts = negativeCountsCache
@@ -889,12 +901,6 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsTectonicStressMapCache = tectonicNodes.associate { it.id to it.stress }
 
-                    // BOLT: Calculate Quasar metrics in the background pipeline
-                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
-                        behaviorLogs = behaviorEvents
-                    )
-
-                    ghostMetricsBehaviorLogsRef = behaviorEvents
                     ghostMetricsStudentsRef = studentsForEngines
                 }
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache
