@@ -186,6 +186,11 @@ object ConditionalFormattingEngine {
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
 
     /**
+     * Cache for lowercased behavior types to avoid redundant string allocations.
+     */
+    private val behaviorTypeCache = LruCache<String, String>(500)
+
+    /**
      * Deserializes a list of [ConditionalFormattingRule] entities into [DecodedConditionalFormattingRule] objects.
      * Rules that fail to decode are logged and skipped. The resulting list is sorted by priority.
      *
@@ -420,7 +425,10 @@ object ConditionalFormattingEngine {
                 var count = 0
                 for (event in behaviorLog) {
                     if (event.timestamp < cutoffTime) break
-                    if (behaviorNames.contains(event.type.lowercase())) {
+                    val typeLower = behaviorTypeCache.get(event.type) ?: event.type.lowercase().also {
+                        behaviorTypeCache.put(event.type, it)
+                    }
+                    if (behaviorNames.contains(typeLower)) {
                         count++
                         if (count >= countThreshold) return true // BOLT: Return early if threshold met
                     }
