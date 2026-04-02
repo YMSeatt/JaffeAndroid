@@ -807,11 +807,16 @@ class SeatingChartViewModel @Inject constructor(
                 val quizDisplayTimeout = prefs.quizDisplayTimeout
                 val currentTime = System.currentTimeMillis()
 
-                // BOLT: Replaced slow java.util.Calendar with java.time.LocalDateTime (Min SDK 26)
-                val now = LocalDateTime.now()
-                val dayOfWeek = now.dayOfWeek.value - 1 // LocalDateTime is 1(Mon)-7(Sun), we want 0-6
-                val currentTimeString = now.format(TIME_FORMATTER)
-                val timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
+                // BOLT: Defer time formatting until it's confirmed that time-based rules are active.
+                // This avoids redundant string allocations on every update for the majority of users.
+                var currentTimeString = "STATIC_TIME"
+                var timeContext = FormattingTimeContext(0, "00:00")
+                if (memoizedAnyTimeBasedRules) {
+                    val now = LocalDateTime.now()
+                    val dayOfWeek = now.dayOfWeek.value - 1 // LocalDateTime is 1(Mon)-7(Sun), we want 0-6
+                    currentTimeString = now.format(TIME_FORMATTER)
+                    timeContext = FormattingTimeContext(dayOfWeek, currentTimeString)
+                }
 
                 // BOLT: Refine cache key to only include preferences that affect Stage 2 re-calculations.
                 // This prevents irrelevant preference changes (like edit mode) from clearing the whole cache.
@@ -849,28 +854,50 @@ class SeatingChartViewModel @Inject constructor(
                 val decodedRules = decodedRulesCache
 
                 // BOLT: Reconcile positions with optimistic updates for background engines.
-                // Short-circuit the mapping if no student dragging is in progress.
-                val studentsForEngines = if (pendingStudentPositions.isEmpty()) {
-                    students
-                } else {
-                    students.map { student ->
+                // Optimized to avoid creating a new list or copying student objects if no optimistic
+                // positions actually differ from the database state.
+                // Note: student.xPosition is a Float from the Student entity, matching pendingPos types.
+                var studentsForEngines = students
+                if (pendingStudentPositions.isNotEmpty()) {
+                    var hasChanges = false
+                    for (student in students) {
                         val pendingPos = pendingStudentPositions[student.id.toInt()]
-                        if (pendingPos != null) {
-                            student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
-                        } else {
-                            student
+                        if (pendingPos != null && (pendingPos.first != student.xPosition || pendingPos.second != student.yPosition)) {
+                            hasChanges = true
+                            break
+                        }
+                    }
+
+                    if (hasChanges) {
+                        studentsForEngines = students.map { student ->
+                            val pendingPos = pendingStudentPositions[student.id.toInt()]
+                            if (pendingPos != null && (pendingPos.first != student.xPosition || pendingPos.second != student.yPosition)) {
+                                student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                            } else {
+                                student
+                            }
                         }
                     }
                 }
 
-                // BOLT: Calculate global Ghost metrics in the background pipeline (Memoized)
+                // BOLT: Calculate log-only Ghost metrics in the background pipeline (Memoized)
+                // These don't depend on student positions, so we avoid recalculating them during drags.
+                if (behaviorEvents !== ghostMetricsBehaviorLogsRef) {
+                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
+                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
+
+                    // BOLT: Calculate Quasar metrics in the background pipeline
+                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
+                        behaviorLogs = behaviorEvents
+                    )
+                }
+
+                // BOLT: Calculate position-sensitive Ghost metrics in the background pipeline (Memoized)
                 if (behaviorEvents !== ghostMetricsBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
                     _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
-                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
-                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
                     _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                         students = studentsForEngines,
                         negativeCounts = negativeCountsCache
@@ -889,11 +916,6 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsTectonicStressMapCache = tectonicNodes.associate { it.id to it.stress }
 
-                    // BOLT: Calculate Quasar metrics in the background pipeline
-                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
-                        behaviorLogs = behaviorEvents
-                    )
-
                     ghostMetricsBehaviorLogsRef = behaviorEvents
                     ghostMetricsStudentsRef = studentsForEngines
                 }
@@ -901,7 +923,7 @@ class SeatingChartViewModel @Inject constructor(
                 val quasarMetricsMap = ghostMetricsQuasarMapCache
 
                 // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute
-                val effectiveTimeKey = if (memoizedAnyTimeBasedRules) currentTimeString else "STATIC_TIME"
+                val effectiveTimeKey = currentTimeString
 
                 val defaultStyle = prefs.defaultStudentStyle
                 // BOLT: Pre-parse default colors to avoid redundant string-to-color conversions in the student loop
