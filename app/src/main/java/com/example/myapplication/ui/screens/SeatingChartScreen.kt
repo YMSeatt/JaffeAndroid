@@ -286,6 +286,11 @@ fun SeatingChartScreen(
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
+    /**
+     * SHIELD: Track the last shared artifact (screenshot/blueprint) for cleanup.
+     * This ensures that temporary files created for sharing don't persist longer than necessary.
+     */
+    var lastSharedArtifactUri by remember { mutableStateOf<Uri?>(null) }
     val hudViewModel: GhostHUDViewModel = viewModel()
     val context = LocalContext.current
 
@@ -446,6 +451,11 @@ fun SeatingChartScreen(
             ghostPhantasmEngine.stopObservingScreenRecording()
             // Ensure privacy shield is cleared on dispose
             ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), false)
+
+            // SHIELD: Clean up the last shared artifact on screen disposal
+            lastSharedArtifactUri?.let { uri ->
+                try { context.contentResolver.delete(uri, null, null) } catch (e: Exception) { /* Ignore */ }
+            }
         }
     }
 
@@ -577,11 +587,17 @@ fun SeatingChartScreen(
                 onHelpClick = onHelpClick,
                 onTakeScreenshot = {
                     coroutineScope.launch {
+                        // SHIELD: Clean up previous artifact before creating a new one
+                        lastSharedArtifactUri?.let { oldUri ->
+                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                        }
+
                         val view = (context as Activity).window.decorView
                         val bitmap = captureComposable(view, (context as Activity).window)
                         if (bitmap != null) {
                             val uri = settingsViewModel.saveScreenshot(bitmap)
                             if (uri != null) {
+                                lastSharedArtifactUri = uri
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "image/png"
                                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -711,9 +727,15 @@ fun SeatingChartScreen(
                 onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
+                        // SHIELD: Clean up previous artifact before creating a new one
+                        lastSharedArtifactUri?.let { oldUri ->
+                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                        }
+
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
                         val uri = settingsViewModel.saveBlueprint(svgContent)
                         if (uri != null) {
+                            lastSharedArtifactUri = uri
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "image/svg+xml"
                                 putExtra(Intent.EXTRA_STREAM, uri)
