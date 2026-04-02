@@ -351,7 +351,8 @@ class SeatingChartViewModel @Inject constructor(
     private var prophecyStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var prophecyLogsRef: List<com.example.myapplication.data.BehaviorEvent>? = null
 
-    private var ghostMetricsBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsLogOnlyBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsPosAwareBehaviorLogsRef: List<BehaviorEvent>? = null
     private var ghostMetricsStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsTectonicStressMapCache: Map<Long, Float> = emptyMap()
     private var ghostMetricsQuasarMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
@@ -863,14 +864,26 @@ class SeatingChartViewModel @Inject constructor(
                     }
                 }
 
-                // BOLT: Calculate global Ghost metrics in the background pipeline (Memoized)
-                if (behaviorEvents !== ghostMetricsBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
+                // BOLT: Calculate log-only Ghost metrics in the background pipeline (Memoized)
+                // These metrics only depend on behavioral history, skipping re-calculation during dragging.
+                if (behaviorEvents !== ghostMetricsLogOnlyBehaviorLogsRef) {
+                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
+                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
+
+                    // BOLT: Calculate Quasar metrics in the background pipeline
+                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
+                        behaviorLogs = behaviorEvents
+                    )
+                    ghostMetricsLogOnlyBehaviorLogsRef = behaviorEvents
+                }
+
+                // BOLT: Calculate position-aware Ghost metrics in the background pipeline (Memoized)
+                // These metrics depend on both behavioral history and physical student coordinates.
+                if (behaviorEvents !== ghostMetricsPosAwareBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
                     _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
-                    _spectralDensity.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateSpectralDensity(behaviorEvents)
-                    _agitation.value = com.example.myapplication.labs.ghost.GhostSpectraEngine.calculateAgitation(behaviorEvents)
                     _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                         students = studentsForEngines,
                         negativeCounts = negativeCountsCache
@@ -889,12 +902,7 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsTectonicStressMapCache = tectonicNodes.associate { it.id to it.stress }
 
-                    // BOLT: Calculate Quasar metrics in the background pipeline
-                    ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
-                        behaviorLogs = behaviorEvents
-                    )
-
-                    ghostMetricsBehaviorLogsRef = behaviorEvents
+                    ghostMetricsPosAwareBehaviorLogsRef = behaviorEvents
                     ghostMetricsStudentsRef = studentsForEngines
                 }
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache

@@ -43,9 +43,12 @@ fun GhostVortexLayer(
         label = "time"
     )
 
-    // BOLT: Reuse shader instances. Since we cap vortices at 5, we can pre-allocate a small pool.
+    // BOLT: Reuse shader and brush instances. Since we cap vortices at 5, we can pre-allocate a small pool.
     val shaderPool = remember {
         List(5) { RuntimeShader(GhostVortexShader.SOCIAL_WHIRLPOOL) }
+    }
+    val brushPool = remember(shaderPool) {
+        shaderPool.map { ShaderBrush(it) }
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -69,7 +72,7 @@ fun GhostVortexLayer(
             shader.setFloatUniform("iPolarity", vortex.polarity)
 
             drawRect(
-                brush = ShaderBrush(shader),
+                brush = brushPool[index],
                 topLeft = Offset(
                     screenX - (vortex.radius * 3f * canvasScale),
                     screenY - (vortex.radius * 3f * canvasScale)
