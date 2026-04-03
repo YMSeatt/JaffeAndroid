@@ -273,6 +273,14 @@ A stochastic engine for **Neural Classroom Simulation**.
 - **Simulated Trajectories**: Uses heuristics and predictions from [GhostOracle] to generate a series of "Simulated Events" representing a likely future trajectory of the classroom.
 - **Probabilistic Modeling**: Influences event probability based on historical negative counts and identified social friction.
 
+## 🔄 Logic Parity & The R&D Bridge
+
+Most features in the Ghost Lab are mobile-optimized ports of pedagogical and spatial theories first modeled in the **Python Analysis Suite**.
+
+To ensure consistency between platforms, maintainers should refer to the following documentation in the `Python/` directory:
+- [**Ghost Lab Guide**](../../../../../../../../../Python/GHOST_LAB_GUIDE.md): Explains the "Logic Parity Bridge" and the mathematical constants (like the 2x coordinate scaling factor) shared between Python and Android.
+- [**Python Ghost Suite**](../../../../../../../../../Python/README.md#ghost-lab-experimental-analysis): Catalogs the 30+ R&D scripts that serve as the "Gold Standard" for Android implementations.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

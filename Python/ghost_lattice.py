@@ -19,16 +19,23 @@ def analyze_social_lattice(students_file, logs_file):
     """
     Analyzes student data and logs to build a social relationship graph.
 
-    The algorithm uses physical proximity on the seating chart as a primary
-    indicator of social potential, and uses behavioral heuristics (like
-    shared names as a proxy for social grouping) to weight edges.
+    This script serves as the logical prototype for the `GhostLatticeLayer` on Android.
+    It infers connections (Collaboration, Friction, or Neutral) between students
+    based on proximity and behavioral patterns.
+
+    ### Heuristics & Constraints:
+    1. **Proximity Threshold**: Uses a 400-unit threshold in Python (typically
+       scaled to 800-1000 units in the Android production environment).
+    2. **Relationship Proxy**: In this prototype, shared surnames are used as a
+       low-fidelity proxy for social collaboration, whereas the Android app
+       uses actual behavioral log correlation.
 
     Args:
-        students_file (str): Path to the students JSON file.
+        students_file (str): Path to the students JSON file (v10 schema).
         logs_file (str): Path to the behavior logs JSON file.
 
-    Outputs:
-        lattice_analysis.json: A JSON file containing the inferred clusters and edges.
+    Returns:
+        None: Results are written to `lattice_analysis.json`.
     """
     if not os.path.exists(students_file):
         print(f"Error: {students_file} not found.")
