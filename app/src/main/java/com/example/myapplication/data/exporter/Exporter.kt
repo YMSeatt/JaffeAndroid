@@ -2,6 +2,7 @@ package com.example.myapplication.data.exporter
 
 import android.content.Context
 import android.net.Uri
+import android.util.LruCache
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
@@ -54,8 +55,10 @@ class Exporter(
     /**
      * Cache for decoded marks data JSON strings to avoid redundant deserialization
      * during large export operations involving many log entries.
+     *
+     * BOLT: Converted to LruCache to prevent unbounded memory growth.
      */
-    private val parsedMarksCache = mutableMapOf<String, Map<String, Any>>()
+    private val parsedMarksCache = LruCache<String, Map<String, Any>>(1000)
 
     /**
      * Helper to safely deserialize JSON-based mark data.
@@ -65,12 +68,12 @@ class Exporter(
      */
     private fun parseMarksData(json: String?): Map<String, Any> {
         if (json.isNullOrEmpty()) return emptyMap()
-        return parsedMarksCache.getOrPut(json) {
-            try {
-                gson.fromJson(json, mapType)
-            } catch (e: Exception) {
-                emptyMap()
+        return parsedMarksCache.get(json) ?: try {
+            gson.fromJson<Map<String, Any>>(json, mapType).also {
+                parsedMarksCache.put(json, it)
             }
+        } catch (e: Exception) {
+            emptyMap()
         }
     }
 
@@ -340,6 +343,16 @@ class Exporter(
         val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
         val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
 
+        // BOLT: Pre-calculate quiz total possible components
+        val sumDefaultPointsContributing = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+
+        // BOLT: Date/Time formatting cache to avoid redundant ZonedDateTime and format() allocations
+        var lastTimestamp = -1L
+        var lastFullDate = ""
+        var lastDate = ""
+        var lastTime = ""
+        var lastDay = ""
+
         data.forEachIndexed { index, item ->
             val row = sheet.createRow(index + 1)
             val studentId = when (item) {
@@ -357,20 +370,28 @@ class Exporter(
                 else -> 0L
             }
 
-            val zonedDateTime = Instant.ofEpochMilli(timestamp).atZone(context.zoneId)
+            if (timestamp != lastTimestamp) {
+                val zonedDateTime = Instant.ofEpochMilli(timestamp).atZone(context.zoneId)
+                lastFullDate = context.fullDateFormat.format(zonedDateTime)
+                lastDate = context.dateFormat.format(zonedDateTime)
+                lastTime = context.timeFormat.format(zonedDateTime)
+                lastDay = context.dayFormat.format(zonedDateTime)
+                lastTimestamp = timestamp
+            }
+
             var col = 0
-            row.createCell(col++).setCellValue(context.fullDateFormat.format(zonedDateTime))
+            row.createCell(col++).setCellValue(lastFullDate)
             row.createCell(col).apply {
-                setCellValue(context.dateFormat.format(zonedDateTime))
+                setCellValue(lastDate)
                 cellStyle = context.rightAlignmentStyle
             }
             col++
             row.createCell(col).apply {
-                setCellValue(context.timeFormat.format(zonedDateTime))
+                setCellValue(lastTime)
                 cellStyle = context.rightAlignmentStyle
             }
             col++
-            row.createCell(col++).setCellValue(context.dayFormat.format(zonedDateTime))
+            row.createCell(col++).setCellValue(lastDay)
             row.createCell(col++).setCellValue(sanitize(student?.firstName ?: "Unknown"))
             row.createCell(col++).setCellValue(sanitize(student?.lastName ?: ""))
 
@@ -413,7 +434,7 @@ class Exporter(
                     val marksData = parseMarksData(item.marksData)
 
                     var totalScore = 0.0
-                    var totalPossible = 0.0
+                    val totalPossible = item.numQuestions.toDouble() * sumDefaultPointsContributing
 
                     quizMarkTypes.forEach { markType ->
                         val rawValue = marksData[markType.name]
@@ -424,9 +445,6 @@ class Exporter(
                             cellStyle = context.rightAlignmentStyle
                         }
 
-                        if (markType.contributesToTotal) {
-                            totalPossible += item.numQuestions.toDouble() * markType.defaultPoints
-                        }
                         totalScore += markCount.toDouble() * markType.defaultPoints
                     }
 
@@ -556,8 +574,12 @@ class Exporter(
                 headerRow.createCell(index).setCellValue(header)
             }
 
-            val behaviorCounts = behaviorLogs.groupBy { it.studentId }
-                .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
+            // BOLT: Manual single-pass aggregation to avoid functional object churn
+            val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
+            for (event in behaviorLogs) {
+                val counts = behaviorCounts.getOrPut(event.studentId) { mutableMapOf() }
+                counts[event.type] = (counts[event.type] ?: 0) + 1
+            }
 
             behaviorCounts.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
                 val studentBehaviors = behaviorCounts[studentId]
@@ -584,36 +606,38 @@ class Exporter(
                 headerRow.createCell(index).setCellValue(header)
             }
 
-            val quizScores = mutableMapOf<Long, MutableMap<String, MutableList<Double>>>()
-            quizLogs.forEach { log ->
-                val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
-                val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
-                // Simplified score calculation
+            // BOLT: Manual single-pass aggregation with [DoubleArray] for [sum, count] to avoid boxing
+            val quizMetrics = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
+            val sumDefaultPointsContributingSummary = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+
+            for (log in quizLogs) {
+                val studentMetrics = quizMetrics.getOrPut(log.studentId) { mutableMapOf() }
+                val metrics = studentMetrics.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
+
                 val marksData = parseMarksData(log.marksData)
                 var totalScore = 0.0
-                var totalPossible = 0.0
+                val totalPossible = log.numQuestions.toDouble() * sumDefaultPointsContributingSummary
+
                 quizMarkTypes.forEach { markType ->
                     val rawValue = marksData[markType.name]
                     val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
-                    if (markType.contributesToTotal) {
-                        totalPossible += log.numQuestions * markType.defaultPoints
-                    }
-                    totalScore += markCount * markType.defaultPoints
+                    totalScore += markCount.toDouble() * markType.defaultPoints
                 }
-                val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
-                quizScoresList.add(scorePercent)
+
+                metrics[0] += if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                metrics[1] += 1.0
             }
 
-            quizScores.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
-                val studentQuizzes = quizScores[studentId]
+            quizMetrics.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
+                val studentQuizzes = quizMetrics[studentId]
                 studentQuizzes?.keys?.sorted()?.forEach { quizName ->
-                    val scores = studentQuizzes[quizName]!!
+                    val metrics = studentQuizzes[quizName]!!
                     val row = sheet.createRow(currentRow++)
                     val student = students[studentId]
                     row.createCell(0).setCellValue(sanitize(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown"))
                     row.createCell(1).setCellValue(sanitize(quizName))
-                    row.createCell(2).setCellValue(scores.average())
-                    row.createCell(3).setCellValue(scores.size.toDouble())
+                    row.createCell(2).setCellValue(if (metrics[1] > 0) metrics[0] / metrics[1] else 0.0)
+                    row.createCell(3).setCellValue(metrics[1])
                 }
             }
             currentRow++
@@ -788,20 +812,29 @@ class Exporter(
 
         // Track active days per student (optimized for O(1) presence checks using epoch day)
         val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
+
+        // BOLT: Temporal cache for epoch day calculations to reduce object churn
+        var lastDayStartMs = Long.MIN_VALUE
+        var lastDayEndMs = Long.MIN_VALUE
+        var lastEpochDay = -1L
+
+        fun getEpochDay(ms: Long): Long {
+            if (ms in lastDayStartMs..lastDayEndMs) return lastEpochDay
+            val localDate = Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate()
+            lastEpochDay = localDate.toEpochDay()
+            lastDayStartMs = localDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            lastDayEndMs = localDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
+            return lastEpochDay
+        }
+
         behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(event.timestamp).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(getEpochDay(event.timestamp))
         }
         homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
         }
         quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
         }
 
         val headers = mutableListOf("Student Name")
@@ -870,8 +903,17 @@ class Exporter(
      */
     internal fun sanitize(value: String?): String {
         if (value.isNullOrBlank()) return ""
-        val trimmed = value.trim()
-        return if (trimmed.isNotEmpty() && trimmed[0] in TRIGGERS) {
+
+        // BOLT: Avoid trim() string allocation by manually finding the first non-whitespace character
+        var firstNonSpace = -1
+        for (i in value.indices) {
+            if (!value[i].isWhitespace()) {
+                firstNonSpace = i
+                break
+            }
+        }
+
+        return if (firstNonSpace != -1 && value[firstNonSpace] in TRIGGERS) {
             "'$value"
         } else {
             value
