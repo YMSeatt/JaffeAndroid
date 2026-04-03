@@ -153,4 +153,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Filter" optimized student list. */
     const val FILTER_MODE_ENABLED = true
+
+    /** Enables the "Ghost Glance" double-tap preview. */
+    const val GLANCE_MODE_ENABLED = true
 }

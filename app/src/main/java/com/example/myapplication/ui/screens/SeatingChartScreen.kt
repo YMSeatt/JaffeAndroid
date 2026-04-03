@@ -172,6 +172,8 @@ import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
 import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
+import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
+import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -286,6 +288,7 @@ fun SeatingChartScreen(
     var isIrisActive by remember { mutableStateOf(false) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
+    var activeGlanceStudentId by remember { mutableStateOf<Long?>(null) }
     /**
      * SHIELD: Track the last shared artifact (screenshot/blueprint) for cleanup.
      * This ensures that temporary files created for sharing don't persist longer than necessary.
@@ -1620,6 +1623,36 @@ fun SeatingChartScreen(
                     currentText = ghostCurrentText
                 )
             }
+
+            // Ghost Glance Overlay
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
+                activeGlanceStudentId?.let { id ->
+                    val student = students.find { it.id.toLong() == id }
+                    if (student != null) {
+                        val bLogs = allBehaviorEvents.filter { it.studentId == id }
+                        val qLogs = allQuizLogs.filter { it.studentId == id }
+                        val hLogs = allHomeworkLogs.filter { it.studentId == id }
+
+                        val glanceState = remember(id, bLogs, qLogs, hLogs) {
+                            GhostGlanceEngine.synthesize(bLogs, qLogs, hLogs)
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onTap = { activeGlanceStudentId = null })
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GhostGlanceSurface(
+                                studentName = student.fullName.value,
+                                state = glanceState
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -1716,6 +1749,7 @@ fun SeatingChartContent(
                     isIrisActive = isIrisActive,
                     irisParams = irisParams,
                     isHelixActive = isHelixActive,
+                    onGlance = { activeGlanceStudentId = it },
                     isZenithActive = isZenithActive,
                     altitude = altitude,
                     zenithScope = zenithScope,
