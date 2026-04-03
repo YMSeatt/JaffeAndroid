@@ -4,21 +4,58 @@ from datetime import datetime
 
 """
 Ghost Architect Analysis Bridge v1.0
-------------------------------------
-This script mirrors the logical heuristics of the GhostArchitectEngine
-to calculate 'Layout Synergy' and 'Strategic Alignment' scores for a classroom.
+
+This module serves as the R&D prototype for the GhostArchitectEngine, implementing
+pedagogical heuristics for seating chart optimization. It calculates synergy scores
+to evaluate how well a classroom layout supports specific strategic goals.
+
+### Logic Parity (Python vs. Android)
+- **Coordinate System**: Python uses a 2000x1500 logical grid, while Android uses 4000x4000.
+- **Proximity Constants**: Because of the grid scale difference, proximity thresholds
+  in this script (e.g., 1000/1500) are typically half of those used in the Android
+  implementation (2000/3000).
 """
 
 class GhostArchitect:
+    """
+    A Strategic Layout Evaluator.
+
+    This class processes student positions and relationship edges to determine
+    the 'Neural Alignment' of a classroom layout.
+
+    Attributes:
+        students (dict): Mapping of student IDs to their position data.
+        edges (list): List of connection objects between students (Collaboration/Friction).
+        behavior_logs (list): Historical logs for contextual stability analysis.
+    """
     def __init__(self, students, edges, behavior_logs):
+        """
+        Initializes the Architect with classroom snapshot data.
+
+        Args:
+            students (list): List of student dicts containing 'id', 'xPosition', 'yPosition'.
+            edges (list): List of dicts representing social links (fromId, toId, type).
+            behavior_logs (list): List of behavior event dicts.
+        """
         self.students = {s['id']: s for s in students}
         self.edges = edges
         self.behavior_logs = behavior_logs
 
     def calculate_synergy(self, goal):
         """
-        Calculates a global synergy score (0.0 to 1.0) based on how well
-        the current layout matches a pedagogical goal.
+        Calculates a global synergy score (0.0 to 1.0) for a pedagogical goal.
+
+        Heuristics:
+        - COLLABORATION: Higher score when 'social allies' are seated within
+          1000 units (scaled to 2000 on Android).
+        - FOCUS: Higher score when 'friction points' are seated further than
+          1500 units (scaled to 3000 on Android).
+
+        Args:
+            goal (str): The strategic objective ('COLLABORATION' or 'FOCUS').
+
+        Returns:
+            float: A normalized score between 0.0 and 1.0.
         """
         score = 0.0
         n_students = len(self.students)
