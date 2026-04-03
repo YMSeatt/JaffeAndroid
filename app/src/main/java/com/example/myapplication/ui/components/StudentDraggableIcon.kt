@@ -108,6 +108,7 @@ fun StudentDraggableIcon(
     canvasOffset: Offset,
     isIrisActive: Boolean = false,
     irisParams: GhostIrisEngine.IrisParameters? = null,
+    onGlance: (Long) -> Unit = {},
     isZenithActive: Boolean = false,
     altitude: Float = 0f,
     isHelixActive: Boolean = false,
@@ -186,6 +187,17 @@ fun StudentDraggableIcon(
                     .onSizeChanged { cardSize = it }
                     .then(portalModifier)
                     .pointerInput(studentUiItem.id) {
+                        detectTapGestures(
+                            onTap = { onClick() },
+                            onLongPress = { onLongClick() },
+                            onDoubleTap = {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
+                                    onGlance(studentUiItem.id.toLong())
+                                }
+                            }
+                        )
+                    }
+                    .pointerInput(studentUiItem.id) {
                         /**
                          * Gesture Handler: Implements high-responsiveness dragging.
                          *
@@ -232,10 +244,6 @@ fun StudentDraggableIcon(
                             }
                         )
                     }
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = onLongClick
-                    )
                     .then(
                         if (!autoExpandEnabled) {
                             Modifier.width(width).height(height)
