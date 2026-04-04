@@ -17,8 +17,25 @@ import com.example.myapplication.ui.model.StudentUiItem
 /**
  * GhostEntanglementLayer: Renders the interactive "Quantum Social Sync" overlay.
  *
- * This layer uses the [GhostEntanglementShader] to visualize pulsating
- * connections between students who exhibit high social synchronicity.
+ * This component visualizes the "spooky action at a distance" between students who
+ * exhibit high social coherence. It utilizes high-performance AGSL shaders to render
+ * interfering ripples and glowing connectivity bridges.
+ *
+ * ### Rendering Logic:
+ * 1. **Coherence Analysis**: Identifies the top 3 most coherent student pairs in real-time.
+ * 2. **Coordinate Normalization**: Translates 4000x4000 logical seating chart units into
+ *    screen pixel coordinates for the shader.
+ * 3. **Shader Execution**: For each pair, it triggers the [GhostEntanglementShader.QUANTUM_RIPPLES]
+ *    effect, passing coherence and time-based uniforms.
+ *
+ * ### BOLT ⚡ Optimization:
+ * To maintain 60fps interaction (especially during student dragging), this layer uses
+ * a **Shader & Brush Pool**. By pre-allocating and reusing `RuntimeShader` instances,
+ * it avoids expensive JNI calls and object allocations within the high-frequency [Canvas]
+ * draw loop.
+ *
+ * @param students The current list of students on the chart.
+ * @param isEntanglementActive Whether the visual overlay is enabled.
  */
 @Composable
 fun GhostEntanglementLayer(

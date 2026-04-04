@@ -48,27 +48,41 @@ object GhostEntanglementEngine {
     )
 
     /**
-     * Calculates the coherence between two students.
-     * Ported from `Python/ghost_entanglement.py`.
+     * Calculates the Coherence Score (0.0 to 1.0) between two students.
+     * Ported from the Python R&D script `ghost_entanglement.py`.
+     *
+     * The score represents the strength of social "entanglement" based on three pillars:
+     * 1. **Spatial (40%)**: Gaussian decay of physical distance. Sigma is set to 600 logical units.
+     * 2. **Behavioral (30%)**: Average of student behavioral synchronicity metrics.
+     * 3. **Academic (30%)**: Parity of academic performance (1.0 - absolute difference).
+     *
+     * @param nodeA The spatial and behavioral representation of the first student.
+     * @param nodeB The spatial and behavioral representation of the second student.
+     * @param sharingGroup Whether the students are in the same classroom group (applies a 1.5x boost).
+     * @return A normalized coherence factor.
      */
     fun calculateCoherence(
         nodeA: EntangledNode,
         nodeB: EntangledNode,
         sharingGroup: Boolean = false
     ): Float {
-        // Physical Proximity factor (Gaussian)
+        // 1. Spatial Pillar: Gaussian Proximity
+        // Models the "Social Field" overlap. sigma = 600 units.
         val dx = nodeA.x - nodeB.x
         val dy = nodeA.y - nodeB.y
         val dist = sqrt(dx * dx + dy * dy)
         val spatialCoherence = exp(-(dist * dist) / (2 * 600f * 600f))
 
-        // Behavioral & Academic Synchronicity
+        // 2. Behavioral Pillar: Average Sync
         val syncFactor = (nodeA.behaviorSync + nodeB.behaviorSync) / 2f
+
+        // 3. Academic Pillar: Performance Parity
         val parityFactor = 1f - abs(nodeA.academicParity - nodeB.academicParity)
 
-        // Group multiplier: Being in the same group significantly boosts entanglement
+        // Catalyst: Shared group membership provides a significant "Quantum Boost" (1.5x)
         val groupMultiplier = if (sharingGroup) 1.5f else 1.0f
 
+        // Weighted Summation
         return ((spatialCoherence * 0.4f + syncFactor * 0.3f + parityFactor * 0.3f) * groupMultiplier).coerceIn(0f, 1f)
     }
 
@@ -142,7 +156,12 @@ object GhostEntanglementEngine {
     }
 
     /**
-     * Helper to calculate student synchronicity metrics.
+     * Calculates high-fidelity synchronicity metrics for a single student node.
+     *
+     * This method processes historical logs to extract a student's "Social Signature":
+     * - **Behavior Sync**: A measure of "Temporal Tempo" (0.0 to 1.0). High scores indicate
+     *   regular, predictable log intervals, suggesting synchronized interaction.
+     * - **Academic Parity Base**: A measure of overall performance (0.0 to 1.0).
      *
      * **BOLT Optimization**: Replaced functional operators with manual loops to minimize
      * object allocations and list traversals during neural analysis.
@@ -152,7 +171,7 @@ object GhostEntanglementEngine {
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): Pair<Float, Float> {
-        // behaviorSync: Measures the "tempo" of behavior logs
+        // 1. behaviorSync: Measures the "Tempo Variance" of behavior logs.
         val bSync = if (behaviorLogs.isEmpty()) 0.5f else {
             val n = behaviorLogs.size
             val timestamps = LongArray(n)
