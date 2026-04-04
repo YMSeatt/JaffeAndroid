@@ -156,4 +156,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Glance" double-tap preview. */
     const val GLANCE_MODE_ENABLED = true
+
+    /** Enables the "Ghost Spotlight" focused pedagogical assessment mode. */
+    const val SPOTLIGHT_MODE_ENABLED = true
 }

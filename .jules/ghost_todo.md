@@ -4,6 +4,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-03-15: Ghost Spotlight - High-performance focus tool for individual student assessment in `/labs/ghost/spotlight`
 - [DONE] 2028-03-12: Ghost Glance - High-fidelity student preview overlay in `/labs/ghost/glance`
 - [DONE] 2028-03-08: Ghost Neural Glow - High-performance, shader-backed glow modifier for student icons in `/labs/ghost/util`
 - [DONE] 2028-03-05: Ghost UI Polish - Reusable Shimmer & Glassmorphic Surface in `/labs/ghost/util`
