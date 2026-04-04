@@ -42,6 +42,14 @@ object GhostVortexEngine {
      * @param windowMillis Time window for analysis (default 10 minutes).
      * @return A list of detected [VortexPoint]s.
      */
+    /** BOLT: Internal data structure to avoid Map lookups in nested loops. */
+    private data class VortexNode(
+        val x: Float,
+        val y: Float,
+        val intensity: Float,
+        val polarity: Float
+    )
+
     fun identifyVortices(
         students: List<com.example.myapplication.data.Student>,
         behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>,
@@ -52,9 +60,8 @@ object GhostVortexEngine {
         val currentTime = System.currentTimeMillis()
         val startTime = currentTime - windowMillis
 
-        // BOLT: Use separate maps for intensity and polarity to eliminate Pair object churn
-        val studentIntensity = mutableMapOf<Long, Float>()
-        val studentPolarity = mutableMapOf<Long, Float>()
+        // BOLT: Collect only active students to transform O(N^2) into O(A^2)
+        val activeNodes = mutableListOf<VortexNode>()
 
         for (student in students) {
             val logs = behaviorLogsByStudent[student.id] ?: continue
@@ -76,25 +83,25 @@ object GhostVortexEngine {
             if (recentCount > 0) {
                 val netPolarity = if (negCount > posCount) -1.0f else 1.0f
                 val intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f)
-                studentIntensity[student.id] = intensity
-                studentPolarity[student.id] = netPolarity
+                activeNodes.add(VortexNode(student.xPosition, student.yPosition, intensity, netPolarity))
             }
         }
+
+        if (activeNodes.isEmpty()) return emptyList()
 
         val vortices = mutableListOf<VortexPoint>()
         val clusterThresholdSq = 800f * 800f
 
-        // BOLT: Optimized clustering using indexed loops and squared distances
-        for (i in students.indices) {
-            val student = students[i]
-            val energy = studentIntensity[student.id] ?: continue
+        // BOLT: Optimized clustering using only active nodes
+        for (i in activeNodes.indices) {
+            val node = activeNodes[i]
 
-            if (energy > 0.4f) {
+            if (node.intensity > 0.4f) {
                 // Check if this student is already near an identified vortex
                 var nearExisting = false
                 for (v in vortices) {
-                    val dx = v.x - student.xPosition
-                    val dy = v.y - student.yPosition
+                    val dx = v.x - node.x
+                    val dy = v.y - node.y
                     if (dx * dx + dy * dy < clusterThresholdSq) {
                         nearExisting = true
                         break
@@ -107,29 +114,26 @@ object GhostVortexEngine {
                     var neighborPolaritySum = 0f
                     var neighborCount = 0
 
-                    for (j in students.indices) {
+                    for (j in activeNodes.indices) {
                         if (i == j) continue
-                        val other = students[j]
-                        val dx = other.xPosition - student.xPosition
-                        val dy = other.yPosition - student.yPosition
+                        val other = activeNodes[j]
+                        val dx = other.x - node.x
+                        val dy = other.y - node.y
                         if (dx * dx + dy * dy < clusterThresholdSq) {
-                            val oEnergy = studentIntensity[other.id] ?: continue
-                            val oPolarity = studentPolarity[other.id] ?: continue
-                            neighborEnergySum += oEnergy
-                            neighborPolaritySum += oPolarity
+                            neighborEnergySum += other.intensity
+                            neighborPolaritySum += other.polarity
                             neighborCount++
                         }
                     }
 
                     if (neighborCount > 0) {
-                        val sPolarity = studentPolarity[student.id] ?: 0f
-                        val avgPolarity = (neighborPolaritySum + sPolarity) / (neighborCount + 1)
-                        val momentum = ((energy + neighborEnergySum) / (neighborCount + 1)).coerceIn(0.1f, 1.0f)
+                        val avgPolarity = (neighborPolaritySum + node.polarity) / (neighborCount + 1)
+                        val momentum = ((node.intensity + neighborEnergySum) / (neighborCount + 1)).coerceIn(0.1f, 1.0f)
 
                         vortices.add(
                             VortexPoint(
-                                x = student.xPosition,
-                                y = student.yPosition,
+                                x = node.x,
+                                y = node.y,
                                 momentum = momentum,
                                 radius = 400f + (momentum * 600f),
                                 polarity = if (avgPolarity >= 0) 1.0f else -1.0f
