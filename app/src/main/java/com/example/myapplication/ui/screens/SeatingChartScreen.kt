@@ -174,6 +174,7 @@ import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
 import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
 import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
 import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
+import com.example.myapplication.labs.ghost.spotlight.GhostSpotlightLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -280,6 +281,7 @@ fun SeatingChartScreen(
     var isArchitectActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
     var isGlyphActive by remember { mutableStateOf(false) }
+    var isSpotlightActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -717,6 +719,8 @@ fun SeatingChartScreen(
                 onToggleOrbit = { isOrbitActive = !isOrbitActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
+                isSpotlightActive = isSpotlightActive,
+                onToggleSpotlight = { isSpotlightActive = !isSpotlightActive },
                 isGlyphActive = isGlyphActive,
                 onToggleGlyph = { isGlyphActive = !isGlyphActive },
                 isArchitectActive = isArchitectActive,
@@ -1109,6 +1113,15 @@ fun SeatingChartScreen(
                     canvasOffset = offset,
                     isRecording = isScreenRecording
                 )
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPOTLIGHT_MODE_ENABLED) {
+                GhostSpotlightLayer(
+                    targetStudent = selectedStudentUiItemForAction,
+                    isActive = isSpotlightActive,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
@@ -1885,6 +1898,8 @@ fun SeatingChartTopAppBar(
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
     onToggleQuasar: () -> Unit,
+    isSpotlightActive: Boolean,
+    onToggleSpotlight: () -> Unit,
     isGlyphActive: Boolean,
     onToggleGlyph: () -> Unit,
     isArchitectActive: Boolean,
@@ -2400,6 +2415,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.SPOTLIGHT_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSpotlightActive) "Disable Ghost Spotlight 👻" else "Ghost Spotlight 👻") },
+                                onClick = {
+                                    onToggleSpotlight()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.SUPERNOVA_MODE_ENABLED) {
