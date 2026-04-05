@@ -36,28 +36,33 @@ object GhostVortexShader {
 
         half4 main(float2 fragCoord) {
             float2 uv = fragCoord / iResolution.xy;
-            float2 p = fragCoord - iVortexPos;
+            float2 p = fragCoord - iVortexPos; // Pixel vector relative to vortex center
             float d = length(p);
 
-            // Swirl Distortion
-            // Rotation angle increases near the center of the vortex
+            // 1. Swirl Distortion (Spatial Warping)
+            // The rotation angle is highest at the center and decays quadratically.
             float rotation = 0.0;
             if (d < iRadius * 3.0) {
+                // iPolarity determines direction (Clockwise vs Counter-clockwise)
                 float strength = iMomentum * 5.0 * iPolarity;
                 rotation = strength * pow(1.0 - d / (iRadius * 3.0), 2.0);
             }
 
             float s = sin(rotation);
             float c = cos(rotation);
+            // Apply 2D rotation matrix to the pixel coordinate
             float2 rotP = float2(p.x * c - p.y * s, p.x * s + p.y * c);
 
+            // Map rotated coordinates back to UV space for potential buffer sampling
             float2 distortedUV = (rotP + iVortexPos) / iResolution.xy;
 
-            // Spiral Glow / Accretion Lines
+            // 2. Spiral Glow / Accretion Lines (Procedural FX)
             float glow = 0.0;
             if (d < iRadius * 1.5) {
                 float angle = atan(rotP.y, rotP.x);
+                // Pulse frequency matched to momentum intensity
                 float pulse = 0.5 + 0.5 * sin(iTime * 2.0);
+                // Procedural noise generates the "streaks" of social energy
                 float lines = smoothstep(0.4, 0.5, noise(float2(angle * 5.0 + iTime, d * 0.01 - iTime * 2.0)));
                 glow = pow(1.0 - d / (iRadius * 1.5), 1.5) * lines * iMomentum * pulse;
             }
