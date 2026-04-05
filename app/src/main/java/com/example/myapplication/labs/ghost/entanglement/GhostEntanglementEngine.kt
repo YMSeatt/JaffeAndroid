@@ -156,6 +156,36 @@ object GhostEntanglementEngine {
     }
 
     /**
+     * Identifies the strongest quantum links in the classroom.
+     *
+     * BOLT: Optimized to identify the top [limit] entangled pairs based on real coherence.
+     */
+    fun identifyEntangledLinks(
+        nodes: List<EntangledNode>,
+        groupMap: Map<Long, Long?>,
+        limit: Int = 3
+    ): List<EntanglementLink> {
+        if (nodes.size < 2) return emptyList()
+
+        val links = mutableListOf<EntanglementLink>()
+
+        for (i in nodes.indices) {
+            for (j in i + 1 until nodes.size) {
+                val nodeA = nodes[i]
+                val nodeB = nodes[j]
+                val sameGroup = groupMap[nodeA.id] != null && groupMap[nodeA.id] == groupMap[nodeB.id]
+
+                val coherence = calculateCoherence(nodeA, nodeB, sameGroup)
+                if (coherence > 0.7f) { // Threshold for visual entanglement
+                    links.add(EntanglementLink(nodeA.id, nodeB.id, coherence))
+                }
+            }
+        }
+
+        return links.sortedByDescending { it.coherence }.take(limit)
+    }
+
+    /**
      * Calculates high-fidelity synchronicity metrics for a single student node.
      *
      * This method processes historical logs to extract a student's "Social Signature":

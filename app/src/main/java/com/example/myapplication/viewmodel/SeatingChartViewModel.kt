@@ -270,6 +270,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral vortices pre-calculated in background. */
     val vortices: StateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>> = _vortices.asStateFlow()
 
+    private val _entangledLinks = MutableStateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>>(emptyList())
+    /** BOLT: Quantum entanglement links pre-calculated in background. */
+    val entangledLinks: StateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>> = _entangledLinks.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -345,6 +349,7 @@ class SeatingChartViewModel @Inject constructor(
     private val studentPotentialsCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
     private val altitudeCache = ConcurrentHashMap<Long, Float>()
     private val entropyScoreCache = ConcurrentHashMap<Long, Float>()
+    private val studentSocialSignaturesCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
 
     /** BOLT: Memoization for AI prophecies and global Ghost metrics to avoid redundant work. */
     private var memoizedProphecies: List<GhostOracle.Prophecy> = emptyList()
@@ -356,6 +361,8 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsTectonicStressMapCache: Map<Long, Float> = emptyMap()
     private var ghostMetricsQuasarMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
+    private var ghostMetricsEntanglementStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsEntanglementBehaviorLogsRef: List<BehaviorEvent>? = null
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -913,6 +920,28 @@ class SeatingChartViewModel @Inject constructor(
                     ghostMetricsPosAwareBehaviorLogsRef = behaviorEvents
                     ghostMetricsStudentsRef = studentsForEngines
                 }
+
+                // BOLT: Calculate quantum entanglement links in the background pipeline (Memoized)
+                if (behaviorEvents !== ghostMetricsEntanglementBehaviorLogsRef || studentsForEngines !== ghostMetricsEntanglementStudentsRef) {
+                    val entangledNodes = studentsForEngines.map { s ->
+                        val sig = studentSocialSignaturesCache[s.id] ?: (0.5f to 0.5f)
+                        com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode(
+                            id = s.id,
+                            x = s.xPosition,
+                            y = s.yPosition,
+                            behaviorSync = sig.first,
+                            academicParity = sig.second
+                        )
+                    }
+                    val groupMap = studentsForEngines.associate { it.id to it.groupId }
+                    _entangledLinks.value = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.identifyEntangledLinks(
+                        nodes = entangledNodes,
+                        groupMap = groupMap
+                    )
+                    ghostMetricsEntanglementBehaviorLogsRef = behaviorEvents
+                    ghostMetricsEntanglementStudentsRef = studentsForEngines
+                }
+
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache
                 val quasarMetricsMap = ghostMetricsQuasarMapCache
 
@@ -961,6 +990,13 @@ class SeatingChartViewModel @Inject constructor(
                             count = quizValidCountCache[student.id] ?: 0
                         )
                         entropyScoreCache[student.id] = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
+
+                        // BOLT: Update student social signature for entanglement
+                        studentSocialSignaturesCache[student.id] = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.calculateNodeMetrics(
+                            behaviorLogs = bLogs,
+                            quizLogs = qLogs,
+                            homeworkLogs = hLogs
+                        )
                     }
                 }
 
@@ -987,6 +1023,7 @@ class SeatingChartViewModel @Inject constructor(
                     academicScoreCache.keys.retainAll(isPresent)
 
                     studentDataHashCache.keys.retainAll(isPresent)
+                    studentSocialSignaturesCache.keys.retainAll(isPresent)
                     memoizedStudents = students
                 }
 

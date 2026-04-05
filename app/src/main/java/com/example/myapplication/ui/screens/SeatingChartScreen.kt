@@ -243,6 +243,7 @@ fun SeatingChartScreen(
     val agitation by seatingChartViewModel.agitation.collectAsState()
     val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
     val vortices by seatingChartViewModel.vortices.collectAsState()
+    val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -1004,6 +1005,9 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTANGLEMENT_MODE_ENABLED && isEntanglementActive) {
                 GhostEntanglementLayer(
                     students = students,
+                    entangledLinks = entangledLinks,
+                    canvasScale = scale,
+                    canvasOffset = offset,
                     isEntanglementActive = isEntanglementActive
                 )
             }
