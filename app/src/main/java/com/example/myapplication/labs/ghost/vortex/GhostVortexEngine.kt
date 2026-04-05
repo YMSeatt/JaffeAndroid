@@ -50,6 +50,24 @@ object GhostVortexEngine {
         val polarity: Float
     )
 
+    /**
+     * Identifies behavioral vortices based on student proximity and log density.
+     *
+     * ### Algorithm Steps:
+     * 1. **Activity Filtering**: Scans all students and filters those with behavior logs
+     *    within the [windowMillis] (default: 10 minutes).
+     * 2. **Energy Calculation**: Computes 'Intensity' based on log frequency (capped at 5 logs)
+     *    and 'Polarity' based on the ratio of positive vs negative logs.
+     * 3. **Spatial Clustering**: Groups high-intensity students (intensity > 0.4) that are
+     *    within the **800-logical-unit** cluster threshold.
+     * 4. **Momentum Synthesis**: Calculates the average momentum and polarity of each cluster,
+     *    identifying the "Vortex" center.
+     *
+     * @param students List of raw student entities.
+     * @param behaviorLogsByStudent Pre-grouped behavior logs for O(1) student lookup.
+     * @param windowMillis The temporal window for defining "recent" activity (default 10m).
+     * @return A list of the top 5 most intense vortices.
+     */
     fun identifyVortices(
         students: List<com.example.myapplication.data.Student>,
         behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>,
@@ -90,6 +108,11 @@ object GhostVortexEngine {
         if (activeNodes.isEmpty()) return emptyList()
 
         val vortices = mutableListOf<VortexPoint>()
+        /**
+         * The clustering threshold (800 units) defines the maximum distance between
+         * students for them to be considered part of the same social vortex.
+         * BOLT: Pre-calculated square avoids sqrt in the O(A^2) loop.
+         */
         val clusterThresholdSq = 800f * 800f
 
         // BOLT: Optimized clustering using only active nodes
