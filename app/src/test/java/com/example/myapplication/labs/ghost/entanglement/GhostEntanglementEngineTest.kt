@@ -7,10 +7,10 @@ class GhostEntanglementEngineTest {
 
     @Test
     fun testCalculateCoherence() {
-        val nodeA = GhostEntanglementEngine.EntangledNode(1L, 100f, 100f, 0.8f, 0.9f)
-        val nodeB = GhostEntanglementEngine.EntangledNode(2L, 110f, 110f, 0.7f, 0.8f)
+        val nodeA = GhostEntanglementEngine.EntangledNode(1L, 100f, 100f, 0.8f, 0.9f, groupId = 10L)
+        val nodeB = GhostEntanglementEngine.EntangledNode(2L, 110f, 110f, 0.7f, 0.8f, groupId = 10L)
 
-        val coherence = GhostEntanglementEngine.calculateCoherence(nodeA, nodeB, sharingGroup = true)
+        val coherence = GhostEntanglementEngine.calculateCoherence(nodeA, nodeB)
 
         // With high proximity, high sync, and group multiplier, coherence should be high
         assertTrue("Coherence should be high for close students in same group", coherence > 0.8f)
@@ -19,13 +19,12 @@ class GhostEntanglementEngineTest {
     @Test
     fun testAnalyzeEntanglement() {
         val nodes = listOf(
-            GhostEntanglementEngine.EntangledNode(1L, 100f, 100f, 0.9f, 0.9f),
-            GhostEntanglementEngine.EntangledNode(2L, 110f, 110f, 0.8f, 0.8f),
-            GhostEntanglementEngine.EntangledNode(3L, 3000f, 3000f, 0.1f, 0.1f)
+            GhostEntanglementEngine.EntangledNode(1L, 100f, 100f, 0.9f, 0.9f, groupId = 10L),
+            GhostEntanglementEngine.EntangledNode(2L, 110f, 110f, 0.8f, 0.8f, groupId = 10L),
+            GhostEntanglementEngine.EntangledNode(3L, 3000f, 3000f, 0.1f, 0.1f, groupId = 20L)
         )
-        val groupMap = mapOf(1L to 10L, 2L to 10L, 3L to 20L)
 
-        val analysis = GhostEntanglementEngine.analyzeEntanglement(nodes, groupMap)
+        val analysis = GhostEntanglementEngine.analyzeEntanglement(nodes)
 
         assertEquals(1, analysis.activeLinks) // Only node 1 and 2 should be entangled
         assertTrue(analysis.maxCoherence > 0.8f)
