@@ -930,13 +930,12 @@ class SeatingChartViewModel @Inject constructor(
                             x = s.xPosition,
                             y = s.yPosition,
                             behaviorSync = sig.first,
-                            academicParity = sig.second
+                            academicParity = sig.second,
+                            groupId = s.groupId
                         )
                     }
-                    val groupMap = studentsForEngines.associate { it.id to it.groupId }
                     _entangledLinks.value = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.identifyEntangledLinks(
-                        nodes = entangledNodes,
-                        groupMap = groupMap
+                        nodes = entangledNodes
                     )
                     ghostMetricsEntanglementBehaviorLogsRef = behaviorEvents
                     ghostMetricsEntanglementStudentsRef = studentsForEngines

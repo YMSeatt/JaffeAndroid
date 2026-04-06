@@ -24,7 +24,8 @@ object GhostEntanglementEngine {
         val x: Float,
         val y: Float,
         val behaviorSync: Float, // 0..1 (Synchronicity in log timing)
-        val academicParity: Float // 0..1 (Similarity in performance)
+        val academicParity: Float, // 0..1 (Similarity in performance)
+        val groupId: Long? = null
     )
 
     data class EntanglementLink(
@@ -56,22 +57,23 @@ object GhostEntanglementEngine {
      * 2. **Behavioral (30%)**: Average of student behavioral synchronicity metrics.
      * 3. **Academic (30%)**: Parity of academic performance (1.0 - absolute difference).
      *
+     * BOLT: Optimized to use squared distance to avoid redundant sqrt calls.
+     *
      * @param nodeA The spatial and behavioral representation of the first student.
      * @param nodeB The spatial and behavioral representation of the second student.
-     * @param sharingGroup Whether the students are in the same classroom group (applies a 1.5x boost).
      * @return A normalized coherence factor.
      */
     fun calculateCoherence(
         nodeA: EntangledNode,
-        nodeB: EntangledNode,
-        sharingGroup: Boolean = false
+        nodeB: EntangledNode
     ): Float {
         // 1. Spatial Pillar: Gaussian Proximity
         // Models the "Social Field" overlap. sigma = 600 units.
         val dx = nodeA.x - nodeB.x
         val dy = nodeA.y - nodeB.y
-        val dist = sqrt(dx * dx + dy * dy)
-        val spatialCoherence = exp(-(dist * dist) / (2 * 600f * 600f))
+        val distSq = dx * dx + dy * dy
+        // BOLT: Eliminated sqrt call as we only need the squared distance for the Gaussian exponent
+        val spatialCoherence = exp(-distSq / (2 * 600f * 600f))
 
         // 2. Behavioral Pillar: Average Sync
         val syncFactor = (nodeA.behaviorSync + nodeB.behaviorSync) / 2f
@@ -80,6 +82,7 @@ object GhostEntanglementEngine {
         val parityFactor = 1f - abs(nodeA.academicParity - nodeB.academicParity)
 
         // Catalyst: Shared group membership provides a significant "Quantum Boost" (1.5x)
+        val sharingGroup = nodeA.groupId != null && nodeA.groupId == nodeB.groupId
         val groupMultiplier = if (sharingGroup) 1.5f else 1.0f
 
         // Weighted Summation
@@ -88,10 +91,11 @@ object GhostEntanglementEngine {
 
     /**
      * Analyzes the overall classroom entanglement.
+     *
+     * BOLT: Removed [groupMap] dependency as [EntangledNode] now contains groupId.
      */
     fun analyzeEntanglement(
-        nodes: List<EntangledNode>,
-        groupMap: Map<Long, Long?> // studentId -> groupId
+        nodes: List<EntangledNode>
     ): EntanglementAnalysis {
         if (nodes.size < 2) return EntanglementAnalysis(CoherenceState.DECOHERED, 0f, 0f, 0)
 
@@ -103,9 +107,8 @@ object GhostEntanglementEngine {
             for (j in i + 1 until nodes.size) {
                 val nodeA = nodes[i]
                 val nodeB = nodes[j]
-                val sameGroup = groupMap[nodeA.id] != null && groupMap[nodeA.id] == groupMap[nodeB.id]
 
-                val coherence = calculateCoherence(nodeA, nodeB, sameGroup)
+                val coherence = calculateCoherence(nodeA, nodeB)
                 if (coherence > 0.6f) {
                     totalCoherence += coherence
                     if (coherence > maxCoherence) maxCoherence = coherence
@@ -159,10 +162,10 @@ object GhostEntanglementEngine {
      * Identifies the strongest quantum links in the classroom.
      *
      * BOLT: Optimized to identify the top [limit] entangled pairs based on real coherence.
+     * Removed [groupMap] dependency.
      */
     fun identifyEntangledLinks(
         nodes: List<EntangledNode>,
-        groupMap: Map<Long, Long?>,
         limit: Int = 3
     ): List<EntanglementLink> {
         if (nodes.size < 2) return emptyList()
@@ -173,9 +176,8 @@ object GhostEntanglementEngine {
             for (j in i + 1 until nodes.size) {
                 val nodeA = nodes[i]
                 val nodeB = nodes[j]
-                val sameGroup = groupMap[nodeA.id] != null && groupMap[nodeA.id] == groupMap[nodeB.id]
 
-                val coherence = calculateCoherence(nodeA, nodeB, sameGroup)
+                val coherence = calculateCoherence(nodeA, nodeB)
                 if (coherence > 0.7f) { // Threshold for visual entanglement
                     links.add(EntanglementLink(nodeA.id, nodeB.id, coherence))
                 }
@@ -194,7 +196,7 @@ object GhostEntanglementEngine {
      * - **Academic Parity Base**: A measure of overall performance (0.0 to 1.0).
      *
      * **BOLT Optimization**: Replaced functional operators with manual loops to minimize
-     * object allocations and list traversals during neural analysis.
+     * object allocations. Optimized variance calculation to be allocation-free (removed intervals array).
      */
     fun calculateNodeMetrics(
         behaviorLogs: List<BehaviorEvent>,
@@ -211,18 +213,16 @@ object GhostEntanglementEngine {
             timestamps.sort()
 
             if (n < 2) 0.5f else {
+                // BOLT: Two-pass variance calculation to avoid DoubleArray(n-1) allocation
                 var totalInterval = 0.0
-                val intervals = DoubleArray(n - 1)
                 for (i in 0 until n - 1) {
-                    val interval = (timestamps[i + 1] - timestamps[i]).toDouble()
-                    intervals[i] = interval
-                    totalInterval += interval
+                    totalInterval += (timestamps[i + 1] - timestamps[i]).toDouble()
                 }
                 val avgInterval = totalInterval / (n - 1)
 
-                // Higher sync for consistent intervals (lower variance)
                 var totalVariance = 0.0
-                for (interval in intervals) {
+                for (i in 0 until n - 1) {
+                    val interval = (timestamps[i + 1] - timestamps[i]).toDouble()
                     val diff = interval - avgInterval
                     totalVariance += diff * diff
                 }
