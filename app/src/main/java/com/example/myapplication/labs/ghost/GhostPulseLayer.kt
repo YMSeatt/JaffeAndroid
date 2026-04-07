@@ -62,6 +62,13 @@ fun GhostPulseLayer(
     val brushPool = remember { mutableListOf<ShaderBrush>() }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        // BOLT: Hoist invariant uniforms that don't change per-resonance.
+        val activeCount = minOf(resonances.size, shaderPool.size)
+        for (i in 0 until activeCount) {
+            shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
+            shaderPool[i].setFloatUniform("iTime", time)
+        }
+
         var idx = 0
         // BOLT: Move current timestamp outside of the loop to avoid repeated system calls.
         val timestamp = System.currentTimeMillis()
@@ -75,6 +82,9 @@ fun GhostPulseLayer(
 
             if (idx >= shaderPool.size) {
                 val s = RuntimeShader(GhostPulseShader.NEURAL_PULSE)
+                // BOLT: Ensure new shaders also get the invariant uniforms for the current frame.
+                s.setFloatUniform("iResolution", size.width, size.height)
+                s.setFloatUniform("iTime", time)
                 shaderPool.add(s)
                 brushPool.add(ShaderBrush(s))
             }
@@ -82,8 +92,6 @@ fun GhostPulseLayer(
             val brush = brushPool[idx]
             idx++
 
-            shader.setFloatUniform("iResolution", size.width, size.height)
-            shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iCenter", centerX, centerY)
             shader.setFloatUniform("iColor", resonance.color.first, resonance.color.second, resonance.color.third)
             shader.setFloatUniform("iIntensity", resonance.intensity)

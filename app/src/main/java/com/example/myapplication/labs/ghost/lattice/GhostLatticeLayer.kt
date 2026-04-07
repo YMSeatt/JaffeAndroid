@@ -45,12 +45,22 @@ fun GhostLatticeLayer(
         label = "time"
     )
 
-    val shader = remember { RuntimeShader(GhostLatticeShader.NEURAL_LATTICE) }
-    val brush = remember(shader) { ShaderBrush(shader) }
+    // BOLT: Pool shaders and brushes to avoid Uniform Overwrite bug and allocations.
+    // Using a growable list for lazy initialization of native shader objects.
+    val shaderPool = remember { mutableListOf<RuntimeShader>() }
+    val brushPool = remember { mutableListOf<ShaderBrush>() }
+
     val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        edges.forEach { edge ->
+        // BOLT: Hoist invariant uniforms that don't change per-edge.
+        val activeEdgesCount = minOf(edges.size, shaderPool.size)
+        for (i in 0 until activeEdgesCount) {
+            shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
+            shaderPool[i].setFloatUniform("iTime", time)
+        }
+
+        edges.forEachIndexed { index, edge ->
             val fromStudent = studentMap[edge.fromId]
             val toStudent = studentMap[edge.toId]
             if (fromStudent != null && toStudent != null) {
@@ -60,8 +70,17 @@ fun GhostLatticeLayer(
                 val endX = (toStudent.xPosition.value * canvasScale) + canvasOffset.x + (toStudent.displayWidth.value.toPx() * canvasScale / 2f)
                 val endY = (toStudent.yPosition.value * canvasScale) + canvasOffset.y + (toStudent.displayHeight.value.toPx() * canvasScale / 2f)
 
-                shader.setFloatUniform("iResolution", size.width, size.height)
-                shader.setFloatUniform("iTime", time)
+                if (index >= shaderPool.size) {
+                    val s = RuntimeShader(GhostLatticeShader.NEURAL_LATTICE)
+                    // BOLT: Ensure new shaders also get the invariant uniforms for the current frame.
+                    s.setFloatUniform("iResolution", size.width, size.height)
+                    s.setFloatUniform("iTime", time)
+                    shaderPool.add(s)
+                    brushPool.add(ShaderBrush(s))
+                }
+                val shader = shaderPool[index]
+                val brush = brushPool[index]
+
                 shader.setFloatUniform("iStartPos", startX, startY)
                 shader.setFloatUniform("iEndPos", endX, endY)
                 shader.setFloatUniform("iColor", edge.color.red, edge.color.green, edge.color.blue)
@@ -69,8 +88,10 @@ fun GhostLatticeLayer(
                 shader.setFloatUniform("iType", edge.type.value)
 
                 // Optimized drawing: only draw the bounding box of the connection line to reduce fragment shader overhead.
-                val minX = minOf(startX, endX) - 50; val minY = minOf(startY, endY) - 50
-                val maxX = maxOf(startX, endX) + 50; val maxY = maxOf(startY, endY) + 50
+                val minX = minOf(startX, endX) - 50f
+                val minY = minOf(startY, endY) - 50f
+                val maxX = maxOf(startX, endX) + 50f
+                val maxY = maxOf(startY, endY) + 50f
                 drawRect(brush = brush, topLeft = Offset(minX, minY), size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY))
             }
         }
