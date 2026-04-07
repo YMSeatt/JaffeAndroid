@@ -1550,37 +1550,47 @@ fun SeatingChartScreen(
                                 val sharedDir = File(mainActivity.cacheDir, "shared")
                                 if (!sharedDir.exists()) sharedDir.mkdirs()
                                 val file = File.createTempFile("export_", ".xlsx", sharedDir)
-                                val uri = FileProvider.getUriForFile(
-                                    mainActivity,
-                                    "com.example.myapplication.fileprovider",
-                                    file
-                                )
-                                seatingChartViewModel.pendingExportOptions?.let { options ->
-                                    val result = seatingChartViewModel.exportData(
-                                        context = mainActivity,
-                                        uri = uri,
-                                        options = options
+                                var successfullyHandedOff = false
+                                try {
+                                    val uri = FileProvider.getUriForFile(
+                                        mainActivity,
+                                        "com.example.myapplication.fileprovider",
+                                        file
                                     )
-                                    if (result.isSuccess) {
-                                        try {
-                                            emailUtil.sendEmailWithRetry(
-                                                from = from,
-                                                password = emailPassword,
-                                                to = to,
-                                                subject = subject,
-                                                body = body,
-                                                attachmentPath = file.absolutePath,
-                                                smtpSettings = smtpSettings
-                                            )
-                                            Toast.makeText(mainActivity, "Email sent!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: EmailException) {
-                                            Toast.makeText(mainActivity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                    seatingChartViewModel.pendingExportOptions?.let { options ->
+                                        val result = seatingChartViewModel.exportData(
+                                            context = mainActivity,
+                                            uri = uri,
+                                            options = options
+                                        )
+                                        if (result.isSuccess) {
+                                            try {
+                                                emailUtil.sendEmailWithRetry(
+                                                    from = from,
+                                                    password = emailPassword,
+                                                    to = to,
+                                                    subject = subject,
+                                                    body = body,
+                                                    attachmentPath = file.absolutePath,
+                                                    smtpSettings = smtpSettings
+                                                )
+                                                successfullyHandedOff = true
+                                                Toast.makeText(mainActivity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: EmailException) {
+                                                Toast.makeText(mainActivity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            Toast.makeText(mainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                         }
-                                    } else {
-                                        Toast.makeText(mainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                     }
+                                } finally {
+                                    // HARDEN: If the export failed or the hand-off to WorkManager was interrupted,
+                                    // ensure the temporary file is deleted immediately to prevent PII leakage.
+                                    if (!successfullyHandedOff && file.exists()) {
+                                        file.delete()
+                                    }
+                                    onShowEmailDialogChange(false)
                                 }
-                                onShowEmailDialogChange(false)
                             }
                         }
                     }

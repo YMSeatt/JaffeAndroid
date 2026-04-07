@@ -152,11 +152,13 @@ fun StudentDraggableIcon(
         Modifier.dragAndDropSource {
             detectTapGestures(
                 onLongPress = {
-                    val studentJson = """{"id": ${studentUiItem.id}, "name": "${studentUiItem.fullName.value}"}"""
+                    // HARDEN: ID-Only Protocol - only pass the student ID in the drag payload.
+                    // The student's name (PII) is omitted to minimize data exposure in the drag framework.
+                    val studentJson = """{"id": ${studentUiItem.id}}"""
                     startTransfer(
                         DragAndDropTransferData(
                             clipData = ClipData.newPlainText("student_data", studentJson),
-                            flags = 0 // HARDEN: Removed DRAG_FLAG_GLOBAL to prevent PII leak outside the app
+                            flags = 0 // HARDEN: Restricted to internal app process
                         )
                     )
                 }
