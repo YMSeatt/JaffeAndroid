@@ -1,9 +1,11 @@
 # 👻 Ghost Android Backlog
 - [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
+- [ ] Idea: "Ghost Adaptive UI" - Density-aware seating chart layouts.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-03-18: Ghost Hub - Futuristic Radial Quick-Action Menu in `/labs/ghost/hub`
 - [DONE] 2028-03-15: Ghost Spotlight - High-performance focus tool for individual student assessment in `/labs/ghost/spotlight`
 - [DONE] 2028-03-12: Ghost Glance - High-fidelity student preview overlay in `/labs/ghost/glance`
 - [DONE] 2028-03-08: Ghost Neural Glow - High-performance, shader-backed glow modifier for student icons in `/labs/ghost/util`
