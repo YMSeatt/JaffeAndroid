@@ -126,8 +126,24 @@ class JsonImporter @Inject constructor(
         }
     }
 
+    /**
+     * Reads the content of a file from a [Uri] with a strict size limit.
+     *
+     * **Security Hardening**: Enforces a 50MB limit to prevent Out-of-Memory (OOM)
+     * Denial-of-Service attacks when ingesting large, malicious, or malformed JSON files.
+     */
     private fun readFileContent(uri: Uri): String {
+        val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
+
+        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+            if (afd.length > maxSizeBytes) {
+                throw SecurityException("Import failed: File exceeds 50MB limit.")
+            }
+        }
+
         val inputStream = context.contentResolver.openInputStream(uri)
+            ?: throw java.io.FileNotFoundException("Could not open input stream for $uri")
+
         val reader = BufferedReader(InputStreamReader(inputStream))
         return reader.readText()
     }
