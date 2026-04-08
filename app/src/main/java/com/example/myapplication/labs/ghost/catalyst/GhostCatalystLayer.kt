@@ -18,6 +18,23 @@ import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostCatalystLayer: Renders the behavioral chain reaction field.
+ *
+ * This layer uses high-performance AGSL shaders to visualize the "Kinetics" of the
+ * classroom, including a global reaction field and individual ionic bonds between
+ * students.
+ *
+ * ### Performance (BOLT):
+ * - **Shader Pooling**: To maintain 60fps, the layer maintains a [bondShaderPool] and
+ *   [bondBrushPool]. This avoids the O(R) object allocations during the high-frequency
+ *   draw loop, where R is the number of active reactions.
+ * - **Memoized Data**: The [engine] and [reactions] list are `remember`ed to avoid
+ *   redundant calculations during recomposition.
+ *
+ * @param students The current list of students on the chart.
+ * @param behaviorLogs Historical behavior logs for reaction analysis.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ * @param isActive Master toggle for this experimental layer.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable

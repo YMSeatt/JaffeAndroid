@@ -15,18 +15,37 @@ import kotlin.math.sqrt
  * - **Activation Energy**: The behavioral threshold required to initiate a chain reaction.
  */
 class GhostCatalystEngine {
+    /**
+     * Represents a detected behavioral reaction between two students.
+     * @property catalystId The ID of the student who performed the initial action.
+     * @property reactantId The ID of the student who performed the subsequent action.
+     * @property intensity The temporal intensity (0.0 to 1.0) of the reaction.
+     * @property timestamp The timestamp of the reactant's action.
+     */
     data class Reaction(
         val catalystId: Long,
         val reactantId: Long,
-        val intensity: Float, // 0.0 to 1.0 based on temporal proximity
+        val intensity: Float,
         val timestamp: Long
     )
 
+    /**
+     * Localized metrics for a specific social catalyst.
+     * @property reactionRate Frequency of triggered reactions (reactions/5min).
+     * @property activationEnergy The social "energy" required to trigger this student.
+     */
     data class CatalystMetrics(
-        val reactionRate: Float, // reactions per unit
-        val activationEnergy: Float // 0.0 to 1.0 (lower is more volatile)
+        val reactionRate: Float,
+        val activationEnergy: Float
     )
 
+    /**
+     * Macroscopic kinetics summary for the entire classroom.
+     * @property reactionsDetected Total number of student-to-student reactions found.
+     * @property reactionRate Classroom-wide reaction rate (r/5min).
+     * @property activationEnergy Global activation energy (eV eq).
+     * @property equilibriumConstant Stability ratio (Rate / Activation Energy).
+     */
     data class GlobalKinetics(
         val reactionsDetected: Int,
         val reactionRate: Float,
@@ -40,7 +59,20 @@ class GhostCatalystEngine {
     data class StudentPos(val id: Long, val x: Float, val y: Float)
 
     /**
-     * Identifies reactions where one student's log precedes another's in spatial proximity.
+     * Identifies behavioral reactions where one student's log precedes another's.
+     *
+     * ### Algorithm (BOLT):
+     * 1. **Chronological Reversal**: Processes DESC-sorted logs in reverse to scan chronologically.
+     * 2. **Temporal Pruning**: For each "Catalyst" event, scans subsequent events ("Reactants")
+     *    until the [timeWindowMs] (default 5m) is exceeded.
+     * 3. **Spatial Pruning**: Uses squared distance checks against [radius] (default 800 logical units)
+     *    to identify localized chain reactions.
+     *
+     * @param students List of student positions for spatial distance mapping.
+     * @param events List of behavior events to analyze.
+     * @param timeWindowMs The temporal window for chain reaction detection (default 300,000ms).
+     * @param radius The spatial clustering threshold (default 800 logical units).
+     * @return A list of unique student-to-student [Reaction] pairs.
      */
     fun calculateReactions(
         students: List<StudentPos>,
@@ -109,6 +141,11 @@ class GhostCatalystEngine {
 
     /**
      * Calculates kinetic metrics for a specific student.
+     *
+     * @param studentId The student to analyze.
+     * @param reactions The pre-calculated classroom reaction list.
+     * @param allEvents All behavior events for frequency analysis.
+     * @return [CatalystMetrics] containing the student's reaction rate and activation energy.
      */
     fun calculateMetrics(
         studentId: Long,
@@ -132,7 +169,11 @@ class GhostCatalystEngine {
 
     /**
      * Performs macroscopic kinetics analysis on classroom behavioral data.
-     * Ported from Python/ghost_catalyst_analysis.py.
+     * Ported from `Python/ghost_catalyst_analysis.py` for logical parity.
+     *
+     * @param events Total behavior logs for global frequency mapping.
+     * @param reactions The list of unique student-to-student reactions.
+     * @return [GlobalKinetics] summary of the classroom's social state.
      */
     fun analyzeCatalystKinetics(
         events: List<BehaviorEvent>,
