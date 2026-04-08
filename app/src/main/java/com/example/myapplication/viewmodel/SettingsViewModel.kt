@@ -902,13 +902,19 @@ class SettingsViewModel @Inject constructor(
         val sharedDbFile = java.io.File(sharedDir, "seating_chart_database.db")
 
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
-        val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
 
         if (encrypt) {
+            // Encryption requires the full payload for the Fernet token
+            val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
             val encryptedToken = securityUtil.encrypt(dbBytes)
             sharedDbFile.writeText(encryptedToken)
         } else {
-            sharedDbFile.writeBytes(dbBytes)
+            // HARDEN: Stream the file directly to avoid OOM for large databases
+            FileInputStream(dbFile).use { inputStream ->
+                FileOutputStream(sharedDbFile).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
         }
 
         return@withContext androidx.core.content.FileProvider.getUriForFile(
