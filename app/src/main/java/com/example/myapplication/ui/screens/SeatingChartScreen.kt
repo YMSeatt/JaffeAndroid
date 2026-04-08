@@ -175,6 +175,7 @@ import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
 import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
 import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
 import com.example.myapplication.labs.ghost.spotlight.GhostSpotlightLayer
+import com.example.myapplication.labs.ghost.hub.GhostHubLayer
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -292,6 +293,8 @@ fun SeatingChartScreen(
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     var activeGlanceStudentId by remember { mutableStateOf<Long?>(null) }
+    var isGhostHubVisible by remember { mutableStateOf(false) }
+    var ghostHubPosition by remember { mutableStateOf(Offset.Zero) }
     /**
      * SHIELD: Track the last shared artifact (screenshot/blueprint) for cleanup.
      * This ensures that temporary files created for sharing don't persist longer than necessary.
@@ -866,10 +869,9 @@ fun SeatingChartScreen(
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onLongPress = {
-                            // Two-finger long press is hard with detectTapGestures
-                            // but we can simulate a special "Ghost Gesture" if needed.
-                            // For now, the menu toggle is primary.
+                        onLongPress = { pos ->
+                            ghostHubPosition = pos
+                            isGhostHubVisible = true
                         }
                     )
                 }
@@ -1648,6 +1650,24 @@ fun SeatingChartScreen(
                     amplitude = ghostAmplitude,
                     isListening = isGhostListening,
                     currentText = ghostCurrentText
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED) {
+                GhostHubLayer(
+                    isVisible = isGhostHubVisible,
+                    position = ghostHubPosition,
+                    onActionSelected = { action ->
+                        when (action.id) {
+                            "HUD" -> isHudActive = !isHudActive
+                            "VISION" -> isVisionActive = !isVisionActive
+                            "PHANTASM" -> isPhantasmActive = !isPhantasmActive
+                            "SPECTRA" -> isSpectraActive = !isSpectraActive
+                            "AURORA" -> isAuroraActive = !isAuroraActive
+                            "FUTURE" -> isFutureActive = !isFutureActive
+                        }
+                    },
+                    onDismiss = { isGhostHubVisible = false }
                 )
             }
 
