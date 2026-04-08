@@ -9,6 +9,14 @@ import org.intellij.lang.annotations.Language
  * distortions) to simulate a chemical environment.
  */
 object GhostCatalystShader {
+    /**
+     * Renders a procedural "Effervescence" field background.
+     *
+     * Features:
+     * 1. **Reaction Bubbles**: Procedural circles that rise based on `iTime` and `iRate`.
+     * 2. **Brownian Distortion**: Heat haze effect simulating classroom social energy.
+     * 3. **Ionic Glow**: Subtle radial background gradient.
+     */
     @Language("AGSL")
     const val REACTION_FIELD = """
         uniform float2 iResolution;
@@ -53,6 +61,13 @@ object GhostCatalystShader {
         }
     """
 
+    /**
+     * Renders a glowing connection line between a catalyst and a reactant.
+     *
+     * Features:
+     * 1. **Pulsating Pulse**: Sinusoidal brightness shift along the line's UV space.
+     * 2. **Sparkle Noise**: High-frequency procedural sparks driven by a hash function.
+     */
     @Language("AGSL")
     const val IONIC_BOND = """
         uniform float2 iResolution;

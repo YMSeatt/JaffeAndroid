@@ -25,3 +25,9 @@
 ### 6. Database Migration Strategy
 - **Relational Groups**: Transitioning `groupId` from `String` to `Long` (v6 to v7) was critical for supporting Room's `@ForeignKey` constraints. This ensures that deleting a `StudentGroup` either cascades or nullifies member students.
 - **JSON Flexibility**: The `marksData` field in `QuizLog` (v12) and `HomeworkLog` (v11) is a strategic "future-proofing" move. Instead of adding new columns for every possible scoring metric (effort, accuracy, etc.), developers can store them in a JSON map, processed by the `Converters` class.
+
+### 7. Ghost Catalyst Kinetics
+- **The Metaphor**: Classroom behavior is modeled as a chemical system where student actions act as catalysts.
+- **Spatio-temporal Inversion**: `GhostCatalystEngine` processes DESC-sorted database logs in reverse to scan chronologically, identifying localized chain reactions within a 300s/800-unit window.
+- **Normalization**: Macroscopic metrics like "Reaction Rate" are normalized to a 5-minute window for cross-classroom comparison.
+- **Activation Energy**: This heuristic represents the classroom's "resistance" to social volatility. High global frequency (engagement) lowers the activation energy required for a chain reaction.
