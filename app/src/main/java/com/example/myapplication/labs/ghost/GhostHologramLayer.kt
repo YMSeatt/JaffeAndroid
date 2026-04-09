@@ -74,18 +74,19 @@ fun GhostHologramLayer(
                 val shader = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     RuntimeShader(GhostHologramShader.HOLOGRAM_GLASS)
                 } else null
+                val brush = shader?.let { ShaderBrush(it) }
 
                 onDrawWithContent {
                     drawContent()
 
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && brush != null) {
                         shader.setFloatUniform("iResolution", size.width, size.height)
                         shader.setFloatUniform("iTime", time)
                         shader.setFloatUniform("iTilt", animatedRoll, animatedPitch)
                         shader.setFloatUniform("iColor", 0.0f, 0.8f, 1.0f) // Cyan
                         shader.setFloatUniform("iFlicker", tilt.flicker)
 
-                        drawRect(brush = ShaderBrush(shader))
+                        drawRect(brush = brush)
                     }
                 }
             }

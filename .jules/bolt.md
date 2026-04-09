@@ -46,3 +46,11 @@
     - Pre-fetched `MutableState` student positions into local arrays for the physics loop.
     - Collapsed multiple `filter`/`count` passes in `GhostAuroraEngine` into a single-pass loop.
 - **Impact:** Eliminated per-frame allocations in the particle system and significantly reduced CPU overhead for physics updates, enabling stable 60fps performance for experimental visualizations.
+
+## Ghost Lab Layer Drawing Optimizations
+- **Discovery:** Several experimental Ghost layers (`GhostHologramLayer`, `GhostTectonicLayer`, `GhostVisionLayer`) were performing expensive object allocations (like `RuntimeShader`, `ShaderBrush`, or `FloatArray`) directly inside their `Canvas` draw loops or on every recomposition. `GhostVisionLayer` also used iterator-based loops for student projections.
+- **Fix:**
+    - Hoisted `RuntimeShader` and `ShaderBrush` creation into `drawWithCache` or `remember` blocks.
+    - Pre-allocated and `remember`ed `FloatArray` buffers (e.g., `nodeData` in Tectonics) and ensured they are reset via `fill(0f)` to prevent stale data artifacts.
+    - Replaced `forEach` student loops with manual index-based `for` loops in high-frequency projection code.
+- **Impact:** Significant reduction in frame-time jitter and GC pressure during experimental mode activation, ensuring smooth 60fps interaction even with complex AGSL visualizers.
