@@ -34,6 +34,15 @@ import kotlin.math.*
  *
  * This component provides a centralized interaction point for activating high-frequency
  * Ghost experiments. It uses an AGSL-backed radial background for visual feedback.
+ *
+ * ### Architectural Intent:
+ * The Hub is designed to be a "Zero-Friction" interface. By centering the menu on the user's
+ * long-press position, it minimizes travel time and leverages spatial memory for selection.
+ *
+ * @param isVisible Controls the visibility and entry/exit animations of the hub.
+ * @param position The center point (in absolute pixels) where the hub was triggered.
+ * @param onActionSelected Callback triggered when the user releases their touch over a segment.
+ * @param onDismiss Callback triggered when the hub should be closed without an action.
  */
 @Composable
 fun GhostHubLayer(
@@ -147,6 +156,7 @@ fun GhostHubLayer(
                     modifier = Modifier
                         .align(Alignment.Center)
                         .offset {
+                        // Position icons around the circle using polar coordinates.
                             IntOffset(
                                 (cos(angle) * radius.toPx()).toInt(),
                                 (sin(angle) * radius.toPx()).toInt()
@@ -192,12 +202,24 @@ data class GhostAction(
     val label: String
 )
 
+/**
+ * Custom gesture detector for the radial hub.
+ *
+ * Uses a low-level [awaitEachGesture] loop to track the user's touch movement relative to the
+ * hub center. This allows for precise, low-latency selection tracking that is independent of
+ * standard Compose button or click behaviors.
+ *
+ * @param center The origin point of the hub.
+ * @param onMove Callback providing the calculated angle (in radians) of the user's finger.
+ * @param onRelease Callback triggered when the user lifts their finger.
+ */
 private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectHubGestures(
     center: Offset,
     onMove: (Float) -> Unit,
     onRelease: () -> Unit
 ) {
     androidx.compose.foundation.gestures.awaitEachGesture {
+        // Wait for the initial touch down
         val down = awaitFirstDown()
 
         while (true) {
@@ -206,11 +228,15 @@ private suspend fun androidx.compose.ui.input.pointer.PointerInputScope.detectHu
 
             if (dragEvent.pressed) {
                 val pos = dragEvent.position
+                // Calculate the displacement vector from the center
                 val dx = pos.x - center.x
                 val dy = pos.y - center.y
+
+                // Convert Cartesian coordinates to Polar angle (-PI to PI)
                 val angle = atan2(dy, dx)
                 onMove(angle)
             } else {
+                // User released contact; finalize the selection
                 onRelease()
                 break
             }
