@@ -633,6 +633,13 @@ class SettingsViewModel @Inject constructor(
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         application.contentResolver.openOutputStream(uri)?.use { outputStream ->
             if (encrypt) {
+                // HARDEN: Check database size before reading for encryption to prevent OOM
+                val maxSizeBytes = 50 * 1024 * 1024L
+                if (dbFile.length() > maxSizeBytes) {
+                    Log.e("SettingsViewModel", "Backup failed: Database exceeds 50MB limit for encryption.")
+                    return@withContext
+                }
+
                 // Encryption requires the full payload for the Fernet token
                 val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
                 val encryptedToken = securityUtil.encrypt(dbBytes)
@@ -904,6 +911,13 @@ class SettingsViewModel @Inject constructor(
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
 
         if (encrypt) {
+            // HARDEN: Check database size before reading for encryption to prevent OOM
+            val maxSizeBytes = 50 * 1024 * 1024L
+            if (dbFile.length() > maxSizeBytes) {
+                Log.e("SettingsViewModel", "Share failed: Database exceeds 50MB limit for encryption.")
+                return@withContext null
+            }
+
             // Encryption requires the full payload for the Fernet token
             val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
             val encryptedToken = securityUtil.encrypt(dbBytes)

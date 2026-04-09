@@ -123,10 +123,20 @@ class Importer(
     /**
      * Imports classroom data from a user-provided [android.net.Uri].
      * Handles file I/O and decryption on [Dispatchers.IO].
+     *
+     * **Security Hardening**: Enforces a 50MB limit to prevent Out-of-Memory (OOM)
+     * Denial-of-Service attacks when ingesting large or malformed JSON files.
      */
     suspend fun importData(uri: android.net.Uri) {
         withContext(Dispatchers.IO) {
             try {
+                val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
+                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+                    if (afd.length > maxSizeBytes) {
+                        throw SecurityException("Import failed: File exceeds 50MB limit.")
+                    }
+                }
+
                 val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
 
                 if (bytes != null) {

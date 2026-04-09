@@ -80,6 +80,9 @@ object ExcelImportUtil {
      * @param studentRepository The repository for student persistence.
      * @param studentGroupDao The DAO for pre-fetching group identities.
      * @return A [Result] containing the count of successfully imported students.
+     *
+     * **Security Hardening**: Enforces a 50MB limit to prevent Out-of-Memory (OOM)
+     * Denial-of-Service attacks when ingesting large or malformed spreadsheet files.
      */
     suspend fun importStudentsFromExcel(
         uri: Uri,
@@ -88,6 +91,13 @@ object ExcelImportUtil {
         studentGroupDao: StudentGroupDao
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
+            val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
+            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
+                if (afd.length > maxSizeBytes) {
+                    throw SecurityException("Import failed: File exceeds 50MB limit.")
+                }
+            }
+
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             inputStream.use { stream ->
                 val workbook = WorkbookFactory.create(stream)
