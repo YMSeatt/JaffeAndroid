@@ -62,6 +62,14 @@ fun GhostVisionLayer(
     var size by remember { mutableStateOf(IntSize(0, 0)) }
     val density = LocalDensity.current
 
+    // BOLT: Hoist student glyph shader/brush to share a single instance across all nodes.
+    val glyphShader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(GhostVisionShader.VISION_GLYPH)
+        } else null
+    }
+    val glyphBrush = remember(glyphShader) { glyphShader?.let { ShaderBrush(it) } }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -71,16 +79,19 @@ fun GhostVisionLayer(
         // 1. AR HUD Shader Layer
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             val hudShader = remember { RuntimeShader(GhostVisionShader.AR_HUD) }
+            val hudBrush = remember(hudShader) { ShaderBrush(hudShader) }
             Canvas(modifier = Modifier.fillMaxSize()) {
                 hudShader.setFloatUniform("iResolution", size.width.toFloat(), size.height.toFloat())
                 hudShader.setFloatUniform("iTime", time)
                 hudShader.setFloatUniform("iStaticIntensity", 0.5f)
-                drawRect(ShaderBrush(hudShader))
+                drawRect(hudBrush)
             }
         }
 
         // 2. Projected Student Neural Glyphs
-        students.forEach { student ->
+        // BOLT: Use a manual for-loop to avoid iterator allocations in the high-frequency UI path.
+        for (i in students.indices) {
+            val student = students[i]
             val projectedOffset = engine.project(
                 student.xPosition.value,
                 student.yPosition.value,
@@ -98,13 +109,12 @@ fun GhostVisionLayer(
                         .size(100.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        val glyphShader = remember { RuntimeShader(GhostVisionShader.VISION_GLYPH) }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && glyphShader != null && glyphBrush != null) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
                             glyphShader.setFloatUniform("iResolution", 100f, 100f)
                             glyphShader.setFloatUniform("iTime", time)
                             glyphShader.setFloatUniform("iPulse", pulse)
-                            drawRect(ShaderBrush(glyphShader))
+                            drawRect(glyphBrush)
                         }
                     }
 

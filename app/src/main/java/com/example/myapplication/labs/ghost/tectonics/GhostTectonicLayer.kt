@@ -51,13 +51,17 @@ fun GhostTectonicLayer(
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostTectonicShader.SOCIAL_TECTONICS) }
         val brush = remember(shader) { ShaderBrush(shader) }
+        // BOLT: Pre-allocate and reuse the node data array to avoid per-frame allocations.
+        val nodeData = remember { FloatArray(20 * 3) }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
 
+            // BOLT: Clear the reused array to avoid stale data artifacts if student count decreases.
+            nodeData.fill(0f)
+
             // Pass up to 20 nodes to the shader (GPU uniform limit)
-            val nodeData = FloatArray(20 * 3)
             val count = min(students.size, 20)
 
             for (i in 0 until count) {
