@@ -159,4 +159,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Spotlight" focused pedagogical assessment mode. */
     const val SPOTLIGHT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Navigator" high-performance mini-map. */
+    const val NAVIGATOR_MODE_ENABLED = true
 }
