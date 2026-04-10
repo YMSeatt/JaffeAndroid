@@ -84,3 +84,10 @@
     - Transitioned to an **ID-Only Intent Protocol**. Alarms now only carry the `reminder_id`.
     - `ReminderReceiver` fetches and decrypts the PII from the secure database only when the alarm triggers.
 - **Location:** `app/src/main/java/com/example/myapplication/util/ReminderManager.kt`, `app/src/main/java/com/example/myapplication/util/ReminderReceiver.kt`
+
+## 🛡️ Privacy and Reliability Hardening: Universal Database Size Limits
+- **Vulnerability:** Size limits (50MB) for database operations were only enforced for encrypted files, leaving the app vulnerable to OOM/DoS attacks via large plaintext database backups, shares, or restores. Additionally, `shareDatabase` used a static filename, creating a risk of race conditions and data corruption.
+- **Fix:**
+    - Implemented a mandatory 50MB size limit for **all** database operations (backup, share, restore) regardless of encryption status.
+    - Hardened `shareDatabase` to use unique, timestamp-based filenames to prevent collisions in the shared cache.
+- **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`

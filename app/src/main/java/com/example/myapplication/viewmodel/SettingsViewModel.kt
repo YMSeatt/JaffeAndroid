@@ -91,6 +91,15 @@ class SettingsViewModel @Inject constructor(
     private val securityUtil: SecurityUtil
 ) : ViewModel() {
 
+    companion object {
+        /**
+         * Mandatory security boundary for database file operations.
+         * Enforcing a 50MB limit prevents Out-of-Memory (OOM) attacks during decryption
+         * and Denial-of-Service (DoS) via storage exhaustion.
+         */
+        private const val MAX_DB_SIZE_BYTES = 50 * 1024 * 1024L
+    }
+
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
 
@@ -630,16 +639,15 @@ class SettingsViewModel @Inject constructor(
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         if (!dbFile.exists()) return@withContext
 
+        // HARDEN: Universal limit to prevent DoS/OOM regardless of encryption status
+        if (dbFile.length() > MAX_DB_SIZE_BYTES) {
+            Log.e("SettingsViewModel", "Backup failed: Database exceeds 50MB limit.")
+            return@withContext
+        }
+
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         application.contentResolver.openOutputStream(uri)?.use { outputStream ->
             if (encrypt) {
-                // HARDEN: Check database size before reading for encryption to prevent OOM
-                val maxSizeBytes = 50 * 1024 * 1024L
-                if (dbFile.length() > maxSizeBytes) {
-                    Log.e("SettingsViewModel", "Backup failed: Database exceeds 50MB limit for encryption.")
-                    return@withContext
-                }
-
                 // Encryption requires the full payload for the Fernet token
                 val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
                 val encryptedToken = securityUtil.encrypt(dbBytes)
@@ -663,7 +671,6 @@ class SettingsViewModel @Inject constructor(
      * 3. Only signals success to the UI if the restoration truly succeeds.
      */
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
-        val maxSizeBytes = 50 * 1024 * 1024 // 50MB limit
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
 
         // Close existing connections and clear temporary journal files before overwriting
@@ -694,7 +701,7 @@ class SettingsViewModel @Inject constructor(
                     var totalRead = 6L
                     while (inputStream.read(buffer).also { read = it } != -1) {
                         totalRead += read
-                        if (totalRead > maxSizeBytes) {
+                        if (totalRead > MAX_DB_SIZE_BYTES) {
                             Log.e("SettingsViewModel", "Restore failed: Encrypted file exceeds 50MB limit.")
                             return@withContext
                         }
@@ -722,7 +729,7 @@ class SettingsViewModel @Inject constructor(
                         var totalRead = if (prefixRead > 0) prefixRead.toLong() else 0L
                         while (inputStream.read(buffer).also { read = it } != -1) {
                             totalRead += read
-                            if (totalRead > maxSizeBytes) {
+                            if (totalRead > MAX_DB_SIZE_BYTES) {
                                 Log.e("SettingsViewModel", "Restore failed: Database file exceeds 50MB limit.")
                                 outputStream.close()
                                 dbFile.delete()
@@ -904,20 +911,28 @@ class SettingsViewModel @Inject constructor(
      */
     suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
+        if (!dbFile.exists()) return@withContext null
+
+        // HARDEN: Universal limit to prevent DoS/OOM regardless of encryption status
+        if (dbFile.length() > MAX_DB_SIZE_BYTES) {
+            Log.e("SettingsViewModel", "Share failed: Database exceeds 50MB limit.")
+            return@withContext null
+        }
+
         val sharedDir = java.io.File(application.cacheDir, "shared")
         if (!sharedDir.exists()) sharedDir.mkdirs()
-        val sharedDbFile = java.io.File(sharedDir, "seating_chart_database.db")
+
+        // HARDEN: Clean up previous database shares to prevent storage leaks in cache
+        sharedDir.listFiles { _, name -> name.startsWith("seating_chart_database_") && name.endsWith(".db") }
+            ?.forEach { it.delete() }
+
+        // HARDEN: Use unique filenames to prevent collisions and potential data corruption
+        val filename = "seating_chart_database_${System.currentTimeMillis()}.db"
+        val sharedDbFile = java.io.File(sharedDir, filename)
 
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
 
         if (encrypt) {
-            // HARDEN: Check database size before reading for encryption to prevent OOM
-            val maxSizeBytes = 50 * 1024 * 1024L
-            if (dbFile.length() > maxSizeBytes) {
-                Log.e("SettingsViewModel", "Share failed: Database exceeds 50MB limit for encryption.")
-                return@withContext null
-            }
-
             // Encryption requires the full payload for the Fernet token
             val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
             val encryptedToken = securityUtil.encrypt(dbBytes)
