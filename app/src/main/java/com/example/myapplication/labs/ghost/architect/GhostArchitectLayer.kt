@@ -77,7 +77,9 @@ fun GhostArchitectLayer(
     val blueprintShader = remember { RuntimeShader(GhostArchitectShader.BLUEPRINT_SHADER) }
     val trajectoryShaderPool = remember { List(20) { RuntimeShader(GhostArchitectShader.TRAJECTORY_SHADER) } }
 
-    // Trigger "Architectural Locking" haptics when moves are recalculated
+    // Trigger "Architectural Locking" haptics when moves are recalculated.
+    // Uses a multi-stage composition (Click -> Tick) to simulate the feeling of
+    // structural elements snapping into a new generative alignment.
     LaunchedEffect(proposedMoves) {
         if (proposedMoves.isNotEmpty() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val composition = VibrationEffect.startComposition()

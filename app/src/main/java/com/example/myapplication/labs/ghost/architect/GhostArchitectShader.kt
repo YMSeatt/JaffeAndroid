@@ -11,6 +11,15 @@ import org.intellij.lang.annotations.Language
  */
 object GhostArchitectShader {
 
+    /**
+     * Renders a procedural blueprint grid with primary and secondary lines.
+     * Includes a vertical scanning line effect to signify active analysis.
+     *
+     * Uniforms:
+     * - [uResolution]: Screen dimensions for UV calculation.
+     * - [uTime]: Driving force for the scanning line animation.
+     * - [uAlpha]: Global transparency control for layer transitions.
+     */
     @Language("AGSL")
     const val BLUEPRINT_SHADER = """
         uniform float2 uResolution;
@@ -42,6 +51,18 @@ object GhostArchitectShader {
         }
     """
 
+    /**
+     * Renders a glowing "Neural Trajectory" beam between two points.
+     *
+     * Mathematical Logic:
+     * 1. Uses a signed distance field (SDF) for a line segment.
+     * 2. Applies [smoothstep] to the distance to create a soft, glowing beam.
+     * 3. Scales [thickness] and shifts [color] based on the move's [uWeight].
+     *
+     * Uniforms:
+     * - [uStart], [uEnd]: Screen-space logical coordinates for the beam.
+     * - [uWeight]: Heuristic importance (0.0 to 1.0). Weights > 0.7 trigger Magenta shift.
+     */
     @Language("AGSL")
     const val TRAJECTORY_SHADER = """
         uniform float2 uStart;

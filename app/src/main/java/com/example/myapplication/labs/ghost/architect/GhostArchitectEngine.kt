@@ -47,6 +47,12 @@ object GhostArchitectEngine {
      * the current layout matches a pedagogical goal.
      * Ported from Python blueprint (ghost_architect_analysis.py).
      *
+     * ### Heuristics:
+     * - **COLLABORATION**: Measures closeness of allies. Synergy peaks (1.0) when all
+     *   collaborators are within 2000 units (scaled from Python's 1000).
+     * - **FOCUS**: Measures separation of friction points. Synergy peaks (1.0) when
+     *   friction points are at least 3000 units apart (scaled from Python's 1500).
+     *
      * BOLT: Optimized to use manual loops instead of `filter` to avoid list allocations.
      */
     fun calculateSynergy(
@@ -98,7 +104,12 @@ object GhostArchitectEngine {
                 val avgDist = totalDist / count
                 (avgDist / 3000.0).toFloat().coerceIn(0.0f, 1.0f)
             }
-            StrategicGoal.STABILITY -> 1.0f // Stability synergy logic can be expanded
+            /**
+             * STABILITY synergy logic is currently a placeholder (1.0f).
+             * Future iterations will incorporate variance-based metrics for student
+             * distribution relative to behavioral hot-spots.
+             */
+            StrategicGoal.STABILITY -> 1.0f
         }
     }
 
@@ -131,7 +142,16 @@ object GhostArchitectEngine {
     /**
      * Proposes a set of moves for the classroom based on the selected strategic goal.
      *
-     * BOLT: Uses O(N + E) analysis by pre-mapping lattice edges.
+     * This function analyzes the current student positions against social lattice edges
+     * and historical behavior logs to generate "Neural Trajectories".
+     *
+     * ### Move Heuristics:
+     * - **COLLABORATION**: Pulls students 30% towards the centroid of their social allies.
+     * - **FOCUS**: Pushes students 200 units away from friction points.
+     * - **STABILITY**: Pulls high-negative-count students 20% towards the classroom center (2000, 2000).
+     *
+     * BOLT: Uses O(N + E) analysis by pre-mapping lattice edges into [edgesByStudent]
+     * and pre-calculating [negativeCounts], avoiding $O(N \times E)$ or $O(N \times L)$ bottlenecks.
      */
     fun proposeLayout(
         students: List<StudentUiItem>,
