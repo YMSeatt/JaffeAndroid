@@ -163,6 +163,7 @@ import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
+import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
@@ -284,6 +285,7 @@ fun SeatingChartScreen(
     var isVisionActive by remember { mutableStateOf(false) }
     var isGlyphActive by remember { mutableStateOf(false) }
     var isSpotlightActive by remember { mutableStateOf(false) }
+    var isNavigatorActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -725,6 +727,8 @@ fun SeatingChartScreen(
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isSpotlightActive = isSpotlightActive,
                 onToggleSpotlight = { isSpotlightActive = !isSpotlightActive },
+                isNavigatorActive = isNavigatorActive,
+                onToggleNavigator = { isNavigatorActive = !isNavigatorActive },
                 isGlyphActive = isGlyphActive,
                 onToggleGlyph = { isGlyphActive = !isGlyphActive },
                 isArchitectActive = isArchitectActive,
@@ -1671,6 +1675,17 @@ fun SeatingChartScreen(
                 )
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.NAVIGATOR_MODE_ENABLED) {
+                GhostNavigatorLayer(
+                    students = students,
+                    scale = scale,
+                    offset = offset,
+                    containerSize = canvasSize,
+                    onTeleport = { newOffset -> offset = newOffset },
+                    isActive = isNavigatorActive
+                )
+            }
+
             // Ghost Glance Overlay
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
                 activeGlanceStudentId?.let { id ->
@@ -1934,6 +1949,8 @@ fun SeatingChartTopAppBar(
     onToggleQuasar: () -> Unit,
     isSpotlightActive: Boolean,
     onToggleSpotlight: () -> Unit,
+    isNavigatorActive: Boolean,
+    onToggleNavigator: () -> Unit,
     isGlyphActive: Boolean,
     onToggleGlyph: () -> Unit,
     isArchitectActive: Boolean,
@@ -2233,6 +2250,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.NAVIGATOR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isNavigatorActive) "Disable Ghost Navigator 👻" else "Ghost Navigator 👻") },
+                                onClick = {
+                                    onToggleNavigator()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.ORBIT_MODE_ENABLED) {
