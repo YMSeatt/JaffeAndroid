@@ -13,20 +13,18 @@ class GhostPulseEngineTest {
 
     @Test
     fun testCalculateResonance_EmptyEvents() {
-        val students = listOf(mockStudent(1))
-        val pulses = GhostPulseEngine.calculateResonance(students, emptyList(), System.currentTimeMillis())
+        val pulses = GhostPulseEngine.calculateResonance(emptyList(), System.currentTimeMillis())
         assertTrue(pulses.isEmpty())
     }
 
     @Test
     fun testCalculateResonance_SingleRecentEvent() {
-        val students = listOf(mockStudent(1))
         val currentTime = System.currentTimeMillis()
         val events = listOf(
             BehaviorEvent(id = 1, studentId = 1, type = "Positive", timestamp = currentTime - 1000, comment = null)
         )
 
-        val pulses = GhostPulseEngine.calculateResonance(students, events, currentTime)
+        val pulses = GhostPulseEngine.calculateResonance(events, currentTime)
 
         assertEquals(1, pulses.size)
         assertEquals(1L, pulses[0].studentId)
@@ -36,14 +34,13 @@ class GhostPulseEngineTest {
 
     @Test
     fun testCalculateResonance_MultipleEvents() {
-        val students = listOf(mockStudent(1), mockStudent(2))
         val currentTime = System.currentTimeMillis()
         val events = listOf(
             BehaviorEvent(id = 1, studentId = 1, type = "Positive", timestamp = currentTime - 500, comment = null),
             BehaviorEvent(id = 2, studentId = 2, type = "Negative", timestamp = currentTime - 2000, comment = null)
         )
 
-        val pulses = GhostPulseEngine.calculateResonance(students, events, currentTime)
+        val pulses = GhostPulseEngine.calculateResonance(events, currentTime)
 
         assertEquals(2, pulses.size)
         val pulse1 = pulses.find { it.studentId == 1L }!!

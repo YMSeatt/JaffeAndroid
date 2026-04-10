@@ -29,13 +29,15 @@ object GhostPulseEngine {
      * Identifies students who should pulse based on recent activity and calculates
      * their "Resonance" (sync level).
      *
-     * @param students All students on the chart.
+     * BOLT: Removed redundant 'students' list and its O(N) association overhead.
+     * Verification of student existence is now deferred to the high-performance
+     * Layer drawing loop which maintains its own mapped cache.
+     *
      * @param events All behavior events.
      * @param currentTime The current system time.
      * @param windowMillis The time window (ms) to consider for "simultaneous" events.
      */
     fun calculateResonance(
-        students: List<StudentUiItem>,
         events: List<BehaviorEvent>,
         currentTime: Long,
         windowMillis: Long = 5000L
@@ -54,12 +56,9 @@ object GhostPulseEngine {
 
         if (recentEvents.isEmpty()) return emptyList()
 
-        val studentMap = students.associateBy { it.id.toLong() }
         val pulses = mutableListOf<ResonancePulse>()
 
         recentEvents.forEach { event ->
-            val student = studentMap[event.studentId] ?: return@forEach
-
             // Determine color based on behavior type
             val color = when {
                 event.type.contains("Positive", ignoreCase = true) -> COLOR_POSITIVE
