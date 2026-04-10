@@ -50,57 +50,62 @@ fun GhostPulseLayer(
     }
 
     val resonances = remember(behaviorLogs, currentTime) {
-        GhostPulseEngine.calculateResonance(students, behaviorLogs, currentTime)
+        GhostPulseEngine.calculateResonance(behaviorLogs, currentTime)
     }
 
     if (resonances.isEmpty()) return
 
     val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
 
-    // BOLT: Pool shaders to avoid O(R) allocations in the draw loop.
-    val shaderPool = remember { mutableListOf<RuntimeShader>() }
-    val brushPool = remember { mutableListOf<ShaderBrush>() }
+    val shader = remember { RuntimeShader(GhostPulseShader.NEURAL_PULSE) }
+    val brush = remember(shader) { ShaderBrush(shader) }
+
+    // BOLT: Pre-allocate and reuse FloatArray buffers to eliminate per-frame object churn.
+    val centers = remember { FloatArray(40) }
+    val colors = remember { FloatArray(60) }
+    val intensities = remember { FloatArray(20) }
+    val radii = remember { FloatArray(20) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        // BOLT: Hoist invariant uniforms that don't change per-resonance.
-        val activeCount = minOf(resonances.size, shaderPool.size)
-        for (i in 0 until activeCount) {
-            shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
-            shaderPool[i].setFloatUniform("iTime", time)
-        }
-
-        var idx = 0
         // BOLT: Move current timestamp outside of the loop to avoid repeated system calls.
         val timestamp = System.currentTimeMillis()
+        val pulseCount = minOf(resonances.size, 20)
 
-        resonances.forEach { resonance ->
-            val student = studentMap[resonance.studentId] ?: return@forEach
+        // Reset buffers
+        centers.fill(0f)
+        colors.fill(0f)
+        intensities.fill(0f)
+        radii.fill(0f)
+
+        for (i in 0 until pulseCount) {
+            val resonance = resonances[i]
+            val student = studentMap[resonance.studentId] ?: continue
 
             // Map student coordinates to screen space
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-            if (idx >= shaderPool.size) {
-                val s = RuntimeShader(GhostPulseShader.NEURAL_PULSE)
-                // BOLT: Ensure new shaders also get the invariant uniforms for the current frame.
-                s.setFloatUniform("iResolution", size.width, size.height)
-                s.setFloatUniform("iTime", time)
-                shaderPool.add(s)
-                brushPool.add(ShaderBrush(s))
-            }
-            val shader = shaderPool[idx]
-            val brush = brushPool[idx]
-            idx++
+            centers[i * 2] = centerX
+            centers[i * 2 + 1] = centerY
 
-            shader.setFloatUniform("iCenter", centerX, centerY)
-            shader.setFloatUniform("iColor", resonance.color.first, resonance.color.second, resonance.color.third)
-            shader.setFloatUniform("iIntensity", resonance.intensity)
+            colors[i * 3] = resonance.color.first
+            colors[i * 3 + 1] = resonance.color.second
+            colors[i * 3 + 2] = resonance.color.third
 
-            // Calculate expansion radius based on time since event
+            intensities[i] = resonance.intensity
+
             val age = (timestamp - resonance.startTime).toFloat()
-            shader.setFloatUniform("iRadius", age * 0.8f * canvasScale)
-
-            drawRect(brush = brush)
+            radii[i] = age * 0.8f * canvasScale
         }
+
+        shader.setFloatUniform("iResolution", size.width, size.height)
+        shader.setFloatUniform("iTime", time)
+        shader.setFloatUniform("iCenters", centers)
+        shader.setFloatUniform("iColors", colors)
+        shader.setFloatUniform("iIntensities", intensities)
+        shader.setFloatUniform("iRadii", radii)
+        shader.setIntUniform("iNumPulses", pulseCount)
+
+        drawRect(brush = brush)
     }
 }

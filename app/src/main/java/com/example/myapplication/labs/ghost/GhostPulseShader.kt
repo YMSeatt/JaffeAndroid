@@ -14,10 +14,11 @@ object GhostPulseShader {
     const val NEURAL_PULSE = """
         uniform float2 iResolution;
         uniform float iTime;
-        uniform float2 iCenter;       // Origin of the pulse
-        uniform float3 iColor;        // Pulse color
-        uniform float iIntensity;     // How strong the pulse is (0.0 to 1.0)
-        uniform float iRadius;        // Current expansion radius
+        uniform float2 iCenters[20];   // Origins of the pulses
+        uniform float3 iColors[20];    // Pulse colors
+        uniform float iIntensities[20]; // Pulse intensities
+        uniform float iRadii[20];      // Pulse expansion radii
+        uniform int iNumPulses;        // Active pulse count
 
         float hash(float2 p) {
             return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453123);
@@ -35,24 +36,38 @@ object GhostPulseShader {
             float2 uv = fragCoord / iResolution.xy;
             float2 p = fragCoord;
 
-            float dist = distance(p, iCenter);
+            float3 totalColor = float3(0.0);
+            float totalAlpha = 0.0;
 
-            // The Wave: A ring that expands over time
-            float wave = exp(-pow(dist - iRadius, 2.0) / 400.0);
-
-            // Add some "Neural" texture using noise
+            // Add some "Neural" texture using noise once per fragment
             float n = noise(uv * 10.0 + iTime * 0.5);
-            wave *= 0.8 + 0.4 * n;
+            float noiseFactor = 0.8 + 0.4 * n;
 
-            // Fade out as it expands
-            float life = clamp(1.0 - (iRadius / 1000.0), 0.0, 1.0);
+            for (int i = 0; i < 20; i++) {
+                if (i >= iNumPulses) break;
 
-            float alpha = wave * iIntensity * life;
+                float2 center = iCenters[i];
+                float radius = iRadii[i];
+                float intensity = iIntensities[i];
+                float3 color = iColors[i];
 
-            // Color with inner glow
-            float3 finalColor = iColor * (wave + 0.2);
+                float dist = distance(p, center);
 
-            return float4(finalColor * alpha, alpha * 0.3);
+                // The Wave: A ring that expands over time
+                float wave = exp(-pow(dist - radius, 2.0) / 400.0);
+                wave *= noiseFactor;
+
+                // Fade out as it expands
+                float life = clamp(1.0 - (radius / 1000.0), 0.0, 1.0);
+
+                float alpha = wave * intensity * life;
+
+                // Accumulate color and alpha
+                totalColor += color * (wave + 0.2) * alpha;
+                totalAlpha += alpha;
+            }
+
+            return float4(totalColor, totalAlpha * 0.3);
         }
     """
 }
