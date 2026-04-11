@@ -33,6 +33,7 @@ fun GhostPreferencesScreen(
     val neuralHapticsEnabled by viewModel.neuralHapticsEnabled.collectAsState()
     val glassmorphismEnabled by viewModel.glassmorphismEnabled.collectAsState()
     val scanlineEffectEnabled by viewModel.scanlineEffectEnabled.collectAsState()
+    val lodEnabled by viewModel.lodEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -96,6 +97,13 @@ fun GhostPreferencesScreen(
                         description = "Apply a retro-futuristic CRT scanline filter.",
                         checked = scanlineEffectEnabled,
                         onCheckedChange = viewModel::setScanlineEffectEnabled
+                    )
+
+                    GhostPreferenceSwitch(
+                        label = "Adaptive LOD",
+                        description = "Dynamically adjust UI detail based on zoom level.",
+                        checked = lodEnabled,
+                        onCheckedChange = viewModel::setLodEnabled
                     )
                 }
             }
