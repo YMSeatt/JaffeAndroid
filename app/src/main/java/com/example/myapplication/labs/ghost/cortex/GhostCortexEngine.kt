@@ -31,33 +31,46 @@ class GhostCortexEngine(private val context: Context) {
     }
 
     /**
-     * Calculates the "Neural Tension" for a student.
-     * Tension = sqrt(academic_entropy^2 + behavioral_turbulence^2)
+     * Calculates the "Neural Tension" for a student using an RMS-based intensity model.
+     * Formula: Tension = sqrt((academic_entropy^2 + behavioral_turbulence^2) / 2)
      *
-     * @param quizLogs Historical academic data.
-     * @param behaviorLogs Historical behavioral data.
+     * ### Component Weights:
+     * - **Academic Entropy**: Derived from quiz scores. A missing history defaults to 0.8 (Stable).
+     *   Higher variance or lower scores increase entropy.
+     * - **Behavioral Turbulence**: Calculated as the ratio of negative events to total events.
+     *
+     * @param quizLogs Historical academic data for score mapping.
+     * @param behaviorLogs Historical behavioral events for turbulence mapping.
      * @return Normalized tension from 0.0 (Zen) to 1.0 (Critical).
      */
     fun calculateNeuralTension(
         quizLogs: List<QuizLog>,
         behaviorLogs: List<BehaviorEvent>
     ): Float {
-        // Academic Entropy: High variance or low scores increase entropy
+        // Academic Entropy: High variance or low scores increase entropy.
+        // We use 0.8f as a baseline "stable" score for students with no logs.
         val scores = quizLogs.mapNotNull { it.markValue?.toFloat()?.div(it.maxMarkValue?.toFloat() ?: 1f) }
         val avgScore = if (scores.isEmpty()) 0.8f else scores.average().toFloat()
         val academicEntropy = (1.0f - avgScore).coerceIn(0f, 1f)
 
-        // Behavioral Turbulence: Ratio of negative logs to total logs
+        // Behavioral Turbulence: Ratio of negative logs to total logs.
         val turbulence = if (behaviorLogs.isEmpty()) 0.0f else {
             behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }.toFloat() / behaviorLogs.size
         }
 
+        // RMS normalization ensures high intensity in either pillar drives the overall tension.
         return sqrt((academicEntropy * academicEntropy + turbulence * turbulence) / 2f).coerceIn(0f, 1f)
     }
 
     /**
      * Triggers a "Somatic Pulse" based on neural tension.
-     * Higher tension results in more complex, sharp, and intense haptic feedback.
+     * Maps the 0.0-1.0 tension range to four distinct haptic composition levels.
+     *
+     * ### Haptic Mapping:
+     * - **Level 1 (< 0.2)**: Subtle Low Tick (30% amplitude).
+     * - **Level 2 (< 0.5)**: Double Click (50% and 30% amplitude).
+     * - **Level 3 (< 0.8)**: Urgent Tick (80%) + Spin (50%, API 31+).
+     * - **Level 4 (>= 0.8)**: Critical Thud (100%) + Quick Fall (100%, API 31+).
      *
      * @param tension Normalized neural tension (0.0 to 1.0).
      */
