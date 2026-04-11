@@ -246,6 +246,7 @@ fun SeatingChartScreen(
     val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
+    val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -1031,7 +1032,7 @@ fun SeatingChartScreen(
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     GhostCatalystLayer(
                         students = students,
-                        behaviorLogs = allBehaviorEvents,
+                        reactions = catalystReactions,
                         canvasScale = scale,
                         canvasOffset = offset,
                         isActive = isCatalystActive

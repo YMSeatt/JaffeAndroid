@@ -14,7 +14,7 @@ import kotlin.math.sqrt
  * - **Reaction Rate**: Frequency of triggered events per time unit.
  * - **Activation Energy**: The behavioral threshold required to initiate a chain reaction.
  */
-class GhostCatalystEngine {
+object GhostCatalystEngine {
     /**
      * Represents a detected behavioral reaction between two students.
      * @property catalystId The ID of the student who performed the initial action.
@@ -62,9 +62,9 @@ class GhostCatalystEngine {
      * Identifies behavioral reactions where one student's log precedes another's.
      *
      * ### Algorithm (BOLT):
-     * 1. **Chronological Reversal**: Processes DESC-sorted logs in reverse to scan chronologically.
-     * 2. **Temporal Pruning**: For each "Catalyst" event, scans subsequent events ("Reactants")
-     *    until the [timeWindowMs] (default 5m) is exceeded.
+     * 1. **Temporal Pruning**: Filters catalysts to only those within the [analysisWindowMs]
+     *    (default 30m) to transform O(L^2) into O(Recent * Window).
+     * 2. **Chronological Reversal**: Processes DESC-sorted logs in reverse to scan chronologically.
      * 3. **Spatial Pruning**: Uses squared distance checks against [radius] (default 800 logical units)
      *    to identify localized chain reactions.
      *
@@ -72,16 +72,22 @@ class GhostCatalystEngine {
      * @param events List of behavior events to analyze.
      * @param timeWindowMs The temporal window for chain reaction detection (default 300,000ms).
      * @param radius The spatial clustering threshold (default 800 logical units).
+     * @param analysisWindowMs The global window for catalyst identification (default 30m).
      * @return A list of unique student-to-student [Reaction] pairs.
      */
     fun calculateReactions(
         students: List<StudentPos>,
         events: List<BehaviorEvent>,
         timeWindowMs: Long = 300_000L,
-        radius: Float = 800f
+        radius: Float = 800f,
+        analysisWindowMs: Long = 1_800_000L
     ): List<Reaction> {
+        if (events.isEmpty() || students.isEmpty()) return emptyList()
+
         val reactions = mutableListOf<Reaction>()
         val radiusSq = radius * radius
+        val currentTime = System.currentTimeMillis()
+        val analysisStart = currentTime - analysisWindowMs
 
         // BOLT: Removed redundant sortedBy call as DAO provides logs in sorted order (DESC).
         // Using asReversed() to process chronologically without O(N log N) overhead.
@@ -90,6 +96,10 @@ class GhostCatalystEngine {
 
         for (i in chronologicalEvents.indices) {
             val catalystEvent = chronologicalEvents[i]
+
+            // BOLT: Skip catalysts outside the active analysis window to reduce search space
+            if (catalystEvent.timestamp < analysisStart) continue
+
             val catalystStudent = studentMap[catalystEvent.studentId] ?: continue
 
             for (j in i + 1 until chronologicalEvents.size) {
@@ -104,8 +114,8 @@ class GhostCatalystEngine {
                 val reactantStudent = studentMap[reactantEvent.studentId] ?: continue
 
                 // Spatial Pruning (Squared distance for BOLT performance)
-                val dx = catalystStudent.xPosition - reactantStudent.xPosition
-                val dy = catalystStudent.yPosition - reactantStudent.yPosition
+                val dx = catalystStudent.x - reactantStudent.x
+                val dy = catalystStudent.y - reactantStudent.y
                 val distSq = dx * dx + dy * dy
 
                 if (distSq < radiusSq) {
@@ -125,22 +135,26 @@ class GhostCatalystEngine {
         return reactions.distinctBy { it.catalystId to it.reactantId }.take(100)
     }
 
-    // Overload for StudentUiItem if needed in UI, but keep core logic testable
+    /** BOLT: Manual index-based access to avoid iterator allocations in high-frequency path. */
     fun calculateReactionsUI(
         students: List<com.example.myapplication.ui.model.StudentUiItem>,
         events: List<BehaviorEvent>,
         timeWindowMs: Long = 300_000L,
         radius: Float = 800f
     ): List<Reaction> {
-        val posList = students.map { StudentPos(it.id.toLong(), it.xPosition.value, it.yPosition.value) }
+        if (students.isEmpty()) return emptyList()
+        val posList = ArrayList<StudentPos>(students.size)
+        for (i in students.indices) {
+            val s = students[i]
+            posList.add(StudentPos(s.id.toLong(), s.xPosition.value, s.yPosition.value))
+        }
         return calculateReactions(posList, events, timeWindowMs, radius)
     }
 
-    private val StudentPos.xPosition get() = x
-    private val StudentPos.yPosition get() = y
-
     /**
      * Calculates kinetic metrics for a specific student.
+     *
+     * BOLT: Replaced functional filter/size with manual loops to minimize list allocations.
      *
      * @param studentId The student to analyze.
      * @param reactions The pre-calculated classroom reaction list.
@@ -152,13 +166,28 @@ class GhostCatalystEngine {
         reactions: List<Reaction>,
         allEvents: List<BehaviorEvent>
     ): CatalystMetrics {
-        val studentReactions = reactions.filter { it.catalystId == studentId }
-        val reactionRate = studentReactions.size.toFloat() / 5.0f // Normalized to 5-min window
+        var reactionCount = 0
+        for (i in reactions.indices) {
+            if (reactions[i].catalystId == studentId) reactionCount++
+        }
+        val reactionRate = reactionCount.toFloat() / 5.0f // Normalized to 5-min window
 
-        val studentEvents = allEvents.filter { it.studentId == studentId }
-        val avgFrequency = if (studentEvents.size < 2) 0.05f else {
-            val spanSec = (studentEvents.last().timestamp - studentEvents.first().timestamp).coerceAtLeast(1000L) / 1000f
-            studentEvents.size / spanSec
+        var studentLogCount = 0
+        var firstTs = Long.MAX_VALUE
+        var lastTs = Long.MIN_VALUE
+
+        for (i in allEvents.indices) {
+            val log = allEvents[i]
+            if (log.studentId == studentId) {
+                studentLogCount++
+                if (log.timestamp < firstTs) firstTs = log.timestamp
+                if (log.timestamp > lastTs) lastTs = log.timestamp
+            }
+        }
+
+        val avgFrequency = if (studentLogCount < 2) 0.05f else {
+            val spanSec = (lastTs - firstTs).coerceAtLeast(1000L) / 1000f
+            studentLogCount / spanSec
         }
 
         // Activation Energy: High frequency students are 'hotter' and require less energy to react.
@@ -171,6 +200,8 @@ class GhostCatalystEngine {
      * Performs macroscopic kinetics analysis on classroom behavioral data.
      * Ported from `Python/ghost_catalyst_analysis.py` for logical parity.
      *
+     * BOLT: Optimized to find min/max timestamps in a single pass.
+     *
      * @param events Total behavior logs for global frequency mapping.
      * @param reactions The list of unique student-to-student reactions.
      * @return [GlobalKinetics] summary of the classroom's social state.
@@ -179,15 +210,20 @@ class GhostCatalystEngine {
         events: List<BehaviorEvent>,
         reactions: List<Reaction>
     ): GlobalKinetics {
-        // reactionRate = unique reactions / 5.0 (Reactions per 5-min)
-        // calculateReactions already returns unique pairs, so we use reactions.size
         val reactionRate = reactions.size / 5.0f
 
         val activationEnergy = if (events.isEmpty()) {
             1.0f
         } else {
-            val sortedEvents = events.sortedBy { it.timestamp }
-            val duration = (sortedEvents.last().timestamp - sortedEvents.first().timestamp).coerceAtLeast(1000L) / 1000f
+            var minTs = Long.MAX_VALUE
+            var maxTs = Long.MIN_VALUE
+            for (i in events.indices) {
+                val ts = events[i].timestamp
+                if (ts < minTs) minTs = ts
+                if (ts > maxTs) maxTs = ts
+            }
+
+            val duration = (maxTs - minTs).coerceAtLeast(1000L) / 1000f
             val globalFreq = events.size / duration
             (1.0f - (globalFreq * 10.0f)).coerceIn(0.1f, 1.0f)
         }

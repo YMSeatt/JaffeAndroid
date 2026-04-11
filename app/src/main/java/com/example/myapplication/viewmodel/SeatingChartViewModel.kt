@@ -274,6 +274,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Quantum entanglement links pre-calculated in background. */
     val entangledLinks: StateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>> = _entangledLinks.asStateFlow()
 
+    private val _catalystReactions = MutableStateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>>(emptyList())
+    /** BOLT: Behavioral chain reactions pre-calculated in background. */
+    val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -363,6 +367,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsQuasarMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
     private var ghostMetricsEntanglementStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsEntanglementBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsCatalystStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsCatalystBehaviorLogsRef: List<BehaviorEvent>? = null
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -939,6 +946,19 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsEntanglementBehaviorLogsRef = behaviorEvents
                     ghostMetricsEntanglementStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate behavioral chain reactions in the background pipeline (Memoized)
+                if (behaviorEvents !== ghostMetricsCatalystBehaviorLogsRef || studentsForEngines !== ghostMetricsCatalystStudentsRef) {
+                    val catalystStudents = studentsForEngines.map { s ->
+                        com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.StudentPos(s.id, s.xPosition, s.yPosition)
+                    }
+                    _catalystReactions.value = com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.calculateReactions(
+                        students = catalystStudents,
+                        events = behaviorEvents
+                    )
+                    ghostMetricsCatalystBehaviorLogsRef = behaviorEvents
+                    ghostMetricsCatalystStudentsRef = studentsForEngines
                 }
 
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache

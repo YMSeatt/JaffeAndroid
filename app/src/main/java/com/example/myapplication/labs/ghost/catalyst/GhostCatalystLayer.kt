@@ -24,14 +24,14 @@ import com.example.myapplication.ui.model.StudentUiItem
  * students.
  *
  * ### Performance (BOLT):
+ * - **Pre-calculated Data**: Reaction analysis is performed in the ViewModel's
+ *   background pipeline, making this layer purely reactive and O(1) during recomposition.
  * - **Shader Pooling**: To maintain 60fps, the layer maintains a [bondShaderPool] and
- *   [bondBrushPool]. This avoids the O(R) object allocations during the high-frequency
- *   draw loop, where R is the number of active reactions.
- * - **Memoized Data**: The [engine] and [reactions] list are `remember`ed to avoid
- *   redundant calculations during recomposition.
+ *   [bondBrushPool]. This avoids O(R) object allocations during the high-frequency
+ *   draw loop.
  *
  * @param students The current list of students on the chart.
- * @param behaviorLogs Historical behavior logs for reaction analysis.
+ * @param reactions Pre-calculated list of behavioral chain reactions.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan offset of the seating chart.
  * @param isActive Master toggle for this experimental layer.
@@ -40,17 +40,12 @@ import com.example.myapplication.ui.model.StudentUiItem
 @Composable
 fun GhostCatalystLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    reactions: List<GhostCatalystEngine.Reaction>,
     canvasScale: Float,
     canvasOffset: Offset,
     isActive: Boolean
 ) {
     if (!isActive) return
-
-    val engine = remember { GhostCatalystEngine() }
-    val reactions = remember(behaviorLogs, students) {
-        engine.calculateReactionsUI(students, behaviorLogs)
-    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "GhostCatalyst")
     val iTime by infiniteTransition.animateFloat(
@@ -91,9 +86,10 @@ fun GhostCatalystLayer(
 
         // 2. Draw Ionic Bonds between catalysts and reactants
         var bondIdx = 0
-        reactions.forEach { reaction ->
-            val catalyst = studentMap[reaction.catalystId] ?: return@forEach
-            val reactant = studentMap[reaction.reactantId] ?: return@forEach
+        for (i in reactions.indices) {
+            val reaction = reactions[i]
+            val catalyst = studentMap[reaction.catalystId] ?: continue
+            val reactant = studentMap[reaction.reactantId] ?: continue
 
             val startX = (catalyst.xPosition.value * canvasScale) + canvasOffset.x
             val startY = (catalyst.yPosition.value * canvasScale) + canvasOffset.y
