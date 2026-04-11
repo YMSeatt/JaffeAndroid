@@ -32,6 +32,9 @@ class GhostPreferencesViewModel @Inject constructor(
     val scanlineEffectEnabled: StateFlow<Boolean> = store.scanlineEffectEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val lodEnabled: StateFlow<Boolean> = store.lodEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
     fun setGlowIntensity(intensity: Float) {
         viewModelScope.launch {
             store.updateGlowIntensity(intensity)
@@ -53,6 +56,12 @@ class GhostPreferencesViewModel @Inject constructor(
     fun setScanlineEffectEnabled(enabled: Boolean) {
         viewModelScope.launch {
             store.updateScanlineEffectEnabled(enabled)
+        }
+    }
+
+    fun setLodEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            store.updateLodEnabled(enabled)
         }
     }
 }

@@ -31,6 +31,7 @@ class GhostPreferencesStore @Inject constructor(
         val NEURAL_HAPTIC_ENABLED = booleanPreferencesKey("neural_haptic_enabled")
         val GLASSMORPHISM_ENABLED = booleanPreferencesKey("glassmorphism_enabled")
         val SCANLINE_EFFECT_ENABLED = booleanPreferencesKey("scanline_effect_enabled")
+        val LOD_ENABLED = booleanPreferencesKey("lod_enabled")
     }
 
     /** Flow of the experimental glow intensity for AGSL shaders. */
@@ -53,6 +54,11 @@ class GhostPreferencesStore @Inject constructor(
         prefs[Keys.SCANLINE_EFFECT_ENABLED] ?: false
     }
 
+    /** Flow indicating if the adaptive Level of Detail engine is active. */
+    val lodEnabled: Flow<Boolean> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.LOD_ENABLED] ?: true
+    }
+
     suspend fun updateGlowIntensity(intensity: Float) {
         context.ghostDataStore.edit { it[Keys.GHOST_GLOW_INTENSITY] = intensity }
     }
@@ -67,5 +73,9 @@ class GhostPreferencesStore @Inject constructor(
 
     suspend fun updateScanlineEffectEnabled(enabled: Boolean) {
         context.ghostDataStore.edit { it[Keys.SCANLINE_EFFECT_ENABLED] = enabled }
+    }
+
+    suspend fun updateLodEnabled(enabled: Boolean) {
+        context.ghostDataStore.edit { it[Keys.LOD_ENABLED] = enabled }
     }
 }

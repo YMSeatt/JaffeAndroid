@@ -64,6 +64,9 @@ import com.example.myapplication.labs.ghost.GhostIrisEngine
 import com.example.myapplication.labs.ghost.GhostIrisLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.labs.ghost.lod.GhostLODEngine
+import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -113,6 +116,7 @@ fun StudentDraggableIcon(
     altitude: Float = 0f,
     isHelixActive: Boolean = false,
     zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
+    ghostPrefsViewModel: GhostPreferencesViewModel = viewModel(),
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
     quizLogFontBold: Boolean = true,
@@ -124,6 +128,15 @@ fun StudentDraggableIcon(
     var height by remember { mutableStateOf(studentUiItem.displayHeight.value) }
     var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val density = LocalDensity.current
+
+    val lodEnabled by ghostPrefsViewModel.lodEnabled.collectAsState()
+    val lodLevel = remember(canvasScale, lodEnabled) {
+        if (GhostConfig.LOD_MODE_ENABLED && lodEnabled) {
+            GhostLODEngine.calculateLOD(canvasScale)
+        } else {
+            GhostLODEngine.DetailLevel.FULL
+        }
+    }
 
 
     // Boundary check removed to prevent unexpected jumping. 
@@ -343,25 +356,45 @@ fun StudentDraggableIcon(
                         val nameParts = studentUiItem.fullName.value.split(" ")
                         val firstName = nameParts.firstOrNull() ?: ""
                         val lastName = if (nameParts.size > 1) nameParts.last() else ""
-                        Text(
-                            text = firstName,
-                            style = TextStyle(
-                                color = studentUiItem.fontColor.value,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
-                                fontSize = studentUiItem.fontSize.value.sp,
-                                textAlign = TextAlign.Center
+
+                        // LOD: Hide full names and logs in MINIMAL mode
+                        if (lodLevel != GhostLODEngine.DetailLevel.MINIMAL) {
+                            Text(
+                                text = firstName,
+                                style = TextStyle(
+                                    color = studentUiItem.fontColor.value,
+                                    fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                    fontSize = studentUiItem.fontSize.value.sp,
+                                    textAlign = TextAlign.Center
+                                )
                             )
-                        )
-                        Text(
-                            text = lastName,
-                            style = TextStyle(
-                                color = studentUiItem.fontColor.value,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
-                                fontSize = studentUiItem.fontSize.value.sp,
-                                textAlign = TextAlign.Center
+                            if (lodLevel != GhostLODEngine.DetailLevel.COMPACT) {
+                                Text(
+                                    text = lastName,
+                                    style = TextStyle(
+                                        color = studentUiItem.fontColor.value,
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                        fontSize = studentUiItem.fontSize.value.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
+                        } else {
+                            // MINIMAL: Show initials only
+                            val initials = (firstName.take(1) + lastName.take(1)).uppercase()
+                            Text(
+                                text = initials,
+                                style = TextStyle(
+                                    color = studentUiItem.fontColor.value,
+                                    fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                    fontSize = (studentUiItem.fontSize.value * 1.5f).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
                             )
-                        )
-                        if (showBehavior) {
+                        }
+
+                        if (showBehavior && (lodLevel == GhostLODEngine.DetailLevel.FULL || lodLevel == GhostLODEngine.DetailLevel.CRITICAL)) {
                             val behaviorLogs = studentUiItem.recentBehaviorDescription.value
                             val quizLogs = studentUiItem.recentQuizDescription.value
                             val homeworkLogs = studentUiItem.recentHomeworkDescription.value

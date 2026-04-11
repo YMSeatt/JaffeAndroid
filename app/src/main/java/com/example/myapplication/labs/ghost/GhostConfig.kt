@@ -162,4 +162,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Navigator" high-performance mini-map. */
     const val NAVIGATOR_MODE_ENABLED = true
+
+    /** Enables the adaptive Level of Detail (LOD) rendering engine. */
+    const val LOD_MODE_ENABLED = true
 }
