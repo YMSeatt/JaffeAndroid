@@ -9,19 +9,17 @@ class GhostCatalystEngineTest {
 
     @Test
     fun `test reaction detection within spatio-temporal window`() {
-        val engine = GhostCatalystEngine()
-
         val student1 = GhostCatalystEngine.StudentPos(1, 100f, 100f)
         val student2 = GhostCatalystEngine.StudentPos(2, 150f, 150f)
 
         val students = listOf(student1, student2)
 
         val events = listOf(
-            BehaviorEvent(studentId = 1, type = "Positive", timestamp = 1000L),
-            BehaviorEvent(studentId = 2, type = "Positive", timestamp = 2000L)
+            BehaviorEvent(studentId = 1, type = "Positive", timestamp = System.currentTimeMillis() - 5000L),
+            BehaviorEvent(studentId = 2, type = "Positive", timestamp = System.currentTimeMillis() - 4000L)
         )
 
-        val reactions = engine.calculateReactions(students, events)
+        val reactions = GhostCatalystEngine.calculateReactions(students, events)
 
         assertEquals(1, reactions.size)
         assertEquals(1L, reactions[0].catalystId)
@@ -31,26 +29,23 @@ class GhostCatalystEngineTest {
 
     @Test
     fun `test temporal pruning of reactions`() {
-        val engine = GhostCatalystEngine()
-
         val student1 = GhostCatalystEngine.StudentPos(1, 100f, 100f)
         val student2 = GhostCatalystEngine.StudentPos(2, 150f, 150f)
 
         val students = listOf(student1, student2)
 
         val events = listOf(
-            BehaviorEvent(studentId = 1, type = "Positive", timestamp = 1000L),
-            BehaviorEvent(studentId = 2, type = "Positive", timestamp = 1000L + 400_000L) // Outside 300s window
+            BehaviorEvent(studentId = 1, type = "Positive", timestamp = System.currentTimeMillis() - 400_000L),
+            BehaviorEvent(studentId = 2, type = "Positive", timestamp = System.currentTimeMillis())
         )
 
-        val reactions = engine.calculateReactions(students, events)
+        val reactions = GhostCatalystEngine.calculateReactions(students, events)
 
         assertTrue(reactions.isEmpty())
     }
 
     @Test
     fun `test kinetic metrics calculation`() {
-        val engine = GhostCatalystEngine()
         val reactions = listOf(
             GhostCatalystEngine.Reaction(1L, 2L, 0.8f, 2000L),
             GhostCatalystEngine.Reaction(1L, 3L, 0.7f, 3000L)
@@ -60,7 +55,7 @@ class GhostCatalystEngineTest {
             BehaviorEvent(studentId = 1, type = "Positive", timestamp = 5000L)
         )
 
-        val metrics = engine.calculateMetrics(1L, reactions, events)
+        val metrics = GhostCatalystEngine.calculateMetrics(1L, reactions, events)
 
         assertEquals(0.4f, metrics.reactionRate, 0.01f)
         assertTrue(metrics.activationEnergy > 0f)
@@ -68,8 +63,6 @@ class GhostCatalystEngineTest {
 
     @Test
     fun `test global kinetics analysis parity with python`() {
-        val engine = GhostCatalystEngine()
-
         // Mock events spanning 10 seconds (globalFreq = 2/10 = 0.2)
         val events = listOf(
             BehaviorEvent(studentId = 1, type = "Positive", timestamp = 1000L),
@@ -85,7 +78,7 @@ class GhostCatalystEngineTest {
             GhostCatalystEngine.Reaction(5L, 6L, 1.0f, 6000L)
         )
 
-        val kinetics = engine.analyzeCatalystKinetics(events, reactions)
+        val kinetics = GhostCatalystEngine.analyzeCatalystKinetics(events, reactions)
 
         // reactionRate = 5 / 5.0 = 1.0
         assertEquals(1.0f, kinetics.reactionRate, 0.01f)
@@ -96,7 +89,7 @@ class GhostCatalystEngineTest {
         // equilibriumConstant = 1.0 / 0.1 = 10.0
         assertEquals(10.0f, kinetics.equilibriumConstant, 0.01f)
 
-        val report = engine.generateCatalystReport(kinetics)
+        val report = GhostCatalystEngine.generateCatalystReport(kinetics)
         assertTrue(report.contains("# 🧪 GHOST CATALYST: KINETICS ANALYSIS REPORT"))
         assertTrue(report.contains("| Reaction Rate | 1.00 | r/5min |"))
     }
