@@ -8,6 +8,24 @@ import org.intellij.lang.annotations.Language
  * This shader visualizes social stress as procedural cracks and "magma glow" in the
  * classroom's background. It uses a combination of fractal noise and distance-based
  * stress mapping.
+ *
+ * ### Shader Architecture:
+ * 1. **Stress Field Generation**: Aggregates normalized stress values from up to 20 student
+ *    nodes using a `smoothstep` radial influence (600 units).
+ * 2. **Lithosphere Texture**: Uses Fractal Brownian Motion (fbm) to generate a gritty,
+ *    rock-like texture that serves as the base layer.
+ * 3. **Procedural Cracking**: Applies a threshold to the fbm noise, modulated by the local
+ *    stress intensity, to "tear" the background.
+ * 4. **Magma Dynamics**: Renders an orange-red glow in high-stress zones, pulsing
+ *    sinusoidally to simulate active geological pressure.
+ * 5. **Seismic Grain**: Adds high-frequency stochastic noise to simulate environmental
+ *    instability.
+ *
+ * ### Uniforms:
+ * - `iResolution`: Standard screen dimensions.
+ * - `iTime`: Animation clock for fbm shifting and magma pulsing.
+ * - `iNodes`: Array of float3 containing (x, y, stress) for each student.
+ * - `iNodeCount`: Number of active nodes passed to the GPU.
  */
 object GhostTectonicShader {
 

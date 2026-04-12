@@ -24,13 +24,29 @@ import kotlin.math.sqrt
  */
 object GhostTectonicEngine {
 
+    /**
+     * Represents a student's position and their calculated social stress.
+     *
+     * @property id The student's database ID.
+     * @property x The horizontal logical coordinate.
+     * @property y The vertical logical coordinate.
+     * @property stress The calculated social stress level, normalized from 0.0 (Stable) to 1.0 (Critical).
+     */
     data class TectonicNode(
         val id: Long,
         val x: Float,
         val y: Float,
-        val stress: Float // 0.0 (Stable) to 1.0 (Critical)
+        val stress: Float
     )
 
+    /**
+     * Encapsulates the macroscopic social stability metrics of the classroom.
+     *
+     * @property avgStress The mean stress level across all tracked students.
+     * @property peakStress The maximum stress level identified in any single student.
+     * @property faultLineCount The number of active "Fault Lines" (high-stress interactions).
+     * @property riskLevel The overall categorical [RiskLevel] of the classroom.
+     */
     data class SeismicAnalysis(
         val avgStress: Float,
         val peakStress: Float,
@@ -38,14 +54,29 @@ object GhostTectonicEngine {
         val riskLevel: RiskLevel
     )
 
+    /**
+     * Categorizes the classroom's social stability risk.
+     */
     enum class RiskLevel {
+        /** Nominal social pressure; no significant fault lines. */
         STABLE,
+        /** Stress is building; monitor student proximity. */
         ACCUMULATING,
+        /** High social friction; tremors (outbursts) likely in specific clusters. */
         VOLATILE,
+        /** URGENT: Social fault lines are at breaking point; event imminent. */
         CRITICAL
     }
 
+    /**
+     * The radius (in logical units) within which a student's stress influences their neighbors.
+     * Calibrated for the 4000x4000 logical canvas.
+     */
     private const val STRESS_RADIUS = 600f
+
+    /**
+     * The impact of a single negative behavioral log on a student's base stress level.
+     */
     private const val NEGATIVE_LOG_WEIGHT = 0.15f
 
     /**
