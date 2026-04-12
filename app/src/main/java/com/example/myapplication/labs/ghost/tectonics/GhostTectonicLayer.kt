@@ -15,17 +15,25 @@ import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.min
 
 /**
- * GhostTectonicLayer: Renders the social stability visualization.
+ * GhostTectonicLayer: Renders the social stability visualization using an AGSL background.
  *
- * This layer uses the [GhostTectonicEngine] to calculate stress nodes and the
- * [GhostTectonicShader] to render a procedural background reflecting classroom
- * "Social Stress".
+ * This layer bridges the logical analysis from [GhostTectonicEngine] with the
+ * procedural rendering in [GhostTectonicShader]. It visualizes localized "Social Stress"
+ * as a dynamic, magma-like field beneath the seating chart icons.
  *
- * @param students Current students to track for tectonic stress.
- * @param behaviorLogs Historical logs used to drive stress accumulation.
- * @param canvasScale The current zoom level of the seating chart.
- * @param canvasOffset The current pan position of the seating chart.
- * @param isActive Whether the layer is currently enabled in the UI.
+ * ### Performance Optimizations (BOLT):
+ * 1. **Array Pooling**: Reuses a `FloatArray` (`nodeData`) for uniform passing to the shader
+ *    to avoid garbage collection pressure during frequent recompositions.
+ * 2. **Logical Mapping**: Efficiently translates 4000x4000 world-space coordinates into
+ *    screen-space coordinates before passing them to the GPU.
+ * 3. **GPU Constraints**: Limits the visualization to the top 20 students to stay within
+ *    standard AGSL uniform array limits.
+ *
+ * @param students Current students to track for tectonic stress; used to drive position uniforms.
+ * @param behaviorLogs Historical logs used to calculate individual stress levels.
+ * @param canvasScale The current zoom level (0.1f to 5.0f) used for coordinate mapping.
+ * @param canvasOffset The current pan offset (in pixels) for coordinate translation.
+ * @param isActive A toggle to enable/disable the layer's rendering pass.
  */
 @Composable
 fun GhostTectonicLayer(
