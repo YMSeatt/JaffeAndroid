@@ -3,6 +3,12 @@ package com.example.myapplication.labs.ghost.emergence
 /**
  * GhostEmergenceShader: AGSL shader for visualizing behavioral emergence.
  * Renders a glowing, organic field based on a 10x10 grid of vitality.
+ *
+ * ### Uniforms:
+ * - `content`: The base shader content (unused if this is a background layer).
+ * - `iResolution`: The dimensions of the canvas.
+ * - `iTime`: Elapsed time in seconds, used for organic noise animation.
+ * - `iGrid`: A 100-float array representing the 10x10 vitality grid.
  */
 object GhostEmergenceShader {
     val SHADER = """
