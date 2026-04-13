@@ -50,33 +50,30 @@ fun GhostWarpLayer(
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostWarpShader.NEURAL_WARP) }
         val brush = remember(shader) { ShaderBrush(shader) }
+        // BOLT: Pre-allocate and remember the FloatArray to eliminate per-frame object churn.
+        val pointsArray = remember { FloatArray(10 * 4) }
 
         Canvas(modifier = modifier.fillMaxSize()) {
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iIntensity", 1.0f)
 
+            // BOLT: Clear the buffer to avoid stale data.
+            pointsArray.fill(0f)
+
             // Convert logical coordinates to screen coordinates
             val pointCount = gravityPoints.size.coerceAtMost(10)
-            val pointsArray = FloatArray(10 * 4) // float4 array
 
-            for (i in 0 until 10) {
-                if (i < pointCount) {
-                    val p = gravityPoints[i]
-                    // Map logical (4000x4000) to screen space
-                    val screenX = p.x * canvasScale + canvasOffset.x
-                    val screenY = p.y * canvasScale + canvasOffset.y
+            for (i in 0 until pointCount) {
+                val p = gravityPoints[i]
+                // Map logical (4000x4000) to screen space
+                val screenX = p.x * canvasScale + canvasOffset.x
+                val screenY = p.y * canvasScale + canvasOffset.y
 
-                    pointsArray[i * 4 + 0] = screenX
-                    pointsArray[i * 4 + 1] = screenY
-                    pointsArray[i * 4 + 2] = p.mass
-                    pointsArray[i * 4 + 3] = p.radius * canvasScale
-                } else {
-                    pointsArray[i * 4 + 0] = 0f
-                    pointsArray[i * 4 + 1] = 0f
-                    pointsArray[i * 4 + 2] = 0f
-                    pointsArray[i * 4 + 3] = 0f
-                }
+                pointsArray[i * 4 + 0] = screenX
+                pointsArray[i * 4 + 1] = screenY
+                pointsArray[i * 4 + 2] = p.mass
+                pointsArray[i * 4 + 3] = p.radius * canvasScale
             }
 
             shader.setFloatUniform("iPoints", pointsArray)
