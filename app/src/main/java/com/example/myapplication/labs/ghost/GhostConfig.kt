@@ -165,4 +165,7 @@ object GhostConfig {
 
     /** Enables the adaptive Level of Detail (LOD) rendering engine. */
     const val LOD_MODE_ENABLED = true
+
+    /** Enables the Ghost Adaptive UI density-aware layout optimization. */
+    const val ADAPTIVE_MODE_ENABLED = true
 }

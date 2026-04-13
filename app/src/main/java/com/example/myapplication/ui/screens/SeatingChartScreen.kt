@@ -150,6 +150,8 @@ import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
 import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
 import com.example.myapplication.labs.ghost.tectonics.GhostTectonicLayer
+import com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveLayer
+import com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine
 import com.example.myapplication.labs.ghost.GhostHorizonEngine
 import com.example.myapplication.labs.ghost.GhostHorizonLayer
 import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
@@ -247,6 +249,7 @@ fun SeatingChartScreen(
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
+    val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -287,6 +290,7 @@ fun SeatingChartScreen(
     var isGlyphActive by remember { mutableStateOf(false) }
     var isSpotlightActive by remember { mutableStateOf(false) }
     var isNavigatorActive by remember { mutableStateOf(false) }
+    var isAdaptiveActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -730,6 +734,8 @@ fun SeatingChartScreen(
                 onToggleSpotlight = { isSpotlightActive = !isSpotlightActive },
                 isNavigatorActive = isNavigatorActive,
                 onToggleNavigator = { isNavigatorActive = !isNavigatorActive },
+                isAdaptiveActive = isAdaptiveActive,
+                onToggleAdaptive = { isAdaptiveActive = !isAdaptiveActive },
                 isGlyphActive = isGlyphActive,
                 onToggleGlyph = { isGlyphActive = !isGlyphActive },
                 isArchitectActive = isArchitectActive,
@@ -894,6 +900,7 @@ fun SeatingChartScreen(
 
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
+            GhostAdaptiveLayer(zones = adaptiveZones, isActive = isAdaptiveActive)
             GhostArchitectLayer(
                 students = students,
                 edges = latticeEdges,
@@ -1952,6 +1959,8 @@ fun SeatingChartTopAppBar(
     onToggleSpotlight: () -> Unit,
     isNavigatorActive: Boolean,
     onToggleNavigator: () -> Unit,
+    isAdaptiveActive: Boolean,
+    onToggleAdaptive: () -> Unit,
     isGlyphActive: Boolean,
     onToggleGlyph: () -> Unit,
     isArchitectActive: Boolean,
@@ -2261,6 +2270,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ADAPTIVE_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isAdaptiveActive) "Disable Ghost Adaptive 👻" else "Ghost Adaptive 👻") },
+                                onClick = {
+                                    onToggleAdaptive()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.GridView, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.ORBIT_MODE_ENABLED) {
