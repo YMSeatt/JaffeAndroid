@@ -14,6 +14,14 @@ import kotlinx.coroutines.delay
 
 /**
  * GhostEmergenceLayer: Visualizes the Emergence simulation as an AGSL background layer.
+ *
+ * This component manages two separate loops:
+ * 1. **Simulation Loop**: Updates the [GhostEmergenceEngine] every 100ms based on student data.
+ * 2. **Animation Loop**: Updates the `iTime` uniform at ~60fps to drive shader-based organic noise.
+ *
+ * @param engine The [GhostEmergenceEngine] instance responsible for the simulation.
+ * @param students The current list of students on the seating chart.
+ * @param behaviorLogs The list of behavioral logs used to drive simulation impulses.
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
