@@ -278,6 +278,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
 
+    private val _adaptiveZones = MutableStateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>>(emptyList())
+    /** BOLT: Density zones pre-calculated in background. */
+    val adaptiveZones: StateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>> = _adaptiveZones.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -370,6 +374,8 @@ class SeatingChartViewModel @Inject constructor(
 
     private var ghostMetricsCatalystStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsCatalystBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -963,6 +969,40 @@ class SeatingChartViewModel @Inject constructor(
 
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache
                 val quasarMetricsMap = ghostMetricsQuasarMapCache
+
+                // BOLT: Calculate adaptive density zones in the background pipeline (Memoized)
+                if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
+                    val uiItemsForDensity = studentsForEngines.map { s ->
+                        val item = studentUiItemCache[s.id.toInt()] ?: s.toStudentUiItem(
+                            recentBehaviorDescription = emptyList(),
+                            recentHomeworkDescription = emptyList(),
+                            recentQuizDescription = emptyList(),
+                            sessionLogText = emptyList(),
+                            groupColor = null,
+                            backgroundColors = listOf(Color.Gray),
+                            outlineColors = listOf(Color.DarkGray),
+                            textColor = Color.White,
+                            fontColor = Color.White,
+                            defaultWidth = 100,
+                            defaultHeight = 100,
+                            defaultOutlineThickness = 2,
+                            defaultCornerRadius = 8,
+                            defaultPadding = 4,
+                            defaultFontFamily = "sans-serif",
+                            defaultFontSize = 12,
+                            irisParams = com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters(0f, Color.White, Color.Blue, 0.5f),
+                            osmoticNode = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode(s.id, s.xPosition, s.yPosition, 0.5f, 0.5f),
+                            altitude = 0.5f,
+                            behaviorEntropy = 0f,
+                            tectonicStress = 0f,
+                            quasarEnergy = 0f,
+                            quasarPolarity = 0f
+                        )
+                        item
+                    }
+                    _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(uiItemsForDensity)
+                    ghostMetricsAdaptiveStudentsRef = studentsForEngines
+                }
 
                 // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute
                 val effectiveTimeKey = if (memoizedAnyTimeBasedRules) currentTimeString else "STATIC_TIME"
