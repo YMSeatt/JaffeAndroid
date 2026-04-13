@@ -44,9 +44,25 @@ fun GhostPulsarLayer(
     val shader = remember { RuntimeShader(GhostPulsarShader.PULSAR_WAVES) }
     val brush = remember(shader) { ShaderBrush(shader) }
 
+    // BOLT: Use rememberInfiniteTransition for better performance and consistency.
+    val infiniteTransition = rememberInfiniteTransition(label = "pulsarTime")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(100000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "time"
+    )
+
     // BOLT: Pre-calculate density-dependent values outside the draw loop.
-    val density = LocalDensity.current
     val studentsToDisplay = remember(students) { students.take(20) }
+
+    // BOLT: Pre-allocate and remember the FloatArrays to eliminate per-frame object churn.
+    val points = remember { FloatArray(20 * 2) }
+    val phases = remember { FloatArray(20) }
+    val amplitudes = remember { FloatArray(20) }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
@@ -58,22 +74,20 @@ fun GhostPulsarLayer(
 
         // Prepare uniforms
         shader.setFloatUniform("iResolution", width, height)
-        shader.setFloatUniform("iTime", currentTime / 1000f)
+        shader.setFloatUniform("iTime", time)
 
-        val maxPoints = 20
-        val points = FloatArray(maxPoints * 2)
-        val phases = FloatArray(maxPoints)
-        val amplitudes = FloatArray(maxPoints)
+        // BOLT: Clear the buffers to avoid stale data.
+        points.fill(0f)
+        phases.fill(0f)
+        amplitudes.fill(0f)
 
         val count = studentsToDisplay.size
-        studentsToDisplay.forEachIndexed { index, student ->
+        // BOLT: Use manual loop to avoid iterator allocation.
+        for (index in 0 until count) {
+            val student = studentsToDisplay[index]
             // Map 4000x4000 logical coordinates to screen space
-            // BOLT: Use pre-calculated density from LocalDensity.current
-            val lx = with(density) { student.xPosition.value.dp.toPx() }
-            val ly = with(density) { student.yPosition.value.dp.toPx() }
-
-            val sx = lx * canvasScale + canvasOffset.x
-            val sy = ly * canvasScale + canvasOffset.y
+            val sx = student.xPosition.value * canvasScale + canvasOffset.x
+            val sy = student.yPosition.value * canvasScale + canvasOffset.y
 
             points[index * 2] = sx
             points[index * 2 + 1] = sy

@@ -27,31 +27,42 @@ fun GhostNebulaLayer(
         GhostNebulaEngine.calculateNebula(students, behaviorLogs)
     }
 
-    var time by remember { mutableStateOf(0f) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            withInfiniteAnimationFrameMillis {
-                time = it / 1000f
-            }
-        }
-    }
+    // BOLT: Use rememberInfiniteTransition for better performance and consistency.
+    val infiniteTransition = rememberInfiniteTransition(label = "nebulaTime")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(100000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "time"
+    )
+
+    // BOLT: Pre-allocate and remember the FloatArray to eliminate per-frame object churn.
+    val clusterData = remember { FloatArray(40) }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         nebulaShader.setFloatUniform("iResolution", size.width, size.height)
         nebulaShader.setFloatUniform("iTime", time)
         nebulaShader.setFloatUniform("iGlobalIntensity", globalIntensity)
 
-        val clusterData = FloatArray(40) // 10 clusters * 4 floats
-        clusters.take(10).forEachIndexed { index, cluster ->
+        // BOLT: Clear the buffer to avoid stale data.
+        clusterData.fill(0f)
+
+        val count = clusters.size.coerceAtMost(10)
+        // BOLT: Use manual loop to avoid iterator allocation.
+        for (i in 0 until count) {
+            val cluster = clusters[i]
             // Convert coordinate system if necessary, but here we assume canvas space
-            clusterData[index * 4 + 0] = cluster.x
-            clusterData[index * 4 + 1] = cluster.y
-            clusterData[index * 4 + 2] = cluster.density
-            clusterData[index * 4 + 3] = cluster.colorIndex
+            clusterData[i * 4 + 0] = cluster.x
+            clusterData[i * 4 + 1] = cluster.y
+            clusterData[i * 4 + 2] = cluster.density
+            clusterData[i * 4 + 3] = cluster.colorIndex
         }
 
         nebulaShader.setFloatUniform("iClusters", clusterData)
-        nebulaShader.setIntUniform("iClusterCount", clusters.size.coerceAtMost(10))
+        nebulaShader.setIntUniform("iClusterCount", count)
 
         drawRect(brush = nebulaBrush)
     }

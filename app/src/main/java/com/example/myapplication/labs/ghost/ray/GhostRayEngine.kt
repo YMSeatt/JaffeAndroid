@@ -99,15 +99,19 @@ class GhostRayEngine(private val context: Context) : SensorEventListener {
         val target = _rayTarget.value ?: return
         var foundId: Long? = null
 
+        // BOLT: Use squared distance to avoid expensive sqrt() calls in the intersection loop.
+        val threshold = 60f * canvasScale
+        val thresholdSq = threshold * threshold
+
         for (student in students) {
             val screenX = student.xPosition.value * canvasScale + canvasOffset.x
             val screenY = student.yPosition.value * canvasScale + canvasOffset.y
 
             val dx = screenX - target.x
             val dy = screenY - target.y
-            val dist = sqrt(dx * dx + dy * dy)
+            val distSq = dx * dx + dy * dy
 
-            if (dist < 60f * canvasScale) { // 60px radius hit box
+            if (distSq < thresholdSq) { // 60px radius hit box
                 foundId = student.id.toLong()
                 break
             }

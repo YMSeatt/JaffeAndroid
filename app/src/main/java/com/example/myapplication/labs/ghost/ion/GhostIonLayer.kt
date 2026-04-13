@@ -57,32 +57,29 @@ fun GhostIonLayer(
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostIonShader.ION_FIELD) }
         val brush = remember(shader) { ShaderBrush(shader) }
+        // BOLT: Pre-allocate and remember the FloatArray to eliminate per-frame object churn.
+        val pointsArray = remember { FloatArray(10 * 4) }
 
         Canvas(modifier = modifier.fillMaxSize()) {
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iGlobalBalance", globalBalance)
 
+            // BOLT: Clear the buffer to avoid stale data.
+            pointsArray.fill(0f)
+
             val pointCount = ionPoints.size.coerceAtMost(10)
-            val pointsArray = FloatArray(10 * 4)
 
-            for (i in 0 until 10) {
-                if (i < pointCount) {
-                    val p = ionPoints[i]
-                    // Map logical (4000x4000) to screen space
-                    val screenX = p.x * canvasScale + canvasOffset.x
-                    val screenY = p.y * canvasScale + canvasOffset.y
+            for (i in 0 until pointCount) {
+                val p = ionPoints[i]
+                // Map logical (4000x4000) to screen space
+                val screenX = p.x * canvasScale + canvasOffset.x
+                val screenY = p.y * canvasScale + canvasOffset.y
 
-                    pointsArray[i * 4 + 0] = screenX
-                    pointsArray[i * 4 + 1] = screenY
-                    pointsArray[i * 4 + 2] = p.charge
-                    pointsArray[i * 4 + 3] = p.density
-                } else {
-                    pointsArray[i * 4 + 0] = 0f
-                    pointsArray[i * 4 + 1] = 0f
-                    pointsArray[i * 4 + 2] = 0f
-                    pointsArray[i * 4 + 3] = 0f
-                }
+                pointsArray[i * 4 + 0] = screenX
+                pointsArray[i * 4 + 1] = screenY
+                pointsArray[i * 4 + 2] = p.charge
+                pointsArray[i * 4 + 3] = p.density
             }
 
             shader.setFloatUniform("iPoints", pointsArray)
