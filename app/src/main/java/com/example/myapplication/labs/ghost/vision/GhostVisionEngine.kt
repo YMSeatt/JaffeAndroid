@@ -29,14 +29,24 @@ class GhostVisionEngine(context: Context) : SensorEventListener {
     private val rotationMatrix = FloatArray(9)
     private val orientationAngles = FloatArray(3)
 
-    // Observable states for UI binding
-    val azimuth = mutableStateOf(0f)   // Yaw (Rotation around Z)
-    val pitch = mutableStateOf(0f)     // Pitch (Rotation around X)
-    val roll = mutableStateOf(0f)      // Roll (Rotation around Y)
+    /** Observable Azimuth (Yaw) in radians. Represents rotation around the Z-axis. */
+    val azimuth = mutableStateOf(0f)
+    /** Observable Pitch in radians. Represents rotation around the X-axis. */
+    val pitch = mutableStateOf(0f)
+    /** Observable Roll in radians. Represents rotation around the Y-axis. */
+    val roll = mutableStateOf(0f)
 
     /**
      * Projects a 2D seating chart coordinate (0..4000) into screen-space
      * based on the current AR orientation.
+     *
+     * Mapping Logic:
+     * - X [0..4000] -> Azimuth [-PI..PI]
+     * - Y [0..4000] -> Pitch [-PI/2..PI/2]
+     *
+     * The method calculates the angular distance between the target coordinate
+     * and the device's current orientation. If within the 60-degree Field of View,
+     * it projects the delta into pixel coordinates.
      *
      * @param x Seating chart X coordinate.
      * @param y Seating chart Y coordinate.
@@ -75,16 +85,30 @@ class GhostVisionEngine(context: Context) : SensorEventListener {
         return null
     }
 
+    /**
+     * Registers the [Sensor.TYPE_ROTATION_VECTOR] listener to start tracking
+     * device orientation.
+     */
     fun start() {
         rotationSensor?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
 
+    /**
+     * Unregisters sensor listeners to conserve battery and resources.
+     */
     fun stop() {
         sensorManager.unregisterListener(this)
     }
 
+    /**
+     * Handles sensor updates.
+     *
+     * Extracts the rotation matrix from the [Sensor.TYPE_ROTATION_VECTOR] event,
+     * computes the orientation angles (azimuth, pitch, roll), and applies a
+     * low-pass filter (alpha = 0.1) to ensure smooth UI updates.
+     */
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
             SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)

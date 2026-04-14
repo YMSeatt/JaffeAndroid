@@ -24,11 +24,23 @@ import com.example.myapplication.ui.model.StudentUiItem
 /**
  * GhostVisionLayer: Compose Neural AR Viewport.
  *
- * This layer renders the AR HUD and projects student data into 3D AR space
- * based on the device's physical orientation.
+ * This layer renders a futuristic AR HUD overlay and projects student data nodes
+ * into a virtual 3D space based on the device's physical orientation.
  *
- * It uses [GhostVisionEngine] for coordinate projection and [GhostVisionShader]
- * for the futuristic HUD visuals.
+ * Key Responsibilities:
+ * 1. **AR HUD**: Renders a procedural scanning interface using [GhostVisionShader.AR_HUD].
+ * 2. **Coordinate Projection**: Uses [GhostVisionEngine.project] to translate student
+ *    seating chart positions into screen-space offsets relative to the device orientation.
+ * 3. **Neural Glyphs**: Renders pulsating, data-driven markers for each student
+ *    using [GhostVisionShader.VISION_GLYPH].
+ *
+ * Performance (Bolt ⚡):
+ * - Hoists [RuntimeShader] and [ShaderBrush] to minimize object churn.
+ * - Uses manual loops over the student list to avoid iterator allocations.
+ *
+ * @param engine The [GhostVisionEngine] responsible for sensor fusion and projection.
+ * @param students The list of students to project into the AR viewport.
+ * @param isActive Whether the AR layer is currently visible and processing input.
  */
 @Composable
 fun GhostVisionLayer(
