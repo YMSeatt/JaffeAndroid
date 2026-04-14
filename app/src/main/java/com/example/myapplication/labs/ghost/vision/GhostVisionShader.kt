@@ -8,7 +8,7 @@ import org.intellij.lang.annotations.Language
  * This object contains futuristic, high-performance shaders for rendering
  * an AR HUD. It includes:
  * - `AR_HUD`: Scanning lines, data brackets, and a "Neural Static" overlay.
- * - `VISION_PORTAL`: A refractive "Lens" effect for AR focus points.
+ * - `VISION_GLYPH`: A pulsating neural data ring for student orientation nodes.
  */
 object GhostVisionShader {
 
