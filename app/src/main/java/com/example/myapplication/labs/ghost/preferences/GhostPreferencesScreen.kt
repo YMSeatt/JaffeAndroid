@@ -34,6 +34,8 @@ fun GhostPreferencesScreen(
     val glassmorphismEnabled by viewModel.glassmorphismEnabled.collectAsState()
     val scanlineEffectEnabled by viewModel.scanlineEffectEnabled.collectAsState()
     val lodEnabled by viewModel.lodEnabled.collectAsState()
+    val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
 
     Scaffold(
         topBar = {
@@ -64,7 +66,10 @@ fun GhostPreferencesScreen(
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        colors = listOf(Color.Black, Color(0xFF001111))
+                        colors = listOf(
+                            MaterialTheme.colorScheme.background,
+                            MaterialTheme.colorScheme.surface
+                        )
                     )
                 )
                 .padding(padding)
@@ -105,6 +110,40 @@ fun GhostPreferencesScreen(
                         checked = lodEnabled,
                         onCheckedChange = viewModel::setLodEnabled
                     )
+                }
+            }
+
+            GhostSectionTitle("CHROMA ENGINE")
+
+            GhostGlassmorphicSurface(
+                modifier = Modifier.fillMaxWidth(),
+                glassmorphismEnabled = glassmorphismEnabled
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    GhostPreferenceSwitch(
+                        label = "Dynamic Color",
+                        description = "Use Material You dynamic color extraction (API 31+).",
+                        checked = dynamicColorEnabled,
+                        onCheckedChange = viewModel::setDynamicColorEnabled
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Theme Mode", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("LIGHT", "DARK", "GHOST").forEach { mode ->
+                                val isSelected = themeMode == mode
+                                GhostSegmentedButton(
+                                    label = mode,
+                                    isSelected = isSelected,
+                                    onClick = { viewModel.setThemeMode(mode) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -158,8 +197,8 @@ fun GhostPreferenceSlider(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(label, color = Color.White)
-            Text("${(value * 100).toInt()}%", color = Color.Cyan)
+            Text(label, color = MaterialTheme.colorScheme.onSurface)
+            Text("${(value * 100).toInt()}%", color = MaterialTheme.colorScheme.primary)
         }
         Slider(
             value = value,
@@ -170,6 +209,27 @@ fun GhostPreferenceSlider(
                 inactiveTrackColor = Color.DarkGray
             )
         )
+    }
+}
+
+@Composable
+fun GhostSegmentedButton(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+        ),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -186,8 +246,8 @@ fun GhostPreferenceSwitch(
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(label, color = Color.White, fontWeight = FontWeight.Bold)
-            Text(description, style = MaterialTheme.typography.bodySmall.copy(color = Color.LightGray))
+            Text(label, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold)
+            Text(description, style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)))
         }
         Switch(
             checked = checked,

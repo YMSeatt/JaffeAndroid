@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import com.example.myapplication.ui.theme.MyApplicationTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.myapplication.labs.ghost.util.GhostChromaTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -21,7 +23,13 @@ class GhostPreferencesActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApplicationTheme {
+            val themeMode by viewModel.themeMode.collectAsState()
+            val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
+
+            GhostChromaTheme(
+                themeMode = themeMode,
+                dynamicColor = dynamicColor
+            ) {
                 GhostPreferencesScreen(
                     viewModel = viewModel,
                     onBack = { finish() }
