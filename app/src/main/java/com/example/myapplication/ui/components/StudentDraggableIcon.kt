@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
@@ -311,16 +312,30 @@ fun StudentDraggableIcon(
 
                     val backgroundColors = studentUiItem.displayBackgroundColor.value
                     if (backgroundColors.size > 1) {
-                        Box(modifier = Modifier.matchParentSize()) {
-                            backgroundColors.forEachIndexed { index, color ->
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .padding( (index * 4).dp)
-                                        .background(color, shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value - (index * 4).dp))
-                                )
-                            }
-                        }
+                        // BOLT: Optimize multi-color background by drawing directly to canvas,
+                        // reducing the UI tree depth by eliminating nested Box composables.
+                        Spacer(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .drawBehind {
+                                    val cornerRadiusPx = studentUiItem.displayCornerRadius.value.toPx()
+                                    val paddingPx = 4.dp.toPx()
+                                    backgroundColors.forEachIndexed { index, color ->
+                                        val inset = index * paddingPx
+                                        drawRoundRect(
+                                            color = color,
+                                            topLeft = Offset(inset, inset),
+                                            size = androidx.compose.ui.geometry.Size(
+                                                size.width - 2 * inset,
+                                                size.height - 2 * inset
+                                            ),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                                                (cornerRadiusPx - inset).coerceAtLeast(0f)
+                                            )
+                                        )
+                                    }
+                                }
+                        )
                     }
 
                     val outlineColors = studentUiItem.displayOutlineColor.value
@@ -353,9 +368,14 @@ fun StudentDraggableIcon(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val nameParts = studentUiItem.fullName.value.split(" ")
-                        val firstName = nameParts.firstOrNull() ?: ""
-                        val lastName = if (nameParts.size > 1) nameParts.last() else ""
+                        // BOLT: Cache name split results to avoid O(N) string allocations during high-frequency dragging.
+                        val (firstName, lastName, initials) = remember(studentUiItem.fullName.value) {
+                            val nameParts = studentUiItem.fullName.value.split(" ")
+                            val fName = nameParts.firstOrNull() ?: ""
+                            val lName = if (nameParts.size > 1) nameParts.last() else ""
+                            val init = (fName.take(1) + lName.take(1)).uppercase()
+                            Triple(fName, lName, init)
+                        }
 
                         // LOD: Hide full names and logs in MINIMAL mode
                         if (lodLevel != GhostLODEngine.DetailLevel.MINIMAL) {
@@ -381,7 +401,6 @@ fun StudentDraggableIcon(
                             }
                         } else {
                             // MINIMAL: Show initials only
-                            val initials = (firstName.take(1) + lastName.take(1)).uppercase()
                             Text(
                                 text = initials,
                                 style = TextStyle(

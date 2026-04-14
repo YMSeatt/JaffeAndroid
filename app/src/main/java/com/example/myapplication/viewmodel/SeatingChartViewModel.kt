@@ -2214,43 +2214,54 @@ class SeatingChartViewModel @Inject constructor(
         val currentStudents = studentDao.getAllStudentsNonLiveData()
         val matchedStudentIds = mutableSetOf<Long>()
 
+        // BOLT: Pre-index students to replace O(N) searches with O(1) lookups.
+        // Combined into a single pass to minimize iterations and string concatenations.
+        val studentsById = HashMap<Long, Student>(currentStudents.size * 2)
+        val studentsByName = HashMap<String, MutableList<Student>>(currentStudents.size * 2)
+        val studentNamePairs = ArrayList<Pair<Student, String>>(currentStudents.size)
+
+        for (student in currentStudents) {
+            studentsById[student.id] = student
+            val fullName = "${student.firstName} ${student.lastName}".trim()
+            studentsByName.getOrPut(fullName.lowercase()) { mutableListOf() }.add(student)
+            studentNamePairs.add(student to fullName)
+        }
+
         try {
             val layoutData = Json.decodeFromString<LayoutData>(layout.layoutDataJson)
 
             layoutData.students.forEach { studentLayout ->
                 var targetStudentId: Long? = null
 
-                // Stage 1: ID Match
-                val idMatch = currentStudents.find { it.id == studentLayout.id }
+                // Stage 1: ID Match (O(1))
+                val idMatch = studentsById[studentLayout.id]
                 if (idMatch != null) {
                     targetStudentId = idMatch.id
                 }
 
-                // Stage 2: Exact Name Match (if ID fails)
+                // Stage 2: Exact Name Match (if ID fails) - O(1) lookup
                 if (targetStudentId == null && studentLayout.firstName.isNotEmpty()) {
-                    val nameMatch = currentStudents.find {
-                        it.firstName.equals(studentLayout.firstName, ignoreCase = true) &&
-                                it.lastName.equals(studentLayout.lastName, ignoreCase = true) &&
-                                !matchedStudentIds.contains(it.id)
-                    }
-                    if (nameMatch != null) {
-                        targetStudentId = nameMatch.id
-                    }
+                    val templateName = "${studentLayout.firstName} ${studentLayout.lastName}".trim().lowercase()
+                    targetStudentId = studentsByName[templateName]?.find { !matchedStudentIds.contains(it.id) }?.id
                 }
 
-                // Stage 3: Fuzzy Name Match (threshold >= 0.85)
+                // Stage 3: Fuzzy Name Match (threshold >= 0.85) - O(N) optimized manual loop
                 if (targetStudentId == null && studentLayout.firstName.isNotEmpty()) {
                     val templateFullName = "${studentLayout.firstName} ${studentLayout.lastName}".trim()
-                    val fuzzyMatch = currentStudents
-                        .filter { !matchedStudentIds.contains(it.id) }
-                        .map { student ->
-                            val currentFullName = "${student.firstName} ${student.lastName}".trim()
-                            val similarity = StringSimilarity.nameSimilarityRatio(templateFullName, currentFullName)
-                            student to similarity
+                    var bestSimilarity = 0.85f
+                    var fuzzyMatch: Student? = null
+
+                    for (pair in studentNamePairs) {
+                        val student = pair.first
+                        if (matchedStudentIds.contains(student.id)) continue
+
+                        val similarity = StringSimilarity.nameSimilarityRatio(templateFullName, pair.second)
+                        // BOLT: Use > for bestSimilarity to ensure the "first win" behavior of the original maxByOrNull.
+                        if (similarity > bestSimilarity) {
+                            bestSimilarity = similarity
+                            fuzzyMatch = student
                         }
-                        .filter { it.second >= 0.85f }
-                        .maxByOrNull { it.second }
-                        ?.first
+                    }
 
                     if (fuzzyMatch != null) {
                         targetStudentId = fuzzyMatch.id
