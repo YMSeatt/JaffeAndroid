@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.preferencesDataStore
+import androidx.datastore.preferences.core.stringPreferencesKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -32,6 +33,8 @@ class GhostPreferencesStore @Inject constructor(
         val GLASSMORPHISM_ENABLED = booleanPreferencesKey("glassmorphism_enabled")
         val SCANLINE_EFFECT_ENABLED = booleanPreferencesKey("scanline_effect_enabled")
         val LOD_ENABLED = booleanPreferencesKey("lod_enabled")
+        val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
+        val GHOST_THEME_MODE = stringPreferencesKey("ghost_theme_mode")
     }
 
     /** Flow of the experimental glow intensity for AGSL shaders. */
@@ -59,6 +62,16 @@ class GhostPreferencesStore @Inject constructor(
         prefs[Keys.LOD_ENABLED] ?: true
     }
 
+    /** Flow indicating if Material You dynamic color is enabled in Ghost Lab. */
+    val dynamicColorEnabled: Flow<Boolean> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.DYNAMIC_COLOR_ENABLED] ?: true
+    }
+
+    /** Flow of the current Ghost theme mode (LIGHT, DARK, GHOST). */
+    val ghostThemeMode: Flow<String> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.GHOST_THEME_MODE] ?: "GHOST"
+    }
+
     suspend fun updateGlowIntensity(intensity: Float) {
         context.ghostDataStore.edit { it[Keys.GHOST_GLOW_INTENSITY] = intensity }
     }
@@ -77,5 +90,13 @@ class GhostPreferencesStore @Inject constructor(
 
     suspend fun updateLodEnabled(enabled: Boolean) {
         context.ghostDataStore.edit { it[Keys.LOD_ENABLED] = enabled }
+    }
+
+    suspend fun updateDynamicColorEnabled(enabled: Boolean) {
+        context.ghostDataStore.edit { it[Keys.DYNAMIC_COLOR_ENABLED] = enabled }
+    }
+
+    suspend fun updateGhostThemeMode(mode: String) {
+        context.ghostDataStore.edit { it[Keys.GHOST_THEME_MODE] = mode }
     }
 }

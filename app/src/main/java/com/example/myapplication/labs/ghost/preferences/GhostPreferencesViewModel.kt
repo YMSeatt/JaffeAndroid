@@ -35,6 +35,12 @@ class GhostPreferencesViewModel @Inject constructor(
     val lodEnabled: StateFlow<Boolean> = store.lodEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
+    val dynamicColorEnabled: StateFlow<Boolean> = store.dynamicColorEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val themeMode: StateFlow<String> = store.ghostThemeMode
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "GHOST")
+
     fun setGlowIntensity(intensity: Float) {
         viewModelScope.launch {
             store.updateGlowIntensity(intensity)
@@ -62,6 +68,18 @@ class GhostPreferencesViewModel @Inject constructor(
     fun setLodEnabled(enabled: Boolean) {
         viewModelScope.launch {
             store.updateLodEnabled(enabled)
+        }
+    }
+
+    fun setDynamicColorEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            store.updateDynamicColorEnabled(enabled)
+        }
+    }
+
+    fun setThemeMode(mode: String) {
+        viewModelScope.launch {
+            store.updateGhostThemeMode(mode)
         }
     }
 }
