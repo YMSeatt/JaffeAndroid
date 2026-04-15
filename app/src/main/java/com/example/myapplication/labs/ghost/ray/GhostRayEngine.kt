@@ -75,8 +75,13 @@ class GhostRayEngine(private val context: Context) : SensorEventListener {
             // azimuth = orientation[0], pitch = orientation[1], roll = orientation[2]
             // We use pitch and roll to map to a 2D plane.
             // This is a simplified projection for the PoC.
-            val x = orientation[2] * 2000f + 500f // Mapping roll to X
-            val y = -orientation[1] * 2000f + 500f // Mapping pitch to Y
+
+            // COORDINATE MAPPING:
+            // The mapping factor (2000f) and offset (500f) translate device orientation
+            // into the 4000x4000 logical canvas space.
+            // Roll (orientation[2]) maps to X, and negative Pitch (-orientation[1]) maps to Y.
+            val x = orientation[2] * 2000f + 500f
+            val y = -orientation[1] * 2000f + 500f
 
             _rayTarget.value = Offset(x, y)
         }
@@ -86,6 +91,14 @@ class GhostRayEngine(private val context: Context) : SensorEventListener {
 
     /**
      * Updates the intersection state based on current ray target and student positions.
+     *
+     * This method performs a spatial query to find which student (if any) is currently
+     * intersected by the projected ray.
+     *
+     * ### Spatial Normalization:
+     * Student positions are stored in logical units, so they are first scaled and
+     * offset to match the current screen/pixel space of the [Canvas] before
+     * intersection testing.
      *
      * @param students List of students currently on the canvas.
      * @param canvasScale The current zoom level of the canvas.
@@ -100,6 +113,7 @@ class GhostRayEngine(private val context: Context) : SensorEventListener {
         var foundId: Long? = null
 
         // BOLT: Use squared distance to avoid expensive sqrt() calls in the intersection loop.
+        // A 60f radius (scaled) is used as the hit box for student icons.
         val threshold = 60f * canvasScale
         val thresholdSq = threshold * threshold
 
@@ -111,7 +125,7 @@ class GhostRayEngine(private val context: Context) : SensorEventListener {
             val dy = screenY - target.y
             val distSq = dx * dx + dy * dy
 
-            if (distSq < thresholdSq) { // 60px radius hit box
+            if (distSq < thresholdSq) {
                 foundId = student.id.toLong()
                 break
             }

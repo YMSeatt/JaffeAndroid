@@ -65,12 +65,19 @@ fun GhostRayLayer(
             try {
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
-                // Source is centered at the bottom, as if coming from the user's tablet.
+
+                // SOURCE PLACEMENT:
+                // The ray source is centered at the bottom of the screen (size.width / 2f, size.height),
+                // simulating the beam originating from the teacher's physical device/tablet.
                 shader.setFloatUniform("iSource", size.width / 2f, size.height)
+
+                // TARGET MAPPING:
+                // The target is provided in pixel coordinates already mapped by the engine.
                 shader.setFloatUniform("iTarget", target!!.x, target!!.y)
                 shader.setFloatUniform("iIntensity", 1.0f)
 
-                // Color based on intersection state
+                // STATE-DRIVEN COLOR:
+                // The beam color shifts based on whether it is currently intersecting a student node.
                 val color = if (intersectedId != null) {
                     Color.Magenta // At-risk / High-energy focus
                 } else {
@@ -79,6 +86,9 @@ fun GhostRayLayer(
 
                 shader.setFloatUniform("iColor", color.red, color.green, color.blue)
 
+                // DRAWING:
+                // We draw a full-screen rectangle using the ShaderBrush. The shader itself
+                // handles the "volumetric" beam shaping based on iSource and iTarget.
                 drawRect(brush = brush)
             } catch (e: Exception) {
                 // Ignore shader runtime errors
