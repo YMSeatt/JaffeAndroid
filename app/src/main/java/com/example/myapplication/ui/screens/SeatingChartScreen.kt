@@ -566,6 +566,7 @@ fun SeatingChartScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+    val globalIonBalance by seatingChartViewModel.globalIonBalance.collectAsState()
     val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
 
     Scaffold(
@@ -1029,7 +1030,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ION_MODE_ENABLED && isIonActive) {
                 GhostIonLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    globalBalance = globalIonBalance,
                     canvasScale = scale,
                     canvasOffset = offset
                 )

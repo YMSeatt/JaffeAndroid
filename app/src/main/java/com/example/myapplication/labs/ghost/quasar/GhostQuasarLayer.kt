@@ -2,7 +2,7 @@ package com.example.myapplication.labs.ghost.quasar
 
 import android.graphics.RuntimeShader
 import android.os.Build
-import androidx.compose.animation.core.withFrameNanos
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
@@ -30,35 +30,32 @@ fun GhostQuasarLayer(
 ) {
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    // BOLT: Determine the number of quasars to pre-allocate shaders.
-    // This avoids mutating lists during the draw phase.
-    val quasarCount = remember(students) {
-        var count = 0
-        for (i in students.indices) {
-            if (students[i].quasarEnergy.value >= 0.1f) count++
-        }
-        count
-    }
+    // BOLT: Use rememberInfiniteTransition for frame-rate stability and to avoid
+    // triggering recomposition of the entire layer on every frame.
+    val infiniteTransition = rememberInfiniteTransition(label = "quasarTime")
+    val time by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1000f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(200000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "time"
+    )
 
-    val shaderPool = remember(quasarCount) {
-        List(quasarCount) { RuntimeShader(GhostQuasarShader.ACCRETION_DISK) }
-    }
-    val brushPool = remember(shaderPool) {
-        shaderPool.map { ShaderBrush(it) }
-    }
-
-    var time by remember { mutableStateOf(0f) }
-    LaunchedEffect(isActive) {
-        val startTime = System.nanoTime()
-        while (isActive) {
-            withFrameNanos { frameTime ->
-                time = (frameTime - startTime) / 1_000_000_000f
-            }
-        }
-    }
+    // BOLT: Pool shaders and brushes to avoid "Uniform Overwrite" bug and object churn.
+    // Growable list allows us to keep native objects alive across student count changes.
+    val shaderPool = remember { mutableListOf<RuntimeShader>() }
+    val brushPool = remember { mutableListOf<ShaderBrush>() }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         var quasarIdx = 0
+
+        // BOLT: Hoist invariant uniforms.
+        for (i in 0 until shaderPool.size) {
+            shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
+            shaderPool[i].setFloatUniform("iTime", time)
+        }
 
         // BOLT: Manual loop over students to find those with pre-calculated Quasar energy.
         // Reading student positions and metrics from MutableState ensures smooth tracking
@@ -66,7 +63,16 @@ fun GhostQuasarLayer(
         for (i in students.indices) {
             val student = students[i]
             val energy = student.quasarEnergy.value
-            if (energy < 0.1f || quasarIdx >= shaderPool.size) continue
+            if (energy < 0.1f) continue
+
+            if (quasarIdx >= shaderPool.size) {
+                val s = RuntimeShader(GhostQuasarShader.ACCRETION_DISK)
+                // Set invariant uniforms for the new shader instance.
+                s.setFloatUniform("iResolution", size.width, size.height)
+                s.setFloatUniform("iTime", time)
+                shaderPool.add(s)
+                brushPool.add(ShaderBrush(s))
+            }
 
             val shader = shaderPool[quasarIdx]
             val brush = brushPool[quasarIdx]
@@ -82,8 +88,6 @@ fun GhostQuasarLayer(
             // Calculate the screen-space size of the effect (World radius 250f)
             val screenRadius = 250f * canvasScale
 
-            shader.setFloatUniform("iResolution", size.width, size.height)
-            shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iCenter", screenX, screenY)
             shader.setFloatUniform("iEnergy", energy)
             shader.setFloatUniform("iColor", color.red, color.green, color.blue)

@@ -10,22 +10,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.platform.LocalContext
-import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostIonLayer: Renders the "Neural Ionization" AGSL effect.
  *
+ * BOLT: Optimized for 60fps performance by offloading student-specific metrics
+ * to the background pipeline and using direct MutableState reads for fluid tracking.
+ *
  * @param students Current students.
- * @param behaviorLogs Current behavior logs.
+ * @param globalBalance The global ion balance (from background pipeline).
  * @param canvasScale Current zoom level.
  * @param canvasOffset Current pan offset.
  */
 @Composable
 fun GhostIonLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    globalBalance: Float,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -33,7 +35,9 @@ fun GhostIonLayer(
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.ION_MODE_ENABLED) return
 
     val context = LocalContext.current
+    // BOLT: Hardware signal is handled once per recomposition, which is infrequent.
     val batteryTemp = remember { GhostIonEngine.getBatteryTemperature(context) }
+    val tempFactor = remember(batteryTemp) { (batteryTemp - 25f).coerceIn(0f, 20f) / 20f }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ionPulse")
     val time by infiniteTransition.animateFloat(
@@ -45,14 +49,6 @@ fun GhostIonLayer(
         ),
         label = "time"
     )
-
-    val ionPoints = remember(students, behaviorLogs, batteryTemp) {
-        GhostIonEngine.calculateIonization(students, behaviorLogs, batteryTemp)
-    }
-
-    val globalBalance = remember(ionPoints) {
-        GhostIonEngine.calculateGlobalBalance(ionPoints)
-    }
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         val shader = remember { RuntimeShader(GhostIonShader.ION_FIELD) }
@@ -68,22 +64,32 @@ fun GhostIonLayer(
             // BOLT: Clear the buffer to avoid stale data.
             pointsArray.fill(0f)
 
-            val pointCount = ionPoints.size.coerceAtMost(10)
+            // BOLT: Read metrics directly from StudentUiItem MutableState. This allows
+            // 60fps fluid tracking during student drag operations as positions and
+            // charges follow the icon without whole-layer recomposition.
+            var activePoints = 0
+            for (i in students.indices) {
+                if (activePoints >= 10) break
+                val student = students[i]
+                val baseDensity = student.ionDensity.value
+                if (baseDensity < 0.1f) continue
 
-            for (i in 0 until pointCount) {
-                val p = ionPoints[i]
+                val charge = student.ionCharge.value
+                val finalDensity = (baseDensity + tempFactor * 0.3f).coerceIn(0f, 1.0f)
+
                 // Map logical (4000x4000) to screen space
-                val screenX = p.x * canvasScale + canvasOffset.x
-                val screenY = p.y * canvasScale + canvasOffset.y
+                val screenX = student.xPosition.value * canvasScale + canvasOffset.x
+                val screenY = student.yPosition.value * canvasScale + canvasOffset.y
 
-                pointsArray[i * 4 + 0] = screenX
-                pointsArray[i * 4 + 1] = screenY
-                pointsArray[i * 4 + 2] = p.charge
-                pointsArray[i * 4 + 3] = p.density
+                pointsArray[activePoints * 4 + 0] = screenX
+                pointsArray[activePoints * 4 + 1] = screenY
+                pointsArray[activePoints * 4 + 2] = charge
+                pointsArray[activePoints * 4 + 3] = finalDensity
+                activePoints++
             }
 
             shader.setFloatUniform("iPoints", pointsArray)
-            shader.setIntUniform("iPointCount", pointCount)
+            shader.setIntUniform("iPointCount", activePoints)
 
             drawRect(brush = brush)
         }
