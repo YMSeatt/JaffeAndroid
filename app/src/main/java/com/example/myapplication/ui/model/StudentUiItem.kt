@@ -80,5 +80,7 @@ data class StudentUiItem(
     val behaviorEntropy: MutableState<Float>,
     val tectonicStress: MutableState<Float>,
     val quasarEnergy: MutableState<Float>,
-    val quasarPolarity: MutableState<Float>
+    val quasarPolarity: MutableState<Float>,
+    val ionCharge: MutableState<Float>,
+    val ionDensity: MutableState<Float>
 )

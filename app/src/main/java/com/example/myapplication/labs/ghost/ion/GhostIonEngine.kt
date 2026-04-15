@@ -28,29 +28,28 @@ object GhostIonEngine {
     )
 
     /**
-     * Analyzes the current state to generate ionization points.
+     * Analyzes the current state to generate ionization metrics for students.
      *
-     * BOLT: Optimized using pre-grouped logs and manual loops to reduce complexity
-     * from O(N*L) to O(N + L) and minimize allocations.
+     * BOLT: Optimized to accept pre-grouped logs, enabling execution in the
+     * background pipeline and eliminating redundant O(L) grouping.
+     *
+     * @param studentIds The list of students to analyze.
+     * @param behaviorLogsByStudent Pre-grouped behavior logs.
+     * @return A map of studentId to Pair(Charge, DensityBase).
      */
-    fun calculateIonization(
-        students: List<StudentUiItem>,
-        behaviorLogs: List<BehaviorEvent>,
-        batteryTemp: Float = 30.0f
-    ): List<IonPoint> {
-        val groupedLogs = behaviorLogs.groupBy { it.studentId }
-        val tempFactor = (batteryTemp - 25f).coerceIn(0f, 20f) / 20f
+    fun calculateIonMetrics(
+        studentIds: List<Long>,
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>
+    ): Map<Long, Pair<Float, Float>> {
+        val results = mutableMapOf<Long, Pair<Float, Float>>()
 
-        return students.map { student ->
-            val sid = student.id.toLong()
-            val logs = groupedLogs[sid]
-            // BOLT: Use take(5) instead of takeLast(5) because logs are sorted DESC (newest first).
+        for (sid in studentIds) {
+            val logs = behaviorLogsByStudent[sid]
+            // BOLT: Use subList instead of take for allocation-free view (if original is List).
             val recentLogs = if (logs != null) {
                 if (logs.size > 5) logs.subList(0, 5) else logs
             } else emptyList()
 
-            // Calculate charge based on behavior balance
-            // BOLT: Single-pass manual loop to avoid multiple traversals and allocations
             var positives = 0
             var negatives = 0
             for (log in recentLogs) {
@@ -65,15 +64,36 @@ object GhostIonEngine {
             val logCount = recentLogs.size
             val charge = if (logCount == 0) 0f else (positives - negatives).toFloat() / logCount.toFloat()
 
-            // Density scales with activity and "heat" (battery temp)
-            // Baseline temp assumed 30°C. Higher temp = higher ion density.
-            val density = (logCount.toFloat() / 5f * 0.7f + tempFactor * 0.3f).coerceIn(0f, 1.0f)
+            // Base density based on log count (0.0 to 0.7).
+            // Battery temp factor (0.3) is applied in the UI layer.
+            val densityBase = (logCount.toFloat() / 5f * 0.7f).coerceIn(0f, 0.7f)
 
+            results[sid] = charge to densityBase
+        }
+
+        return results
+    }
+
+    /**
+     * Legacy structure for compatibility (to be removed once UI is refactored).
+     */
+    fun calculateIonization(
+        students: List<StudentUiItem>,
+        behaviorLogs: List<BehaviorEvent>,
+        batteryTemp: Float = 30.0f
+    ): List<IonPoint> {
+        val groupedLogs = behaviorLogs.groupBy { it.studentId }
+        val studentIds = students.map { it.id.toLong() }
+        val metrics = calculateIonMetrics(studentIds, groupedLogs)
+        val tempFactor = (batteryTemp - 25f).coerceIn(0f, 20f) / 20f
+
+        return students.map { student ->
+            val m = metrics[student.id.toLong()] ?: (0f to 0f)
             IonPoint(
                 x = student.xPosition.value,
                 y = student.yPosition.value,
-                charge = charge,
-                density = density
+                charge = m.first,
+                density = (m.second + tempFactor * 0.3f).coerceIn(0f, 1.0f)
             )
         }
     }
@@ -99,5 +119,17 @@ object GhostIonEngine {
             sum += p.charge
         }
         return sum / points.size
+    }
+
+    /**
+     * Calculates the global "Ion Balance" from a metrics map.
+     */
+    fun calculateGlobalBalanceFromMetrics(metrics: Map<Long, Pair<Float, Float>>): Float {
+        if (metrics.isEmpty()) return 0f
+        var sum = 0f
+        for (m in metrics.values) {
+            sum += m.first
+        }
+        return sum / metrics.size
     }
 }

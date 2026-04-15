@@ -270,6 +270,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral vortices pre-calculated in background. */
     val vortices: StateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>> = _vortices.asStateFlow()
 
+    private val _globalIonBalance = MutableStateFlow(0f)
+    /** BOLT: Global Ion balance calculated in background. */
+    val globalIonBalance: StateFlow<Float> = _globalIonBalance.asStateFlow()
+
     private val _entangledLinks = MutableStateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>>(emptyList())
     /** BOLT: Quantum entanglement links pre-calculated in background. */
     val entangledLinks: StateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>> = _entangledLinks.asStateFlow()
@@ -369,6 +373,7 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsTectonicStressMapCache: Map<Long, Float> = emptyMap()
     private var ghostMetricsQuasarMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
+    private var ghostMetricsIonMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
     private var ghostMetricsEntanglementStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsEntanglementBehaviorLogsRef: List<BehaviorEvent>? = null
 
@@ -455,7 +460,9 @@ class SeatingChartViewModel @Inject constructor(
         val behaviorEntropy: Float,
         val tectonicStress: Float,
         val quasarEnergy: Float,
-        val quasarPolarity: Float
+        val quasarPolarity: Float,
+        val ionCharge: Float,
+        val ionDensity: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -902,6 +909,15 @@ class SeatingChartViewModel @Inject constructor(
                     ghostMetricsQuasarMapCache = com.example.myapplication.labs.ghost.quasar.GhostQuasarEngine.identifyQuasars(
                         behaviorLogs = behaviorEvents
                     )
+
+                    // BOLT: Calculate Ion metrics in the background pipeline
+                    val studentIds = students.map { it.id.toLong() }
+                    ghostMetricsIonMapCache = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateIonMetrics(
+                        studentIds = studentIds,
+                        behaviorLogsByStudent = behaviorLogsByStudent
+                    )
+                    _globalIonBalance.value = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateGlobalBalanceFromMetrics(ghostMetricsIonMapCache)
+
                     ghostMetricsLogOnlyBehaviorLogsRef = behaviorEvents
                 }
 
@@ -969,6 +985,7 @@ class SeatingChartViewModel @Inject constructor(
 
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache
                 val quasarMetricsMap = ghostMetricsQuasarMapCache
+                val ionMetricsMap = ghostMetricsIonMapCache
 
                 // BOLT: Calculate adaptive density zones in the background pipeline (Memoized)
                 if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
@@ -996,7 +1013,9 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorEntropy = 0f,
                             tectonicStress = 0f,
                             quasarEnergy = 0f,
-                            quasarPolarity = 0f
+                            quasarPolarity = 0f,
+                            ionCharge = 0f,
+                            ionDensity = 0f
                         )
                         item
                     }
@@ -1267,6 +1286,7 @@ class SeatingChartViewModel @Inject constructor(
 
                         val tStress = tectonicStressMap[student.id] ?: 0f
                         val qMetrics = quasarMetricsMap[student.id] ?: (0f to 0f)
+                        val iMetrics = ionMetricsMap[student.id] ?: (0f to 0f)
 
                         StudentDerivedData(
                             behaviorDescription,
@@ -1283,7 +1303,9 @@ class SeatingChartViewModel @Inject constructor(
                             entropyScore,
                             tStress,
                             qMetrics.first,
-                            qMetrics.second
+                            qMetrics.second,
+                            iMetrics.first,
+                            iMetrics.second
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -1335,7 +1357,9 @@ class SeatingChartViewModel @Inject constructor(
                                 existingItem.behaviorEntropy.value != derivedData.behaviorEntropy ||
                                 existingItem.tectonicStress.value != derivedData.tectonicStress ||
                                 existingItem.quasarEnergy.value != derivedData.quasarEnergy ||
-                                existingItem.quasarPolarity.value != derivedData.quasarPolarity
+                                existingItem.quasarPolarity.value != derivedData.quasarPolarity ||
+                                existingItem.ionCharge.value != derivedData.ionCharge ||
+                                existingItem.ionDensity.value != derivedData.ionDensity
 
                         if (!isCacheHit || volatileChanged) {
                             studentForUi.updateStudentUiItem(
@@ -1362,7 +1386,9 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorEntropy = derivedData.behaviorEntropy,
                             tectonicStress = derivedData.tectonicStress,
                             quasarEnergy = derivedData.quasarEnergy,
-                                quasarPolarity = derivedData.quasarPolarity
+                                    quasarPolarity = derivedData.quasarPolarity,
+                                    ionCharge = derivedData.ionCharge,
+                                    ionDensity = derivedData.ionDensity
                             )
                         }
                         existingItem
@@ -1390,7 +1416,9 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorEntropy = derivedData.behaviorEntropy,
                             tectonicStress = derivedData.tectonicStress,
                             quasarEnergy = derivedData.quasarEnergy,
-                            quasarPolarity = derivedData.quasarPolarity
+                            quasarPolarity = derivedData.quasarPolarity,
+                            ionCharge = derivedData.ionCharge,
+                            ionDensity = derivedData.ionDensity
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem

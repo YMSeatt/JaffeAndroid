@@ -53,7 +53,9 @@ fun Student.toStudentUiItem(
     behaviorEntropy: Float,
     tectonicStress: Float,
     quasarEnergy: Float,
-    quasarPolarity: Float
+    quasarPolarity: Float,
+    ionCharge: Float,
+    ionDensity: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -86,7 +88,9 @@ fun Student.toStudentUiItem(
         behaviorEntropy = mutableStateOf(behaviorEntropy),
         tectonicStress = mutableStateOf(tectonicStress),
         quasarEnergy = mutableStateOf(quasarEnergy),
-        quasarPolarity = mutableStateOf(quasarPolarity)
+        quasarPolarity = mutableStateOf(quasarPolarity),
+        ionCharge = mutableStateOf(ionCharge),
+        ionDensity = mutableStateOf(ionDensity)
     )
 }
 
@@ -125,7 +129,9 @@ fun Student.updateStudentUiItem(
     behaviorEntropy: Float,
     tectonicStress: Float,
     quasarEnergy: Float,
-    quasarPolarity: Float
+    quasarPolarity: Float,
+    ionCharge: Float,
+    ionDensity: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -157,6 +163,8 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.tectonicStress, tectonicStress)
     updateIfChanged(item.quasarEnergy, quasarEnergy)
     updateIfChanged(item.quasarPolarity, quasarPolarity)
+    updateIfChanged(item.ionCharge, ionCharge)
+    updateIfChanged(item.ionDensity, ionDensity)
 }
 
 /**
