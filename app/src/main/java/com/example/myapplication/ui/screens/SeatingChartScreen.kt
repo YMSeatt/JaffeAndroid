@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
@@ -179,6 +180,9 @@ import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
 import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
 import com.example.myapplication.labs.ghost.spotlight.GhostSpotlightLayer
 import com.example.myapplication.labs.ghost.hub.GhostHubLayer
+import com.example.myapplication.labs.ghost.hub.GhostStudentHubLayer
+import com.example.myapplication.labs.ghost.hub.GhostAction
+import com.example.myapplication.labs.ghost.GhostLinkEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -302,6 +306,8 @@ fun SeatingChartScreen(
     var activeGlanceStudentId by remember { mutableStateOf<Long?>(null) }
     var isGhostHubVisible by remember { mutableStateOf(false) }
     var ghostHubPosition by remember { mutableStateOf(Offset.Zero) }
+    var isStudentHubVisible by remember { mutableStateOf(false) }
+    var studentHubPosition by remember { mutableStateOf(Offset.Zero) }
     /**
      * SHIELD: Track the last shared artifact (screenshot/blueprint) for cleanup.
      * This ensures that temporary files created for sharing don't persist longer than necessary.
@@ -839,9 +845,10 @@ fun SeatingChartScreen(
             }
         }
 
-        val onStudentLongClick: (StudentUiItem) -> Unit = { studentItem ->
+        val onStudentLongClick: (StudentUiItem, Offset) -> Unit = { studentItem, pos ->
             selectedStudentUiItemForAction = studentItem
-            showStudentActionMenu = true
+            studentHubPosition = pos
+            isStudentHubVisible = true
         }
 
         val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
@@ -1667,6 +1674,48 @@ fun SeatingChartScreen(
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED) {
+                GhostStudentHubLayer(
+                    isVisible = isStudentHubVisible,
+                    position = studentHubPosition,
+                    onActionSelected = { action ->
+                        when (action.id) {
+                            "LOG_BEHAVIOR" -> showBehaviorDialog = true
+                            "NEURAL_INSIGHT" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
+                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+
+                                    currentGhostInsight = GhostInsightEngine.generateInsight(
+                                        student.fullName.value, behavior, quiz, homework
+                                    )
+                                    showGhostInsightDialog = true
+                                }
+                            }
+                            "NEURAL_SYNAPSE" -> showGhostSynapseDialog = true
+                            "LOG_ACADEMIC" -> {
+                                if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                            }
+                            "NEURAL_DOSSIER" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    val report = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
+                                    Toast.makeText(context, "Neural Dossier Generated for ${student.fullName.value}", Toast.LENGTH_SHORT).show()
+                                    Log.d("GhostLink", report)
+                                }
+                            }
+                            "EDIT_STUDENT" -> {
+                                coroutineScope.launch {
+                                    selectedStudentUiItemForAction?.let { student ->
+                                        editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                        showAddEditStudentDialog = true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onDismiss = { isStudentHubVisible = false }
+                )
+
                 GhostHubLayer(
                     isVisible = isGhostHubVisible,
                     position = ghostHubPosition,
@@ -1766,7 +1815,7 @@ fun SeatingChartContent(
     allQuizLogs: List<com.example.myapplication.data.QuizLog> = emptyList(),
     allHomeworkLogs: List<com.example.myapplication.data.HomeworkLog> = emptyList(),
     onStudentClick: (StudentUiItem) -> Unit,
-    onStudentLongClick: (StudentUiItem) -> Unit,
+    onStudentLongClick: (StudentUiItem, Offset) -> Unit,
     onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
     onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
     seatingChartViewModel: SeatingChartViewModel,
@@ -1807,7 +1856,7 @@ fun SeatingChartContent(
                     showBehavior = showRecentBehavior,
                     isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
                     onClick = { onStudentClick(studentItem) },
-                    onLongClick = { onStudentLongClick(studentItem) },
+                    onLongClick = { pos -> onStudentLongClick(studentItem, pos) },
                     onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
                     noAnimations = noAnimations,
                     editModeEnabled = editModeEnabled,

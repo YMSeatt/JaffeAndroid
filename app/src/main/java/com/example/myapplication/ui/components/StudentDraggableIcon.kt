@@ -101,7 +101,7 @@ fun StudentDraggableIcon(
     canvasSize: androidx.compose.ui.unit.IntSize,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (Offset) -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean,
     editModeEnabled: Boolean,
@@ -205,7 +205,13 @@ fun StudentDraggableIcon(
                     .pointerInput(studentUiItem.id) {
                         detectTapGestures(
                             onTap = { onClick() },
-                            onLongPress = { onLongClick() },
+                            onLongPress = { offset ->
+                                // Calculate absolute screen-space position for the radial hub.
+                                // We take the student's current canvas position and add the local tap offset.
+                                val absoluteX = (offsetX * canvasScale) + canvasOffset.x + (offset.x * canvasScale)
+                                val absoluteY = (offsetY * canvasScale) + canvasOffset.y + (offset.y * canvasScale)
+                                onLongClick(Offset(absoluteX, absoluteY))
+                            },
                             onDoubleTap = {
                                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
                                     onGlance(studentUiItem.id.toLong())
