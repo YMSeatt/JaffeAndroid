@@ -1,10 +1,10 @@
 # 👻 Ghost Android Backlog
 - [ ] Idea: "Ghost Memento" - Persistent Undo/Redo across app restarts using DataStore.
-- [ ] Idea: "Ghost Relay" - Integrated Android Share Sheet for Neural Dossiers.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-04-06: Ghost Relay - Integrated Android Share Sheet for Neural Dossiers in `SeatingChartScreen.kt`
 - [DONE] 2028-04-05: Ghost Student Hub - Per-student radial quick-action menu in `/labs/ghost/hub/GhostStudentHubLayer.kt`
 - [DONE] 2028-04-01: Ghost Chroma - Material You & Neural Theme Engine in `/labs/ghost/util/GhostChroma.kt`
 - [DONE] 2028-03-28: Ghost Adaptive UI - Density-aware seating chart layouts in `/labs/ghost/adaptive`
