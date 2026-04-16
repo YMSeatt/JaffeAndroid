@@ -650,8 +650,12 @@ class SettingsViewModel @Inject constructor(
             if (encrypt) {
                 // Encryption requires the full payload for the Fernet token
                 val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
-                val encryptedToken = securityUtil.encrypt(dbBytes)
-                outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
+                try {
+                    val encryptedToken = securityUtil.encrypt(dbBytes)
+                    outputStream.write(encryptedToken.toByteArray(Charsets.UTF_8))
+                } finally {
+                    dbBytes.fill(0.toByte())
+                }
             } else {
                 // Stream the file directly to avoid OOM for large databases
                 FileInputStream(dbFile).use { inputStream ->
@@ -935,8 +939,12 @@ class SettingsViewModel @Inject constructor(
         if (encrypt) {
             // Encryption requires the full payload for the Fernet token
             val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
-            val encryptedToken = securityUtil.encrypt(dbBytes)
-            sharedDbFile.writeText(encryptedToken)
+            try {
+                val encryptedToken = securityUtil.encrypt(dbBytes)
+                sharedDbFile.writeText(encryptedToken)
+            } finally {
+                dbBytes.fill(0.toByte())
+            }
         } else {
             // HARDEN: Stream the file directly to avoid OOM for large databases
             FileInputStream(dbFile).use { inputStream ->
