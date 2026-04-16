@@ -1698,9 +1698,8 @@ fun SeatingChartScreen(
                             }
                             "NEURAL_DOSSIER" -> {
                                 selectedStudentUiItemForAction?.let { student ->
-                                    val report = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
+                                    GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
                                     Toast.makeText(context, "Neural Dossier Generated for ${student.fullName.value}", Toast.LENGTH_SHORT).show()
-                                    Log.d("GhostLink", report)
                                 }
                             }
                             "EDIT_STUDENT" -> {
