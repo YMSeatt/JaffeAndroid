@@ -5,11 +5,21 @@ import org.intellij.lang.annotations.Language
 /**
  * GhostIonShader: AGSL shaders for the "Ghost Ion" experiment.
  *
- * Visualizes classroom energy as ionized gas clouds and electrostatic
- * discharge patterns.
+ * Provides the [ION_FIELD] shader which visualizes classroom energy as ionized
+ * gas clouds, glowing student cores, and electrostatic discharge patterns.
  */
 object GhostIonShader {
 
+    /**
+     * Procedural plasma field shader.
+     *
+     * ### Uniforms:
+     * - `iResolution`: Screen dimensions.
+     * - `iTime`: Animation clock.
+     * - `iGlobalBalance`: Classroom-wide behavior polarity (-1.0 to 1.0).
+     * - `iPoints`: Array of student data. Each `float4` contains `(x, y, charge, density)`.
+     * - `iPointCount`: Number of active students to render (capped at 10).
+     */
     @Language("AGSL")
     const val ION_FIELD = """
         uniform float2 iResolution;

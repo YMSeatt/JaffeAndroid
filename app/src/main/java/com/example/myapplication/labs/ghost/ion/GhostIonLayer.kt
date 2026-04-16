@@ -16,13 +16,18 @@ import com.example.myapplication.ui.model.StudentUiItem
 /**
  * GhostIonLayer: Renders the "Neural Ionization" AGSL effect.
  *
- * BOLT: Optimized for 60fps performance by offloading student-specific metrics
- * to the background pipeline and using direct MutableState reads for fluid tracking.
+ * This layer visualizes the classroom's "Ionic Field" using procedural AGSL shaders.
+ * It maps student behavior and hardware signals (Battery Temperature) to glowing
+ * "Ion Cores" and "Atmospheric Haze."
  *
- * @param students Current students.
- * @param globalBalance The global ion balance (from background pipeline).
- * @param canvasScale Current zoom level.
- * @param canvasOffset Current pan offset.
+ * BOLT: Optimized for 60fps performance by offloading student-specific metrics
+ * to the background pipeline (`SeatingChartViewModel`) and using direct `MutableState`
+ * reads for fluid tracking during student drag-and-drop.
+ *
+ * @param students Current list of students to visualize.
+ * @param globalBalance The normalized classroom-wide ion balance (-1.0 to 1.0).
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
  */
 @Composable
 fun GhostIonLayer(

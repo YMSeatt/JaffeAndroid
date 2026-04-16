@@ -12,30 +12,45 @@ import kotlin.math.sin
 /**
  * GhostIonEngine: Calculates classroom "Ionic Potential" and "Charge Density".
  *
- * This engine maps behavioral logs and hardware signals (Battery Temperature)
- * to a futuristic ionization metaphor.
+ * This engine models students as energy points in a high-fidelity plasma field. It identifies
+ * behavioral patterns and hardware signals (Battery Temperature) to calculate "Neural Ionization,"
+ * a visual metaphor for classroom engagement and volatility.
+ *
+ * The logic is primarily used by the [GhostIonLayer] to drive AGSL shader effects on the
+ * seating chart.
  */
 object GhostIonEngine {
 
     /**
      * Represents a point of ionization in the classroom.
+     *
+     * @property x Logical X coordinate on the 4000x4000 canvas.
+     * @property y Logical Y coordinate on the 4000x4000 canvas.
+     * @property charge The behavioral polarity (-1.0 for negative/disruptive, 1.0 for positive).
+     * @property density The concentration of activity (0.0 to 1.0), influenced by log
+     *   frequency and hardware temperature.
      */
     data class IonPoint(
         val x: Float,
         val y: Float,
-        val charge: Float, // -1.0 to 1.0 (Negative to Positive)
-        val density: Float // 0.0 to 1.0
+        val charge: Float,
+        val density: Float
     )
 
     /**
      * Analyzes the current state to generate ionization metrics for students.
      *
-     * BOLT: Optimized to accept pre-grouped logs, enabling execution in the
-     * background pipeline and eliminating redundant O(L) grouping.
+     * This method performs a single-pass analysis over the most recent logs for each student
+     * to determine their current "Charge" and "Density Base."
      *
-     * @param studentIds The list of students to analyze.
-     * @param behaviorLogsByStudent Pre-grouped behavior logs.
+     * BOLT: Optimized to accept pre-grouped logs, enabling execution in the background
+     * pipeline (`updateStudentsForDisplay`) and eliminating redundant $O(L)$ grouping.
+     *
+     * @param studentIds The list of student IDs to analyze.
+     * @param behaviorLogsByStudent Pre-grouped behavior logs, sorted by timestamp DESC.
      * @return A map of studentId to Pair(Charge, DensityBase).
+     *   - Charge: -1.0 (Negative) to 1.0 (Positive).
+     *   - DensityBase: 0.0 to 0.7 (Based on log frequency).
      */
     fun calculateIonMetrics(
         studentIds: List<Long>,
@@ -76,6 +91,13 @@ object GhostIonEngine {
 
     /**
      * Legacy structure for compatibility (to be removed once UI is refactored).
+     *
+     * This method handles the grouping and coordinate mapping in a single pass.
+     * Prefer [calculateIonMetrics] for modern background-offloaded pipelines.
+     *
+     * @param students List of UI items containing positions.
+     * @param behaviorLogs All relevant behavioral events.
+     * @param batteryTemp Current device temperature in Celsius.
      */
     fun calculateIonization(
         students: List<StudentUiItem>,
@@ -100,6 +122,10 @@ object GhostIonEngine {
 
     /**
      * Utility to get battery temperature from the system.
+     *
+     * This uses the [Intent.ACTION_BATTERY_CHANGED] sticky intent.
+     *
+     * @return Temperature in Celsius.
      */
     fun getBatteryTemperature(context: Context): Float {
         val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -109,6 +135,8 @@ object GhostIonEngine {
 
     /**
      * Calculates the global "Ion Balance" of the classroom.
+     *
+     * This averages the individual charges to determine the overall "Atmospheric Charge."
      *
      * BOLT: Use manual loop to avoid intermediate list allocation from map().
      */

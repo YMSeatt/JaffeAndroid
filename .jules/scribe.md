@@ -31,3 +31,8 @@
 - **Spatio-temporal Inversion**: `GhostCatalystEngine` processes DESC-sorted database logs in reverse to scan chronologically, identifying localized chain reactions within a 300s/800-unit window.
 - **Normalization**: Macroscopic metrics like "Reaction Rate" are normalized to a 5-minute window for cross-classroom comparison.
 - **Activation Energy**: This heuristic represents the classroom's "resistance" to social volatility. High global frequency (engagement) lowers the activation energy required for a chain reaction.
+
+### 8. Ghost Ion "Neural Ionization"
+- **Thermal Correlation**: The engine uses hardware battery temperature as a proxy for classroom "energy." A 0.3x density boost is applied when the battery temperature rises above 25°C, simulating a "heated" atmosphere.
+- **Charge Polarity**: Behavior logs are mapped to an electrostatic charge. "Participating" and "Positive" logs are cationic (+), while "Disruptive" and "Negative" logs are anionic (-).
+- **GPU Batching**: To avoid hitting the JNI overhead of multiple `setFloatUniform` calls, all 10 student ion points are batched into a single `float4 iPoints[10]` array.
