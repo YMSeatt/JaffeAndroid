@@ -31,9 +31,23 @@ fun GhostAdaptiveLayer(
     val shader = remember { RuntimeShader(GhostAdaptiveShader.ADAPTIVE_HEATMAP) }
     val brush = remember { ShaderBrush(shader) }
 
-    // BOLT: Reusable buffer for packed point uniforms to avoid per-frame allocations.
-    // 25 points * 4 components (x, y, density, padding) = 100 floats
-    val pointsBuffer = remember { FloatArray(100) }
+    // BOLT: Reusable buffer for packed point uniforms and zone count to avoid per-frame allocations.
+    // 25 points * 4 components (x, y, density, padding) = 100 floats.
+    // Hoisted into remember(zones) to ensure expensive sorting and buffer population
+    // only occur when the underlying data changes, maintaining 60fps during animations.
+    val (pointsBuffer, activeZoneCount) = remember(zones) {
+        val buffer = FloatArray(100)
+        // Only pass the top 25 high-density zones to stay within AGSL uniform limits
+        val topZones = zones.sortedByDescending { it.density }.take(25)
+        for (i in topZones.indices) {
+            val zone = topZones[i]
+            buffer[i * 4] = zone.centerX
+            buffer[i * 4 + 1] = zone.centerY
+            buffer[i * 4 + 2] = zone.density
+            buffer[i * 4 + 3] = 0f // Padding
+        }
+        buffer to topZones.size
+    }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val width = size.width
@@ -42,18 +56,9 @@ fun GhostAdaptiveLayer(
         shader.setFloatUniform("iResolution", width, height)
         shader.setFloatUniform("iTime", time)
 
-        // Only pass the top 25 high-density zones to stay within AGSL uniform limits
-        val topZones = zones.sortedByDescending { it.density }.take(25)
-        topZones.forEachIndexed { i, zone ->
-            pointsBuffer[i * 4] = zone.centerX
-            pointsBuffer[i * 4 + 1] = zone.centerY
-            pointsBuffer[i * 4 + 2] = zone.density
-            pointsBuffer[i * 4 + 3] = 0f // Padding
-        }
-
-        // BOLT: setFloatUniform with float array for uniform float4 array[25]
+        // BOLT: setFloatUniform with pre-calculated buffer to eliminate per-frame JNI and sorting overhead
         shader.setFloatUniform("iDensityPoints", pointsBuffer)
-        shader.setIntUniform("iPointCount", topZones.size)
+        shader.setIntUniform("iPointCount", activeZoneCount)
 
         drawRect(brush = brush)
     }

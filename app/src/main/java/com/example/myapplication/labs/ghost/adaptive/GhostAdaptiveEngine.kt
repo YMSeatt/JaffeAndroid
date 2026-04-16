@@ -47,7 +47,9 @@ object GhostAdaptiveEngine {
         if (students.isEmpty()) return emptyList()
 
         // 1. Accumulate density
-        students.forEach { student ->
+        // BOLT: Manual loop to avoid iterator allocation in high-frequency engine
+        for (i in students.indices) {
+            val student = students[i]
             val x = student.xPosition.value.coerceIn(0f, CANVAS_SIZE - 1f)
             val y = student.yPosition.value.coerceIn(0f, CANVAS_SIZE - 1f)
             val gx = (x / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
@@ -57,14 +59,11 @@ object GhostAdaptiveEngine {
             grid[gy * GRID_SIZE + gx] += 1.0f
 
             // Soften the density by contributing to neighbors (simple blur)
-            val neighbors = listOf(
-                gx - 1 to gy, gx + 1 to gy, gx to gy - 1, gx to gy + 1
-            )
-            neighbors.forEach { (nx, ny) ->
-                if (nx in 0 until GRID_SIZE && ny in 0 until GRID_SIZE) {
-                    grid[ny * GRID_SIZE + nx] += 0.3f
-                }
-            }
+            // BOLT: Direct bounds checking to eliminate neighbor list allocation
+            if (gx > 0) grid[gy * GRID_SIZE + (gx - 1)] += 0.3f
+            if (gx < GRID_SIZE - 1) grid[gy * GRID_SIZE + (gx + 1)] += 0.3f
+            if (gy > 0) grid[(gy - 1) * GRID_SIZE + gx] += 0.3f
+            if (gy < GRID_SIZE - 1) grid[(gy + 1) * GRID_SIZE + gx] += 0.3f
         }
 
         // 2. Normalize and create zones
@@ -102,15 +101,22 @@ object GhostAdaptiveEngine {
         zones: List<DensityZone>
     ): List<AdaptiveMove> {
         val proposals = mutableListOf<AdaptiveMove>()
-        val densityMap = zones.associateBy { it.gridX to it.gridY }
+        // BOLT: Use a flat FloatArray for density lookup instead of a Map with Pair keys
+        // to eliminate thousands of object allocations (Pair, Map.Entry, etc.).
+        val densityGrid = FloatArray(GRID_SIZE * GRID_SIZE)
+        for (i in zones.indices) {
+            val zone = zones[i]
+            densityGrid[zone.gridY * GRID_SIZE + zone.gridX] = zone.density
+        }
 
-        students.forEach { student ->
+        for (i in students.indices) {
+            val student = students[i]
             val x = student.xPosition.value
             val y = student.yPosition.value
             val gx = (x / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
             val gy = (y / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
 
-            val currentDensity = densityMap[gx to gy]?.density ?: 0f
+            val currentDensity = densityGrid[gy * GRID_SIZE + gx]
 
             // Only suggest moves for students in high-pressure areas (> 0.7 density)
             if (currentDensity > 0.7f) {
@@ -124,7 +130,7 @@ object GhostAdaptiveEngine {
                         if (dx == 0 && dy == 0) continue
                         val nx = (gx + dx).coerceIn(0, GRID_SIZE - 1)
                         val ny = (gy + dy).coerceIn(0, GRID_SIZE - 1)
-                        val nDensity = densityMap[nx to ny]?.density ?: 0f
+                        val nDensity = densityGrid[ny * GRID_SIZE + nx]
 
                         if (nDensity < minDensity) {
                             minDensity = nDensity

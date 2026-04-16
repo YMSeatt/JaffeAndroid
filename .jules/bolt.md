@@ -54,3 +54,11 @@
     - Pre-allocated and `remember`ed `FloatArray` buffers (e.g., `nodeData` in Tectonics) and ensured they are reset via `fill(0f)` to prevent stale data artifacts.
     - Replaced `forEach` student loops with manual index-based `for` loops in high-frequency projection code.
 - **Impact:** Significant reduction in frame-time jitter and GC pressure during experimental mode activation, ensuring smooth 60fps interaction even with complex AGSL visualizers.
+
+## Ghost Adaptive UI Allocation and Redrawing Optimization
+- **Discovery:** `GhostAdaptiveEngine` was allocating a `neighbors` list and using `students.forEach` (iterator) for every student in its density calculation. `proposeAdaptiveLayout` was creating a `Map` with `Pair` keys for density lookups, leading to thousands of object allocations during pressure analysis. In the UI layer, `GhostAdaptiveLayer` was performing expensive sorting and uniform buffer population on every 60fps frame inside the `Canvas` draw pass.
+- **Fix:**
+    - Refactored `calculateDensityMetrics` to use manual index loops and direct bounds checking for cardinal neighbors, eliminating per-student list allocations.
+    - Optimized `proposeAdaptiveLayout` to use a flat `FloatArray` for O(1) primitive density lookups, removing `Pair` and `Map.Entry` overhead.
+    - Hoisted sorting and uniform buffer preparation in `GhostAdaptiveLayer` into a `remember(zones)` block to ensure they only run when data changes.
+- **Impact:** Eliminated per-frame and per-student allocations in the Adaptive UI engine and significantly reduced CPU/JNI overhead in the drawing pass, ensuring smooth 60fps performance even during heavy classroom activity.
