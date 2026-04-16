@@ -1698,8 +1698,13 @@ fun SeatingChartScreen(
                             }
                             "NEURAL_DOSSIER" -> {
                                 selectedStudentUiItemForAction?.let { student ->
-                                    GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
-                                    Toast.makeText(context, "Neural Dossier Generated for ${student.fullName.value}", Toast.LENGTH_SHORT).show()
+                                    val dossier = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "Neural Dossier: ${student.fullName.value}")
+                                        putExtra(Intent.EXTRA_TEXT, dossier)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
                                 }
                             }
                             "EDIT_STUDENT" -> {
