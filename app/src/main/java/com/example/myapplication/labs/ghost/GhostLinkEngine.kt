@@ -45,10 +45,18 @@ object GhostLinkEngine {
             "Phase 3: Predicting Academic Synergy with neighboring nodes."
         )
 
+        // PRIVACY: Mask the student name in the report content (e.g., "John Doe" -> "J. DOE")
+        val nameParts = studentName.trim().split(" ")
+        val maskedName = if (nameParts.size >= 2) {
+            "${nameParts.first().take(1)}. ${nameParts.last()}"
+        } else {
+            studentName
+        }.uppercase(Locale.US)
+
         val report = StringBuilder()
-        report.append("# \uD83D\uDC7B GHOST NEURAL DOSSIER: ${studentName.uppercase(Locale.US)}\n")
+        report.append("# \uD83D\uDC7B GHOST NEURAL DOSSIER: $maskedName\n")
         report.append("**Status:** Teleported via Ghost Portal\n")
-        report.append("**Internal ID:** $studentId\n")
+        // PRIVACY: Removed Internal ID to prevent leaking database state
         report.append("**Analysis Timestamp:** $timestamp\n\n")
         report.append("---\n\n")
 
