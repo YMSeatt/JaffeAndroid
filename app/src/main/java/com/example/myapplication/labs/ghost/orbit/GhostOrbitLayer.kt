@@ -60,11 +60,6 @@ fun GhostOrbitLayer(
         GhostOrbitEngine.calculateOrbitalParameters(students, behaviorLogs)
     }
 
-    // BOLT: Lightweight position updates run every frame.
-    val orbitalStates = remember(orbitalParams, time) {
-        GhostOrbitEngine.updateOrbitalStates(orbitalParams, time)
-    }
-
     val nebulaShader = remember { RuntimeShader(GhostOrbitShader.NEURAL_NEBULA) }
     val nebulaBrush = remember(nebulaShader) { ShaderBrush(nebulaShader) }
 
@@ -93,30 +88,41 @@ fun GhostOrbitLayer(
         drawRect(brush = nebulaBrush)
 
         // 2. Draw Orbital Paths and Student "Planets"
-        orbitalStates.forEach { state ->
+        val scaleX = size.width / 4000f
+        val scaleY = size.height / 4000f
+        val twoPi = 2f * PI.toFloat()
+
+        for (i in orbitalParams.indices) {
+            val p = orbitalParams[i]
+
+            // BOLT: Calculate orbital position on-the-fly to eliminate per-frame allocations
+            val angle = (time * p.speed + (p.studentId * 0.785f)) % twoPi
+            val orbitalX = p.centerX + cos(angle) * p.radius
+            val orbitalY = p.centerY + sin(angle) * p.radius
+
             // Scale logical classroom coordinates (4000x4000) to screen coordinates
-            val screenX = (state.x / 4000f) * size.width
-            val screenY = (state.y / 4000f) * size.height
-            val centerX = (state.centerX / 4000f) * size.width
-            val centerY = (state.centerY / 4000f) * size.height
+            val screenX = orbitalX * scaleX
+            val screenY = orbitalY * scaleY
+            val centerX = p.centerX * scaleX
+            val centerY = p.centerY * scaleY
 
             // Draw orbital path
             drawCircle(
-                color = Color.Cyan.copy(alpha = 0.05f * state.energy),
-                radius = (state.radius / 4000f) * size.width,
+                color = Color.Cyan.copy(alpha = 0.05f * p.energy),
+                radius = p.radius * scaleX,
                 center = Offset(centerX, centerY),
                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2f)
             )
 
             // Draw Student Node (Planet)
             drawCircle(
-                color = if (state.stability > 0.7f) Color.Green else Color.Red,
-                radius = 15f + (state.energy * 10f),
+                color = if (p.stability > 0.7f) Color.Green else Color.Red,
+                radius = 15f + (p.energy * 10f),
                 center = Offset(screenX, screenY)
             )
 
             // Optional: Draw a "Moon" for recent logs
-            if (state.energy > 0.5f) {
+            if (p.energy > 0.5f) {
                 val moonAngle = time * 5f
                 val moonX = screenX + 40f * cos(moonAngle)
                 val moonY = screenY + 40f * sin(moonAngle)

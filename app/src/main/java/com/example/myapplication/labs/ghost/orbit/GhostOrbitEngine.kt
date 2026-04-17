@@ -59,35 +59,61 @@ object GhostOrbitEngine {
         students: List<StudentUiItem>,
         behaviorLogs: List<BehaviorEvent>
     ): List<OrbitalParameters> {
+        val logsByStudent = behaviorLogs.groupBy { it.studentId }
+        return calculateOrbitalParameters(students, logsByStudent)
+    }
+
+    /**
+     * BOLT: Optimized overload accepting pre-grouped logs to avoid O(L) grouping.
+     * Uses manual index loops and pre-allocated buffers to minimize allocations.
+     */
+    fun calculateOrbitalParameters(
+        students: List<StudentUiItem>,
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>
+    ): List<OrbitalParameters> {
         if (students.isEmpty()) return emptyList()
 
-        // O(L) grouping
-        val logsByStudent = behaviorLogs.groupBy { it.studentId }
         val currentTime = System.currentTimeMillis()
         val windowMillis = 3600_000L
 
         // Identify "Social Suns" - O(S)
-        val suns = students.filter { student ->
-            val logs = logsByStudent[student.id.toLong()] ?: emptyList()
-            // Single-pass count
+        val sunCountThreshold = 5
+        val sunsX = FloatArray(students.size)
+        val sunsY = FloatArray(students.size)
+        val sunsIds = IntArray(students.size)
+        var sunCount = 0
+
+        for (i in students.indices) {
+            val student = students[i]
+            val logs = behaviorLogsByStudent[student.id.toLong()] ?: continue
+
             var posCount = 0
-            for (log in logs) {
-                if (!log.type.contains("Negative", ignoreCase = true)) {
+            for (j in logs.indices) {
+                if (!logs[j].type.contains("Negative", ignoreCase = true)) {
                     posCount++
                 }
             }
-            posCount > 5
+            if (posCount > sunCountThreshold) {
+                sunsX[sunCount] = student.xPosition.value
+                sunsY[sunCount] = student.yPosition.value
+                sunsIds[sunCount] = student.id
+                sunCount++
+            }
         }
 
-        return students.map { student ->
+        val results = ArrayList<OrbitalParameters>(students.size)
+
+        for (i in students.indices) {
+            val student = students[i]
             val studentId = student.id.toLong()
-            val logs = logsByStudent[studentId] ?: emptyList()
+            val logs = behaviorLogsByStudent[studentId] ?: emptyList()
 
             // Single-pass metrics calculation
             var recentCount = 0
             var posCount = 0
             var negCount = 0
-            for (log in logs) {
+            for (j in logs.indices) {
+                val log = logs[j]
                 if (currentTime - log.timestamp < windowMillis) {
                     recentCount++
                 }
@@ -114,40 +140,39 @@ object GhostOrbitEngine {
             val energy = (totalCount.toFloat() / 10f).coerceIn(0.2f, 1.0f)
 
             // Calculate center based on nearest Sun
-            val center = if (suns.isNotEmpty()) {
-                var nearestSun: StudentUiItem? = null
-                var minDistSq = Float.MAX_VALUE
+            var centerX = 2000f
+            var centerY = 2000f
 
-                for (sun in suns) {
-                    if (sun.id == student.id) continue
-                    val dx = sun.xPosition.value - student.xPosition.value
-                    val dy = sun.yPosition.value - student.yPosition.value
+            if (sunCount > 0) {
+                var minDistSq = Float.MAX_VALUE
+                val sX = student.xPosition.value
+                val sY = student.yPosition.value
+
+                for (j in 0 until sunCount) {
+                    if (sunsIds[j] == student.id) continue
+                    val dx = sunsX[j] - sX
+                    val dy = sunsY[j] - sY
                     val d2 = dx * dx + dy * dy
                     if (d2 < minDistSq) {
                         minDistSq = d2
-                        nearestSun = sun
+                        centerX = sunsX[j]
+                        centerY = sunsY[j]
                     }
                 }
-
-                if (nearestSun != null) {
-                    nearestSun.xPosition.value to nearestSun.yPosition.value
-                } else {
-                    2000f to 2000f
-                }
-            } else {
-                2000f to 2000f // Classroom logical center
             }
 
-            OrbitalParameters(
+            results.add(OrbitalParameters(
                 studentId = studentId,
-                centerX = center.first,
-                centerY = center.second,
+                centerX = centerX,
+                centerY = centerY,
                 speed = baseSpeed,
                 radius = baseRadius,
                 energy = energy,
                 stability = stability
-            )
+            ))
         }
+
+        return results
     }
 
     /**
