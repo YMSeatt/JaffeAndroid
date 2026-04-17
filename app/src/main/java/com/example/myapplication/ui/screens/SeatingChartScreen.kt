@@ -1698,10 +1698,20 @@ fun SeatingChartScreen(
                             }
                             "NEURAL_DOSSIER" -> {
                                 selectedStudentUiItemForAction?.let { student ->
-                                    val dossier = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), student.fullName.value)
+                                    val fullName = student.fullName.value
+                                    val dossier = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), fullName)
+
+                                    // PRIVACY: Mask the student name in the intent subject (e.g., "J. DOE")
+                                    val nameParts = fullName.trim().split(" ")
+                                    val maskedName = if (nameParts.size >= 2) {
+                                        "${nameParts.first().take(1)}. ${nameParts.last()}"
+                                    } else {
+                                        fullName
+                                    }.uppercase(java.util.Locale.US)
+
                                     val intent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"
-                                        putExtra(Intent.EXTRA_SUBJECT, "Neural Dossier: ${student.fullName.value}")
+                                        putExtra(Intent.EXTRA_SUBJECT, "Neural Dossier: $maskedName")
                                         putExtra(Intent.EXTRA_TEXT, dossier)
                                     }
                                     context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
