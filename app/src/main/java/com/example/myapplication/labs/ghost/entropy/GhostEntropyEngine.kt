@@ -44,8 +44,13 @@ object GhostEntropyEngine {
      * Calculates the Shannon Entropy of behavior types for a student.
      * Ported to Python/ghost_entropy_analyzer.py.
      *
+     * This measures the "unpredictability" of a student's behavior. A student who
+     * consistently exhibits only one type of behavior has 0 entropy, while a student
+     * with a perfectly even distribution of many different behaviors has high entropy.
+     *
      * BOLT: Refactored to accept pre-calculated counts to eliminate redundant log
-     * traversals in the background update pipeline.
+     * traversals in the background update pipeline, achieving O(1) performance
+     * relative to the number of logs.
      *
      * @param typeCounts Map of behavior type names to their occurrence counts.
      * @param totalLogs Total number of behavioral logs for the student.
@@ -70,7 +75,12 @@ object GhostEntropyEngine {
     /**
      * Calculates the normalized variance of academic performance.
      *
-     * BOLT: Refactored to accept pre-calculated statistical moments.
+     * Variance is a measure of how spread out the student's quiz scores are.
+     * High variance suggests inconsistent academic performance (e.g., alternating
+     * between 0% and 100%).
+     *
+     * BOLT: Refactored to accept pre-calculated statistical moments (sum and sum of squares)
+     * to allow O(1) calculation during the background update pipeline.
      *
      * @param sum Sum of quiz score ratios (markValue / maxMarkValue).
      * @param sumSq Sum of squares of quiz score ratios.

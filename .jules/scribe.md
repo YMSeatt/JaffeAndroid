@@ -36,3 +36,8 @@
 - **Thermal Correlation**: The engine uses hardware battery temperature as a proxy for classroom "energy." A 0.3x density boost is applied when the battery temperature rises above 25°C, simulating a "heated" atmosphere.
 - **Charge Polarity**: Behavior logs are mapped to an electrostatic charge. "Participating" and "Positive" logs are cationic (+), while "Disruptive" and "Negative" logs are anionic (-).
 - **GPU Batching**: To avoid hitting the JNI overhead of multiple `setFloatUniform` calls, all 10 student ion points are batched into a single `float4 iPoints[10]` array.
+
+### 9. Ghost Entropy "Neural Turbulence"
+- **The "First-20" Tradeoff**: `GhostEntropyLayer` only samples the first 20 students to calculate the global distortion intensity. This is a deliberate performance cap to ensure 60fps on mid-range hardware.
+- **Academic Normalization**: The variance normalization uses a 4.0x multiplier because the maximum possible variance of a value in the range [0, 1] is 0.25.
+- **Shannon Normalization**: Behavioral entropy is normalized against `ln(5)`, assuming a maximum of 5 distinct behavior types in the standard classroom log schema.

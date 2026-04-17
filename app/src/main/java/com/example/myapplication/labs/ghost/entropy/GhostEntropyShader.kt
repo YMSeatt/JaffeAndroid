@@ -17,11 +17,17 @@ object GhostEntropyShader {
         uniform float iEntropy; // 0.0 to 1.0
         uniform shader contents;
 
-        // Simplex noise-like function for procedural turbulence
+        /**
+         * Simplex noise-like function for procedural turbulence.
+         * Uses a pseudo-random hash to generate non-periodic fluctuations.
+         */
         float hash(float2 p) {
             return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453123);
         }
 
+        /**
+         * Bilinear noise function for smooth gradients.
+         */
         float noise(float2 p) {
             float2 i = floor(p);
             float2 f = fract(p);
@@ -34,7 +40,11 @@ object GhostEntropyShader {
             // Normalize coordinates
             float2 uv = fragCoord / iResolution.xy;
 
-            // Apply entropy-driven thermal distortion
+            /**
+             * Apply entropy-driven thermal distortion.
+             * The intensity of the UV offset is directly proportional to iEntropy,
+             * creating a "shimmer" effect that scales with neural turbulence.
+             */
             float distortionIntensity = iEntropy * 0.05;
             float speed = 5.0;
             float frequency = 20.0;
