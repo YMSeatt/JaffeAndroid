@@ -52,6 +52,10 @@ fun GhostEntropyLayer(
 
     // BOLT: Entropy is now pre-calculated in the SeatingChartViewModel's memoized Stage 2
     // and synced to StudentUiItem, eliminating the redundant O(N*L) calculation here.
+    //
+    // PERFORMANCE: To maintain 60fps on low-end devices, we only sample the entropy
+    // of the first 20 students to determine the global distortion magnitude. This
+    // O(min(N, 20)) tradeoff prevents the UI thread from stalling in large classrooms.
     val maxEntropy = remember(students) {
         var maxE = 0f
         for (i in 0 until students.size.coerceAtMost(20)) {
