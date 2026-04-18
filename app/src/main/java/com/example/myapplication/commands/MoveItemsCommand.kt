@@ -42,8 +42,8 @@ enum class ItemType { STUDENT, FURNITURE }
  * @param moves A list of [ItemMove] objects describing the changes to be applied.
  */
 class MoveItemsCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val moves: List<ItemMove>
+    internal val viewModel: SeatingChartViewModel,
+    internal val moves: List<ItemMove>
 ) : Command {
     override suspend fun execute() {
         val studentUpdates = moves.filter { it.itemType == ItemType.STUDENT }

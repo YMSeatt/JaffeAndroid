@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: "Ghost Memento" - Persistent Undo/Redo across app restarts using DataStore.
 
 ## 🚧 Active Construction
+  - [DONE] Task: "Ghost Memento" - Persistent Undo/Redo across app restarts using DataStore.
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-04-09: Ghost Memento - Persistent state engine for undo/redo history in `/labs/ghost/memento/`
 - [DONE] 2028-04-06: Ghost Relay - Integrated Android Share Sheet for Neural Dossiers in `SeatingChartScreen.kt`
 - [DONE] 2028-04-05: Ghost Student Hub - Per-student radial quick-action menu in `/labs/ghost/hub/GhostStudentHubLayer.kt`
 - [DONE] 2028-04-01: Ghost Chroma - Material You & Neural Theme Engine in `/labs/ghost/util/GhostChroma.kt`

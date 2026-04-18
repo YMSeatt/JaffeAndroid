@@ -168,4 +168,7 @@ object GhostConfig {
 
     /** Enables the Ghost Adaptive UI density-aware layout optimization. */
     const val ADAPTIVE_MODE_ENABLED = true
+
+    /** Enables "Ghost Memento" persistent undo/redo history. */
+    const val MEMENTO_MODE_ENABLED = true
 }

@@ -11,10 +11,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param log The [HomeworkLog] to be recorded.
  */
 class LogHomeworkCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val log: HomeworkLog
+    internal val viewModel: SeatingChartViewModel,
+    internal val log: HomeworkLog
 ) : Command {
-    private var generatedId: Long = log.id
+    internal var generatedId: Long = log.id
 
     override suspend fun execute() {
         val logToInsert = if (generatedId != 0L) log.copy(id = generatedId) else log

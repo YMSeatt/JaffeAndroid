@@ -11,8 +11,8 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param student The [Student] entity to be deleted.
  */
 class DeleteStudentCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val student: Student
+    internal val viewModel: SeatingChartViewModel,
+    internal val student: Student
 ) : Command {
     override suspend fun execute() {
         viewModel.internalDeleteStudent(student)

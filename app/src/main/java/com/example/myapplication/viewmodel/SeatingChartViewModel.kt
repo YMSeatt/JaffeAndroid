@@ -91,6 +91,10 @@ import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.util.SecurityUtil
+import com.example.myapplication.labs.ghost.memento.GhostMementoStore
+import com.example.myapplication.labs.ghost.memento.GhostMementoMapper
+import com.example.myapplication.labs.ghost.memento.MementoHistory
+import com.example.myapplication.labs.ghost.GhostConfig
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -155,6 +159,8 @@ class SeatingChartViewModel @Inject constructor(
     private val guideDao: GuideDao,
     private val appPreferencesRepository: AppPreferencesRepository,
     private val securityUtil: SecurityUtil,
+    private val ghostMementoStore: GhostMementoStore,
+    private val ghostMementoMapper: GhostMementoMapper,
     private val application: Application
 ) : ViewModel() {
 
@@ -316,6 +322,21 @@ class SeatingChartViewModel @Inject constructor(
             list.add(iterator.next())
         }
         _undoStackState.value = list
+
+        // Ghost Memento: Persist state changes to DataStore
+        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MEMENTO_MODE_ENABLED) {
+            viewModelScope.launch(Dispatchers.IO) {
+                // Limit history to 50 items to prevent DataStore bloat.
+                // commandUndoStack is an ArrayDeque where 'push' adds to the front (newest first).
+                // We want to save the 50 newest commands in oldest-to-newest order for restoration.
+                val undoList = commandUndoStack.take(50).reversed()
+                val redoList = commandRedoStack.take(50).reversed()
+
+                val undoMemento = undoList.mapNotNull { ghostMementoMapper.toMemento(it) }
+                val redoMemento = redoList.mapNotNull { ghostMementoMapper.toMemento(it) }
+                ghostMementoStore.saveHistory(MementoHistory(undoMemento, redoMemento))
+            }
+        }
     }
     /**
      * Stores optimistic student positions during drag operations.
@@ -524,6 +545,29 @@ class SeatingChartViewModel @Inject constructor(
         allCustomBehaviors = customBehaviorDao.getAllCustomBehaviors()
         allCustomHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypes()
         allSystemBehaviors = systemBehaviorDao.getAllSystemBehaviors().asLiveData()
+
+        // Ghost Memento: Restore command history from DataStore
+        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MEMENTO_MODE_ENABLED) {
+            viewModelScope.launch {
+                val history = ghostMementoStore.commandHistoryFlow.first()
+                if (history.undoStack.isNotEmpty() || history.redoStack.isNotEmpty()) {
+                    // Memento stacks are saved in oldest-to-newest order.
+                    // To restore the ArrayDeque (where newest is at the front), we add them to the end.
+                    history.undoStack.forEach { memento ->
+                        ghostMementoMapper.fromMemento(memento, this@SeatingChartViewModel)?.let {
+                            commandUndoStack.addLast(it)
+                        }
+                    }
+                    history.redoStack.forEach { memento ->
+                        ghostMementoMapper.fromMemento(memento, this@SeatingChartViewModel)?.let {
+                            commandRedoStack.addLast(it)
+                        }
+                    }
+                    updateUndoStackState()
+                    Log.d("GhostMemento", "Restored ${commandUndoStack.size} undo and ${commandRedoStack.size} redo commands.")
+                }
+            }
+        }
 
 
         // Wire up MediatorLiveData sources.
