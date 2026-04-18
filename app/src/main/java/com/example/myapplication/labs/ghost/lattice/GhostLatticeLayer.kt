@@ -22,10 +22,18 @@ import com.example.myapplication.labs.ghost.GhostConfig
  *
  * BOLT: Optimized to receive pre-calculated [edges] from background pipeline.
  *
+ * ### Performance Design:
+ * - **Shader Pooling**: Reuses `RuntimeShader` instances to avoid the overhead of native object
+ *   re-allocation and the "Uniform Overwrite" bug in rapid Draw passes.
+ * - **Bounding Box Clipping**: Instead of drawing a full-screen Canvas for every edge, this
+ *   layer calculates a tight `drawRect` around each connection line to minimize fragment shader
+ *   work and pixel-fill pressure.
+ *
  * @param students The list of student UI items, providing current positions and dimensions.
  * @param edges Pre-calculated social connection edges.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan offset of the seating chart.
+ * @param modifier The modifier to apply to the [Canvas].
  */
 @Composable
 fun GhostLatticeLayer(
