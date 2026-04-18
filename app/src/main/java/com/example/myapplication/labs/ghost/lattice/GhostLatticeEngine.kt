@@ -28,6 +28,8 @@ import kotlin.random.Random
  *    heuristic to infer collaboration, this Android engine uses a deterministic [Random] seed (42)
  *    combined with log density. This ensures consistent visual results during Proof-of-Concept
  *    while avoiding name-based assumptions that may not hold true in all cultures.
+ * 3. **Connection Cap**: To maintain 60fps stability and prevent JNI/Shader overhead, the engine
+ *    limits the lattice to **50 edges** per frame.
  */
 object GhostLatticeEngine {
 
@@ -202,6 +204,10 @@ object GhostLatticeEngine {
 
     /**
      * Compatibility overload for legacy callers.
+     *
+     * @param nodes The list of spatial student representations.
+     * @param events The full stream of behavioral events.
+     * @return A list of inferred [Edge] connections.
      */
     fun computeLattice(nodes: List<LatticeNode>, events: List<BehaviorEvent>): List<Edge> {
         val negativeCounts = mutableMapOf<Long, Int>()
