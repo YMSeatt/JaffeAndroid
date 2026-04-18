@@ -11,10 +11,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param student The [Student] entity to be added.
  */
 class AddStudentCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val student: Student
+    internal val viewModel: SeatingChartViewModel,
+    internal val student: Student
 ) : Command {
-    private var generatedId: Long = student.id
+    internal var generatedId: Long = student.id
 
     override suspend fun execute() {
         val studentToInsert = if (generatedId != 0L) student.copy(id = generatedId) else student

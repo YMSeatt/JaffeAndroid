@@ -15,8 +15,8 @@ package com.example.myapplication.commands
  * @param description A human-readable description of the bulk action (e.g., "Align 5 Items").
  */
 class CompositeCommand(
-    private val commands: List<Command>,
-    private val description: String
+    internal val commands: List<Command>,
+    internal val description: String
 ) : Command {
     override suspend fun execute() {
         commands.forEach { it.execute() }

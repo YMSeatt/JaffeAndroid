@@ -13,10 +13,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param newPosition The position after the move.
  */
 class MoveGuideCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val guide: Guide,
-    private val oldPosition: Float,
-    private val newPosition: Float
+    internal val viewModel: SeatingChartViewModel,
+    internal val guide: Guide,
+    internal val oldPosition: Float,
+    internal val newPosition: Float
 ) : Command {
     override suspend fun execute() {
         viewModel.internalUpdateGuide(guide.copy(position = newPosition))

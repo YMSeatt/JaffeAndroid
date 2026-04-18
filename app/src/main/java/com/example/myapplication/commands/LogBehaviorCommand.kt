@@ -11,10 +11,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param event The [BehaviorEvent] to be recorded.
  */
 class LogBehaviorCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val event: BehaviorEvent
+    internal val viewModel: SeatingChartViewModel,
+    internal val event: BehaviorEvent
 ) : Command {
-    private var generatedId: Int = event.id
+    internal var generatedId: Int = event.id
 
     override suspend fun execute() {
         val eventToInsert = if (generatedId != 0) event.copy(id = generatedId) else event

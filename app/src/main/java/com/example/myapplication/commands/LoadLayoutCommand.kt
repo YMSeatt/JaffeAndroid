@@ -16,10 +16,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param oldFurniture List of furniture states before loading the layout.
  */
 class LoadLayoutCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val layout: LayoutTemplate,
-    private val oldStudents: List<Student>,
-    private val oldFurniture: List<Furniture>
+    internal val viewModel: SeatingChartViewModel,
+    internal val layout: LayoutTemplate,
+    internal val oldStudents: List<Student>,
+    internal val oldFurniture: List<Furniture>
 ) : Command {
     override suspend fun execute() {
         viewModel.internalLoadLayout(layout)
