@@ -253,6 +253,7 @@ fun SeatingChartScreen(
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
+    val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
@@ -985,8 +986,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FUTURE_MODE_ENABLED && isFutureActive) {
                 GhostFutureLayer(
                     students = students,
-                    historicalLogs = allBehaviorEvents,
-                    prophecies = allProphecies,
+                    futureEvents = futureEvents,
                     isFutureActive = isFutureActive,
                     canvasScale = scale,
                     canvasOffset = offset

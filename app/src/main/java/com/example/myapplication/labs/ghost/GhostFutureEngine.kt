@@ -29,22 +29,54 @@ object GhostFutureEngine {
         prophecies: List<GhostOracle.Prophecy>,
         hoursIntoFuture: Int = 1
     ): List<BehaviorEvent> {
-        val simulatedEvents = mutableListOf<BehaviorEvent>()
-        val currentTime = System.currentTimeMillis()
-        val random = Random(currentTime)
-
         // BOLT: O(L) grouping for O(1) lookup in the student loop.
         val logsByStudent = historicalLogs.groupBy { it.studentId }
         val propheciesByStudent = prophecies.groupBy { it.studentId }
 
-        students.forEach { student ->
-            val studentId = student.id.toLong()
+        val rawStudents = students.map { uiItem ->
+            com.example.myapplication.data.Student(
+                id = uiItem.id.toLong(),
+                firstName = uiItem.fullName.value.split(" ").firstOrNull() ?: "",
+                lastName = uiItem.fullName.value.split(" ").lastOrNull() ?: "",
+                xPosition = uiItem.xPosition.value,
+                yPosition = uiItem.yPosition.value
+            )
+        }
+
+        return generateFutureEvents(
+            students = rawStudents,
+            logsByStudent = logsByStudent,
+            propheciesByStudent = propheciesByStudent,
+            hoursIntoFuture = hoursIntoFuture
+        )
+    }
+
+    /**
+     * BOLT: High-performance overload that accepts pre-calculated log and prophecy maps
+     * to eliminate redundant O(L) allocations in high-frequency paths.
+     */
+    fun generateFutureEvents(
+        students: List<com.example.myapplication.data.Student>,
+        logsByStudent: Map<Long, List<BehaviorEvent>>,
+        propheciesByStudent: Map<Long, List<GhostOracle.Prophecy>>,
+        hoursIntoFuture: Int = 1
+    ): List<BehaviorEvent> {
+        val simulatedEvents = mutableListOf<BehaviorEvent>()
+        val currentTime = System.currentTimeMillis()
+        val random = Random(currentTime)
+
+        // BOLT: Replace functional forEach with manual index loops to minimize iterator churn.
+        val studentCount = students.size
+        for (i in 0 until studentCount) {
+            val student = students[i]
+            val studentId = student.id
             // Base probability of an event happening in the next hour
             var eventProbability = 0.2f
 
             // Influence from Prophecies - BOLT: O(1) lookup
             val studentProphecies = propheciesByStudent[studentId] ?: emptyList()
-            studentProphecies.forEach { prophecy ->
+            for (j in studentProphecies.indices) {
+                val prophecy = studentProphecies[j]
                 when (prophecy.type) {
                     GhostOracle.ProphecyType.SOCIAL_FRICTION -> eventProbability += 0.3f
                     GhostOracle.ProphecyType.ENGAGEMENT_DROP -> eventProbability += 0.1f
@@ -57,7 +89,8 @@ object GhostFutureEngine {
             // BOLT: Optimized count with manual loop over pre-grouped list
             val studentLogs = logsByStudent[studentId] ?: emptyList()
             var negativeCount = 0
-            for (log in studentLogs) {
+            for (k in studentLogs.indices) {
+                val log = studentLogs[k]
                 if (log.type.contains("Negative", ignoreCase = true)) {
                     negativeCount++
                 }
@@ -69,7 +102,15 @@ object GhostFutureEngine {
             for (h in 1..hoursIntoFuture) {
                 if (random.nextFloat() < eventProbability) {
                     // Determine event type
-                    val isNegative = if (studentProphecies.any { it.type == GhostOracle.ProphecyType.SOCIAL_FRICTION }) {
+                    var hasFriction = false
+                    for (m in studentProphecies.indices) {
+                        if (studentProphecies[m].type == GhostOracle.ProphecyType.SOCIAL_FRICTION) {
+                            hasFriction = true
+                            break
+                        }
+                    }
+
+                    val isNegative = if (hasFriction) {
                         random.nextFloat() < 0.7f // 70% chance of negative if friction is predicted
                     } else {
                         random.nextFloat() < 0.3f // 30% baseline negative chance
