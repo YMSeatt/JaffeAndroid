@@ -24,8 +24,7 @@ import com.example.myapplication.ui.model.StudentUiItem
 @Composable
 fun GhostFutureLayer(
     students: List<StudentUiItem>,
-    historicalLogs: List<BehaviorEvent>,
-    prophecies: List<GhostOracle.Prophecy>,
+    futureEvents: List<BehaviorEvent>,
     isFutureActive: Boolean,
     canvasScale: Float,
     canvasOffset: Offset,
@@ -44,16 +43,37 @@ fun GhostFutureLayer(
         label = "time"
     )
 
-    val simulatedEvents = remember(students, historicalLogs, prophecies) {
-        GhostFutureEngine.generateFutureEvents(students, historicalLogs, prophecies, hoursIntoFuture = 2)
-    }
-
     val futureShader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             RuntimeShader(GhostFutureShader.TEMPORAL_WARP)
         } else null
     }
     val futureBrush = remember(futureShader) { futureShader?.let { ShaderBrush(it) } }
+
+    // BOLT: Pre-index students for O(1) lookup in the Canvas draw pass.
+    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
+
+    // BOLT: Hoist constants and pre-calculate render metadata for simulated events
+    // to eliminate per-frame string parsing and unit conversions in the Canvas.
+    data class EventRenderData(
+        val studentId: Long,
+        val color: Color,
+        val timeSeed: Float
+    )
+    val eventMetadata = remember(futureEvents) {
+        val list = ArrayList<EventRenderData>(futureEvents.size)
+        for (i in futureEvents.indices) {
+            val event = futureEvents[i]
+            val type = event.type
+            val isNegative = type.contains("Disruptive") || type.contains("Conflict")
+            list.add(EventRenderData(
+                studentId = event.studentId,
+                color = if (isNegative) Color.Magenta else Color.Cyan,
+                timeSeed = event.timestamp.toFloat()
+            ))
+        }
+        list
+    }
 
     Box(modifier = modifier.fillMaxSize()) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && futureShader != null && futureBrush != null) {
@@ -64,23 +84,26 @@ fun GhostFutureLayer(
 
                 drawRect(brush = futureBrush)
 
-                // Draw Predicted Events as floating nodes
-                simulatedEvents.forEach { event ->
-                    val student = students.find { it.id.toLong() == event.studentId } ?: return@forEach
+                // BOLT: Hoist DP conversions and reuse scaled metrics
+                val circleRadius = 12.dp.toPx() * canvasScale
+                val floatAmplitude = 40.dp.toPx() * canvasScale
 
+                // BOLT: Optimized drawing loop using manual indices and O(1) student lookups.
+                for (i in eventMetadata.indices) {
+                    val meta = eventMetadata[i]
+                    val student = studentMap[meta.studentId] ?: continue
+
+                    // Map student coordinates to screen space
                     val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
                     val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-                    val isNegative = event.type.contains("Simulated") &&
-                                   (event.type.contains("Disruptive") || event.type.contains("Conflict"))
-
-                    val color = if (isNegative) Color.Magenta else Color.Cyan
-                    val alpha = 0.4f + 0.2f * kotlin.math.sin(time * 5f + event.timestamp.toFloat())
+                    val alpha = 0.4f + 0.2f * kotlin.math.sin(time * 5f + meta.timeSeed)
+                    val floatingY = centerY + floatAmplitude * kotlin.math.sin(time + meta.timeSeed)
 
                     drawCircle(
-                        color = color.copy(alpha = alpha),
-                        radius = 12.dp.toPx() * canvasScale,
-                        center = Offset(centerX, centerY + 40.dp.toPx() * canvasScale * kotlin.math.sin(time + event.timestamp.toFloat()))
+                        color = meta.color.copy(alpha = alpha),
+                        radius = circleRadius,
+                        center = Offset(centerX, floatingY)
                     )
                 }
             }

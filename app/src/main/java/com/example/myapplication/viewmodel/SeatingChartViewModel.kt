@@ -282,6 +282,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
 
+    private val _futureEvents = MutableStateFlow<List<BehaviorEvent>>(emptyList())
+    /** BOLT: Simulated future events pre-calculated in background. */
+    val futureEvents: StateFlow<List<BehaviorEvent>> = _futureEvents.asStateFlow()
+
     private val _adaptiveZones = MutableStateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>>(emptyList())
     /** BOLT: Density zones pre-calculated in background. */
     val adaptiveZones: StateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>> = _adaptiveZones.asStateFlow()
@@ -379,6 +383,10 @@ class SeatingChartViewModel @Inject constructor(
 
     private var ghostMetricsCatalystStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsCatalystBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsFutureStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsFutureBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsFuturePropheciesRef: List<com.example.myapplication.labs.ghost.GhostOracle.Prophecy>? = null
 
     private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
 
@@ -981,6 +989,21 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsCatalystBehaviorLogsRef = behaviorEvents
                     ghostMetricsCatalystStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate simulated future events in the background pipeline (Memoized)
+                // Note: We use raw 'students' (not studentsForEngines) to keep the simulation stable during dragging.
+                if (behaviorEvents !== ghostMetricsFutureBehaviorLogsRef || students !== ghostMetricsFutureStudentsRef || memoizedProphecies !== ghostMetricsFuturePropheciesRef) {
+                    val propheciesByStudent = memoizedProphecies.groupBy { it.studentId }
+                    _futureEvents.value = com.example.myapplication.labs.ghost.GhostFutureEngine.generateFutureEvents(
+                        students = students,
+                        logsByStudent = behaviorLogsByStudent,
+                        propheciesByStudent = propheciesByStudent,
+                        hoursIntoFuture = 2
+                    )
+                    ghostMetricsFutureBehaviorLogsRef = behaviorEvents
+                    ghostMetricsFutureStudentsRef = students
+                    ghostMetricsFuturePropheciesRef = memoizedProphecies
                 }
 
                 val tectonicStressMap = ghostMetricsTectonicStressMapCache
