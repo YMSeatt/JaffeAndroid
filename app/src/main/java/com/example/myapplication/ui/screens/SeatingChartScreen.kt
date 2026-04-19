@@ -124,6 +124,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.silhouette.GhostSilhouetteLayer
 import com.example.myapplication.labs.ghost.ion.GhostIonLayer
 import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
@@ -255,6 +256,7 @@ fun SeatingChartScreen(
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
+    val draggingSilhouettes by seatingChartViewModel.draggingSilhouettes.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -302,6 +304,7 @@ fun SeatingChartScreen(
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
+    var isSilhouetteActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
     var activeGlanceStudentId by remember { mutableStateOf<Long?>(null) }
@@ -910,6 +913,12 @@ fun SeatingChartScreen(
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
             GhostAdaptiveLayer(zones = adaptiveZones, isActive = isAdaptiveActive)
+            GhostSilhouetteLayer(
+                silhouettes = draggingSilhouettes,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isSilhouetteActive
+            )
             GhostArchitectLayer(
                 students = students,
                 edges = latticeEdges,
@@ -2203,6 +2212,16 @@ fun SeatingChartTopAppBar(
                 }
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isSilhouetteActive) "Disable Neural Silhouette 👻" else "Ghost Silhouette 👻") },
+                            onClick = {
+                                isSilhouetteActive = !isSilhouetteActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
                         if (GhostConfig.FILTER_MODE_ENABLED) {
                             DropdownMenuItem(

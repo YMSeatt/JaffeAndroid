@@ -95,6 +95,7 @@ import com.example.myapplication.labs.ghost.memento.GhostMementoStore
 import com.example.myapplication.labs.ghost.memento.GhostMementoMapper
 import com.example.myapplication.labs.ghost.memento.MementoHistory
 import com.example.myapplication.labs.ghost.GhostConfig
+import com.example.myapplication.labs.ghost.silhouette.SilhouetteData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -295,6 +296,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _adaptiveZones = MutableStateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>>(emptyList())
     /** BOLT: Density zones pre-calculated in background. */
     val adaptiveZones: StateFlow<List<com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.DensityZone>> = _adaptiveZones.asStateFlow()
+
+    private val _draggingSilhouettes = MutableStateFlow<List<SilhouetteData>>(emptyList())
+    /** BOLT: Track active drag operations for Ghost Silhouettes. */
+    val draggingSilhouettes: StateFlow<List<SilhouetteData>> = _draggingSilhouettes.asStateFlow()
 
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
@@ -1841,6 +1846,31 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Records the start of a drag operation to render a Ghost Silhouette.
+     */
+    /**
+     * Records the start of a drag operation to render a Ghost Silhouette.
+     */
+    fun onStudentDragStarted(studentId: Int, x: Float, y: Float, width: Float, height: Float) {
+        if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.SILHOUETTE_MODE_ENABLED) return
+        val current = _draggingSilhouettes.value.toMutableList()
+        if (current.none { it.id == studentId }) {
+            current.add(SilhouetteData(studentId, x, y, width, height))
+            _draggingSilhouettes.value = current
+        }
+    }
+
+    /**
+     * Records the end or cancellation of a drag operation.
+     */
+    fun onStudentDragEnded(studentId: Int) {
+        val currentSilhouettes = _draggingSilhouettes.value.toMutableList()
+        if (currentSilhouettes.removeAll { it.id == studentId }) {
+            _draggingSilhouettes.value = currentSilhouettes
+        }
+    }
+
     fun updateStudentPosition(
         studentId: Int,
         oldX: Float,
@@ -1848,6 +1878,8 @@ class SeatingChartViewModel @Inject constructor(
         newX: Float,
         newY: Float
     ) {
+        onStudentDragEnded(studentId)
+
         viewModelScope.launch {
             val student = getStudentForEditing(studentId.toLong())
             if (student != null) {
