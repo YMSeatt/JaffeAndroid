@@ -29,8 +29,10 @@ fun GhostMagnetarLayer(
 
     val heading by engine.magneticHeading.collectAsState()
 
-    val dipoles = remember(students, behaviorLogs) {
-        engine.calculateDipoles(students, behaviorLogs)
+    val studentsToDisplay = remember(students) { students.take(15) }
+
+    val dipoles = remember(studentsToDisplay) {
+        engine.calculateDipoles(studentsToDisplay)
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "magnetarTime")
@@ -56,17 +58,15 @@ fun GhostMagnetarLayer(
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iHeading", heading)
 
-        val count = dipoles.take(15).size
+        val count = dipoles.size
         shader.setIntUniform("iDipoleCount", count)
 
-        dipoles.take(15).forEachIndexed { index, dipole ->
+        // BOLT: Use manual index loop to eliminate iterator and 'take' allocations in the draw pass.
+        for (index in 0 until count) {
+            val dipole = dipoles[index]
             // Map logical coordinates to screen space
-            val screenPos = Offset(
-                x = dipole.x * canvasScale + canvasOffset.x,
-                y = dipole.y * canvasScale + canvasOffset.y
-            )
-            posArray[index * 2] = screenPos.x
-            posArray[index * 2 + 1] = screenPos.y
+            posArray[index * 2] = dipole.x * canvasScale + canvasOffset.x
+            posArray[index * 2 + 1] = dipole.y * canvasScale + canvasOffset.y
             strengthArray[index] = dipole.strength
         }
 

@@ -73,41 +73,28 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     /**
-     * Calculates the magnetic dipoles for each student based on their behavioral history.
+     * BOLT: Refactored to accept pre-calculated log counts, eliminating O(B) grouping and allocations.
+     * Maps students to [MagneticDipole] instances using high-performance primitive calculations.
      */
     fun calculateDipoles(
-        students: List<StudentUiItem>,
-        behaviorLogs: List<BehaviorEvent>
+        students: List<StudentUiItem>
     ): List<MagneticDipole> {
-        val groupedLogs = behaviorLogs.groupBy { it.studentId }
-
-        return students.map { student ->
-            val sid = student.id.toLong()
-            val logs = groupedLogs[sid] ?: emptyList()
-
-            // Calculate polarity based on log counts
-            var northWeight = 0f
-            var southWeight = 0f
-
-            logs.forEach { log ->
-                if (log.type.contains("Positive", ignoreCase = true)) {
-                    northWeight += 1.0f
-                } else if (log.type.contains("Negative", ignoreCase = true)) {
-                    southWeight += 1.5f // Negative behaviors exert stronger "Social Gravity"
-                }
-            }
-
-            val strength = (northWeight - southWeight).coerceIn(-10f, 10f)
-            val radius = (abs(strength) * 50f + 100f).coerceIn(100f, 600f)
-
-            MagneticDipole(
-                studentId = sid,
-                x = student.xPosition.value,
-                y = student.yPosition.value,
-                strength = strength,
-                radius = radius
+        val dipoles = ArrayList<MagneticDipole>(students.size)
+        // BOLT: Use manual index loop to avoid iterator churn.
+        val count = students.size
+        for (i in 0 until count) {
+            val student = students[i]
+            dipoles.add(
+                MagneticDipole(
+                    studentId = student.id.toLong(),
+                    x = student.xPosition.value,
+                    y = student.yPosition.value,
+                    strength = student.magneticStrength.value,
+                    radius = student.magneticRadius.value
+                )
             )
         }
+        return dipoles
     }
 
     /**
@@ -122,12 +109,21 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
             "Bottom-Right" to (3000f to 3000f)
         )
 
-        val quadrantIntensities = quadrants.map { (name, pos) ->
+        val quadrantIntensities = ArrayList<FieldStrength>(quadrants.size)
+        val dCount = dipoles.size
+        var intensitySum = 0f
+
+        // BOLT: Reverted to for-in loop for the 4-quadrant list for clarity,
+        // while keeping the manual O(D) dipole loop for performance.
+        for (quadrant in quadrants) {
+            val (name, pos) = quadrant
             var fx = 0.0
             var fy = 0.0
-            val (qx, qy) = pos
+            val qx = pos.first
+            val qy = pos.second
 
-            dipoles.forEach { d ->
+            for (j in 0 until dCount) {
+                val d = dipoles[j]
                 val dx = (qx - d.x).toDouble()
                 val dy = (qy - d.y).toDouble()
                 val r2 = dx * dx + dy * dy + 100.0
@@ -139,11 +135,13 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
             }
 
             val totalStrength = Math.sqrt(fx * fx + fy * fy).toFloat()
-            FieldStrength(name, totalStrength)
+            quadrantIntensities.add(FieldStrength(name, totalStrength))
+            intensitySum += totalStrength
         }
 
+        // BOLT: Optimized avgIntensity calculation to avoid list allocations.
         val avgIntensity = if (quadrantIntensities.isNotEmpty()) {
-            quadrantIntensities.map { it.intensity }.average().toFloat()
+            intensitySum / quadrantIntensities.size
         } else 0f
 
         val status = when {
@@ -176,12 +174,16 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
         report.append("---\n\n")
 
         report.append("## [QUADRANT INTENSITY MAP]\n")
-        analysis.quadrantIntensities.forEach { q ->
+        val qIntensities = analysis.quadrantIntensities
+        for (i in qIntensities.indices) {
+            val q = qIntensities[i]
             report.append("- ${q.quadrantName}: ${String.format(java.util.Locale.US, "%.4f", q.intensity)} μG\n")
         }
 
         report.append("\n## [MAGNETIC POLARITY MAP]\n")
-        analysis.dipoles.forEach { d ->
+        val dipoles = analysis.dipoles
+        for (i in dipoles.indices) {
+            val d = dipoles[i]
             val name = studentNames[d.studentId] ?: "Student ${d.studentId}"
             val polarity = when {
                 d.strength > 0 -> "NORTH (+)"

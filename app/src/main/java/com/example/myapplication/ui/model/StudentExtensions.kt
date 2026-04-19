@@ -55,7 +55,9 @@ fun Student.toStudentUiItem(
     quasarEnergy: Float,
     quasarPolarity: Float,
     ionCharge: Float,
-    ionDensity: Float
+    ionDensity: Float,
+    magneticStrength: Float,
+    magneticRadius: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -90,7 +92,9 @@ fun Student.toStudentUiItem(
         quasarEnergy = mutableStateOf(quasarEnergy),
         quasarPolarity = mutableStateOf(quasarPolarity),
         ionCharge = mutableStateOf(ionCharge),
-        ionDensity = mutableStateOf(ionDensity)
+        ionDensity = mutableStateOf(ionDensity),
+        magneticStrength = mutableStateOf(magneticStrength),
+        magneticRadius = mutableStateOf(magneticRadius)
     )
 }
 
@@ -131,7 +135,9 @@ fun Student.updateStudentUiItem(
     quasarEnergy: Float,
     quasarPolarity: Float,
     ionCharge: Float,
-    ionDensity: Float
+    ionDensity: Float,
+    magneticStrength: Float,
+    magneticRadius: Float
 ) {
     updateIfChanged(item.fullName, "$firstName $lastName")
     updateIfChanged(item.nickname, nickname)
@@ -165,6 +171,8 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.quasarPolarity, quasarPolarity)
     updateIfChanged(item.ionCharge, ionCharge)
     updateIfChanged(item.ionDensity, ionDensity)
+    updateIfChanged(item.magneticStrength, magneticStrength)
+    updateIfChanged(item.magneticRadius, magneticRadius)
 }
 
 /**
