@@ -18,6 +18,9 @@ import com.example.myapplication.data.QuizLog
  */
 object GhostHelixEngine {
 
+    /**
+     * The constituent building blocks of a student's Neural DNA.
+     */
     enum class BasePairType {
         ADENINE,  // Positive Behavior
         THYMINE,  // Negative Behavior
@@ -25,12 +28,25 @@ object GhostHelixEngine {
         GUANINE   // Academic Turbulence
     }
 
+    /**
+     * A single data point in the genetic sequence.
+     * @property type The base pair classification (A, T, C, G).
+     * @property intensity The "strength" of the event (0.0 to 1.0).
+     * @property timestamp The time the event occurred, used for chronological sequencing.
+     */
     data class NeuralBasePair(
         val type: BasePairType,
         val intensity: Float, // 0..1
         val timestamp: Long
     )
 
+    /**
+     * The complete sequenced DNA of a student, containing visual parameters for the shader.
+     * @property studentId The unique identifier of the student.
+     * @property basePairs The chronological list of base pairs.
+     * @property twistRate Driving rotation speed for the AGSL helix (1.0 to 3.0).
+     * @property stability Normalized stability score (0.1 to 1.0) driving visual jitter.
+     */
     data class HelixSequence(
         val studentId: Long,
         val basePairs: List<NeuralBasePair>,
@@ -39,7 +55,12 @@ object GhostHelixEngine {
     )
 
     /**
-     * Sequences a student's logs into a Neural DNA helix.
+     * Sequences a student's behavioral and academic logs into a Neural DNA helix.
+     *
+     * @param studentId The ID of the student to sequence.
+     * @param behaviorLogs Current set of behavior events.
+     * @param quizLogs Current set of academic quiz logs.
+     * @return A [HelixSequence] containing the base pairs and calculated visual parameters.
      */
     fun sequenceStudentData(
         studentId: Long,
@@ -97,8 +118,14 @@ object GhostHelixEngine {
     }
 
     /**
-     * Analyzes the "Genetic Trajectory" of a sequence.
-     * Ported from `Python/ghost_helix_analysis.py`.
+     * Analyzes the "Genetic Trajectory" of a sequence to determine social/academic momentum.
+     *
+     * This logic is ported from `Python/ghost_helix_analysis.py` to maintain cross-platform
+     * parity. It uses a weighted scoring system where Adenine and Cytosine contribute
+     * positively, while Thymine and Guanine contribute negatively.
+     *
+     * @param sequence The sequenced Neural DNA.
+     * @return A normalized trajectory score (0.0 to 1.0).
      */
     fun calculateTrajectory(sequence: HelixSequence): Float {
         if (sequence.basePairs.isEmpty()) return 0.5f
