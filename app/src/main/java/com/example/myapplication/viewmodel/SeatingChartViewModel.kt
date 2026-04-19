@@ -386,6 +386,8 @@ class SeatingChartViewModel @Inject constructor(
     private val studentPotentialsCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
     private val altitudeCache = ConcurrentHashMap<Long, Float>()
     private val entropyScoreCache = ConcurrentHashMap<Long, Float>()
+    private val magneticStrengthCache = ConcurrentHashMap<Long, Float>()
+    private val magneticRadiusCache = ConcurrentHashMap<Long, Float>()
     private val studentSocialSignaturesCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
 
     /** BOLT: Memoization for AI prophecies and global Ghost metrics to avoid redundant work. */
@@ -491,7 +493,9 @@ class SeatingChartViewModel @Inject constructor(
         val quasarEnergy: Float,
         val quasarPolarity: Float,
         val ionCharge: Float,
-        val ionDensity: Float
+        val ionDensity: Float,
+        val magneticStrength: Float,
+        val magneticRadius: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -1136,6 +1140,13 @@ class SeatingChartViewModel @Inject constructor(
                         )
                         entropyScoreCache[student.id] = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
 
+                        // BOLT: Update student social signature for Magnetar
+                        val nPos = positiveCountsCache[student.id] ?: 0
+                        val nNeg = negativeCountsCache[student.id] ?: 0
+                        val mStrength = (nPos.toFloat() - nNeg.toFloat() * 1.5f).coerceIn(-10f, 10f)
+                        magneticStrengthCache[student.id] = mStrength
+                        magneticRadiusCache[student.id] = (abs(mStrength) * 50f + 100f).coerceIn(100f, 600f)
+
                         // BOLT: Update student social signature for entanglement
                         studentSocialSignaturesCache[student.id] = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.calculateNodeMetrics(
                             behaviorLogs = bLogs,
@@ -1159,6 +1170,8 @@ class SeatingChartViewModel @Inject constructor(
                     studentPotentialsCache.keys.retainAll(isPresent)
                     altitudeCache.keys.retainAll(isPresent)
                     entropyScoreCache.keys.retainAll(isPresent)
+                    magneticStrengthCache.keys.retainAll(isPresent)
+                    magneticRadiusCache.keys.retainAll(isPresent)
 
                     behaviorTypeCountsCache.keys.retainAll(isPresent)
                     behaviorScoreCache.keys.retainAll(isPresent)
@@ -1354,6 +1367,8 @@ class SeatingChartViewModel @Inject constructor(
                         val tStress = tectonicStressMap[student.id] ?: 0f
                         val qMetrics = quasarMetricsMap[student.id] ?: (0f to 0f)
                         val iMetrics = ionMetricsMap[student.id] ?: (0f to 0f)
+                        val mStrength = magneticStrengthCache[student.id] ?: 0f
+                        val mRadius = magneticRadiusCache[student.id] ?: 100f
 
                         StudentDerivedData(
                             behaviorDescription,
@@ -1372,7 +1387,9 @@ class SeatingChartViewModel @Inject constructor(
                             qMetrics.first,
                             qMetrics.second,
                             iMetrics.first,
-                            iMetrics.second
+                            iMetrics.second,
+                            mStrength,
+                            mRadius
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -1426,7 +1443,9 @@ class SeatingChartViewModel @Inject constructor(
                                 existingItem.quasarEnergy.value != derivedData.quasarEnergy ||
                                 existingItem.quasarPolarity.value != derivedData.quasarPolarity ||
                                 existingItem.ionCharge.value != derivedData.ionCharge ||
-                                existingItem.ionDensity.value != derivedData.ionDensity
+                                existingItem.ionDensity.value != derivedData.ionDensity ||
+                                existingItem.magneticStrength.value != derivedData.magneticStrength ||
+                                existingItem.magneticRadius.value != derivedData.magneticRadius
 
                         if (!isCacheHit || volatileChanged) {
                             studentForUi.updateStudentUiItem(
@@ -1453,9 +1472,11 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorEntropy = derivedData.behaviorEntropy,
                             tectonicStress = derivedData.tectonicStress,
                             quasarEnergy = derivedData.quasarEnergy,
-                                    quasarPolarity = derivedData.quasarPolarity,
-                                    ionCharge = derivedData.ionCharge,
-                                    ionDensity = derivedData.ionDensity
+                            quasarPolarity = derivedData.quasarPolarity,
+                            ionCharge = derivedData.ionCharge,
+                            ionDensity = derivedData.ionDensity,
+                            magneticStrength = derivedData.magneticStrength,
+                            magneticRadius = derivedData.magneticRadius
                             )
                         }
                         existingItem
@@ -1485,7 +1506,9 @@ class SeatingChartViewModel @Inject constructor(
                             quasarEnergy = derivedData.quasarEnergy,
                             quasarPolarity = derivedData.quasarPolarity,
                             ionCharge = derivedData.ionCharge,
-                            ionDensity = derivedData.ionDensity
+                            ionDensity = derivedData.ionDensity,
+                            magneticStrength = derivedData.magneticStrength,
+                            magneticRadius = derivedData.magneticRadius
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         newItem

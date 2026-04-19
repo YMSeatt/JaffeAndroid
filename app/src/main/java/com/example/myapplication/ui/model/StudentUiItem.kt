@@ -82,5 +82,7 @@ data class StudentUiItem(
     val quasarEnergy: MutableState<Float>,
     val quasarPolarity: MutableState<Float>,
     val ionCharge: MutableState<Float>,
-    val ionDensity: MutableState<Float>
+    val ionDensity: MutableState<Float>,
+    val magneticStrength: MutableState<Float>,
+    val magneticRadius: MutableState<Float>
 )
