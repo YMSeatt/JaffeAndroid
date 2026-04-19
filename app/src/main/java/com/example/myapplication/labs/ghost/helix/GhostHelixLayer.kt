@@ -18,6 +18,14 @@ import androidx.compose.ui.graphics.toArgb
 
 /**
  * GhostHelixLayer: Renders the Neural DNA helix over a student component.
+ *
+ * This layer uses a post-processing AGSL shader effect to draw a rotating double-helix
+ * representing the student's behavioral and academic "genome". The helix shifts color
+ * based on the student's trajectory and becomes "unstable" (jittery) if stability is low.
+ *
+ * @param sequence The sequenced Neural DNA data for the student.
+ * @param modifier Modifier to be applied to the layout.
+ * @param content The student UI component to be wrapped by the helix.
  */
 @Composable
 fun GhostHelixLayer(

@@ -3,13 +3,24 @@ package com.example.myapplication.labs.ghost.helix
 import org.intellij.lang.annotations.Language
 
 /**
- * GhostHelixShader: An AGSL shader that renders a rotating 3D Double Helix.
- *
- * This shader simulates depth through shading and uses procedural noise to
- * create a pulsing "Neural Energy" effect.
+ * GhostHelixShader: AGSL scripts for rendering the Neural DNA effect.
  */
 object GhostHelixShader {
 
+    /**
+     * NEURAL_HELIX: A high-performance shader that renders a rotating 3D Double Helix.
+     *
+     * It simulates depth through shading and uses procedural noise to create a pulsing
+     * "Neural Energy" effect. The helix jitter is inversely proportional to student stability.
+     *
+     * Uniforms:
+     * - [iResolution]: Dimensions of the drawing area.
+     * - [iTime]: Animation time for rotation.
+     * - [iStability]: Normalized stability (0.1..1.0). Controls procedural jitter.
+     * - [iTwist]: Twist rate (1.0..3.0). Controls rotation speed and spiral density.
+     * - [iColor]: Base color for the DNA strands, derived from the trajectory.
+     * - [contents]: The underlying UI content to be blended with the helix.
+     */
     @Language("AGSL")
     const val NEURAL_HELIX = """
         uniform float2 iResolution;
