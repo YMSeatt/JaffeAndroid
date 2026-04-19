@@ -171,4 +171,7 @@ object GhostConfig {
 
     /** Enables "Ghost Memento" persistent undo/redo history. */
     const val MEMENTO_MODE_ENABLED = true
+
+    /** Enables "Ghost Silhouette" drag placeholders. */
+    const val SILHOUETTE_MODE_ENABLED = true
 }

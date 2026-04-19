@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Neural UI Transitions using shared element equivalents in Compose
 
 ## 🚧 Active Construction
-  - [DONE] Task: "Ghost Memento" - Persistent Undo/Redo across app restarts using DataStore.
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-04-19: Ghost Silhouette - AGSL drag-and-drop placeholders in `/labs/ghost/silhouette/`
 - [DONE] 2028-04-09: Ghost Memento - Persistent state engine for undo/redo history in `/labs/ghost/memento/`
 - [DONE] 2028-04-06: Ghost Relay - Integrated Android Share Sheet for Neural Dossiers in `SeatingChartScreen.kt`
 - [DONE] 2028-04-05: Ghost Student Hub - Per-student radial quick-action menu in `/labs/ghost/hub/GhostStudentHubLayer.kt`

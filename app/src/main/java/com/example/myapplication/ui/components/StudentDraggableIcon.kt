@@ -229,6 +229,15 @@ fun StudentDraggableIcon(
                          * slightly delayed.
                          */
                         detectDragGestures(
+                            onDragStart = {
+                                viewModel.onStudentDragStarted(
+                                    studentUiItem.id,
+                                    offsetX,
+                                    offsetY,
+                                    width.value,
+                                    height.value
+                                )
+                            },
                             onDrag = { change, dragAmount ->
                                 change.consume()
                                 offsetX += dragAmount.x / canvasScale
@@ -263,6 +272,9 @@ fun StudentDraggableIcon(
                                     finalX.toFloat(),
                                     finalY.toFloat()
                                 )
+                            },
+                            onDragCancel = {
+                                viewModel.onStudentDragEnded(studentUiItem.id)
                             }
                         )
                     }
