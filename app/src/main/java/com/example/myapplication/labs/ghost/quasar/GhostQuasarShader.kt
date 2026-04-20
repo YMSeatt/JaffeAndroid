@@ -8,14 +8,19 @@ import org.intellij.lang.annotations.Language
 object GhostQuasarShader {
 
     /**
-     * Renders a pulsing accretion disk around high-energy students.
+     * Renders a pulsing accretion disk around high-energy students using procedural noise and swirls.
+     *
+     * The shader uses a signed distance field (SDF) approach to render a ring (disk)
+     * whose radius and thickness scale with the provided `iEnergy`. It incorporates
+     * a temporal sine wave for pulsing and an angular swirl component to simulate
+     * rotational momentum.
      *
      * Uniforms:
-     * - [iResolution]: Canvas dimensions.
-     * - [iTime]: Elapsed time.
-     * - [iCenter]: Center of the Quasar in world space.
-     * - [iEnergy]: Energy level (0.0 - 1.0).
-     * - [iColor]: Base color based on polarity.
+     * - [iResolution]: Canvas dimensions used for coordinate normalization.
+     * - [iTime]: Elapsed time used to drive the pulse and swirl animations.
+     * - [iCenter]: Center of the Quasar in screen coordinates.
+     * - [iEnergy]: Energy level (0.0 - 1.0) scaling the disk's physical presence.
+     * - [iColor]: RGB color vector (Cyan for positive, Magenta for negative).
      */
     @Language("AGSL")
     const val ACCRETION_DISK = """

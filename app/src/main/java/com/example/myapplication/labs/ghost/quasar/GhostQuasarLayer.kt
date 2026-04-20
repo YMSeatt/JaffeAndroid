@@ -16,9 +16,17 @@ import com.example.myapplication.ui.model.StudentUiItem
 /**
  * GhostQuasarLayer: Visualizes high-energy student activity using AGSL shaders.
  *
- * This layer renders pulsing accretion disks around students identified as "Quasars".
- * It is optimized for 60fps performance by offloading identification logic to the
- * ViewModel and utilizing a pre-allocated shader pool.
+ * This layer renders pulsing "Accretion Disks" around students identified as Quasars.
+ * These disks serve as high-visibility indicators of current classroom focal points,
+ * allowing teachers to see at a glance where social or academic energy is concentrating.
+ *
+ * Visual Logic:
+ * - **Radius**: Scales with the `quasarEnergy` metric.
+ * - **Color**: Cyan for positive polarity, Magenta for negative polarity.
+ * - **Motion**: Swirls and pulses to represent active social momentum.
+ *
+ * BOLT: Optimized for 60fps performance by offloading identification logic to the
+ * ViewModel and utilizing a pre-allocated shader pool to prevent JNI uniform overwrites.
  */
 @Composable
 fun GhostQuasarLayer(
