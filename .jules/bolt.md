@@ -62,3 +62,13 @@
     - Optimized `proposeAdaptiveLayout` to use a flat `FloatArray` for O(1) primitive density lookups, removing `Pair` and `Map.Entry` overhead.
     - Hoisted sorting and uniform buffer preparation in `GhostAdaptiveLayer` into a `remember(zones)` block to ensure they only run when data changes.
 - **Impact:** Eliminated per-frame and per-student allocations in the Adaptive UI engine and significantly reduced CPU/JNI overhead in the drawing pass, ensuring smooth 60fps performance even during heavy classroom activity.
+
+## Ghost Navigator and Singularity Allocation Optimization
+- **Discovery:**
+    - `GhostNavigatorLayer` was allocating an `Iterator` on every frame (60fps) by using `forEach` on the student list and performing redundant math inside the loop.
+    - `GhostSingularityLayer` was creating thousands of short-lived `Offset` objects in a high-frequency proximity-sensing loop.
+- **Fix:**
+    - Replaced `forEach` with manual index-based `for` loops in both components.
+    - Added a primitive-based `calculatePull` overload to `GhostSingularityEngine` to avoid `Offset` allocations.
+    - Hoisted constant calculations (colors, radii, and scaling factors) out of the student loops in `GhostNavigatorLayer`.
+- **Impact:** Significant reduction in object churn and CPU overhead in both the 60fps rendering path and the background interaction monitors.

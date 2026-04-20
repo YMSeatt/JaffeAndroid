@@ -55,16 +55,19 @@ fun GhostSingularityLayer(
     // Haptic Feedback Loop: Monitor student proximity to the singularity
     LaunchedEffect(students, singularityPos, isSingularityActive) {
         if (!isSingularityActive || singularityPos == Offset.Zero) return@LaunchedEffect
+        val singX = singularityPos.x
+        val singY = singularityPos.y
 
         while (true) {
             var maxPull = 0f
-            students.forEach { student ->
+            // BOLT: Manual index loop and primitive pull calculation to eliminate Offset churn
+            for (i in students.indices) {
+                val student = students[i]
                 // Calculate pull based on center of student icon
-                val studentCenter = Offset(
-                    student.xPosition.value + student.displayWidth.value.value / 2f,
-                    student.yPosition.value + student.displayHeight.value.value / 2f
-                )
-                val pull = engine.calculatePull(studentCenter, singularityPos, radius)
+                val centerX = student.xPosition.value + student.displayWidth.value.value / 2f
+                val centerY = student.yPosition.value + student.displayHeight.value.value / 2f
+
+                val pull = engine.calculatePull(centerX, centerY, singX, singY, radius)
                 if (pull > maxPull) maxPull = pull
             }
 

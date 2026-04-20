@@ -93,19 +93,26 @@ fun GhostNavigatorLayer(
                     }
                 }
         ) {
+            val dotRadius = 2.dp
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val mapWidth = size.width
                 val mapHeight = size.height
+                val dotRadiusPx = dotRadius.toPx()
+                val invLogicalSize = 1f / GhostNavigatorEngine.LOGICAL_CANVAS_SIZE
+                val scaleX = mapWidth * invLogicalSize
+                val scaleY = mapHeight * invLogicalSize
 
                 // 1. Draw Students as tiny dots
-                students.forEach { student ->
-                    val normX = student.xPosition.value / GhostNavigatorEngine.LOGICAL_CANVAS_SIZE
-                    val normY = student.yPosition.value / GhostNavigatorEngine.LOGICAL_CANVAS_SIZE
+                // BOLT: Manual index loop to eliminate iterator allocations in 60fps path
+                for (i in students.indices) {
+                    val student = students[i]
+                    val normX = student.xPosition.value * scaleX
+                    val normY = student.yPosition.value * scaleY
 
                     drawCircle(
                         color = studentColor,
-                        radius = 2.dp.toPx(),
-                        center = Offset(normX * mapWidth, normY * mapHeight)
+                        radius = dotRadiusPx,
+                        center = Offset(normX, normY)
                     )
                 }
 
