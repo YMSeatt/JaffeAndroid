@@ -29,8 +29,15 @@ class GhostSingularityEngine(private val context: Context) {
      * Uses inverse-square law simulated for 2D UI space.
      */
     fun calculatePull(objectPos: Offset, singularityPos: Offset, radius: Float): Float {
-        val dx = singularityPos.x - objectPos.x
-        val dy = singularityPos.y - objectPos.y
+        return calculatePull(objectPos.x, objectPos.y, singularityPos.x, singularityPos.y, radius)
+    }
+
+    /**
+     * BOLT: Primitive-based overload to eliminate Offset object churn during proximity analysis.
+     */
+    fun calculatePull(objX: Float, objY: Float, singX: Float, singY: Float, radius: Float): Float {
+        val dx = singX - objX
+        val dy = singY - objY
         val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(10f)
 
         // Normalize: 1.0 at event horizon, 0.0 far away
