@@ -5,16 +5,24 @@ import com.example.myapplication.data.BehaviorEvent
 /**
  * GhostQuasarEngine: Identifies "Quasar Students" — high-energy nodes in the classroom ecosystem.
  *
- * A student becomes a Quasar if they meet specific criteria for behavioral log density
- * or rapid academic shifts, creating a visual "Gravity Well" and "Accretion Disk"
- * on the seating chart.
+ * This engine serves as the "Luminosity Detector" for the seating chart. A student becomes a
+ * Quasar if they exhibit a high frequency of recent behavior (3+ logs in 30 minutes),
+ * signifying they are a focal point of classroom energy.
+ *
+ * The engine calculates two primary metrics:
+ * 1. **Energy**: A normalized value (0.0 to 1.0) representing log density.
+ * 2. **Polarity**: A normalized value (-1.0 to 1.0) representing the balance of positive
+ *    vs. negative behaviors.
  *
  * BOLT: Optimized for single-pass O(Recent) analysis using manual loops and early exits.
  */
 object GhostQuasarEngine {
 
     /**
-     * Identifies Quasars from the behavioral log stream.
+     * Identifies Quasars from the behavioral log stream within a 30-minute window.
+     *
+     * Why 30 minutes? This window was chosen to represent "current" classroom momentum
+     * without being overly sensitive to a single interaction or bogged down by historical data.
      *
      * BOLT: This method is optimized to run in O(Recent) time by assuming the input list
      * is sorted descending by timestamp. It performs a single pass to aggregate energy

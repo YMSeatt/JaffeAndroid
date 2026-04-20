@@ -46,3 +46,9 @@
 - **The Genetic Mapping**: Behavioral and academic data are mapped to four bases: Adenine (Positive Behavior), Thymine (Negative Behavior), Cytosine (High Academic >60%), and Guanine (Low Academic <60%).
 - **Twist Dynamics**: The `twistRate` (1.0..3.0) is driven by the frequency of academic logs (C/G), making the helix spin faster for academically active students.
 - **Stability Heuristic**: `stability` (0.1..1.0) is calculated as the ratio of positive to total logs. A stability score below 0.5 triggers noticeable procedural jitter in the AGSL shader to visually signal "behavioral noise."
+
+### 11. Ghost Quasar Energy and Polarity
+- **Sliding Window**: The engine uses a hardcoded 30-minute window (`30 * 60 * 1000L`). Events older than this are ignored to focus on current classroom "energy."
+- **Activation Threshold**: A student only achieves "Quasar" status (and visual auras) after reaching 3 behavioral events within the window. This prevents UI flicker from single, isolated logs.
+- **Polarity Mapping**: Polarity is mapped linearly from -1.0 (Magenta/Negative) to +1.0 (Cyan/Positive). The visual core of the accretion disk shifts color based on this normalized float.
+- **Shader Batching/Pooling**: To avoid the "Uniform Overwrite" bug (where multiple draw calls sharing the same native shader object overwrite each other's uniforms before the GPU executes), the `GhostQuasarLayer` maintains a `shaderPool`. Each active Quasar is assigned its own `RuntimeShader` instance from the pool.
