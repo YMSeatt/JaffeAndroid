@@ -174,4 +174,7 @@ object GhostConfig {
 
     /** Enables "Ghost Silhouette" drag placeholders. */
     const val SILHOUETTE_MODE_ENABLED = true
+
+    /** Enables the "Ghost Morph" shared element neural transitions. */
+    const val MORPH_MODE_ENABLED = true
 }
