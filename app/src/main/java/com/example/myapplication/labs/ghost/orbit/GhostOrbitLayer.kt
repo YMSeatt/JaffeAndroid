@@ -24,6 +24,13 @@ import kotlin.math.sin
  *
  * It transforms the traditional seating chart into a dynamic orbital system where
  * students move along paths determined by their engagement and stability.
+ *
+ * This layer uses high-performance AGSL shaders for background nebula rendering
+ * and interactive gravity well effects.
+ *
+ * @param students The list of students to visualize as orbiting planets.
+ * @param behaviorLogs The log history used to drive orbital parameters (speed/radius).
+ * @param isActive Whether the layer is currently visible and animating.
  */
 @Composable
 fun GhostOrbitLayer(

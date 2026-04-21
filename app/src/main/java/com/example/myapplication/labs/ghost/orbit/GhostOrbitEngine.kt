@@ -24,6 +24,14 @@ object GhostOrbitEngine {
     /**
      * Represents the immutable orbital parameters for a student,
      * calculated only when data changes.
+     *
+     * @property studentId Unique identifier for the student.
+     * @property centerX The X coordinate of the "Social Sun" or center of orbit.
+     * @property centerY The Y coordinate of the "Social Sun" or center of orbit.
+     * @property speed Angular velocity, driven by recent engagement frequency.
+     * @property radius Distance from the orbital center, inversely proportional to behavioral stability.
+     * @property energy Aggregate activity level used to scale visual pulses and glow effects.
+     * @property stability Normalized ratio (0..1) of positive behavior history.
      */
     data class OrbitalParameters(
         val studentId: Long,
@@ -36,7 +44,11 @@ object GhostOrbitEngine {
     )
 
     /**
-     * Represents the time-dependent orbital state of a student node.
+     * Represents the time-dependent orbital state of a student node, calculated for a specific timestamp.
+     *
+     * @property x The calculated X screen coordinate for this frame.
+     * @property y The calculated Y screen coordinate for this frame.
+     * @property angle The current angular position in radians.
      */
     data class OrbitalState(
         val studentId: Long,
