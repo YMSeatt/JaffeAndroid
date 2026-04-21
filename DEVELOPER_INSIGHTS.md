@@ -95,5 +95,14 @@ The ViewModel layer manages the application's UI state and coordinates between t
     - **Memoized Pipelines**: Stage 2 of the student update cycle utilizes identity-based caching to avoid redundant re-calculations of formatting or log descriptions when irrelevant data (like item positions) changes.
     - **Optimistic UI**: The icon components update their local `MutableState` immediately during gestures, while the ViewModel handles the asynchronous database synchronization in the background.
 
+## 🪐 Ghost Orbit Dynamics
+
+The `GhostOrbitEngine` implements a celestial metaphor for classroom social structures.
+
+- **The Social Sun Threshold**: A student is promoted to a "Social Sun" (gravitational attractor) if they possess more than **5 positive behavior logs**. This threshold prevents the galaxy from having too many conflicting centers of gravity.
+- **Canvas Centering**: If no "Social Suns" are detected, the system defaults the orbital center to **(2000, 2000)**, which is the geometric center of the 4000x4000 logical canvas.
+- **Engagement Scaling**: Angular velocity is calculated as `recentLogs / 5f`, capped at **2.0 radians/frame**. This ensures that even hyper-active students don't rotate so fast that they become a visual distraction.
+- **Stability and Radius**: The orbital radius is calculated as `150f + (1.0 - stability) * 300f`. This means a perfectly stable student (stability=1.0) stays at a tight **150-unit** radius, while an unstable student can drift up to **450 units** away.
+
 ---
 *Documentation love letter from Scribe 📜*
