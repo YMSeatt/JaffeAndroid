@@ -1726,6 +1726,20 @@ fun SeatingChartScreen(
                                     context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
                                 }
                             }
+                            "NEURAL_MORPH" -> {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MORPH_MODE_ENABLED) {
+                                    selectedStudentUiItemForAction?.let { student ->
+                                        val intent = Intent(context, com.example.myapplication.labs.ghost.morph.GhostMorphActivity::class.java).apply {
+                                            putExtra("STUDENT_ID", student.id.toLong())
+                                            putExtra("STUDENT_NAME", student.fullName.value)
+                                            // Pass triggering position for potential transition refinement
+                                            putExtra("TRIGGER_X", studentHubPosition.x)
+                                            putExtra("TRIGGER_Y", studentHubPosition.y)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }
                             "EDIT_STUDENT" -> {
                                 coroutineScope.launch {
                                     selectedStudentUiItemForAction?.let { student ->

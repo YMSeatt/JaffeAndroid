@@ -56,6 +56,7 @@ fun GhostStudentHubLayer(
             GhostAction("NEURAL_SYNAPSE", Icons.Default.Hub, "Neural Synapse"),
             GhostAction("LOG_ACADEMIC", Icons.Default.School, "Log Academic"),
             GhostAction("NEURAL_DOSSIER", Icons.Default.Article, "Neural Dossier"),
+            GhostAction("NEURAL_MORPH", Icons.Default.AutoFixHigh, "Neural Morph"),
             GhostAction("EDIT_STUDENT", Icons.Default.Person, "Edit Student")
         )
     }

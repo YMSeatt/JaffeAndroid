@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Neural UI Transitions using shared element equivalents in Compose
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-04-22: Ghost Morph - Shared Element Neural Transitions in `/labs/ghost/morph/`
 - [DONE] 2028-04-19: Ghost Silhouette - AGSL drag-and-drop placeholders in `/labs/ghost/silhouette/`
 - [DONE] 2028-04-09: Ghost Memento - Persistent state engine for undo/redo history in `/labs/ghost/memento/`
 - [DONE] 2028-04-06: Ghost Relay - Integrated Android Share Sheet for Neural Dossiers in `SeatingChartScreen.kt`
