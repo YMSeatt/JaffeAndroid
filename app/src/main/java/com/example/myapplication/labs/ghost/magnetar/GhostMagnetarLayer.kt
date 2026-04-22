@@ -29,6 +29,8 @@ fun GhostMagnetarLayer(
 
     val heading by engine.magneticHeading.collectAsState()
 
+    // BOLT Optimization: Cap at 15 students to prevent shader uniform overflow
+    // and maintain 60fps fragment throughput.
     val studentsToDisplay = remember(students) { students.take(15) }
 
     val dipoles = remember(studentsToDisplay) {
@@ -56,6 +58,7 @@ fun GhostMagnetarLayer(
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
+        // Passes device orientation to the shader to skew the visual field lines
         shader.setFloatUniform("iHeading", heading)
 
         val count = dipoles.size

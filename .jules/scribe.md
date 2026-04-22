@@ -52,3 +52,8 @@
 - **Activation Threshold**: A student only achieves "Quasar" status (and visual auras) after reaching 3 behavioral events within the window. This prevents UI flicker from single, isolated logs.
 - **Polarity Mapping**: Polarity is mapped linearly from -1.0 (Magenta/Negative) to +1.0 (Cyan/Positive). The visual core of the accretion disk shifts color based on this normalized float.
 - **Shader Batching/Pooling**: To avoid the "Uniform Overwrite" bug (where multiple draw calls sharing the same native shader object overwrite each other's uniforms before the GPU executes), the `GhostQuasarLayer` maintains a `shaderPool`. Each active Quasar is assigned its own `RuntimeShader` instance from the pool.
+
+### 12. Ghost Magnetar "Social Polarity"
+- **Negativity Bias**: The engine applies a 1.5x multiplier to negative behavioral logs when calculating social magnetic strength. This intentionally models the disproportionate impact disruptive students have on classroom cohesion.
+- **Hardware Skewing**: The `iHeading` uniform in `GhostMagnetarLayer` passes the device's actual magnetometer heading. Rotating the physical device rotates the virtual field, a deliberate UI metaphor for "reorienting" social analysis.
+- **BOLT Performance Cap**: The shader is hard-coded to 15 dipoles (`iDipolePos[15]`). `GhostMagnetarLayer` uses `students.take(15)` to ensure visual stability and prevent out-of-bounds uniform access in the AGSL program.
