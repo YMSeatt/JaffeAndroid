@@ -75,6 +75,9 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
     /**
      * BOLT: Refactored to accept pre-calculated log counts, eliminating O(B) grouping and allocations.
      * Maps students to [MagneticDipole] instances using high-performance primitive calculations.
+     *
+     * @param students The list of students to process. Note: The UI layer usually limits this to 15
+     *                 to match shader uniform constraints.
      */
     fun calculateDipoles(
         students: List<StudentUiItem>
@@ -100,6 +103,9 @@ class GhostMagnetarEngine(context: Context) : SensorEventListener {
     /**
      * Performs macroscopic field analysis based on student dipoles.
      * Ported from Python/ghost_magnetar_analysis.py.
+     *
+     * Calculates the vector sum of magnetic field contributions at four quadrant centers.
+     * The field at any point P is the sum of (Strength_i * vector(P-D_i) / |P-D_i|^3) for all dipoles D_i.
      */
     fun analyzeMagneticField(dipoles: List<MagneticDipole>): MagnetarAnalysis {
         val quadrants = listOf(

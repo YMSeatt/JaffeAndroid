@@ -21,14 +21,17 @@ object GhostMagnetarShader {
 
         float2 getField(float2 p) {
             float2 field = float2(0.0);
+            // Sum contributions from up to 15 student dipoles.
+            // Uses Inverse-Square Law approximation for magnetic flux.
             for (int i = 0; i < 15; i++) {
                 if (i >= iDipoleCount) break;
                 float2 d = p - iDipolePos[i];
                 float r2 = dot(d, d) + 100.0;
-                // Magnetic Monopole simulation for visual streamlines
+                // Magnetic Monopole simulation for visual streamlines.
+                // Parity with Python/ghost_magnetar_analysis.py field calculation.
                 field += (d / pow(r2, 1.5)) * iDipoleStrength[i] * 5000.0;
             }
-            // Apply external magnetic field from device magnetometer
+            // Apply external magnetic field from device magnetometer to skew the global field.
             float2 externalField = float2(cos(iHeading), sin(iHeading)) * 0.05;
             return field + externalField;
         }
