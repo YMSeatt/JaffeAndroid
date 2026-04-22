@@ -33,10 +33,6 @@ fun GhostMagnetarLayer(
     // and maintain 60fps fragment throughput.
     val studentsToDisplay = remember(students) { students.take(15) }
 
-    val dipoles = remember(studentsToDisplay) {
-        engine.calculateDipoles(studentsToDisplay)
-    }
-
     val infiniteTransition = rememberInfiniteTransition(label = "magnetarTime")
     val time by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -61,16 +57,18 @@ fun GhostMagnetarLayer(
         // Passes device orientation to the shader to skew the visual field lines
         shader.setFloatUniform("iHeading", heading)
 
-        val count = dipoles.size
+        val count = studentsToDisplay.size
         shader.setIntUniform("iDipoleCount", count)
 
-        // BOLT: Use manual index loop to eliminate iterator and 'take' allocations in the draw pass.
+        // BOLT: Read properties directly from StudentUiItem MutableState. This allows
+        // 60fps fluid tracking during student drag operations as field lines follow
+        // the icon without whole-layer recomposition or redundant object allocations.
         for (index in 0 until count) {
-            val dipole = dipoles[index]
+            val student = studentsToDisplay[index]
             // Map logical coordinates to screen space
-            posArray[index * 2] = dipole.x * canvasScale + canvasOffset.x
-            posArray[index * 2 + 1] = dipole.y * canvasScale + canvasOffset.y
-            strengthArray[index] = dipole.strength
+            posArray[index * 2] = student.xPosition.value * canvasScale + canvasOffset.x
+            posArray[index * 2 + 1] = student.yPosition.value * canvasScale + canvasOffset.y
+            strengthArray[index] = student.magneticStrength.value
         }
 
         shader.setFloatUniform("iDipolePos", posArray)
