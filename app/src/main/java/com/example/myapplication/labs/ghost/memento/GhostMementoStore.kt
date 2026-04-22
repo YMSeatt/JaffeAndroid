@@ -9,6 +9,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import javax.inject.Inject
@@ -25,7 +26,8 @@ private val Context.mementoDataStore: DataStore<Preferences> by preferencesDataS
  */
 @Singleton
 class GhostMementoStore @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val securityUtil: SecurityUtil
 ) {
     private object Keys {
         val COMMAND_HISTORY = stringPreferencesKey("command_history")
@@ -33,12 +35,13 @@ class GhostMementoStore @Inject constructor(
 
     /**
      * Reactive stream of the persisted command history.
-     * Deserializes the JSON state into a [MementoHistory] object.
+     * Decrypts and deserializes the JSON state into a [MementoHistory] object.
      */
     val commandHistoryFlow: Flow<MementoHistory> = context.mementoDataStore.data.map { prefs ->
-        val json = prefs[Keys.COMMAND_HISTORY]
-        if (json != null) {
+        val encryptedJson = prefs[Keys.COMMAND_HISTORY]
+        if (encryptedJson != null) {
             try {
+                val json = securityUtil.decryptSafe(encryptedJson)
                 Json.decodeFromString<MementoHistory>(json)
             } catch (e: Exception) {
                 MementoHistory()
@@ -50,12 +53,13 @@ class GhostMementoStore @Inject constructor(
 
     /**
      * Atomically updates the persisted command history.
-     * Serializes the [MementoHistory] into JSON before storage.
+     * Serializes and encrypts the [MementoHistory] into JSON before storage.
      */
     suspend fun saveHistory(history: MementoHistory) {
         val json = Json.encodeToString(history)
+        val encryptedJson = securityUtil.encrypt(json)
         context.mementoDataStore.edit { prefs ->
-            prefs[Keys.COMMAND_HISTORY] = json
+            prefs[Keys.COMMAND_HISTORY] = encryptedJson
         }
     }
 
