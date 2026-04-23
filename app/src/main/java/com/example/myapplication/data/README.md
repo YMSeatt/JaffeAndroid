@@ -21,11 +21,26 @@ The data model is organized into three primary clusters:
     *   **LayoutTemplate**: Snapshots of student/furniture arrangements.
     *   **QuizTemplate** / **HomeworkTemplate**: Reusable structures for common classroom assignments.
 
+## 🧪 Normalized Assignment Model (Modern) vs. Legacy Log Model
+
+The application is currently transitioning from a flat, log-based history to a normalized, template-based assignment system.
+
+### 1. Legacy Log Model (`QuizLog`, `HomeworkLog`, `BehaviorEvent`)
+*   **Architecture**: Optimized for rapid, unstructured data entry. Every log is self-contained.
+*   **Flexibility**: Uses **JSON-Backed Storage** (`marksData`) for granular scoring metrics. This prevents frequent schema migrations as UI reporting needs change.
+*   **Use Case**: Best for quick "one-off" notes or historical records where strict template adherence isn't required.
+
+### 2. Normalized Assignment Model (`Quiz`, `Homework`, `QuizTemplate`, `HomeworkTemplate`)
+*   **Architecture**: Highly structured and relational. Assignments are instantiated from reusable **Templates**.
+*   **Consistency**: Ensures that assessments (like a "Unit 1 Quiz") follow a consistent schema (number of questions, specific scoring steps) across all students.
+*   **Benefits**: Easier to perform longitudinal analysis on specific assessments and supports multi-step homework check-ins (Checkboxes, Scores, and Comments).
+*   **Use Case**: Preferred for standardized classroom assessments and structured checking routines.
+
 ## ⚡ JSON-Backed Flexibility (The "Future-Proofing" Strategy)
 
 To avoid frequent and disruptive schema migrations as the UI evolves, specific entities utilize a hybrid storage approach:
 
-*   **`QuizLog.marksData`** and **`HomeworkLog.marksData`**: Instead of adding a new column for every possible scoring metric (e.g., "Partial Credit", "Late Penalty", "Oral Fluency"), these entities store complex scoring maps as **JSON strings**.
+*   **`QuizLog.marksData`** and **`HomeworkTemplate.marksData`**: These store complex scoring maps or multi-step assignment structures as **JSON strings**.
 *   **Benefits**: This allows the application to support dynamic scoring types and experimental metrics without altering the underlying SQLite tables, ensuring better compatibility between different app versions.
 
 ## ⛓️ Referential Integrity & Cascading
