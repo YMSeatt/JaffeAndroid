@@ -1883,7 +1883,9 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
-            students.forEach { studentItem ->
+            // BOLT: Replace forEach with manual index loops to eliminate iterator churn in the high-frequency rendering path.
+            for (i in students.indices) {
+                val studentItem = students[i]
                 val irisParams = if (isIrisActive) studentItem.irisParams.value else null
                 val altitude = if (isZenithActive) studentItem.altitude.value else 0f
 
@@ -1916,7 +1918,8 @@ fun SeatingChartContent(
                     homeworkLogFontBold = homeworkLogFontBold
                 )
             }
-            furniture.forEach { furnitureItem ->
+            for (i in furniture.indices) {
+                val furnitureItem = furniture[i]
                 FurnitureDraggableIcon(
                     furnitureUiItem = furnitureItem,
                     viewModel = seatingChartViewModel,
