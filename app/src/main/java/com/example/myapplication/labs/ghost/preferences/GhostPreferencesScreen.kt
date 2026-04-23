@@ -34,6 +34,7 @@ fun GhostPreferencesScreen(
     val glassmorphismEnabled by viewModel.glassmorphismEnabled.collectAsState()
     val scanlineEffectEnabled by viewModel.scanlineEffectEnabled.collectAsState()
     val lodEnabled by viewModel.lodEnabled.collectAsState()
+    val shakeToRecenterEnabled by viewModel.shakeToRecenterEnabled.collectAsState()
     val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
 
@@ -159,6 +160,13 @@ fun GhostPreferencesScreen(
                         description = "Use high-fidelity Android 15 haptic primitives for feedback.",
                         checked = neuralHapticsEnabled,
                         onCheckedChange = viewModel::setNeuralHapticsEnabled
+                    )
+
+                    GhostPreferenceSwitch(
+                        label = "Shake to Recenter",
+                        description = "Rapidly shake the device to reset the canvas zoom and pan.",
+                        checked = shakeToRecenterEnabled,
+                        onCheckedChange = viewModel::setShakeToRecenterEnabled
                     )
                 }
             }

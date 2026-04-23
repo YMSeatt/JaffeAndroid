@@ -1,8 +1,10 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Add "Ghost Shake" accelerometer-based canvas recenter gesture.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-04-25: Ghost Shake - Accelerometer-based canvas recenter gesture in `SeatingChartScreen.kt` and `/labs/ghost/util/GhostShakeDetector.kt`
 - [DONE] 2028-04-22: Ghost Morph - Shared Element Neural Transitions in `/labs/ghost/morph/`
 - [DONE] 2028-04-19: Ghost Silhouette - AGSL drag-and-drop placeholders in `/labs/ghost/silhouette/`
 - [DONE] 2028-04-09: Ghost Memento - Persistent state engine for undo/redo history in `/labs/ghost/memento/`

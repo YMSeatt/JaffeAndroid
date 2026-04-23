@@ -41,6 +41,9 @@ class GhostPreferencesViewModel @Inject constructor(
     val themeMode: StateFlow<String> = store.ghostThemeMode
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), "GHOST")
 
+    val shakeToRecenterEnabled: StateFlow<Boolean> = store.shakeToRecenterEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun setGlowIntensity(intensity: Float) {
         viewModelScope.launch {
             store.updateGlowIntensity(intensity)
@@ -80,6 +83,12 @@ class GhostPreferencesViewModel @Inject constructor(
     fun setThemeMode(mode: String) {
         viewModelScope.launch {
             store.updateGhostThemeMode(mode)
+        }
+    }
+
+    fun setShakeToRecenterEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            store.updateShakeToRecenterEnabled(enabled)
         }
     }
 }

@@ -184,6 +184,10 @@ import com.example.myapplication.labs.ghost.hub.GhostHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostStudentHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostAction
 import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
+import com.example.myapplication.labs.ghost.util.GhostHapticManager
+import com.example.myapplication.labs.ghost.util.GhostShakeDetector
+import android.hardware.SensorManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -318,7 +322,11 @@ fun SeatingChartScreen(
      */
     var lastSharedArtifactUri by remember { mutableStateOf<Uri?>(null) }
     val hudViewModel: GhostHUDViewModel = viewModel()
+    val ghostPrefsViewModel: GhostPreferencesViewModel = viewModel()
     val context = LocalContext.current
+    val hapticManager = remember { GhostHapticManager(context) }
+
+    val shakeToRecenterEnabled by ghostPrefsViewModel.shakeToRecenterEnabled.collectAsState()
 
     // Portal State: Manages the visibility and position of the Ghost Portal during drag-and-drop.
     var isDraggingPortalActive by remember { mutableStateOf(false) }
@@ -435,7 +443,19 @@ fun SeatingChartScreen(
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
 
-    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive) {
+    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, shakeToRecenterEnabled) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val shakeDetector = if (shakeToRecenterEnabled && sensorManager != null) {
+            GhostShakeDetector {
+                scale = 1f
+                offset = Offset.Zero
+                hapticManager.perform(GhostHapticManager.Pattern.SUCCESS)
+                Toast.makeText(context, "Canvas Recentered 👻", Toast.LENGTH_SHORT).show()
+            }.apply {
+                start(sensorManager)
+            }
+        } else null
+
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
             ghostPhantasmEngine.observeScreenRecording(ContextCompat.getMainExecutor(context)) { recording ->
                 isScreenRecording = recording
@@ -475,6 +495,7 @@ fun SeatingChartScreen(
             ghostVisionEngine.stop()
             ghostRayEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
+            sensorManager?.let { shakeDetector?.stop(it) }
             // Ensure privacy shield is cleared on dispose
             ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), false)
 

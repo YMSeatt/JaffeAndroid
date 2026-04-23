@@ -35,6 +35,7 @@ class GhostPreferencesStore @Inject constructor(
         val LOD_ENABLED = booleanPreferencesKey("lod_enabled")
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
         val GHOST_THEME_MODE = stringPreferencesKey("ghost_theme_mode")
+        val SHAKE_TO_RECENTER_ENABLED = booleanPreferencesKey("shake_to_recenter_enabled")
     }
 
     /** Flow of the experimental glow intensity for AGSL shaders. */
@@ -72,6 +73,11 @@ class GhostPreferencesStore @Inject constructor(
         prefs[Keys.GHOST_THEME_MODE] ?: "GHOST"
     }
 
+    /** Flow indicating if the accelerometer-based shake-to-recenter gesture is enabled. */
+    val shakeToRecenterEnabled: Flow<Boolean> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.SHAKE_TO_RECENTER_ENABLED] ?: false
+    }
+
     suspend fun updateGlowIntensity(intensity: Float) {
         context.ghostDataStore.edit { it[Keys.GHOST_GLOW_INTENSITY] = intensity }
     }
@@ -98,5 +104,9 @@ class GhostPreferencesStore @Inject constructor(
 
     suspend fun updateGhostThemeMode(mode: String) {
         context.ghostDataStore.edit { it[Keys.GHOST_THEME_MODE] = mode }
+    }
+
+    suspend fun updateShakeToRecenterEnabled(enabled: Boolean) {
+        context.ghostDataStore.edit { it[Keys.SHAKE_TO_RECENTER_ENABLED] = enabled }
     }
 }
