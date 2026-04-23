@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Guide
 import com.example.myapplication.data.GuideType
@@ -53,6 +54,22 @@ fun GridAndRulers(
 
     val canvasBackgroundColor by settingsViewModel.canvasBackgroundColor.collectAsState()
     val guidesStayWhenRulersHidden by settingsViewModel.guidesStayWhenRulersHidden.collectAsState()
+
+    val density = LocalDensity.current
+    // BOLT: Hoist constants and pre-parse colors to avoid redundant allocations in 60fps draw path.
+    val gridSizePx = remember(gridSize, density) { with(density) { gridSize.dp.toPx() } }
+    val rulerThickness = remember(density) { with(density) { 30.dp.toPx() } }
+    val textSize = remember(density) { with(density) { 12.dp.toPx() } }
+    val parsedBackgroundColor = remember(canvasBackgroundColor) {
+        try { Color(android.graphics.Color.parseColor(canvasBackgroundColor)) } catch (e: Exception) { Color.White }
+    }
+    val rulerPaint = remember(textSize) {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
+            textAlign = android.graphics.Paint.Align.CENTER
+            this.textSize = textSize
+        }
+    }
 
     Canvas(modifier = Modifier
         .fillMaxSize()
@@ -99,16 +116,14 @@ fun GridAndRulers(
             )
         }) {
         // Draw Background
-        drawRect(color = try { Color(android.graphics.Color.parseColor(canvasBackgroundColor)) } catch (e: Exception) { Color.White })
+        drawRect(color = parsedBackgroundColor)
 
         // Grid (drawn within the transformed canvas)
         withTransform({
             translate(left = offset.x, top = offset.y)
             scale(scale, scale)
         }) {
-            if (showGrid && gridSize > 0) {
-                val gridSizePx = gridSize.dp.toPx()
-
+            if (showGrid && gridSizePx > 0) {
                 // Calculate visible world coordinates
                 val worldXStart = -offset.x / scale
                 val worldYStart = -offset.y / scale
@@ -147,7 +162,9 @@ fun GridAndRulers(
                 val worldYStart = -offset.y / scale
                 val worldXEnd = worldXStart + canvasSize.width / scale
                 val worldYEnd = worldYStart + canvasSize.height / scale
-                guides.forEach { guide ->
+                // BOLT: Replace forEach with manual index loop to eliminate iterator churn.
+                for (i in guides.indices) {
+                    val guide = guides[i]
                     if (guide.type == GuideType.HORIZONTAL) {
                         drawLine(
                             start = Offset(worldXStart, guide.position),
@@ -168,18 +185,8 @@ fun GridAndRulers(
         }
 
         // Rulers (drawn outside the transform, in screen space)
-        if (showRulers && gridSize > 0) {
-            val gridSizePx = gridSize.dp.toPx()
-            val rulerThickness = 30.dp.toPx()
-            val textSize = 12.dp.toPx()
-
+        if (showRulers && gridSizePx > 0) {
             drawIntoCanvas { canvas ->
-                val paint = android.graphics.Paint().apply {
-                    color = android.graphics.Color.BLACK
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    this.textSize = textSize
-                }
-
                 // Horizontal Ruler
                 val worldXStart = -offset.x / scale
                 val worldXEnd = (size.width - offset.x) / scale
@@ -197,7 +204,7 @@ fun GridAndRulers(
                         )
                         canvas.nativeCanvas.drawText(
                             (worldX).toLong().toString(),
-                            screenX, rulerThickness, paint
+                            screenX, rulerThickness, rulerPaint
                         )
                     }
                 }
@@ -221,7 +228,7 @@ fun GridAndRulers(
                         canvas.nativeCanvas.rotate(-90f, rulerThickness, screenY)
                         canvas.nativeCanvas.drawText(
                             (worldY).toLong().toString(),
-                            rulerThickness, screenY, paint
+                            rulerThickness, screenY, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
                     }
