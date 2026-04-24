@@ -4,6 +4,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-05-10: Ghost Strategist - Integrated Generative AI Tactical Co-Pilot into Seating Chart & ViewModel
 - [DONE] 2028-04-25: Ghost Shake - Accelerometer-based canvas recenter gesture in `SeatingChartScreen.kt` and `/labs/ghost/util/GhostShakeDetector.kt`
 - [DONE] 2028-04-22: Ghost Morph - Shared Element Neural Transitions in `/labs/ghost/morph/`
 - [DONE] 2028-04-19: Ghost Silhouette - AGSL drag-and-drop placeholders in `/labs/ghost/silhouette/`
