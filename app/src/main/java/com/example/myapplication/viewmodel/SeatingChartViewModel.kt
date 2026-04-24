@@ -680,7 +680,9 @@ class SeatingChartViewModel @Inject constructor(
                     val oldGrouped = behaviorLogsByStudentCache
                     val finalGrouped = mutableMapOf<Long, List<BehaviorEvent>>()
 
-                    newGrouped.forEach { (studentId, newList) ->
+                    for (entry in newGrouped) {
+                        val studentId = entry.key
+                        val newList = entry.value
                         val oldList = oldGrouped[studentId]
                         if (oldList == newList) {
                             finalGrouped[studentId] = oldList
@@ -752,7 +754,9 @@ class SeatingChartViewModel @Inject constructor(
                     val oldGrouped = homeworkLogsByStudentCache
                     val finalGrouped = mutableMapOf<Long, List<HomeworkLog>>()
 
-                    newGrouped.forEach { (studentId, newList) ->
+                    for (entry in newGrouped) {
+                        val studentId = entry.key
+                        val newList = entry.value
                         val oldList = oldGrouped[studentId]
                         if (oldList == newList) {
                             finalGrouped[studentId] = oldList
@@ -782,7 +786,9 @@ class SeatingChartViewModel @Inject constructor(
                     val oldGrouped = quizLogsByStudentCache
                     val finalGrouped = mutableMapOf<Long, List<QuizLog>>()
 
-                    newGrouped.forEach { (studentId, newList) ->
+                    for (entry in newGrouped) {
+                        val studentId = entry.key
+                        val newList = entry.value
                         val oldList = oldGrouped[studentId]
                         if (oldList == newList) {
                             finalGrouped[studentId] = oldList
@@ -950,14 +956,17 @@ class SeatingChartViewModel @Inject constructor(
                 val studentsForEngines = if (pendingStudentPositions.isEmpty()) {
                     students
                 } else {
-                    students.map { student ->
+                    val list = ArrayList<Student>(students.size)
+                    for (i in 0 until students.size) {
+                        val student = students[i]
                         val pendingPos = pendingStudentPositions[student.id.toInt()]
                         if (pendingPos != null) {
-                            student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second)
+                            list.add(student.copy(xPosition = pendingPos.first, yPosition = pendingPos.second))
                         } else {
-                            student
+                            list.add(student)
                         }
                     }
+                    list
                 }
 
                 // BOLT: Calculate log-only Ghost metrics in the background pipeline (Memoized)
@@ -972,7 +981,10 @@ class SeatingChartViewModel @Inject constructor(
                     )
 
                     // BOLT: Calculate Ion metrics in the background pipeline
-                    val studentIds = students.map { it.id.toLong() }
+                    val studentIds = ArrayList<Long>(students.size)
+                    for (i in 0 until students.size) {
+                        studentIds.add(students[i].id)
+                    }
                     ghostMetricsIonMapCache = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateIonMetrics(
                         studentIds = studentIds,
                         behaviorLogsByStudent = behaviorLogsByStudent
@@ -1013,16 +1025,18 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Calculate quantum entanglement links in the background pipeline (Memoized)
                 if (behaviorEvents !== ghostMetricsEntanglementBehaviorLogsRef || studentsForEngines !== ghostMetricsEntanglementStudentsRef) {
-                    val entangledNodes = studentsForEngines.map { s ->
+                    val entangledNodes = ArrayList<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode>(studentsForEngines.size)
+                    for (i in 0 until studentsForEngines.size) {
+                        val s = studentsForEngines[i]
                         val sig = studentSocialSignaturesCache[s.id] ?: (0.5f to 0.5f)
-                        com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode(
+                        entangledNodes.add(com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode(
                             id = s.id,
                             x = s.xPosition,
                             y = s.yPosition,
                             behaviorSync = sig.first,
                             academicParity = sig.second,
                             groupId = s.groupId
-                        )
+                        ))
                     }
                     _entangledLinks.value = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.identifyEntangledLinks(
                         nodes = entangledNodes
@@ -1033,8 +1047,10 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Calculate behavioral chain reactions in the background pipeline (Memoized)
                 if (behaviorEvents !== ghostMetricsCatalystBehaviorLogsRef || studentsForEngines !== ghostMetricsCatalystStudentsRef) {
-                    val catalystStudents = studentsForEngines.map { s ->
-                        com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.StudentPos(s.id, s.xPosition, s.yPosition)
+                    val catalystStudents = ArrayList<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.StudentPos>(studentsForEngines.size)
+                    for (i in 0 until studentsForEngines.size) {
+                        val s = studentsForEngines[i]
+                        catalystStudents.add(com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.StudentPos(s.id, s.xPosition, s.yPosition))
                     }
                     _catalystReactions.value = com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.calculateReactions(
                         students = catalystStudents,
@@ -1065,7 +1081,9 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Calculate adaptive density zones in the background pipeline (Memoized)
                 if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
-                    val uiItemsForDensity = studentsForEngines.map { s ->
+                    val uiItemsForDensity = ArrayList<StudentUiItem>(studentsForEngines.size)
+                    for (i in 0 until studentsForEngines.size) {
+                        val s = studentsForEngines[i]
                         val item = studentUiItemCache[s.id.toInt()] ?: s.toStudentUiItem(
                             recentBehaviorDescription = emptyList(),
                             recentHomeworkDescription = emptyList(),
@@ -1093,7 +1111,7 @@ class SeatingChartViewModel @Inject constructor(
                             ionCharge = 0f,
                             ionDensity = 0f
                         )
-                        item
+                        uiItemsForDensity.add(item)
                     }
                     _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(uiItemsForDensity)
                     ghostMetricsAdaptiveStudentsRef = studentsForEngines
@@ -1190,8 +1208,10 @@ class SeatingChartViewModel @Inject constructor(
                     memoizedStudents = students
                 }
 
-                // --- Stage 2: Per-Student Transformation ---
-                val studentsWithBehavior = students.map { student ->
+                // --- Stage 2/3: Transformation & Sync ---
+                val studentsWithBehavior = ArrayList<StudentUiItem>(students.size)
+                for (idx in 0 until students.size) {
+                    val student = students[idx]
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                     // BOLT: Use identity-based cache for student data hash to avoid O(N) calculations.
                     val cachedHashEntry = studentDataHashCache[student.id]
@@ -1241,79 +1261,82 @@ class SeatingChartViewModel @Inject constructor(
                             timeKey = effectiveTimeKey,
                             lastCleared = lastCleared
                         )
-                        // 2a. Log Filtering:
+                        // 2a/b. Log Filtering & Description Generation (Single Pass):
                         // Only show logs that haven't been "cleared" by the user and haven't exceeded
                         // the display timeout defined in preferences.
-                        // BOLT: Optimized filtering using manual loops and early breaks on DESC sorted lists.
-                        val recentEvents = mutableListOf<BehaviorEvent>()
+                        // BOLT: Combined filtering and description generation into single-pass manual loops.
+                        val behaviorDescription = ArrayList<String>()
                         if (student.showLogs && behaviorList != null) {
                             val timeoutMs = behaviorDisplayTimeout.toLong() * 3600000L
-                            for (event in behaviorList) {
-                                if (recentEvents.size >= behaviorLimit) break
+                            for (i in 0 until behaviorList.size) {
+                                val event = behaviorList[i]
+                                if (behaviorDescription.size >= behaviorLimit) break
                                 if (event.timestamp <= lastCleared) break
                                 if (behaviorDisplayTimeout > 0 && currentTime >= event.timestamp + timeoutMs) break
-                                recentEvents.add(event)
+
+                                val description = if (useInitialsForBehavior) {
+                                    behaviorInitialsMap[event.type] ?: event.type.first().toString()
+                                } else {
+                                    event.type
+                                }
+                                behaviorDescription.add(if (event.comment.isNullOrBlank()) description else "$description: ${event.comment}")
                             }
                         }
 
-                        val recentHomework = mutableListOf<HomeworkLog>()
+                        val homeworkDescription = ArrayList<String>()
                         if (student.showLogs && homeworkList != null) {
                             val timeoutMs = homeworkDisplayTimeout.toLong() * 3600000L
-                            for (log in homeworkList) {
-                                if (recentHomework.size >= homeworkLimit) break
+                            for (i in 0 until homeworkList.size) {
+                                val log = homeworkList[i]
+                                if (homeworkDescription.size >= homeworkLimit) break
                                 if (log.loggedAt <= lastCleared) break
                                 if (homeworkDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
-                                recentHomework.add(log)
+
+                                val status = if (log.isComplete) "Done" else "Not Done"
+                                val prefix = if (useInitialsForHomework) {
+                                    homeworkInitialsMap[log.assignmentName] ?: log.assignmentName.first().toString()
+                                } else {
+                                    log.assignmentName
+                                }
+                                homeworkDescription.add("$prefix: $status")
                             }
                         }
 
-                        val recentQuizzes = mutableListOf<QuizLog>()
+                        val quizDescription = ArrayList<String>()
                         if (student.showLogs && quizList != null) {
                             val timeoutMs = quizDisplayTimeout.toLong() * 3600000L
-                            for (log in quizList) {
-                                if (recentQuizzes.size >= quizLimit) break
+                            for (i in 0 until quizList.size) {
+                                val log = quizList[i]
+                                if (quizDescription.size >= quizLimit) break
                                 if (log.loggedAt <= lastCleared) break
                                 if (log.isComplete) continue
                                 if (quizDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
-                                recentQuizzes.add(log)
-                            }
-                        }
 
-                        // 2b. Description Generation:
-                        // Convert raw log entries into display strings, optionally using initials.
-                        val behaviorDescription = recentEvents.map {
-                            val description = if (useInitialsForBehavior) {
-                                behaviorInitialsMap[it.type] ?: it.type.first().toString()
-                            } else {
-                                it.type
-                            }
-                            if (it.comment.isNullOrBlank()) {
-                                description
-                            } else {
-                                "$description: ${it.comment}"
-                            }
-                        }
-
-                        val homeworkDescription = recentHomework.map {
-                            val status = if (it.isComplete) "Done" else "Not Done"
-                            if (useInitialsForHomework) {
-                                (homeworkInitialsMap[it.assignmentName] ?: it.assignmentName.first().toString()) + ": $status"
-                            } else {
-                                "${it.assignmentName}: $status"
-                            }
-                        }
-                        val quizDescription = recentQuizzes.map {
-                            if (useInitialsForQuiz) {
-                                quizInitialsMap[it.quizName] ?: it.quizName.first().toString()
-                            } else {
-                                it.quizName
+                                quizDescription.add(if (useInitialsForQuiz) {
+                                    quizInitialsMap[log.quizName] ?: log.quizName.first().toString()
+                                } else {
+                                    log.quizName
+                                })
                             }
                         }
 
                         val sessionLogs = if (sessionActive) {
-                            val quizLogsSess = sessionQuizLogsGrouped[student.id]?.map { "Quiz: ${it.comment}" } ?: emptyList()
-                            val homeworkLogsSess = sessionHomeworkLogsGrouped[student.id]?.map { "${it.assignmentName}: ${it.status}" } ?: emptyList()
-                            (quizLogsSess + homeworkLogsSess).take(maxLogsToDisplay)
+                            val sLogs = ArrayList<String>(maxLogsToDisplay)
+                            val qLogsSess = sessionQuizLogsGrouped[student.id]
+                            if (qLogsSess != null) {
+                                for (i in 0 until qLogsSess.size) {
+                                    if (sLogs.size >= maxLogsToDisplay) break
+                                    sLogs.add("Quiz: ${qLogsSess[i].comment}")
+                                }
+                            }
+                            val hLogsSess = sessionHomeworkLogsGrouped[student.id]
+                            if (hLogsSess != null) {
+                                for (i in 0 until hLogsSess.size) {
+                                    if (sLogs.size >= maxLogsToDisplay) break
+                                    sLogs.add("${hLogsSess[i].assignmentName}: ${hLogsSess[i].status}")
+                                }
+                            }
+                            sLogs
                         } else {
                             emptyList()
                         }
@@ -1484,7 +1507,7 @@ class SeatingChartViewModel @Inject constructor(
                             magneticRadius = derivedData.magneticRadius
                             )
                         }
-                        existingItem
+                        studentsWithBehavior.add(existingItem)
                     } else {
                         val newItem = studentForUi.toStudentUiItem(
                             recentBehaviorDescription = behaviorDescription,
@@ -1516,7 +1539,7 @@ class SeatingChartViewModel @Inject constructor(
                             magneticRadius = derivedData.magneticRadius
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
-                        newItem
+                        studentsWithBehavior.add(newItem)
                     }
                 }
                 studentsForDisplay.postValue(studentsWithBehavior)
