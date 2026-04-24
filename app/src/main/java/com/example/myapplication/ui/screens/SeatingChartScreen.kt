@@ -176,6 +176,8 @@ import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
+import com.example.myapplication.labs.ghost.strategist.GhostStrategistLayer
+import com.example.myapplication.labs.ghost.strategist.GhostStrategistEngine
 import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
 import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
 import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
@@ -261,6 +263,9 @@ fun SeatingChartScreen(
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
     val draggingSilhouettes by seatingChartViewModel.draggingSilhouettes.collectAsState()
+    val strategistInterventions by seatingChartViewModel.strategistInterventions.collectAsState()
+    val isStrategistThinking by seatingChartViewModel.isStrategistThinking.collectAsState()
+    val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -302,6 +307,7 @@ fun SeatingChartScreen(
     var isSpotlightActive by remember { mutableStateOf(false) }
     var isNavigatorActive by remember { mutableStateOf(false) }
     var isAdaptiveActive by remember { mutableStateOf(false) }
+    var isStrategistActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -693,6 +699,13 @@ fun SeatingChartScreen(
                 },
                 isHudActive = isHudActive,
                 onToggleHud = { isHudActive = !isHudActive },
+                isStrategistActive = isStrategistActive,
+                onToggleStrategist = {
+                    isStrategistActive = !isStrategistActive
+                    if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                },
+                strategistGoal = strategistGoal,
+                onStrategistGoalChange = { seatingChartViewModel.setStrategistGoal(it) },
                 isChronosActive = isChronosActive,
                 onToggleChronos = { isChronosActive = !isChronosActive },
                 isHologramActive = isHologramActive,
@@ -1324,6 +1337,12 @@ fun SeatingChartScreen(
                         prophecies = allProphecies
                     )
                 }
+
+                GhostStrategistLayer(
+                    interventions = strategistInterventions,
+                    isActive = isStrategistActive,
+                    isThinking = isStrategistThinking
+                )
             }
 
             if (showGhostSynapseDialog) {
@@ -1785,6 +1804,10 @@ fun SeatingChartScreen(
                             "SPECTRA" -> isSpectraActive = !isSpectraActive
                             "AURORA" -> isAuroraActive = !isAuroraActive
                             "FUTURE" -> isFutureActive = !isFutureActive
+                            "STRATEGIST" -> {
+                                isStrategistActive = !isStrategistActive
+                                if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2000,6 +2023,10 @@ fun SeatingChartTopAppBar(
     onNeuralOracleClick: () -> Unit,
     isHudActive: Boolean,
     onToggleHud: () -> Unit,
+    isStrategistActive: Boolean,
+    onToggleStrategist: () -> Unit,
+    strategistGoal: GhostStrategistEngine.StrategistGoal,
+    onStrategistGoalChange: (GhostStrategistEngine.StrategistGoal) -> Unit,
     isChronosActive: Boolean,
     onToggleChronos: () -> Unit,
     isHologramActive: Boolean,
@@ -2230,6 +2257,33 @@ fun SeatingChartTopAppBar(
                 }
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.STRATEGIST_MODE_ENABLED) {
+                Box {
+                    var showStrategistGoals by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        onToggleStrategist()
+                        if (!isStrategistActive) showStrategistGoals = true
+                    }) {
+                        Icon(
+                            Icons.Default.Psychology,
+                            contentDescription = "Neural Strategist",
+                            tint = if (isStrategistActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(expanded = showStrategistGoals, onDismissRequest = { showStrategistGoals = false }) {
+                        GhostStrategistEngine.StrategistGoal.entries.forEach { goal ->
+                            DropdownMenuItem(
+                                text = { Text(goal.name.toTitleCase()) },
+                                onClick = {
+                                    onStrategistGoalChange(goal)
+                                    showStrategistGoals = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VISION_MODE_ENABLED) {
                 IconButton(onClick = onToggleVision) {
                     Icon(
@@ -2297,6 +2351,16 @@ fun SeatingChartTopAppBar(
                             },
                             leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
+                        if (GhostConfig.STRATEGIST_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isStrategistActive) "Disable Strategist 👻" else "Neural Strategist 👻") },
+                                onClick = {
+                                    onToggleStrategist()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(if (isChronosActive) "Disable Chronos 👻" else "Enable Chronos 👻") },
                             onClick = {
