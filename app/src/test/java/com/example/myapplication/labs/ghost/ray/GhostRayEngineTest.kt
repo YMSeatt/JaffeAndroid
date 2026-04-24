@@ -10,6 +10,22 @@ import org.junit.Test
 class GhostRayEngineTest {
 
     @Test
+    fun `test report generation`() {
+        val reportHit = GhostRayEngine.generateRayReport(1L, "Alice")
+        assertNotNull(reportHit)
+        assert(reportHit.contains("# 👻 GHOST RAY: NEURAL TARGETING LOG"))
+        assert(reportHit.contains("**Target Locked:** Alice"))
+        assert(reportHit.contains("**Intersection ID:** 1"))
+        assert(reportHit.contains("## [SPATIAL TELEMETRY]"))
+
+        val reportMiss = GhostRayEngine.generateRayReport(null, null)
+        assertNotNull(reportMiss)
+        assert(reportMiss.contains("**Target Locked:** NONE"))
+        assert(reportMiss.contains("**Intersection ID:** VOID"))
+        assert(reportMiss.contains("## [SCANNING STATUS]"))
+    }
+
+    @Test
     fun `test intersection logic`() {
         // Since we can't easily mock Context and Sensors in a plain unit test without Robolectric,
         // we'll test the public updateIntersection logic by manually setting the rayTarget.
