@@ -21,6 +21,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.ui.theme.MyApplicationTheme
 
+/**
+ * HelpActivity: The user-facing documentation hub for the application.
+ *
+ * This activity provides a static, categorised knowledge base that explains the core
+ * metaphors and interactive mechanics of the seating chart. It is designed to be a
+ * lightweight reference for teachers to learn about gestures, formatting rules,
+ * and data management without leaving the app.
+ */
 class HelpActivity : ComponentActivity() {
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {

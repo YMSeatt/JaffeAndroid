@@ -21,6 +21,21 @@ import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
+/**
+ * SettingsActivity: A dedicated environment for granular application configuration.
+ *
+ * This activity provides a structured, multi-tabbed interface for managing every aspect
+ * of the Seating Chart experience—from visual themes and behavior types to SMTP
+ * credentials and data persistence.
+ *
+ * ### Security & Isolation:
+ * - **Hardened Environment**: Utilizes [WindowManager.LayoutParams.FLAG_SECURE] to
+ *   prevent the system from capturing screenshots or screen recordings of sensitive
+ *   configuration details (e.g., mail server passwords).
+ * - **Clean State Boundary**: Operates in a separate activity to provide a distinct
+ *   navigation stack, ensuring that configuration changes are finalized before the
+ *   user returns to the primary seating chart interface.
+ */
 @AndroidEntryPoint
 class SettingsActivity : ComponentActivity() {
 

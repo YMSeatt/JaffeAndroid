@@ -41,6 +41,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.delay
 
+/**
+ * MainActivity: The primary UI orchestration hub for the Seating Chart application.
+ *
+ * This activity serves as the main entry point and "control center," managing the transition
+ * between the interactive seating chart, data analysis screens, and system-level reminders.
+ *
+ * ### Responsibilities:
+ * 1. **State Orchestration**: Manages the high-level application state, including the
+ *    password-protected "unlocked" status and the navigation between major screens.
+ * 2. **System Integration**: Registers [ActivityResultLauncher]s for handling common
+ *    file operations like exporting Excel reports and importing classroom JSON data.
+ * 3. **Privacy Hardening**: Implements a background "Cleanup Service" on startup to
+ *    purge temporary PII-laden files from the internal cache.
+ * 4. **Auto-Lock Security**: Monitors user interaction to enforce a configurable
+ *    security timeout, automatically re-locking the app when idle.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var lastActivityTime by mutableStateOf(System.currentTimeMillis())
