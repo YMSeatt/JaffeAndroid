@@ -131,13 +131,25 @@ class Importer(
         withContext(Dispatchers.IO) {
             try {
                 val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
-                context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
-                    if (afd.length > maxSizeBytes) {
-                        throw SecurityException("Import failed: File exceeds 50MB limit.")
-                    }
-                }
 
-                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                val inputStream = context.contentResolver.openInputStream(uri)
+                    ?: throw java.io.FileNotFoundException("Could not open input stream for $uri")
+
+                val bytes = inputStream.use { stream ->
+                    val bos = java.io.ByteArrayOutputStream()
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalBytesRead = 0L
+
+                    while (stream.read(buffer).also { bytesRead = it } != -1) {
+                        totalBytesRead += bytesRead
+                        if (totalBytesRead > maxSizeBytes) {
+                            throw SecurityException("Import failed: File exceeds 50MB limit.")
+                        }
+                        bos.write(buffer, 0, bytesRead)
+                    }
+                    bos.toByteArray()
+                }
 
                 if (bytes != null) {
                     val jsonString = if (encryptDataFilesFlow.first()) {
