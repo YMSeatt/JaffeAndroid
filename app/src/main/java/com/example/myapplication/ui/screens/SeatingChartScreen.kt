@@ -166,6 +166,7 @@ import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
+import com.example.myapplication.labs.ghost.lasso.GhostLassoLayer
 import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
@@ -309,6 +310,7 @@ fun SeatingChartScreen(
     var isNavigatorActive by remember { mutableStateOf(false) }
     var isAdaptiveActive by remember { mutableStateOf(false) }
     var isStrategistActive by remember { mutableStateOf(false) }
+    var isLassoActive by remember { mutableStateOf(false) }
     var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
     var isRayActive by remember { mutableStateOf(false) }
     var isCortexActive by remember { mutableStateOf(false) }
@@ -947,6 +949,20 @@ fun SeatingChartScreen(
 
         ) {
             GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
+            GhostLassoLayer(
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isLassoActive,
+                onSelectionChange = { ids ->
+                    selectMode = true
+                    val currentSelected = selectedItemIds.toMutableSet()
+                    ids.forEach { id ->
+                        currentSelected.add(ChartItemId(id.toInt(), ItemType.STUDENT))
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
+                }
+            )
             GhostAdaptiveLayer(zones = adaptiveZones, isActive = isAdaptiveActive)
             GhostSilhouetteLayer(
                 silhouettes = draggingSilhouettes,
@@ -1809,6 +1825,7 @@ fun SeatingChartScreen(
                                 isStrategistActive = !isStrategistActive
                                 if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
                             }
+                            "LASSO" -> isLassoActive = !isLassoActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2314,6 +2331,16 @@ fun SeatingChartTopAppBar(
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
+                        if (GhostConfig.LASSO_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isLassoActive) "Disable Ghost Lasso 👻" else "Ghost Lasso 👻") },
+                                onClick = {
+                                    isLassoActive = !isLassoActive
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Gesture, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
                         if (GhostConfig.FILTER_MODE_ENABLED) {
