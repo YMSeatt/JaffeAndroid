@@ -45,7 +45,7 @@ fun ManageInitialsScreen(
     val systemBehaviors by viewModel.allSystemBehaviors.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.customBehaviors.observeAsState(initial = emptyList())
 
-    val homeworkTypes by viewModel.customHomeworkTypes.observeAsState(initial = emptyList())
+    val homeworkStatuses by viewModel.customHomeworkStatuses.observeAsState(initial = emptyList())
 
     val quizTemplates by viewModel.allQuizTemplates.observeAsState(initial = emptyList())
 
@@ -86,7 +86,7 @@ fun ManageInitialsScreen(
                     )
                 }
                 1 -> {
-                    val allHomework = homeworkTypes.map { it.name }.distinct()
+                    val allHomework = homeworkStatuses.map { it.name }.distinct()
                     InitialsList(
                         items = allHomework,
                         initialsMapStr = homeworkInitialsMapStr,

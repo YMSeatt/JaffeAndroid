@@ -1316,13 +1316,13 @@ class SeatingChartViewModel @Inject constructor(
                                 if (log.loggedAt <= lastCleared) break
                                 if (homeworkDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
 
-                                val status = if (log.isComplete) "Done" else "Not Done"
-                                val prefix = if (useInitialsForHomework) {
-                                    homeworkInitialsMap[log.assignmentName] ?: log.assignmentName.first().toString()
+                                val status = log.status
+                                val statusDescription = if (useInitialsForHomework) {
+                                    homeworkInitialsMap[status] ?: if (status.isNotEmpty()) status.first().toString() else "?"
                                 } else {
-                                    log.assignmentName
+                                    status
                                 }
-                                homeworkDescription.add("$prefix: $status")
+                                homeworkDescription.add("${log.assignmentName}: $statusDescription")
                             }
                         }
 
@@ -1357,7 +1357,14 @@ class SeatingChartViewModel @Inject constructor(
                             if (hLogsSess != null) {
                                 for (i in 0 until hLogsSess.size) {
                                     if (sLogs.size >= maxLogsToDisplay) break
-                                    sLogs.add("${hLogsSess[i].assignmentName}: ${hLogsSess[i].status}")
+                                    val log = hLogsSess[i]
+                                    val status = log.status
+                                    val statusDescription = if (useInitialsForHomework) {
+                                        homeworkInitialsMap[status] ?: if (status.isNotEmpty()) status.first().toString() else "?"
+                                    } else {
+                                        status
+                                    }
+                                    sLogs.add("${log.assignmentName}: $statusDescription")
                                 }
                             }
                             sLogs
