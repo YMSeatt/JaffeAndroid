@@ -53,6 +53,24 @@ This application is designed to maintain logical parity with its [Android counte
 *   **Coordinate Parity**: While Python uses a **2000x1500** logical canvas and Android uses **4000x4000**, the data is import-compatible.
 *   **Feature Alignment**: Shared implementations of the Command pattern for Undo/Redo and complex conditional formatting rules.
 
+## 🛠️ Developing with Commands
+
+The Python application uses the **Command Pattern** to manage all state-modifying actions. This architecture ensures that every feature is automatically compatible with the multi-step Undo/Redo system and the persistent history model.
+
+### Implementing a New Command
+To add a new reversible feature, follow these requirements in `commands.py`:
+
+1.  **State Snapshotting**: During `__init__`, you **must** capture all state that will be changed. If you are modifying a student, store their current data dictionary as `self.old_data`.
+2.  **Execution Logic**: Implement `execute()` to apply the change. This method should update the `self.app` state and trigger a UI redraw (e.g., `self.app.draw_all_items()`).
+3.  **Undo Logic**: Implement `undo()` to perfectly restore the application to its previous state using the snapshots captured during initialization.
+4.  **Serialization Parity**:
+    -   Implement `_get_data_for_serialization()` to return a dictionary of the command's internal state.
+    -   Implement the `@classmethod _from_serializable_data()` to re-instantiate your command from that dictionary.
+    -   **Important**: Ensure all data in the serialization dictionary is JSON-compatible.
+
+### High-Integrity Deletion
+When implementing deletion commands (like `DeleteItemCommand`), you must capture all **associated relational data** (such as behavioral logs) to ensure that undoing a deletion doesn't result in data loss.
+
 ## 👻 Ghost Lab (Experimental Analysis)
 
 The `Python/` directory contains the **Ghost Lab Suite**—a collection of 30+ R&D scripts that serve as the logical foundation for the Android application's futuristic experimental features. These scripts process classroom data (exported via JSON v10) to generate high-fidelity insights, stylized blueprints, and mathematical models for "Neural" visualizations.
