@@ -13,7 +13,7 @@ import kotlin.math.*
  *
  * This implementation is parity-matched with `Python/ghost_vector_analysis.py`.
  */
-class GhostVectorEngine {
+object GhostVectorEngine {
 
     /**
      * Classifies the social status of a student based on their net force magnitude.
@@ -55,6 +55,8 @@ class GhostVectorEngine {
     /**
      * Calculates the social vectors for all students given the current lattice nodes and edges.
      *
+     * BOLT: Optimized with manual index-based loops to minimize iterator overhead.
+     *
      * @param nodes Spatial representations of students.
      * @param edges Inferred social connections between students.
      * @return A list of [SocialVector]s, one for each student node.
@@ -63,44 +65,55 @@ class GhostVectorEngine {
         nodes: List<GhostLatticeEngine.LatticeNode>,
         edges: List<GhostLatticeEngine.Edge>
     ): List<SocialVector> {
-        val nodeMap = nodes.associateBy { it.id }
+        val n = nodes.size
+        val eSize = edges.size
 
         // Group edges by student ID to transform O(S * E) into O(S + E)
         val edgesByStudent = mutableMapOf<Long, MutableList<GhostLatticeEngine.Edge>>()
-        edges.forEach { edge ->
+        for (i in 0 until eSize) {
+            val edge = edges[i]
             edgesByStudent.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
             edgesByStudent.getOrPut(edge.toId) { mutableListOf() }.add(edge)
         }
 
-        return nodes.map { node ->
+        val nodeMap = mutableMapOf<Long, GhostLatticeEngine.LatticeNode>()
+        for (i in 0 until n) {
+            val node = nodes[i]
+            nodeMap[node.id] = node
+        }
+
+        val result = ArrayList<SocialVector>(n)
+        for (i in 0 until n) {
+            val node = nodes[i]
             var netDx = 0f
             var netDy = 0f
 
-            val studentEdges = edgesByStudent[node.id] ?: emptyList()
-            studentEdges.forEach { edge ->
-                val otherId = if (edge.fromId == node.id) edge.toId else edge.fromId
-                val otherNode = nodeMap[otherId] ?: return@forEach
+            val studentEdges = edgesByStudent[node.id]
+            if (studentEdges != null) {
+                val sEdgesSize = studentEdges.size
+                for (j in 0 until sEdgesSize) {
+                    val edge = studentEdges[j]
+                    val otherId = if (edge.fromId == node.id) edge.toId else edge.fromId
+                    val otherNode = nodeMap[otherId] ?: continue
 
-                val dx = otherNode.x - node.x
-                val dy = otherNode.y - node.y
-                val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                    val dx = otherNode.x - node.x
+                    val dy = otherNode.y - node.y
+                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
 
-                // Normalize direction
-                val dirX = dx / dist
-                val dirY = dy / dist
+                    // Normalize direction
+                    val dirX = dx / dist
+                    val dirY = dy / dist
 
-                // Force calculation based on connection type
-                // COLLABORATION: Positive force (Attracts)
-                // FRICTION: Negative force (Repels)
-                // NEUTRAL: Mild positive force
-                val forceMagnitude = when (edge.type) {
-                    GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
-                    GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
-                    GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
+                    // Force calculation based on connection type
+                    val forceMagnitude = when (edge.type) {
+                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
+                        GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
+                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
+                    }
+
+                    netDx += dirX * forceMagnitude
+                    netDy += dirY * forceMagnitude
                 }
-
-                netDx += dirX * forceMagnitude
-                netDy += dirY * forceMagnitude
             }
 
             val mag = sqrt(netDx * netDx + netDy * netDy)
@@ -113,15 +126,95 @@ class GhostVectorEngine {
                 else -> SocialStatus.NOMINAL
             }
 
-            SocialVector(
+            result.add(SocialVector(
                 studentId = node.id,
                 dx = netDx,
                 dy = netDy,
                 magnitude = mag,
                 angle = atan2(netDy, netDx),
                 status = status
-            )
+            ))
         }
+        return result
+    }
+
+    /**
+     * BOLT: Optimized overload for Student entities to avoid intermediate LatticeNode allocations.
+     *
+     * @param students The list of student entities with positions.
+     * @param edges Inferred social connections between students.
+     * @return A list of [SocialVector]s.
+     */
+    fun calculateVectorsForStudents(
+        students: List<com.example.myapplication.data.Student>,
+        edges: List<GhostLatticeEngine.Edge>
+    ): List<SocialVector> {
+        val n = students.size
+        val eSize = edges.size
+
+        val edgesByStudent = mutableMapOf<Long, MutableList<GhostLatticeEngine.Edge>>()
+        for (i in 0 until eSize) {
+            val edge = edges[i]
+            edgesByStudent.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
+            edgesByStudent.getOrPut(edge.toId) { mutableListOf() }.add(edge)
+        }
+
+        val studentMap = mutableMapOf<Long, com.example.myapplication.data.Student>()
+        for (i in 0 until n) {
+            val s = students[i]
+            studentMap[s.id] = s
+        }
+
+        val result = ArrayList<SocialVector>(n)
+        for (i in 0 until n) {
+            val student = students[i]
+            var netDx = 0f
+            var netDy = 0f
+
+            val studentEdges = edgesByStudent[student.id]
+            if (studentEdges != null) {
+                val sEdgesSize = studentEdges.size
+                for (j in 0 until sEdgesSize) {
+                    val edge = studentEdges[j]
+                    val otherId = if (edge.fromId == student.id) edge.toId else edge.fromId
+                    val otherStudent = studentMap[otherId] ?: continue
+
+                    val dx = otherStudent.xPosition - student.xPosition
+                    val dy = otherStudent.yPosition - student.yPosition
+                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+
+                    val dirX = dx / dist
+                    val dirY = dy / dist
+
+                    val forceMagnitude = when (edge.type) {
+                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
+                        GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
+                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
+                    }
+
+                    netDx += dirX * forceMagnitude
+                    netDy += dirY * forceMagnitude
+                }
+            }
+
+            val mag = sqrt(netDx * netDx + netDy * netDy)
+            val status = when {
+                mag > 85f -> SocialStatus.HIGH_TURBULENCE
+                mag < 5f -> SocialStatus.ISOLATED
+                mag > 40f -> SocialStatus.ACTIVE_SYNERGY
+                else -> SocialStatus.NOMINAL
+            }
+
+            result.add(SocialVector(
+                studentId = student.id,
+                dx = netDx,
+                dy = netDy,
+                magnitude = mag,
+                angle = atan2(netDy, netDx),
+                status = status
+            ))
+        }
+        return result
     }
 
     /**
@@ -131,9 +224,12 @@ class GhostVectorEngine {
      * @return A [SocialAnalysis] containing global metrics.
      */
     fun analyzeClassroomCohesion(vectors: List<SocialVector>): SocialAnalysis {
-        val avgCohesion = if (vectors.isNotEmpty()) {
-            vectors.sumOf { it.magnitude.toDouble() }.toFloat() / vectors.size
-        } else 0f
+        val size = vectors.size
+        var totalMag = 0.0
+        for (i in 0 until size) {
+            totalMag += vectors[i].magnitude.toDouble()
+        }
+        val avgCohesion = if (size > 0) totalMag.toFloat() / size else 0f
 
         val status = if (avgCohesion < 50f) "STABLE" else "DYNAMIC"
 
@@ -169,7 +265,10 @@ class GhostVectorEngine {
         report.append("| Student | Net Force (mG) | Social Status |\n")
         report.append("| :--- | :--- | :--- |\n")
 
-        vectors.sortedByDescending { it.magnitude }.forEach { vector ->
+        val sortedVectors = vectors.sortedByDescending { it.magnitude }
+        val vSize = sortedVectors.size
+        for (i in 0 until vSize) {
+            val vector = sortedVectors[i]
             val name = studentNames[vector.studentId] ?: "Student ${vector.studentId}"
             val statusStr = vector.status.name.replace("_", " ")
             report.append("| $name | ${String.format(Locale.US, "%.2f", vector.magnitude)} | $statusStr |\n")

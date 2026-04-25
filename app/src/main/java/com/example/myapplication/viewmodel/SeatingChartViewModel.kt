@@ -292,6 +292,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Social lattice edges pre-calculated in background. */
     val latticeEdges: StateFlow<List<com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.Edge>> = _latticeEdges.asStateFlow()
 
+    private val _socialVectors = MutableStateFlow<List<com.example.myapplication.labs.ghost.vector.GhostVectorEngine.SocialVector>>(emptyList())
+    /** BOLT: Social gravity vectors pre-calculated in background. */
+    val socialVectors: StateFlow<List<com.example.myapplication.labs.ghost.vector.GhostVectorEngine.SocialVector>> = _socialVectors.asStateFlow()
+
     private val _vortices = MutableStateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>>(emptyList())
     /** BOLT: Behavioral vortices pre-calculated in background. */
     val vortices: StateFlow<List<com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.VortexPoint>> = _vortices.asStateFlow()
@@ -1025,9 +1029,16 @@ class SeatingChartViewModel @Inject constructor(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
-                    _latticeEdges.value = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
+                    val newEdges = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                         students = studentsForEngines,
                         negativeCounts = negativeCountsCache
+                    )
+                    _latticeEdges.value = newEdges
+
+                    // BOLT: Calculate social vectors in the background pipeline, reusing lattice edges.
+                    _socialVectors.value = com.example.myapplication.labs.ghost.vector.GhostVectorEngine.calculateVectorsForStudents(
+                        students = studentsForEngines,
+                        edges = newEdges
                     )
 
                     // BOLT: Calculate behavioral vortices in the background pipeline
