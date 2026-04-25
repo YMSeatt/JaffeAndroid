@@ -10,35 +10,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
-import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.labs.ghost.GhostConfig
-import com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine
 import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostVectorLayer: Renders the social gravity vectors on the seating chart.
  *
- * This layer visualizes the invisible social forces acting on students. It combines data
- * from the [GhostLatticeEngine] and [GhostVectorEngine] to draw directional indicators
+ * This layer visualizes the invisible social forces acting on students. It receives
+ * pre-calculated vectors from the background pipeline and draws directional indicators
  * (using [GhostVectorShader]) for each student.
  *
+ * BOLT: Optimized to receive [vectors] from background pipeline and use manual index loops
+ * in the draw pass to ensure 60fps stability.
+ *
  * @param students Current list of students on the chart.
- * @param behaviorLogs Historical logs used to calculate social links.
+ * @param vectors Pre-calculated social force vectors.
  * @param canvasScale Current zoom level.
  * @param canvasOffset Current pan position.
  */
 @Composable
 fun GhostVectorLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    vectors: List<GhostVectorEngine.SocialVector>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
 ) {
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.VECTOR_MODE_ENABLED) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-    val engine = remember { GhostVectorEngine() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "vectorTime")
     val time by infiniteTransition.animateFloat(
@@ -50,15 +49,6 @@ fun GhostVectorLayer(
         label = "time"
     )
 
-    // Calculate vectors based on current student positions and lattice connections
-    val vectors = remember(students, behaviorLogs) {
-        val nodes = students.map {
-            GhostLatticeEngine.LatticeNode(it.id.toLong(), it.xPosition.value, it.yPosition.value)
-        }
-        val edges = GhostLatticeEngine.computeLattice(nodes, behaviorLogs)
-        engine.calculateVectors(nodes, edges)
-    }
-
     val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
 
     // BOLT: Pool shaders and brushes to avoid O(N) allocations in the draw loop
@@ -68,7 +58,9 @@ fun GhostVectorLayer(
 
     Canvas(modifier = modifier.fillMaxSize()) {
         var vectorIdx = 0
-        vectors.forEach { vector ->
+        val vSize = vectors.size
+        for (i in 0 until vSize) {
+            val vector = vectors[i]
             val student = studentMap[vector.studentId]
             // Only render if there's a significant social force
             if (student != null && vector.magnitude > 2.0f) {

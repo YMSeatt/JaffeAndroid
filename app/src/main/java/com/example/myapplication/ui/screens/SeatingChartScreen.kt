@@ -257,6 +257,7 @@ fun SeatingChartScreen(
     val spectralDensity by seatingChartViewModel.spectralDensity.collectAsState()
     val agitation by seatingChartViewModel.agitation.collectAsState()
     val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
+    val socialVectors by seatingChartViewModel.socialVectors.collectAsState()
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
@@ -1205,7 +1206,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED && isVectorActive) {
                 GhostVectorLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    vectors = socialVectors,
                     canvasScale = scale,
                     canvasOffset = offset
                 )

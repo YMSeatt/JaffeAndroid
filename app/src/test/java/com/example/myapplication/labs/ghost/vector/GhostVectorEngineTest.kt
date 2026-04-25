@@ -7,8 +7,6 @@ import androidx.compose.ui.graphics.Color
 
 class GhostVectorEngineTest {
 
-    private val engine = GhostVectorEngine()
-
     @Test
     fun `test student status categorization`() {
         val nodes = listOf(
@@ -20,7 +18,7 @@ class GhostVectorEngineTest {
         val edgesTurbulence = listOf(
             GhostLatticeEngine.Edge(1L, 2L, 1.0f, GhostLatticeEngine.ConnectionType.FRICTION, Color.Red)
         )
-        val vectorsTurbulence = engine.calculateVectors(nodes, edgesTurbulence)
+        val vectorsTurbulence = GhostVectorEngine.calculateVectors(nodes, edgesTurbulence)
         assertEquals(GhostVectorEngine.SocialStatus.HIGH_TURBULENCE, vectorsTurbulence.find { it.studentId == 1L }?.status)
         assertEquals(100f, vectorsTurbulence[0].magnitude, 0.01f)
 
@@ -28,7 +26,7 @@ class GhostVectorEngineTest {
         val edgesSynergy = listOf(
             GhostLatticeEngine.Edge(1L, 2L, 0.8f, GhostLatticeEngine.ConnectionType.COLLABORATION, Color.Green)
         )
-        val vectorsSynergy = engine.calculateVectors(nodes, edgesSynergy)
+        val vectorsSynergy = GhostVectorEngine.calculateVectors(nodes, edgesSynergy)
         assertEquals(GhostVectorEngine.SocialStatus.ACTIVE_SYNERGY, vectorsSynergy.find { it.studentId == 1L }?.status)
         assertEquals(48f, vectorsSynergy[0].magnitude, 0.01f)
 
@@ -36,12 +34,12 @@ class GhostVectorEngineTest {
         val edgesNominal = listOf(
             GhostLatticeEngine.Edge(1L, 2L, 1.0f, GhostLatticeEngine.ConnectionType.NEUTRAL, Color.Blue)
         )
-        val vectorsNominal = engine.calculateVectors(nodes, edgesNominal)
+        val vectorsNominal = GhostVectorEngine.calculateVectors(nodes, edgesNominal)
         assertEquals(GhostVectorEngine.SocialStatus.NOMINAL, vectorsNominal.find { it.studentId == 1L }?.status)
         assertEquals(15f, vectorsNominal[0].magnitude, 0.01f)
 
         // Isolated (< 5)
-        val vectorsIsolated = engine.calculateVectors(nodes, emptyList())
+        val vectorsIsolated = GhostVectorEngine.calculateVectors(nodes, emptyList())
         assertEquals(GhostVectorEngine.SocialStatus.ISOLATED, vectorsIsolated.find { it.studentId == 1L }?.status)
         assertEquals(0f, vectorsIsolated[0].magnitude, 0.01f)
     }
@@ -52,7 +50,7 @@ class GhostVectorEngineTest {
             createMockVector(1L, 100f),
             createMockVector(2L, 20f)
         )
-        val analysis = engine.analyzeClassroomCohesion(vectors)
+        val analysis = GhostVectorEngine.analyzeClassroomCohesion(vectors)
         assertEquals(60f, analysis.cohesionIndex, 0.01f)
         assertEquals("DYNAMIC", analysis.globalStatus)
 
@@ -60,7 +58,7 @@ class GhostVectorEngineTest {
             createMockVector(1L, 40f),
             createMockVector(2L, 20f)
         )
-        val analysisStable = engine.analyzeClassroomCohesion(vectorsStable)
+        val analysisStable = GhostVectorEngine.analyzeClassroomCohesion(vectorsStable)
         assertEquals(30f, analysisStable.cohesionIndex, 0.01f)
         assertEquals("STABLE", analysisStable.globalStatus)
     }
@@ -73,7 +71,7 @@ class GhostVectorEngineTest {
         val analysis = GhostVectorEngine.SocialAnalysis(90f, "DYNAMIC")
         val names = mapOf(1L to "Alpha Student")
 
-        val report = engine.generateSocialReport(analysis, vectors, names)
+        val report = GhostVectorEngine.generateSocialReport(analysis, vectors, names)
         println("Report output:\n$report")
 
         assertTrue(report.contains("# 👻 GHOST VECTOR: SOCIAL COHESION ANALYSIS"))
