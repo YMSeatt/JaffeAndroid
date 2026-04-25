@@ -135,17 +135,24 @@ class JsonImporter @Inject constructor(
     private fun readFileContent(uri: Uri): String {
         val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
 
-        context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
-            if (afd.length > maxSizeBytes) {
-                throw SecurityException("Import failed: File exceeds 50MB limit.")
-            }
-        }
-
         val inputStream = context.contentResolver.openInputStream(uri)
             ?: throw java.io.FileNotFoundException("Could not open input stream for $uri")
 
-        val reader = BufferedReader(InputStreamReader(inputStream))
-        return reader.readText()
+        inputStream.use { stream ->
+            val bos = java.io.ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var bytesRead: Int
+            var totalBytesRead = 0L
+
+            while (stream.read(buffer).also { bytesRead = it } != -1) {
+                totalBytesRead += bytesRead
+                if (totalBytesRead > maxSizeBytes) {
+                    throw SecurityException("Import failed: File exceeds 50MB limit.")
+                }
+                bos.write(buffer, 0, bytesRead)
+            }
+            return bos.toString("UTF-8")
+        }
     }
 
     private suspend fun importClassroomData(uri: Uri) {

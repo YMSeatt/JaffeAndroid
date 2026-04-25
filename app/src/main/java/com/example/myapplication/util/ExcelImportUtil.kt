@@ -92,15 +92,12 @@ object ExcelImportUtil {
     ): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
-            context.contentResolver.openAssetFileDescriptor(uri, "r")?.use { afd ->
-                if (afd.length > maxSizeBytes) {
-                    throw SecurityException("Import failed: File exceeds 50MB limit.")
-                }
-            }
 
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             inputStream.use { stream ->
-                val workbook = WorkbookFactory.create(stream)
+                if (stream == null) return@withContext Result.success(0)
+                val limitedStream = LimitedInputStream(stream, maxSizeBytes)
+                val workbook = WorkbookFactory.create(limitedStream)
                 val sheet = workbook.getSheetAt(0)
                 val rows = sheet.iterator()
 
@@ -200,6 +197,42 @@ object ExcelImportUtil {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import from Excel", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * A wrapper [InputStream] that enforces a maximum byte limit.
+     * Throws [SecurityException] if the limit is exceeded.
+     */
+    private class LimitedInputStream(private val inputStream: InputStream, private val maxSize: Long) : InputStream() {
+        private var bytesRead = 0L
+
+        override fun read(): Int {
+            val result = inputStream.read()
+            if (result != -1) {
+                bytesRead++
+                checkSize()
+            }
+            return result
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val result = inputStream.read(b, off, len)
+            if (result != -1) {
+                bytesRead += result
+                checkSize()
+            }
+            return result
+        }
+
+        private fun checkSize() {
+            if (bytesRead > maxSize) {
+                throw SecurityException("Import failed: File exceeds 50MB limit.")
+            }
+        }
+
+        override fun close() {
+            inputStream.close()
         }
     }
 }
