@@ -37,3 +37,7 @@ LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTi
 ## 2026-03-05 - Ghost Architect Layout Analysis Port
 **Discrepancy:** The Python prototype uses `ghost_architect_analysis.py` to calculate 'Layout Synergy' and 'Strategic Alignment' scores based on Euclidean distance with 1000/1500 thresholds. The Android application had a basic layout proposer but lacked the scoring and reporting logic.
 **Adaptation:** Ported `calculateSynergy` and `generateReport` into `GhostArchitectEngine.kt`. Adjusted distance constants (1000 -> 2000, 1500 -> 3000) to account for the 2x scale difference in Android's 4000x4000 logical coordinate system. Used `Locale.US` for Markdown report formatting to maintain parity with Python's numeric string output.
+
+## 2028-05-15 - Homework Initials Logic Parity
+**Discrepancy:** The Python prototype maps homework initials based on the status string (e.g., "Done", "Late") rather than the assignment name. The Android application was incorrectly using the assignment name for initials mapping and displayed assignment types in the "Manage Initials" screen.
+**Adaptation:** Modified `SeatingChartViewModel.kt` to apply `homeworkInitialsMap` to the `log.status` field. Updated `ManageInitialsScreen.kt` to populate the "Homework" tab with `customHomeworkStatuses` to ensure the user can configure initials for the correct set of labels, matching Python's logical behavior.
