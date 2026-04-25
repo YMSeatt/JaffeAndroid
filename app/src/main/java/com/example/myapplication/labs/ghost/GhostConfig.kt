@@ -177,4 +177,7 @@ object GhostConfig {
 
     /** Enables the "Ghost Morph" shared element neural transitions. */
     const val MORPH_MODE_ENABLED = true
+
+    /** Enables "Ghost Lasso" gesture-based multi-selection. */
+    const val LASSO_MODE_ENABLED = true
 }

@@ -62,7 +62,8 @@ fun GhostHubLayer(
             GhostAction("SPECTRA", Icons.Default.Palette, "Data Refraction"),
             GhostAction("AURORA", Icons.Default.Waves, "Climate Visualization"),
             GhostAction("FUTURE", Icons.Default.Update, "Neural Future"),
-            GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist")
+            GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"),
+            GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso")
         )
     }
 
