@@ -142,6 +142,7 @@ import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
+import com.example.myapplication.labs.ghost.glitch.GhostGlitchLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
@@ -265,6 +266,7 @@ fun SeatingChartScreen(
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
     val draggingSilhouettes by seatingChartViewModel.draggingSilhouettes.collectAsState()
+    val glitchIntensity by seatingChartViewModel.glitchIntensity.collectAsState()
     val strategistInterventions by seatingChartViewModel.strategistInterventions.collectAsState()
     val isStrategistThinking by seatingChartViewModel.isStrategistThinking.collectAsState()
     val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
@@ -305,6 +307,7 @@ fun SeatingChartScreen(
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
+    var isGlitchActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) }
     var isGlyphActive by remember { mutableStateOf(false) }
     var isSpotlightActive by remember { mutableStateOf(false) }
     var isNavigatorActive by remember { mutableStateOf(false) }
@@ -573,6 +576,12 @@ fun SeatingChartScreen(
         ghostPhasingEngine.updatePhase(phaseLevel)
     }
 
+    LaunchedEffect(glitchIntensity) {
+        if (glitchIntensity > 0.3f && isGlitchActive) {
+            hapticManager.perform(GhostHapticManager.Pattern.NEURAL_FRICTION)
+        }
+    }
+
     LaunchedEffect(isSupernovaActive, allBehaviorEvents) {
         if (isSupernovaActive) {
             ghostSupernovaEngine.updatePressure(allBehaviorEvents)
@@ -756,6 +765,8 @@ fun SeatingChartScreen(
                 onToggleZenith = { isZenithActive = !isZenithActive },
                 isHorizonActive = isHorizonActive,
                 onToggleHorizon = { isHorizonActive = !isHorizonActive },
+                isGlitchActive = isGlitchActive,
+                onToggleGlitch = { isGlitchActive = !isGlitchActive },
                 isHelixActive = isHelixActive,
                 onToggleHelix = { isHelixActive = !isHelixActive },
                 isMagnetarActive = isMagnetarActive,
@@ -926,6 +937,14 @@ fun SeatingChartScreen(
         Box(
             modifier = Modifier
                 .padding(paddingValues)
+                .fillMaxSize()
+        ) {
+            GhostGlitchLayer(
+                intensity = glitchIntensity,
+                isActive = isGlitchActive
+            )
+            Box(
+                modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTapGestures(
@@ -2088,6 +2107,8 @@ fun SeatingChartTopAppBar(
     onToggleZenith: () -> Unit,
     isHorizonActive: Boolean,
     onToggleHorizon: () -> Unit,
+    isGlitchActive: Boolean,
+    onToggleGlitch: () -> Unit,
     isHelixActive: Boolean,
     onToggleHelix: () -> Unit,
     isEmergenceActive: Boolean,
@@ -2522,6 +2543,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.GLITCH_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isGlitchActive) "Suppress Glitch 👻" else "Neural Glitch 👻") },
+                                onClick = {
+                                    onToggleGlitch()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                 if (GhostConfig.CORTEX_MODE_ENABLED) {
