@@ -19,6 +19,23 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import kotlin.math.roundToInt
 
+/**
+ * A highly customizable dropdown menu implementation designed for high-performance UIs.
+ *
+ * Unlike the standard Material 3 [androidx.compose.material3.DropdownMenu], this component:
+ * 1. **Supports Animation Toggling**: Allows animations to be disabled globally via
+ *    [noAnimations], which is critical for maintaining 60fps on lower-end devices or
+ *    during heavy classroom simulations.
+ * 2. **Explicit Positioning**: Uses [IntOffset] and [Popup] for more predictable placement
+ *    on the large seating chart canvas.
+ *
+ * @param expanded Whether the menu is currently visible.
+ * @param onDismissRequest Callback triggered when the user clicks outside the menu.
+ * @param modifier Modifier for the menu's card container.
+ * @param offset The relative displacement of the menu from its anchor point.
+ * @param noAnimations If true, disables the fade-in/fade-out transitions.
+ * @param content The composable content (typically [androidx.compose.material3.DropdownMenuItem]s).
+ */
 @Composable
 fun CustomDropdownMenu(
     expanded: Boolean,
