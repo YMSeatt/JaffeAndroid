@@ -37,6 +37,13 @@ import kotlin.math.floor
  * 2. **Rulers**: These are drawn in "Screen Space" (pixels) so they remain fixed to the
  *    edges of the device, but their labels are calculated by reverse-mapping the screen
  *    pixels back to logical world coordinates based on the current [scale] and [offset].
+ *
+ * ### ⚡ BOLT Performance Optimizations:
+ * - **Allocation Hoisting**: Instantiation of `android.graphics.Paint`, color parsing, and
+ *   DP-to-Px conversions are hoisted into `remember` blocks. This prevents thousands
+ *   of object allocations during high-frequency pan/zoom gestures.
+ * - **Index-Based Loops**: Replaces `forEach` iterators with manual index loops to
+ *   further reduce object churn in the 60fps draw path.
  */
 @Composable
 fun GridAndRulers(

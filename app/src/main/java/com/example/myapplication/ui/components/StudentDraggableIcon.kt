@@ -86,6 +86,14 @@ import kotlin.math.roundToInt
  *    Compose only recomposes the specific parts of the icon (e.g., position or background)
  *    that change, rather than the entire icon or the parent canvas.
  *
+ * ### ⚡ BOLT & Ghost Lab Integrations:
+ * - **Level of Detail (LOD)**: Automatically sheds rendering tasks (like drawing full names
+ *   or log text) when zoomed out, preserving frame budget.
+ * - **Ghost Iris & Helix**: Seamlessly overlays procedural neural signatures from the
+ *   "Ghost Lab" suite when enabled.
+ * - **Shared Transitions**: Integrated with the "Ghost Morph" system for fluid shared-element
+ *   transitions to the Neural Dossier view.
+ *
  * @param studentUiItem The UI-optimized state object for the student.
  * @param viewModel The ViewModel for database synchronization.
  * @param showBehavior Whether to display the recent behavior/quiz logs.
