@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Add "Ghost Glitch" - Neural feedback during data conflicts.
+- [ ] Idea: Add "Neural Sync" - Real-time collaboration visualizer.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-05-20: Ghost Glitch - Neural spatial feedback in `/labs/ghost/glitch/`
 - [DONE] 2028-05-15: Ghost Lasso - Neural gesture-based multi-selection tool in `/labs/ghost/lasso/`
 - [DONE] 2028-05-10: Ghost Strategist - Integrated Generative AI Tactical Co-Pilot into Seating Chart & ViewModel
 - [DONE] 2028-04-25: Ghost Shake - Accelerometer-based canvas recenter gesture in `SeatingChartScreen.kt` and `/labs/ghost/util/GhostShakeDetector.kt`

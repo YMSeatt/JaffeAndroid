@@ -180,4 +180,7 @@ object GhostConfig {
 
     /** Enables "Ghost Lasso" gesture-based multi-selection. */
     const val LASSO_MODE_ENABLED = true
+
+    /** Enables "Ghost Glitch" neural feedback during spatial conflicts. */
+    const val GLITCH_MODE_ENABLED = true
 }

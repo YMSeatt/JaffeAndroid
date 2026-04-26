@@ -33,7 +33,8 @@ class GhostHapticManager(private val context: Context) {
         ERROR,          // Harsh alert (Heavy Thud)
         NEURAL_THINKING, // Circular momentum (Spin + Pulse)
         UI_CLICK,       // Sharp, clean interaction
-        SPARK_POP       // Sudden, light burst
+        SPARK_POP,      // Sudden, light burst
+        NEURAL_FRICTION // High-frequency resistance (Low Ticks)
     }
 
     /**
@@ -48,6 +49,7 @@ class GhostHapticManager(private val context: Context) {
             Pattern.NEURAL_THINKING -> playNeuralThinking()
             Pattern.UI_CLICK -> playUiClick()
             Pattern.SPARK_POP -> playSparkPop()
+            Pattern.NEURAL_FRICTION -> playNeuralFriction()
         }
     }
 
@@ -107,10 +109,26 @@ class GhostHapticManager(private val context: Context) {
                 .compose()
             vibrator?.vibrate(effect)
         } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            vibrator?.vibrate(VibrationEffect.createOneShot(20, 255))
+            vibrator?.vibrate(VibrationEffect.createOneShot(20, VibrationEffect.DEFAULT_AMPLITUDE))
         } else {
             @Suppress("DEPRECATION")
             vibrator?.vibrate(20)
+        }
+    }
+
+    private fun playNeuralFriction() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val effect = VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.4f)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.6f, 30)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.8f, 30)
+                .compose()
+            vibrator?.vibrate(effect)
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createOneShot(100, 64))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(100)
         }
     }
 }

@@ -324,6 +324,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Track active drag operations for Ghost Silhouettes. */
     val draggingSilhouettes: StateFlow<List<SilhouetteData>> = _draggingSilhouettes.asStateFlow()
 
+    private val _glitchIntensity = MutableStateFlow(0f)
+    /** BOLT: Spatial conflict intensity calculated in background update pipeline. */
+    val glitchIntensity: StateFlow<Float> = _glitchIntensity.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -1584,6 +1588,15 @@ class SeatingChartViewModel @Inject constructor(
                         studentsWithBehavior.add(newItem)
                     }
                 }
+
+                // BOLT: Calculate spatial glitch intensity in the background pipeline.
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) {
+                    val currentGlitch = com.example.myapplication.labs.ghost.glitch.GhostGlitchEngine.calculateGlitchIntensity(studentsWithBehavior)
+                    _glitchIntensity.value = currentGlitch
+                } else {
+                    _glitchIntensity.value = 0f
+                }
+
                 studentsForDisplay.postValue(studentsWithBehavior)
             }
         }
