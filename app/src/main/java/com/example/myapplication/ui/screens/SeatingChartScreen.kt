@@ -1963,6 +1963,14 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
+            // BOLT: Pre-calculate selection sets to transform O(N*S) lookup into O(1).
+            val selectedStudentIds = remember(selectedItemIds) {
+                selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id }.toSet()
+            }
+            val selectedFurnitureIds = remember(selectedItemIds) {
+                selectedItemIds.filter { it.type == ItemType.FURNITURE }.map { it.id }.toSet()
+            }
+
             // BOLT: Replace forEach with manual index loops to eliminate iterator churn in the high-frequency rendering path.
             for (i in students.indices) {
                 val studentItem = students[i]
@@ -1973,7 +1981,7 @@ fun SeatingChartContent(
                     studentUiItem = studentItem,
                     viewModel = seatingChartViewModel,
                     showBehavior = showRecentBehavior,
-                    isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
+                    isSelected = studentItem.id in selectedStudentIds,
                     onClick = { onStudentClick(studentItem) },
                     onLongClick = { pos -> onStudentLongClick(studentItem, pos) },
                     onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
@@ -2005,7 +2013,7 @@ fun SeatingChartContent(
                     viewModel = seatingChartViewModel,
                     scale = scale,
                     canvasOffset = offset,
-                    isSelected = selectedItemIds.any { it.id == furnitureItem.id && it.type == ItemType.FURNITURE },
+                    isSelected = furnitureItem.id in selectedFurnitureIds,
                     onClick = { onFurnitureClick(furnitureItem) },
                     onLongClick = { onFurnitureLongClick(furnitureItem) },
                     onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(furnitureItem.id, ItemType.FURNITURE)), w.toInt(), h.toInt()) },
