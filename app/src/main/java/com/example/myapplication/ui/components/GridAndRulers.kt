@@ -77,6 +77,21 @@ fun GridAndRulers(
             this.textSize = textSize
         }
     }
+    // BOLT: Pre-allocate paints to avoid per-frame allocations during Canvas draw.
+    val gridPaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.LTGRAY
+            strokeWidth = 1f
+            style = android.graphics.Paint.Style.STROKE
+        }
+    }
+    val guidePaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.RED
+            strokeWidth = 2f
+            style = android.graphics.Paint.Style.STROKE
+        }
+    }
 
     Canvas(modifier = Modifier
         .fillMaxSize()
@@ -137,29 +152,22 @@ fun GridAndRulers(
                 val worldXEnd = worldXStart + canvasSize.width / scale
                 val worldYEnd = worldYStart + canvasSize.height / scale
 
-                // Determine the first and last grid lines to draw
-                val firstLineX = floor(worldXStart / gridSizePx) * gridSizePx
-                var currentX = firstLineX
-                while (currentX < worldXEnd) {
-                    drawLine(
-                        start = Offset(currentX, worldYStart),
-                        end = Offset(currentX, worldYEnd),
-                        color = Color.LightGray,
-                        strokeWidth = 1f / scale
-                    )
-                    currentX += gridSizePx
-                }
+                // BOLT: Optimized grid drawing using native Canvas to avoid Offset allocations.
+                drawIntoCanvas { canvas ->
+                    gridPaint.strokeWidth = 1f / scale
+                    val firstLineX = floor(worldXStart / gridSizePx) * gridSizePx
+                    var currentX = firstLineX
+                    while (currentX < worldXEnd) {
+                        canvas.nativeCanvas.drawLine(currentX, worldYStart, currentX, worldYEnd, gridPaint)
+                        currentX += gridSizePx
+                    }
 
-                val firstLineY = floor(worldYStart / gridSizePx) * gridSizePx
-                var currentY = firstLineY
-                while (currentY < worldYEnd) {
-                    drawLine(
-                        start = Offset(worldXStart, currentY),
-                        end = Offset(worldXEnd, currentY),
-                        color = Color.LightGray,
-                        strokeWidth = 1f / scale
-                    )
-                    currentY += gridSizePx
+                    val firstLineY = floor(worldYStart / gridSizePx) * gridSizePx
+                    var currentY = firstLineY
+                    while (currentY < worldYEnd) {
+                        canvas.nativeCanvas.drawLine(worldXStart, currentY, worldXEnd, currentY, gridPaint)
+                        currentY += gridSizePx
+                    }
                 }
             }
 
@@ -169,23 +177,16 @@ fun GridAndRulers(
                 val worldYStart = -offset.y / scale
                 val worldXEnd = worldXStart + canvasSize.width / scale
                 val worldYEnd = worldYStart + canvasSize.height / scale
-                // BOLT: Replace forEach with manual index loop to eliminate iterator churn.
-                for (i in guides.indices) {
-                    val guide = guides[i]
-                    if (guide.type == GuideType.HORIZONTAL) {
-                        drawLine(
-                            start = Offset(worldXStart, guide.position),
-                            end = Offset(worldXEnd, guide.position),
-                            color = Color.Red,
-                            strokeWidth = 2f / scale
-                        )
-                    } else { // vertical
-                        drawLine(
-                            start = Offset(guide.position, worldYStart),
-                            end = Offset(guide.position, worldYEnd),
-                            color = Color.Red,
-                            strokeWidth = 2f / scale
-                        )
+                // BOLT: Optimized guide drawing using native Canvas and manual loop.
+                drawIntoCanvas { canvas ->
+                    guidePaint.strokeWidth = 2f / scale
+                    for (i in guides.indices) {
+                        val guide = guides[i]
+                        if (guide.type == GuideType.HORIZONTAL) {
+                            canvas.nativeCanvas.drawLine(worldXStart, guide.position, worldXEnd, guide.position, guidePaint)
+                        } else { // vertical
+                            canvas.nativeCanvas.drawLine(guide.position, worldYStart, guide.position, worldYEnd, guidePaint)
+                        }
                     }
                 }
             }
