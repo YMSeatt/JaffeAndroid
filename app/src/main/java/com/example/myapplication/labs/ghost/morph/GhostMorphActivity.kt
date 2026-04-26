@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.morph
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
@@ -13,8 +14,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.data.StudentDao
 import com.example.myapplication.ui.theme.MyApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 
@@ -28,15 +31,24 @@ import androidx.compose.foundation.background
 @AndroidEntryPoint
 class GhostMorphActivity : ComponentActivity() {
 
+    @Inject
+    lateinit var studentDao: StudentDao
+
     @OptIn(ExperimentalSharedTransitionApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of sensitive Neural Dossiers
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
 
         val studentId = intent.getLongExtra("STUDENT_ID", -1L)
-        val studentName = intent.getStringExtra("STUDENT_NAME") ?: "Unknown Student"
 
         setContent {
             MyApplicationTheme {
+                val studentName by produceState(initialValue = "Loading...") {
+                    val student = studentDao.getStudentByIdNonLiveData(studentId)
+                    value = student?.let { "${it.firstName} ${it.lastName}" } ?: "Unknown Student"
+                }
+
                 var isDossierVisible by remember { mutableStateOf(false) }
 
                 LaunchedEffect(Unit) {

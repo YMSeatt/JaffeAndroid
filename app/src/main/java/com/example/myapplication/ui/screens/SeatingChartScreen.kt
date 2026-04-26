@@ -1788,7 +1788,6 @@ fun SeatingChartScreen(
                                     selectedStudentUiItemForAction?.let { student ->
                                         val intent = Intent(context, com.example.myapplication.labs.ghost.morph.GhostMorphActivity::class.java).apply {
                                             putExtra("STUDENT_ID", student.id.toLong())
-                                            putExtra("STUDENT_NAME", student.fullName.value)
                                             // Pass triggering position for potential transition refinement
                                             putExtra("TRIGGER_X", studentHubPosition.x)
                                             putExtra("TRIGGER_Y", studentHubPosition.y)

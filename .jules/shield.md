@@ -91,3 +91,11 @@
     - Implemented a mandatory 50MB size limit for **all** database operations (backup, share, restore) regardless of encryption status.
     - Hardened `shareDatabase` to use unique, timestamp-based filenames to prevent collisions in the shared cache.
 - **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`
+
+## 🛡️ Privacy Hardening: ID-Only Intent Protocol & Screen Protection
+- **Vulnerability:** Student PII (full name) was passed via Intent extras to `GhostMorphActivity`, potentially exposing it to system logs or malicious Intent interceptors. Additionally, the sensitive 'Neural Dossier' screen lacked protection against screenshots and screen recordings.
+- **Fix:**
+    - Transitioned to an **ID-Only Intent Protocol** for the Neural Morph transition.
+    - Updated `GhostMorphActivity` to fetch the student name directly from the secure local database using the provided ID.
+    - Enforced `WindowManager.LayoutParams.FLAG_SECURE` in `GhostMorphActivity` to prevent unauthorized data capture.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/morph/GhostMorphActivity.kt`
