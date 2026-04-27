@@ -308,6 +308,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Quantum entanglement links pre-calculated in background. */
     val entangledLinks: StateFlow<List<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntanglementLink>> = _entangledLinks.asStateFlow()
 
+    private val _syncLinks = MutableStateFlow<List<com.example.myapplication.labs.ghost.sync.GhostSyncEngine.SyncLink>>(emptyList())
+    /** BOLT: Neural sync links pre-calculated in background. */
+    val syncLinks: StateFlow<List<com.example.myapplication.labs.ghost.sync.GhostSyncEngine.SyncLink>> = _syncLinks.asStateFlow()
+
     private val _catalystReactions = MutableStateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>>(emptyList())
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
@@ -435,6 +439,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsIonMapCache: Map<Long, Pair<Float, Float>> = emptyMap()
     private var ghostMetricsEntanglementStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsEntanglementBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsSyncStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsSyncBehaviorLogsRef: List<BehaviorEvent>? = null
 
     private var ghostMetricsCatalystStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsCatalystBehaviorLogsRef: List<BehaviorEvent>? = null
@@ -1082,6 +1089,51 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsEntanglementBehaviorLogsRef = behaviorEvents
                     ghostMetricsEntanglementStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate neural sync links in the background pipeline (Memoized)
+                // Note: We use studentsSnapshot built during Stage 2/3 for high-fidelity sync analysis.
+                // However, that happens below. Let's pre-calculate sync links if needed using raw students.
+                if (behaviorEvents !== ghostMetricsSyncBehaviorLogsRef || studentsForEngines !== ghostMetricsSyncStudentsRef) {
+                    val tempUiItems = ArrayList<StudentUiItem>(studentsForEngines.size)
+                    for (i in 0 until studentsForEngines.size) {
+                        val s = studentsForEngines[i]
+                        val item = studentUiItemCache[s.id.toInt()] ?: s.toStudentUiItem(
+                            recentBehaviorDescription = emptyList(),
+                            recentHomeworkDescription = emptyList(),
+                            recentQuizDescription = emptyList(),
+                            sessionLogText = emptyList(),
+                            groupColor = null,
+                            backgroundColors = listOf(Color.Gray),
+                            outlineColors = listOf(Color.DarkGray),
+                            textColor = Color.White,
+                            fontColor = Color.White,
+                            defaultWidth = 100,
+                            defaultHeight = 100,
+                            defaultOutlineThickness = 2,
+                            defaultCornerRadius = 8,
+                            defaultPadding = 4,
+                            defaultFontFamily = "sans-serif",
+                            defaultFontSize = 12,
+                            irisParams = null,
+                            osmoticNode = null,
+                            altitude = 0f,
+                            behaviorEntropy = 0f,
+                            tectonicStress = 0f,
+                            quasarEnergy = 0f,
+                            quasarPolarity = 0f,
+                            ionCharge = 0f,
+                            ionDensity = 0f
+                        )
+                        tempUiItems.add(item)
+                    }
+
+                    _syncLinks.value = com.example.myapplication.labs.ghost.sync.GhostSyncEngine.calculateSyncLinks(
+                        students = tempUiItems,
+                        behaviorLogs = behaviorEvents
+                    )
+                    ghostMetricsSyncBehaviorLogsRef = behaviorEvents
+                    ghostMetricsSyncStudentsRef = studentsForEngines
                 }
 
                 // BOLT: Calculate behavioral chain reactions in the background pipeline (Memoized)

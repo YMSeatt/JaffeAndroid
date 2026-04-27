@@ -4,6 +4,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-05-27: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-20: Ghost Glitch - Neural spatial feedback in `/labs/ghost/glitch/`
 - [DONE] 2028-05-15: Ghost Lasso - Neural gesture-based multi-selection tool in `/labs/ghost/lasso/`
 - [DONE] 2028-05-10: Ghost Strategist - Integrated Generative AI Tactical Co-Pilot into Seating Chart & ViewModel
