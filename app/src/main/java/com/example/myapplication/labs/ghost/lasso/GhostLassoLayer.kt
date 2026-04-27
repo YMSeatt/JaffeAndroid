@@ -32,9 +32,12 @@ fun GhostLassoLayer(
 ) {
     if (!isActive) return
 
-    var lassoPath by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    val lassoPath = remember { mutableStateListOf<Offset>() }
     var lassoFade by remember { mutableFloatStateOf(0f) }
     val scope = rememberCoroutineScope()
+
+    // BOLT: Pre-allocate buffers and hoisted state to avoid per-frame allocations.
+    val pointsArray = remember { FloatArray(64) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "GhostLasso")
     val time by infiniteTransition.animateFloat(
@@ -59,19 +62,22 @@ fun GhostLassoLayer(
             .pointerInput(isActive) {
                 detectDragGestures(
                     onDragStart = {
-                        lassoPath = listOf(it)
+                        lassoPath.clear()
+                        lassoPath.add(it)
                         lassoFade = 1f
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        lassoPath = lassoPath + change.position
+                        lassoPath.add(change.position)
                     },
                     onDragEnd = {
                         // Resample path for selection logic
                         val simplifiedPath = GhostLassoEngine.resample(lassoPath, 50)
 
                         val selectedIds = mutableSetOf<Long>()
-                        students.forEach { student ->
+                        val studentCount = students.size
+                        for (i in 0 until studentCount) {
+                            val student = students[i]
                             val studentPos = Offset(
                                 student.xPosition.value * canvasScale + canvasOffset.x,
                                 student.yPosition.value * canvasScale + canvasOffset.y
@@ -94,7 +100,7 @@ fun GhostLassoLayer(
                             ) { value, _ ->
                                 lassoFade = value
                                 if (value == 0f) {
-                                    lassoPath = emptyList()
+                                    lassoPath.clear()
                                 }
                             }
                         }
@@ -107,15 +113,12 @@ fun GhostLassoLayer(
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iAlpha", lassoFade)
 
-                    val shaderPoints = GhostLassoEngine.resample(lassoPath, 32)
-                    val pointsArray = FloatArray(64) { 0f }
-                    shaderPoints.forEachIndexed { i, offset ->
-                        pointsArray[i * 2] = offset.x
-                        pointsArray[i * 2 + 1] = offset.y
-                    }
+                    // BOLT: Zero-allocation resampling directly into remembered buffer.
+                    val pointCount = 32
+                    GhostLassoEngine.resampleToBuffer(lassoPath, pointCount, pointsArray)
 
                     shader.setFloatUniform("points", pointsArray)
-                    shader.setIntUniform("pointCount", shaderPoints.size)
+                    shader.setIntUniform("pointCount", pointCount)
                 }
             }
     ) {
