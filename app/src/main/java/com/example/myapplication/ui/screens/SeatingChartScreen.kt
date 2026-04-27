@@ -126,6 +126,8 @@ import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.silhouette.GhostSilhouetteLayer
 import com.example.myapplication.labs.ghost.ion.GhostIonLayer
+import com.example.myapplication.labs.ghost.sync.GhostSyncLayer
+import com.example.myapplication.labs.ghost.sync.GhostSyncEngine
 import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
@@ -262,6 +264,7 @@ fun SeatingChartScreen(
     val socialVectors by seatingChartViewModel.socialVectors.collectAsState()
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
+    val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
@@ -289,6 +292,7 @@ fun SeatingChartScreen(
     var isWarpActive by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
+    var isSyncActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
@@ -757,6 +761,8 @@ fun SeatingChartScreen(
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 isEntanglementActive = isEntanglementActive,
                 onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
+                isSyncActive = isSyncActive,
+                onToggleSync = { isSyncActive = !isSyncActive },
                 isIonActive = isIonActive,
                 onToggleIon = { isIonActive = !isIonActive },
                 isEntropyActive = isEntropyActive,
@@ -1059,6 +1065,16 @@ fun SeatingChartScreen(
                     behaviorLogs = allBehaviorEvents,
                     canvasScale = scale,
                     canvasOffset = offset
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SYNC_MODE_ENABLED) {
+                GhostSyncLayer(
+                    students = students,
+                    syncLinks = syncLinks,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isSyncActive
                 )
             }
 
@@ -1843,6 +1859,7 @@ fun SeatingChartScreen(
                                 isStrategistActive = !isStrategistActive
                                 if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
                             }
+                            "SYNC" -> isSyncActive = !isSyncActive
                             "LASSO" -> isLassoActive = !isLassoActive
                         }
                     },
@@ -2107,6 +2124,8 @@ fun SeatingChartTopAppBar(
     onToggleOsmosis: () -> Unit,
     isEntanglementActive: Boolean,
     onToggleEntanglement: () -> Unit,
+    isSyncActive: Boolean,
+    onToggleSync: () -> Unit,
     isIonActive: Boolean,
     onToggleIon: () -> Unit,
     isEntropyActive: Boolean,
@@ -2501,6 +2520,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.SYNC_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSyncActive) "Disable Neural Sync 👻" else "Neural Sync 👻") },
+                                onClick = {
+                                    onToggleSync()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Link, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.NAVIGATOR_MODE_ENABLED) {
