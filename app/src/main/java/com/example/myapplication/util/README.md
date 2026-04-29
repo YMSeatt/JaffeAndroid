@@ -13,9 +13,19 @@ Performance is treated as a first-class feature in this package. To ensure a flu
 ## 🏛️ Key Components
 
 ### 1. Conditional Formatting Engine (`ConditionalFormattingEngine.kt`)
-The brain behind the seating chart's dynamic styling.
-- **Reactive Styling**: Evaluates complex conditions (behavior counts, quiz scores, live session responses) to resolve student visual states.
-- **Optimization**: Uses a multi-stage decoding process where rules are pre-processed into `DecodedConditionalFormattingRule` objects, moving expensive logic out of the rendering loop.
+The brain behind the seating chart's dynamic styling and automated feedback visualization.
+
+- **Reactive Styling**: Evaluates a prioritized set of conditional rules to resolve student visual states (backgrounds, outlines). Supports a wide range of conditions:
+    - **Demographic**: Group membership.
+    - **Behavioral**: Incident counts within sliding time windows (e.g., "3+ Negative logs in the last 24h").
+    - **Academic**: Historical quiz scores using fuzzy name matching and percentage thresholds.
+    - **Real-time**: Integration with live session data (latest quiz responses, homework check status).
+- **Rule Schema (DSL)**: Conditions are stored as flexible JSON structures, allowing the system to expand to new criteria without database schema migrations.
+- **BOLT Performance Architecture**:
+    - **Stage 2 Integration**: Evaluation is integrated into the Seating Chart's 3-stage update pipeline, running on background threads.
+    - **Decoded Rule Cache**: Rules are pre-decoded and prioritized outside the per-student loop to avoid redundant JSON parsing (O(R*S) -> O(R)).
+    - **Memoized JSON Parsing**: Uses an `LruCache` to store deserialized mark data from `QuizLog` entries.
+    - **Early-Exit Filters**: Implements global activation filters (Time windows, Day-of-week, UI Mode) that bypass evaluation logic if a rule is not currently relevant.
 
 ### 2. Collision Detector (`CollisionDetector.kt`)
 Manages the spatial organization of student icons.
