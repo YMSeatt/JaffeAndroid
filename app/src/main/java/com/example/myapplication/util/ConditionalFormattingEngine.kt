@@ -18,12 +18,18 @@ import kotlinx.serialization.InternalSerializationApi
 /**
  * Represents a time range and set of days when a conditional formatting rule is active.
  *
- * These objects are evaluated during the Stage 2 transformation in the seating chart update
- * pipeline. Using pre-formatted strings for time comparison allows for efficient temporal
- * filtering without expensive Calendar/Date object churn.
+ * ### Architectural Intent:
+ * These objects are evaluated during the **Stage 2: Transformation** phase of the seating chart update
+ * pipeline (see [com.example.myapplication.viewmodel.SeatingChartViewModel.updateStudentsForDisplay]).
  *
- * @property startTime The start time in "HH:mm" format (24-hour).
- * @property endTime The end time in "HH:mm" format (24-hour).
+ * ### Performance Strategy:
+ * Using pre-formatted "HH:mm" strings for time comparison allows the engine to perform temporal
+ * filtering using simple string range checks (`currentTimeString in start..end`). This avoids the
+ * significant object churn associated with repeatedly creating `Calendar`, `Date`, or `ZonedDateTime`
+ * objects for every student icon during high-frequency UI updates.
+ *
+ * @property startTime The start time in "HH:mm" format (24-hour, e.g., "08:30").
+ * @property endTime The end time in "HH:mm" format (24-hour, e.g., "15:45").
  * @property daysOfWeek List of integers representing days of the week (0=Monday, 6=Sunday).
  */
 @Serializable
@@ -35,37 +41,44 @@ data class ActiveTime(
 
 /**
  * Defines the criteria that must be met for a conditional formatting rule to be applied.
- * This class is serialized to JSON and stored in the [ConditionalFormattingRule] entity.
+ * This class is serialized to JSON and stored in the [ConditionalFormattingRule.conditionJson] column.
  *
  * ### Condition Type Schema:
- * Each `type` utilizes a specific subset of properties. Unused properties should be null.
+ * Each `type` utilizes a specific subset of properties. Unused properties should be null in the JSON.
  *
  * - **`group`**:
- *   - [groupId]: The ID of the student group to match.
+ *   - [groupId]: The database `Long` ID of the student group.
+ *   - *Example*: `{"type": "group", "group_id": 5}`
  * - **`behavior_count`**:
- *   - [behaviorNames]: Comma-separated list of behavior types to monitor (case-insensitive).
- *   - [countThreshold]: The minimum number of occurrences to trigger the rule.
- *   - [timeWindowHours]: The look-back period in hours (defaults to 24).
+ *   - [behaviorNames]: Comma-separated list of behavior types (e.g., "Participating, Helping").
+ *   - [countThreshold]: The integer threshold (e.g., 3).
+ *   - [timeWindowHours]: Hours to look back (e.g., 48).
+ *   - *Example*: `{"type": "behavior_count", "behavior_names": "Negative", "count_threshold": 2, "time_window_hours": 24}`
  * - **`quiz_score_threshold`**:
- *   - [quizNameContains]: Partial name filter for the quiz.
- *   - [scoreThresholdPercent]: Percentage value (0-100) to compare against.
- *   - [operator]: Comparison operator (`<=`, `>=`, `==`, `<`, `>`).
+ *   - [quizNameContains]: Substring to match quiz names.
+ *   - [scoreThresholdPercent]: Percentage value (0.0 to 100.0).
+ *   - [operator]: One of `<=`, `>=`, `==`, `<`, `>`.
+ *   - *Example*: `{"type": "quiz_score_threshold", "quiz_name_contains": "Midterm", "score_threshold_percent": 60.0, "operator": "<"}`
  * - **`live_quiz_response`**:
- *   - [quizResponse]: The exact string response to match (case-insensitive).
+ *   - [quizResponse]: String to match the latest response in a session.
+ *   - *Example*: `{"type": "live_quiz_response", "quiz_response": "Correct"}`
  * - **`live_homework_yes_no`**:
- *   - [homeworkTypeId]: The ID/name of the homework assignment.
- *   - [homeworkResponse]: The expected status (e.g., "Yes", "No").
+ *   - [homeworkTypeId]: The key for the specific homework step.
+ *   - [homeworkResponse]: The status string (e.g., "Done").
+ *   - *Example*: `{"type": "live_homework_yes_no", "homework_type_id": "Reading", "homework_response": "Done"}`
  * - **`live_homework_select`**:
- *   - [homeworkOptionName]: The specific multi-select option name to match.
+ *   - [homeworkOptionName]: The specific option in a multi-select step.
+ *   - *Example*: `{"type": "live_homework_select", "homework_option_name": "Signed"}`
  * - **`quiz_mark_count`**:
- *   - [markTypeId]: The ID of the specific quiz mark (e.g., "Correct").
- *   - [markCountThreshold]: The minimum count of that mark.
- *   - [markOperator]: Comparison operator for the count (`<=`, `>=`, `==`, etc.).
+ *   - [markTypeId]: The ID/Name of the mark (e.g., "Half Credit").
+ *   - [markCountThreshold]: The integer threshold.
+ *   - [markOperator]: One of `<=`, `>=`, `==`, `<`, `>`, `!=`.
+ *   - *Example*: `{"type": "quiz_mark_count", "mark_type_id": "Correct", "mark_count_threshold": 5, "mark_operator": ">="}`
  *
  * ### Global Filters:
- * These properties apply regardless of the [type]:
+ * These filters are evaluated before the specific condition type logic to allow for early-exit optimization.
  * - [activeModes]: List of UI modes (`behavior`, `quiz`, `homework`) where the rule is active.
- * - [activeTimes]: Specific time windows and days when the rule is evaluated.
+ * - [activeTimes]: Specific [ActiveTime] windows and days when the rule is evaluated.
  *
  * @property type The category of the condition.
  * @property groupId Used by `group` type.
@@ -123,18 +136,23 @@ data class Format(
 
 /**
  * A processed version of [ConditionalFormattingRule] where JSON strings have been
- * deserialized into [Condition] and [Format] objects.
+ * deserialized into domain objects.
  *
- * This class is a key component of the application's performance architecture. By
- * pre-decoding rules and pre-calculating sets (like [behaviorNamesSet]), the engine
- * avoids expensive JSON parsing and string splitting during high-frequency UI updates
- * (e.g., student dragging).
+ * ### Performance Context:
+ * This class is a key component of the application's **BOLT (Performance-Obsessed)** architecture.
+ * By pre-decoding rules into this format *before* the per-student rendering loop starts, the
+ * engine avoids:
+ * 1. **O(R * S)** JSON deserialization calls (where R = rules, S = students).
+ * 2. **O(R * S * B)** string splitting operations for behavior name lists (where B = behavior types).
+ *
+ * The pre-calculated [behaviorNamesSet] enables O(1) lookups during the behavioral analysis phase
+ * of rule evaluation.
  *
  * @property id The unique ID of the rule from the database.
  * @property priority The execution priority (lower numbers are processed first).
  * @property condition The deserialized condition criteria.
  * @property format The deserialized visual format.
- * @property behaviorNamesSet A pre-split set of lowercase behavior names derived from [Condition.behaviorNames] for O(1) matching.
+ * @property behaviorNamesSet A pre-split set of lowercase behavior names derived from [Condition.behaviorNames].
  */
 data class DecodedConditionalFormattingRule(
     val id: Int,
@@ -182,13 +200,19 @@ object ConditionalFormattingEngine {
 
     /**
      * Cache for decoded marks data JSON strings to avoid redundant deserialization.
-     * The key is the raw JSON string from [QuizLog.marksData].
+     *
+     * **Why**: [QuizLog.marksData] contains a JSON map of mark counts. Parsing this JSON
+     * for every rule evaluation for every student would create massive GC pressure.
+     * This cache ensures that identical JSON strings are parsed only once.
      */
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
 
     /**
-     * BOLT: Cache for lowercased behavior types to avoid per-event string allocations
-     * during high-frequency rule evaluation. Size-limited to prevent memory leaks.
+     * BOLT: Cache for lowercased behavior types.
+     *
+     * **Why**: Behavior comparisons are case-insensitive. Calling `.lowercase()` creates
+     * a new string allocation every time. In a loop of thousands of logs, this adds up.
+     * This cache memoizes the lowercase version of common behavior types.
      */
     private val lowercaseCache = LruCache<String, String>(256)
 
