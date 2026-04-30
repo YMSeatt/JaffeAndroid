@@ -129,10 +129,14 @@ fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
     val dayFormatter = remember { SimpleDateFormat("EEEE", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
+    // BOLT: Hoist Date object to avoid O(N) allocations during scrolling
+    val date = remember { Date() }
+
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(behaviorLogs) {
             val studentName = studentMap[it.studentId]?.let { student -> "${student.firstName} ${student.lastName}" } ?: "Unknown"
-            Text(text = "Student: $studentName, Day: ${dayFormatter.format(Date(it.timestamp))}, Type: ${it.type}, Timestamp: ${dateFormatter.format(Date(it.timestamp))}, Comment: ${it.comment ?: "N/A"}")
+            date.time = it.timestamp
+            Text(text = "Student: $studentName, Day: ${dayFormatter.format(date)}, Type: ${it.type}, Timestamp: ${dateFormatter.format(date)}, Comment: ${it.comment ?: "N/A"}")
         }
     }
 }
@@ -142,9 +146,13 @@ fun HomeworkLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val homeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
+    // BOLT: Hoist Date object to avoid O(N) allocations during scrolling
+    val date = remember { Date() }
+
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(homeworkLogs) {
-            Text(text = "Student ID: ${it.studentId}, Assignment: ${it.assignmentName}, Status: ${it.status}, Logged At: ${dateFormatter.format(Date(it.loggedAt))}, Comment: ${it.comment ?: "N/A"}")
+            date.time = it.loggedAt
+            Text(text = "Student ID: ${it.studentId}, Assignment: ${it.assignmentName}, Status: ${it.status}, Logged At: ${dateFormatter.format(date)}, Comment: ${it.comment ?: "N/A"}")
         }
     }
 }
@@ -154,9 +162,13 @@ fun QuizLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val quizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).apply { timeZone = TimeZone.getTimeZone("UTC") } }
 
+    // BOLT: Hoist Date object to avoid O(N) allocations during scrolling
+    val date = remember { Date() }
+
     LazyColumn(modifier = Modifier.padding(16.dp)) {
         items(quizLogs) {
-            Text(text = "Student ID: ${it.studentId}, Quiz Name: ${it.quizName}, Mark Value: ${it.markValue ?: "N/A"}, Mark Type: ${it.markType ?: "N/A"}, Max Mark: ${it.maxMarkValue ?: "N/A"}, Logged At: ${dateFormatter.format(Date(it.loggedAt))}, Comment: ${it.comment ?: "N/A"}")
+            date.time = it.loggedAt
+            Text(text = "Student ID: ${it.studentId}, Quiz Name: ${it.quizName}, Mark Value: ${it.markValue ?: "N/A"}, Mark Type: ${it.markType ?: "N/A"}, Max Mark: ${it.maxMarkValue ?: "N/A"}, Logged At: ${dateFormatter.format(date)}, Comment: ${it.comment ?: "N/A"}")
         }
     }
 }

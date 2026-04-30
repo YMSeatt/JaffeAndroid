@@ -105,15 +105,15 @@ fun BehaviorDialog(
                                         }
                                     }
                                 }
-                                studentIds.forEach { studentId ->
-                                    val behaviorEvent = BehaviorEvent(
+                                val behaviorEvents = studentIds.map { studentId ->
+                                    BehaviorEvent(
                                         studentId = studentId,
                                         comment = notes,
                                         type = behaviorType,
                                         timestamp = System.currentTimeMillis()
                                     )
-                                    viewModel.addBehaviorEvent(behaviorEvent)
                                 }
+                                viewModel.addBehaviorEvents(behaviorEvents)
                                 onBehaviorLogged(studentIds.size)
                                 onDismiss()
                             },
