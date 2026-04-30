@@ -642,9 +642,10 @@ fun SeatingChartScreen(
                 onShowUndoHistory = { showUndoHistoryDialog = true },
                 onBehaviorLog = { type ->
                     val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
-                    targets.forEach { id ->
-                        seatingChartViewModel.addBehaviorEvent(BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null))
+                    val behaviorEvents = targets.map { id ->
+                        BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null)
                     }
+                    seatingChartViewModel.addBehaviorEvents(behaviorEvents)
                     if (!selectMode) selectedStudentUiItemForAction = null
                     coroutineScope.launch { snackbarHostState.showSnackbar("Logged $type for ${targets.size} student(s)") }
                 },

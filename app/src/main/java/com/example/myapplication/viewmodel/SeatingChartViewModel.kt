@@ -1092,45 +1092,10 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 // BOLT: Calculate neural sync links in the background pipeline (Memoized)
-                // Note: We use studentsSnapshot built during Stage 2/3 for high-fidelity sync analysis.
-                // However, that happens below. Let's pre-calculate sync links if needed using raw students.
                 if (behaviorEvents !== ghostMetricsSyncBehaviorLogsRef || studentsForEngines !== ghostMetricsSyncStudentsRef) {
-                    val tempUiItems = ArrayList<StudentUiItem>(studentsForEngines.size)
-                    for (i in 0 until studentsForEngines.size) {
-                        val s = studentsForEngines[i]
-                        val item = studentUiItemCache[s.id.toInt()] ?: s.toStudentUiItem(
-                            recentBehaviorDescription = emptyList(),
-                            recentHomeworkDescription = emptyList(),
-                            recentQuizDescription = emptyList(),
-                            sessionLogText = emptyList(),
-                            groupColor = null,
-                            backgroundColors = listOf(Color.Gray),
-                            outlineColors = listOf(Color.DarkGray),
-                            textColor = Color.White,
-                            fontColor = Color.White,
-                            defaultWidth = 100,
-                            defaultHeight = 100,
-                            defaultOutlineThickness = 2,
-                            defaultCornerRadius = 8,
-                            defaultPadding = 4,
-                            defaultFontFamily = "sans-serif",
-                            defaultFontSize = 12,
-                            irisParams = null,
-                            osmoticNode = null,
-                            altitude = 0f,
-                            behaviorEntropy = 0f,
-                            tectonicStress = 0f,
-                            quasarEnergy = 0f,
-                            quasarPolarity = 0f,
-                            ionCharge = 0f,
-                            ionDensity = 0f
-                        )
-                        tempUiItems.add(item)
-                    }
-
-                    _syncLinks.value = com.example.myapplication.labs.ghost.sync.GhostSyncEngine.calculateSyncLinks(
-                        students = tempUiItems,
-                        behaviorLogs = behaviorEvents
+                    _syncLinks.value = com.example.myapplication.labs.ghost.sync.GhostSyncEngine.calculateSyncLinksForStudents(
+                        students = studentsForEngines,
+                        behaviorLogsByStudent = behaviorLogsByStudent
                     )
                     ghostMetricsSyncBehaviorLogsRef = behaviorEvents
                     ghostMetricsSyncStudentsRef = studentsForEngines
@@ -1939,6 +1904,23 @@ class SeatingChartViewModel @Inject constructor(
             )
             val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
             executeCommand(command)
+        }
+    }
+
+    /**
+     * BOLT: Bulk behavior logging. Encapsulates multiple events into a single CompositeCommand
+     * to reduce IO overhead and ensure atomic history updates.
+     */
+    fun addBehaviorEvents(events: List<BehaviorEvent>) {
+        if (events.isEmpty()) return
+        if (events.size == 1) {
+            addBehaviorEvent(events[0])
+            return
+        }
+        viewModelScope.launch {
+            val commands = events.map { LogBehaviorCommand(this@SeatingChartViewModel, it) }
+            val compositeCommand = CompositeCommand(commands, "Log ${events.size} behavior(s)")
+            executeCommand(compositeCommand)
         }
     }
 
