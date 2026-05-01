@@ -92,7 +92,9 @@ fun GhostVectorLayer(
                 }
                 shader.setFloatUniform("iColor", color.red, color.green, color.blue)
 
-                // Define a localized drawing area for the vector needle
+                // Define a localized drawing area for the vector needle.
+                // 500f is calibrated to provide enough space for the animated "Neural Flow" trail
+                // without clipping the needle even at high magnitudes.
                 val drawAreaSize = 500f * canvasScale
                 drawRect(
                     brush = brush,
