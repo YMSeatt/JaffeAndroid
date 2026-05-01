@@ -15,6 +15,26 @@ import kotlin.math.*
  */
 object GhostVectorEngine {
 
+    /** Force multiplier for collaborative (attraction) interactions. */
+    private const val FORCE_COLLABORATION = 60f
+    /** Force multiplier for friction-based (repulsion) interactions. */
+    private const val FORCE_FRICTION = -100f
+    /** Force multiplier for neutral, proximity-based interactions. */
+    private const val FORCE_NEUTRAL = 15f
+
+    /** Net force threshold (mG) for classifying a student as "High Turbulence". */
+    private const val THRESHOLD_TURBULENCE = 85f
+    /** Net force threshold (mG) for classifying a student as "Active Synergy". */
+    private const val THRESHOLD_SYNERGY = 40f
+    /** Net force threshold (mG) below which a student is considered "Isolated". */
+    private const val THRESHOLD_ISOLATED = 5f
+
+    /** Minimum distance safety to avoid division by zero during normalization. */
+    private const val MIN_DISTANCE_SAFETY = 1f
+
+    /** The global cohesion index threshold for a "Dynamic" classroom state. */
+    private const val COHESION_DYNAMIC_THRESHOLD = 50f
+
     /**
      * Classifies the social status of a student based on their net force magnitude.
      */
@@ -98,7 +118,7 @@ object GhostVectorEngine {
 
                     val dx = otherNode.x - node.x
                     val dy = otherNode.y - node.y
-                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
 
                     // Normalize direction
                     val dirX = dx / dist
@@ -106,9 +126,9 @@ object GhostVectorEngine {
 
                     // Force calculation based on connection type
                     val forceMagnitude = when (edge.type) {
-                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
-                        GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
-                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
+                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
+                        GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
+                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
                     }
 
                     netDx += dirX * forceMagnitude
@@ -120,9 +140,9 @@ object GhostVectorEngine {
 
             // Social Status classification matching Python thresholds
             val status = when {
-                mag > 85f -> SocialStatus.HIGH_TURBULENCE
-                mag < 5f -> SocialStatus.ISOLATED
-                mag > 40f -> SocialStatus.ACTIVE_SYNERGY
+                mag > THRESHOLD_TURBULENCE -> SocialStatus.HIGH_TURBULENCE
+                mag < THRESHOLD_ISOLATED -> SocialStatus.ISOLATED
+                mag > THRESHOLD_SYNERGY -> SocialStatus.ACTIVE_SYNERGY
                 else -> SocialStatus.NOMINAL
             }
 
@@ -181,15 +201,15 @@ object GhostVectorEngine {
 
                     val dx = otherStudent.xPosition - student.xPosition
                     val dy = otherStudent.yPosition - student.yPosition
-                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
 
                     val dirX = dx / dist
                     val dirY = dy / dist
 
                     val forceMagnitude = when (edge.type) {
-                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * 60f
-                        GhostLatticeEngine.ConnectionType.FRICTION -> -edge.strength * 100f
-                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * 15f
+                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
+                        GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
+                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
                     }
 
                     netDx += dirX * forceMagnitude
@@ -199,9 +219,9 @@ object GhostVectorEngine {
 
             val mag = sqrt(netDx * netDx + netDy * netDy)
             val status = when {
-                mag > 85f -> SocialStatus.HIGH_TURBULENCE
-                mag < 5f -> SocialStatus.ISOLATED
-                mag > 40f -> SocialStatus.ACTIVE_SYNERGY
+                mag > THRESHOLD_TURBULENCE -> SocialStatus.HIGH_TURBULENCE
+                mag < THRESHOLD_ISOLATED -> SocialStatus.ISOLATED
+                mag > THRESHOLD_SYNERGY -> SocialStatus.ACTIVE_SYNERGY
                 else -> SocialStatus.NOMINAL
             }
 
@@ -231,7 +251,7 @@ object GhostVectorEngine {
         }
         val avgCohesion = if (size > 0) totalMag.toFloat() / size else 0f
 
-        val status = if (avgCohesion < 50f) "STABLE" else "DYNAMIC"
+        val status = if (avgCohesion < COHESION_DYNAMIC_THRESHOLD) "STABLE" else "DYNAMIC"
 
         return SocialAnalysis(avgCohesion, status)
     }

@@ -62,3 +62,11 @@
 - **Negativity Bias**: The engine applies a 1.5x multiplier to negative behavioral logs when calculating social magnetic strength. This intentionally models the disproportionate impact disruptive students have on classroom cohesion.
 - **Hardware Skewing**: The `iHeading` uniform in `GhostMagnetarLayer` passes the device's actual magnetometer heading. Rotating the physical device rotates the virtual field, a deliberate UI metaphor for "reorienting" social analysis.
 - **BOLT Performance Cap**: The shader is hard-coded to 15 dipoles (`iDipolePos[15]`). `GhostMagnetarLayer` uses `students.take(15)` to ensure visual stability and prevent out-of-bounds uniform access in the AGSL program.
+
+### 14. Ghost Vector "Social Gravity" Metrics
+- **mG (milli-Gravities)**: The synthetic unit for social force intensity. Calibrated such that a standard interaction at 400 units distance yields approximately 15-60 mG.
+- **The 85mG Threshold**: This "High Turbulence" marker is the mathematical equivalent of 1.5x standard deviation in the Python reference suite. It represents a state where social friction outweighs collaboration by a significant margin.
+- **Force Multipliers**:
+    - `FORCE_FRICTION (-100f)`: Repulsion is weighted 1.6x more heavily than `FORCE_COLLABORATION (60f)` to highlight disruptive social dynamics.
+    - `FORCE_NEUTRAL (15f)`: Provides a baseline "social cohesion" pull even in the absence of explicit logs.
+- **Zero-Allocation Needle**: The `GhostVectorLayer` utilizes a pooled `RuntimeShader` approach to render hundreds of needles without triggering GC pauses, capturing uniforms just-in-time during the `Canvas` draw pass.
