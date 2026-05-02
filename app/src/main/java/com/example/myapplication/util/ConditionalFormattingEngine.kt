@@ -263,6 +263,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -291,6 +292,7 @@ object ConditionalFormattingEngine {
             behaviorLog = behaviorLog,
             quizLog = quizLog,
             homeworkLog = homeworkLog,
+            quizMarkTypes = quizMarkTypes,
             isLiveQuizActive = isLiveQuizActive,
             liveQuizScores = liveQuizScores,
             isLiveHomeworkActive = isLiveHomeworkActive,
@@ -325,6 +327,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -342,6 +345,7 @@ object ConditionalFormattingEngine {
                     behaviorLog,
                     quizLog,
                     homeworkLog,
+                    quizMarkTypes,
                     isLiveQuizActive,
                     liveQuizScores,
                     isLiveHomeworkActive,
@@ -400,6 +404,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -473,10 +478,8 @@ object ConditionalFormattingEngine {
                     // BOLT: Removed redundant studentId check as quizLog is already student-specific
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
-                    val score = log.markValue
-                    val maxScore = log.maxMarkValue
-                    if (score != null && maxScore != null && maxScore > 0) {
-                        val percentage = (score.toDouble() / maxScore.toDouble()) * 100 // Ensure floating-point division
+                    val percentage = QuizScoreEngine.calculatePercentage(log, quizMarkTypes)
+                    if (percentage != null) {
                         when (operator) {
                             "<=" -> percentage <= scoreThresholdPercent
                             ">=" -> percentage >= scoreThresholdPercent
@@ -527,9 +530,7 @@ object ConditionalFormattingEngine {
                 quizLog.any { log ->
                     // BOLT: Removed redundant studentId check
                     try {
-                        val marksData = decodedMarksCache.get(log.marksData) ?: json.decodeFromString<Map<String, Int>>(log.marksData).also {
-                            decodedMarksCache.put(log.marksData, it)
-                        }
+                        val marksData = QuizScoreEngine.getMarksData(log)
                         val count = marksData[markTypeId] ?: 0
                         when (operator) {
                             ">=" -> count >= countThreshold
