@@ -50,7 +50,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.content.ContextCompat
+import com.example.myapplication.util.findActivity
 
 /**
  * RemindersScreen: The primary user interface for managing teacher reminders.
@@ -68,6 +70,15 @@ fun RemindersScreen(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val activity = context.findActivity()
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
+    }
+
     var showPermissionDialog by remember { mutableStateOf(false) }
 
     val requestPermissionLauncher = rememberLauncherForActivityResult(

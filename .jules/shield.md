@@ -99,3 +99,8 @@
     - Updated `GhostMorphActivity` to fetch the student name directly from the secure local database using the provided ID.
     - Enforced `WindowManager.LayoutParams.FLAG_SECURE` in `GhostMorphActivity` to prevent unauthorized data capture.
 - **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/morph/GhostMorphActivity.kt`
+
+## 🛡️ Privacy Hardening: Screen Protection for Reminders
+- **Vulnerability:** The 'Reminders' screen, which often contains student PII and sensitive classroom tasks, lacked protection against screenshots and screen recordings.
+- **Fix:** Implemented a `DisposableEffect` in `RemindersScreen.kt` to proactively enforce `WindowManager.LayoutParams.FLAG_SECURE` whenever the screen is active.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/RemindersScreen.kt`
