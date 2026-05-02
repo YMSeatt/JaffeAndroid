@@ -18,6 +18,9 @@ class GhostMementoMapper @Inject constructor() {
     /**
      * Maps a production [Command] to its serializable [MementoCommand] counterpart.
      * Uses exhaustive type checking to ensure all command types are handled.
+     *
+     * @param command The production command to decompose.
+     * @return A serializable DTO, or null if the command type is not supported for persistence.
      */
     fun toMemento(command: Command): MementoCommand? {
         return when (command) {
@@ -50,6 +53,10 @@ class GhostMementoMapper @Inject constructor() {
     /**
      * Reconstructs a production [Command] from a persisted [MementoCommand].
      * Requires a reference to the [SeatingChartViewModel] to wire up database dependencies.
+     *
+     * @param memento The serialized command DTO.
+     * @param viewModel The invoker and state manager for the seating chart.
+     * @return A live Command instance ready for execution or undo.
      */
     fun fromMemento(memento: MementoCommand, viewModel: SeatingChartViewModel): Command? {
         return when (memento) {

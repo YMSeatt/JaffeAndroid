@@ -70,3 +70,9 @@
     - `FORCE_FRICTION (-100f)`: Repulsion is weighted 1.6x more heavily than `FORCE_COLLABORATION (60f)` to highlight disruptive social dynamics.
     - `FORCE_NEUTRAL (15f)`: Provides a baseline "social cohesion" pull even in the absence of explicit logs.
 - **Zero-Allocation Needle**: The `GhostVectorLayer` utilizes a pooled `RuntimeShader` approach to render hundreds of needles without triggering GC pauses, capturing uniforms just-in-time during the `Canvas` draw pass.
+
+### 15. Ghost Memento Architecture
+- **Metaphor**: A specialized "Long-Term Memory" engine for command history persistence.
+- **Persistence Strategy**: Uses a high-integrity mapping system (`GhostMementoMapper`) to transform complex production `Command` objects into pure-data `MementoCommand` DTOs.
+- **Encryption**: History is serialized to JSON and encrypted using `SecurityUtil` before storage in Jetpack DataStore, ensuring privacy for historical behavioral and academic records.
+- **Atomic Recovery**: The `SeatingChartViewModel` re-hydrates its undo/redo stacks from the store on launch, enabling a seamless "Resume Work" experience across app restarts.
