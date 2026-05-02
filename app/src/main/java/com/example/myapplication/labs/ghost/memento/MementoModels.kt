@@ -138,6 +138,9 @@ sealed class MementoCommand {
         val commands: List<MementoCommand>
     ) : MementoCommand()
 
+    /**
+     * Bulk movement command for multiple students and/or furniture items.
+     */
     @Serializable
     data class MoveItems(
         override val description: String,
@@ -145,10 +148,27 @@ sealed class MementoCommand {
     ) : MementoCommand()
 }
 
+/**
+ * MementoItemMove: Captures the transformation of a single seating chart item.
+ *
+ * This DTO ensures that bulk move operations can be perfectly reconstructed.
+ * It stores full snapshots of the [student] or [furniture] entity to maintain
+ * referential integrity if the move is redone after the original item has
+ * been modified by other commands.
+ *
+ * @property id The database primary key of the item.
+ * @property itemType Discriminator string: "STUDENT" or "FURNITURE".
+ * @property oldX Original horizontal coordinate.
+ * @property oldY Original vertical coordinate.
+ * @property newX Target horizontal coordinate.
+ * @property newY Target vertical coordinate.
+ * @property student Complete snapshot of the student (null if itemType is "FURNITURE").
+ * @property furniture Complete snapshot of the furniture (null if itemType is "STUDENT").
+ */
 @Serializable
 data class MementoItemMove(
     val id: Long,
-    val itemType: String, // "STUDENT" or "FURNITURE"
+    val itemType: String,
     val oldX: Float,
     val oldY: Float,
     val newX: Float,
