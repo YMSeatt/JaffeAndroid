@@ -119,12 +119,6 @@ class StatsViewModel @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
-     * Cache for decoded quiz marks data to avoid redundant JSON parsing during aggregation.
-     * The key is the raw JSON string from [QuizLog.marksData].
-     */
-    private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
-
-    /**
      * Cache for decoded homework marks data.
      */
     private val decodedHomeworkMarksCache = LruCache<String, Map<String, String>>(1000)
@@ -358,34 +352,11 @@ class StatsViewModel @Inject constructor(
         // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
         val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
 
-        // --- Optimization: Pre-calculate mark type lookups and points ---
-        val markTypeMapByName = quizMarkTypes.associateBy { it.name }
-        val markTypeMapById = quizMarkTypes.associateBy { it.id.toString() }
-        val sumDefaultPointsContributing = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
-
         for (log in quizLogs) {
             val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
             val stats = studentScores.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
 
-            // Optimization: LruCache for JSON parsing
-            val marksData = decodedMarksCache.get(log.marksData) ?: try {
-                json.decodeFromString<Map<String, Int>>(log.marksData).also {
-                    decodedMarksCache.put(log.marksData, it)
-                }
-            } catch (e: Exception) { emptyMap() }
-
-            var totalScore = 0.0
-            val totalPossible = log.numQuestions * sumDefaultPointsContributing
-
-            // Optimization: Iterate over recorded marks instead of all possible mark types (O(M_recorded) vs O(M_all))
-            marksData.forEach { (key, markCount) ->
-                val markType = markTypeMapByName[key] ?: markTypeMapById[key]
-                if (markType != null) {
-                    totalScore += markCount * markType.defaultPoints
-                }
-            }
-
-            val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+            val scorePercent = com.example.myapplication.util.QuizScoreEngine.calculatePercentage(log, quizMarkTypes) ?: 0.0
             stats[0] += scorePercent
             stats[1] += 1.0
         }

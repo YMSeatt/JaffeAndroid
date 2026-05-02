@@ -943,6 +943,7 @@ class SeatingChartViewModel @Inject constructor(
                 val quizInitialsMap = quizInitialsMapCache
 
                 val lastClearedTimestamps = prefs.studentLogsLastCleared
+                val markTypes = quizMarkTypes.value ?: emptyList()
 
                 val behaviorDisplayTimeout = prefs.behaviorDisplayTimeout
                 val homeworkDisplayTimeout = prefs.homeworkDisplayTimeout
@@ -1427,6 +1428,7 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorLog = behaviorList ?: emptyList(),
                             quizLog = quizList ?: emptyList(),
                             homeworkLog = homeworkList ?: emptyList(),
+                            quizMarkTypes = markTypes,
                             isLiveQuizActive = sessionActive,
                             liveQuizScores = liveQuizScores.value ?: emptyMap(),
                             isLiveHomeworkActive = sessionActive,
