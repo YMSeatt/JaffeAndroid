@@ -186,4 +186,7 @@ object GhostConfig {
 
     /** Enables "Ghost Glitch" neural feedback during spatial conflicts. */
     const val GLITCH_MODE_ENABLED = true
+
+    /** Enables "Ghost Kinetic" physics-based momentum for student icons. */
+    const val KINETIC_MODE_ENABLED = true
 }
