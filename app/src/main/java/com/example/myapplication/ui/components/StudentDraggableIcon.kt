@@ -1,6 +1,8 @@
 package com.example.myapplication.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import android.content.ClipData
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -66,6 +69,7 @@ import com.example.myapplication.labs.ghost.GhostIrisLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.labs.ghost.kinetic.GhostKineticEngine
 import com.example.myapplication.labs.ghost.lod.GhostLODEngine
 import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.ui.model.StudentUiItem
@@ -133,6 +137,12 @@ fun StudentDraggableIcon(
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
+
+    // BOLT: Kinetic state tracking
+    val kineticScope = rememberCoroutineScope()
+    val velocityTracker = remember { VelocityTracker() }
+    var kineticJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
     var width by remember { mutableStateOf(studentUiItem.displayWidth.value) }
     var height by remember { mutableStateOf(studentUiItem.displayHeight.value) }
     var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
@@ -229,15 +239,12 @@ fun StudentDraggableIcon(
                     }
                     .pointerInput(studentUiItem.id) {
                         /**
-                         * Gesture Handler: Implements high-responsiveness dragging.
-                         *
-                         * By updating the [MutableState] properties of the [StudentUiItem]
-                         * directly during the 'onDrag' phase, we ensure that the UI follows
-                         * the finger at 60fps, even if the background database update is
-                         * slightly delayed.
+                         * Gesture Handler: Implements high-responsiveness dragging with Ghost Kinetic momentum.
                          */
                         detectDragGestures(
                             onDragStart = {
+                                kineticJob?.cancel()
+                                velocityTracker.resetTracking()
                                 viewModel.onStudentDragStarted(
                                     studentUiItem.id,
                                     offsetX,
@@ -251,35 +258,57 @@ fun StudentDraggableIcon(
                                 offsetX += dragAmount.x / canvasScale
                                 offsetY += dragAmount.y / canvasScale
 
+                                // BOLT: Track velocity in logical units for decay calculation
+                                velocityTracker.addPosition(change.uptimeMillis, Offset(offsetX, offsetY))
+
                                 // Update MutableState for instant UI feedback to observers
                                 studentUiItem.xPosition.value = offsetX
                                 studentUiItem.yPosition.value = offsetY
                             },
                             onDragEnd = {
-                                /**
-                                 * Grid Snapping Logic: If enabled, aligns the final logical
-                                 * coordinates to the nearest grid intersection before
-                                 * committing to the database.
-                                 */
-                                val finalX = if (gridSnapEnabled) {
-                                    (offsetX / gridSize).roundToInt() * gridSize
-                                } else {
-                                    offsetX.roundToInt()
-                                }
-                                val finalY = if (gridSnapEnabled) {
-                                    (offsetY / gridSize).roundToInt() * gridSize
-                                } else {
-                                    offsetY.roundToInt()
-                                }
+                                val velocity = velocityTracker.calculateVelocity()
+                                val velocityMag = Offset(velocity.x, velocity.y).getDistance()
 
-                                // Sync the final, potentially snapped position to the database.
-                                viewModel.updateStudentPosition(
-                                    studentUiItem.id,
-                                    studentUiItem.xPosition.value,
-                                    studentUiItem.yPosition.value,
-                                    finalX.toFloat(),
-                                    finalY.toFloat()
-                                )
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.KINETIC_MODE_ENABLED &&
+                                    velocityMag > GhostKineticEngine.VELOCITY_THRESHOLD) {
+
+                                    kineticJob = kineticScope.launch {
+                                        val animPos = Animatable(Offset(offsetX, offsetY), Offset.VectorConverter)
+                                        animPos.animateDecay(
+                                            initialVelocity = Offset(velocity.x, velocity.y),
+                                            animationSpec = GhostKineticEngine.decaySpec()
+                                        ) {
+                                            offsetX = value.x
+                                            offsetY = value.y
+                                            studentUiItem.xPosition.value = offsetX
+                                            studentUiItem.yPosition.value = offsetY
+                                        }
+
+                                        // Final Sync after kinetic glide
+                                        val finalX = if (gridSnapEnabled) (offsetX / gridSize).roundToInt() * gridSize else offsetX.roundToInt()
+                                        val finalY = if (gridSnapEnabled) (offsetY / gridSize).roundToInt() * gridSize else offsetY.roundToInt()
+
+                                        viewModel.updateStudentPosition(
+                                            studentUiItem.id,
+                                            studentUiItem.xPosition.value,
+                                            studentUiItem.yPosition.value,
+                                            finalX.toFloat(),
+                                            finalY.toFloat()
+                                        )
+                                        kineticJob = null
+                                    }
+                                } else {
+                                    val finalX = if (gridSnapEnabled) (offsetX / gridSize).roundToInt() * gridSize else offsetX.roundToInt()
+                                    val finalY = if (gridSnapEnabled) (offsetY / gridSize).roundToInt() * gridSize else offsetY.roundToInt()
+
+                                    viewModel.updateStudentPosition(
+                                        studentUiItem.id,
+                                        studentUiItem.xPosition.value,
+                                        studentUiItem.yPosition.value,
+                                        finalX.toFloat(),
+                                        finalY.toFloat()
+                                    )
+                                }
                             },
                             onDragCancel = {
                                 viewModel.onStudentDragEnded(studentUiItem.id)
