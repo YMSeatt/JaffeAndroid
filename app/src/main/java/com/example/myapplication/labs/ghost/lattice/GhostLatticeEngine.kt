@@ -96,11 +96,17 @@ object GhostLatticeEngine {
         val edges = ArrayList<Edge>(50)
         val random = Random(42)
 
+        // BOLT: Hoist behavioral metrics into a primitive array to avoid O(N^2) boxing/map overhead.
+        val negCounts = IntArray(n)
+        for (i in 0 until n) {
+            negCounts[i] = negativeCounts[students[i].id] ?: 0
+        }
+
         val thresholdSq = 800f * 800f
 
         for (i in 0 until n) {
             val nodeA = students[i]
-            val negA = negativeCounts[nodeA.id] ?: 0
+            val negA = negCounts[i]
 
             for (j in i + 1 until n) {
                 if (edges.size >= 50) return edges // BOLT: Early exit when cap reached
@@ -111,7 +117,7 @@ object GhostLatticeEngine {
                 val distSq = dx * dx + dy * dy
 
                 if (distSq < thresholdSq) {
-                    val negB = negativeCounts[nodeB.id] ?: 0
+                    val negB = negCounts[j]
                     val dist = sqrt(distSq)
 
                     // Logic improved to use real behavioral markers
@@ -160,11 +166,17 @@ object GhostLatticeEngine {
         val edges = ArrayList<Edge>(50)
         val random = Random(42)
 
+        // BOLT: Hoist behavioral metrics into a primitive array.
+        val negCounts = IntArray(n)
+        for (i in 0 until n) {
+            negCounts[i] = negativeCounts[nodes[i].id] ?: 0
+        }
+
         val thresholdSq = 800f * 800f
 
         for (i in 0 until n) {
             val nodeA = nodes[i]
-            val negA = negativeCounts[nodeA.id] ?: 0
+            val negA = negCounts[i]
 
             for (j in i + 1 until n) {
                 if (edges.size >= 50) return edges // BOLT: Early exit when cap reached
@@ -175,7 +187,7 @@ object GhostLatticeEngine {
                 val distSq = dx * dx + dy * dy
 
                 if (distSq < thresholdSq) {
-                    val negB = negativeCounts[nodeB.id] ?: 0
+                    val negB = negCounts[j]
                     val dist = sqrt(distSq)
 
                     // Logic improved to use real behavioral markers
