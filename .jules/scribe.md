@@ -76,3 +76,12 @@
 - **Persistence Strategy**: Uses a high-integrity mapping system (`GhostMementoMapper`) to transform complex production `Command` objects into pure-data `MementoCommand` DTOs.
 - **Encryption**: History is serialized to JSON and encrypted using `SecurityUtil` before storage in Jetpack DataStore, ensuring privacy for historical behavioral and academic records.
 - **Atomic Recovery**: The `SeatingChartViewModel` re-hydrates its undo/redo stacks from the store on launch, enabling a seamless "Resume Work" experience across app restarts.
+
+### 16. Ghost Osmosis "Neural Diffusion" Calibration
+- **The Gaussian Kernel**: The engine uses a Gaussian Radial Basis Function (RBF) for spatial influence, specifically calibrated with **$\sigma = 400$**. This value was chosen to ensure that a student's "potential" remains significant within their immediate group (approx 800 units) but tapers off before affecting the entire 4000-unit canvas.
+- **The 320,000 Constant**: To avoid expensive `pow()` and `sqrt()` operations, the code uses a pre-calculated denominator of **320,000f** ($2\sigma^2$).
+- **Color Mapping Protocol**:
+    - **Blue (Cyan)**: Knowledge Potential (Academic logs).
+    - **Green**: Positive Behavioral Concentration.
+    - **Red**: Negative Behavioral Concentration.
+- **Shader Pooling Logic**: The `GhostOsmosisLayer` uses a strict pooling strategy for `RuntimeShader` and `ShaderBrush`. This is required because `ShaderBrush` captures uniforms at the moment of application; drawing multiple patches with different uniforms in one frame requires unique object instances to prevent visual "bleeding" or overwrites.

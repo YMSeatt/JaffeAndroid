@@ -61,9 +61,13 @@ object GhostOsmosisEngine {
      * Analyzes the overall classroom osmotic balance by summing pairwise interactions.
      * Ported from `Python/ghost_osmosis_analyzer.py`.
      *
+     * This function performs an $O(N^2)$ analysis of student interactions to determine
+     * the "Neural Equilibrium" of the classroom. It calculates the average 'Osmotic Pressure'
+     * (difference in potential) weighted by spatial proximity using a Gaussian decay.
+     *
      * @param students List of osmotic nodes representing students.
-     * @param diffusionRadius The spatial range within which students influence one another.
-     * @return An [OsmosisAnalysis] containing global metrics.
+     * @param diffusionRadius The spatial range (in logical units) within which students influence one another.
+     * @return An [OsmosisAnalysis] containing global metrics such as balance score and status.
      */
     fun analyzeOsmoticBalance(
         students: List<OsmoticNode>,
@@ -123,9 +127,12 @@ object GhostOsmosisEngine {
      * Generates a Markdown-formatted report of the classroom's osmotic balance.
      * Ported from `Python/ghost_osmosis_analyzer.py`.
      *
-     * @param analysis The global osmotic analysis metrics.
+     * The report categorizes the classroom climate (VOID, STABLE, EQUILIBRIUM, HIGH_GRADIENT)
+     * and provides human-readable interpretations of the neural diffusion deltas.
+     *
+     * @param analysis The global osmotic analysis metrics calculated by [analyzeOsmoticBalance].
      * @param timestamp Optional fixed timestamp for the report (defaults to current time).
-     * @return A formatted Markdown string.
+     * @return A formatted Markdown string suitable for display or export.
      */
     fun generateOsmosisReport(
         analysis: OsmosisAnalysis,
@@ -157,6 +164,17 @@ object GhostOsmosisEngine {
         return report.toString()
     }
 
+    /**
+     * Calculates the diffusion gradients for a sampling grid across the logical canvas.
+     *
+     * This is used by the UI layer ([GhostOsmosisLayer]) to render the fluid field.
+     * It maps the complex student potentials into a simplified grid of [DiffusionGradient]s
+     * which are then visualized using AGSL shaders.
+     *
+     * @param students The list of student nodes to process.
+     * @param gridSize The resolution of the sampling grid (e.g., 20x20).
+     * @return A list of [DiffusionGradient] points for the UI to render.
+     */
     fun calculateOsmosis(
         students: List<OsmoticNode>,
         gridSize: Int = 20
@@ -218,9 +236,14 @@ object GhostOsmosisEngine {
     /**
      * Calculates the 'Academic Potential' and 'Behavioral Concentration' for a student.
      *
+     * **Academic Potential (kPotential)**: An average of Quiz scores and Homework completion status.
+     * **Behavioral Concentration (bConcentration)**: A normalized ratio of positive vs negative logs.
+     *
      * **BOLT Optimization**: Replaced functional operators (filter, map, average, count) with
      * manual loops to avoid redundant object allocations and multiple list traversals
      * per student during the high-frequency seating chart update pipeline.
+     *
+     * @return A Pair containing (kPotential [0..1], bConcentration [-1..1]).
      */
     fun calculateStudentPotentials(
         behaviorLogs: List<BehaviorEvent>,

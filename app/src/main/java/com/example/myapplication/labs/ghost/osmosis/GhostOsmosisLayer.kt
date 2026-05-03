@@ -37,8 +37,17 @@ fun GhostOsmosisLayer(
         GhostOsmosisEngine.calculateOsmosis(students)
     }
 
-    // BOLT: Pool shaders and brushes to avoid O(G) allocations in the draw loop
-    // while ensuring unique instances for correct uniform capturing per draw call.
+    /**
+     * BOLT Optimization: Shader & Brush Pooling.
+     * We maintain a pool of RuntimeShader and ShaderBrush instances to avoid per-frame
+     * and per-gradient allocations within the DrawScope.
+     *
+     * Why Pooling?
+     * 1. Re-allocating RuntimeShaders triggers JNI overhead and GPU resource thrashing.
+     * 2. ShaderBrush captures the current state of the shader uniforms when applied.
+     *    To draw multiple gradient patches with different uniforms in a single frame,
+     *    each patch MUST use a unique Shader/Brush instance from the pool.
+     */
     val diffusionShaderPool = remember { mutableListOf<RuntimeShader>() }
     val diffusionBrushPool = remember { mutableListOf<ShaderBrush>() }
 
