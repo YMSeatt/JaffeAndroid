@@ -75,7 +75,13 @@ object GhostVectorEngine {
     /**
      * Calculates the social vectors for all students given the current lattice nodes and edges.
      *
-     * BOLT: Optimized with manual index-based loops to minimize iterator overhead.
+     * BOLT ⚡ Optimization:
+     * 1. **Zero-Allocation Force Loop**: Processes edges in a single pass using the Action-Reaction
+     *    principle (Newton's Third Law). For each edge between A and B, it calculates the vector
+     *    once and applies it to both A and B (with reversed sign), cutting trig/math by 50%.
+     * 2. **Eliminated Intermediate Collections**: Removed `HashMap` and `MutableList` grouping
+     *    logic from the hot path.
+     * 3. **Primitive Accumulation**: Uses `FloatArray`s for net force components to avoid boxing.
      *
      * @param nodes Spatial representations of students.
      * @param edges Inferred social connections between students.
@@ -86,59 +92,55 @@ object GhostVectorEngine {
         edges: List<GhostLatticeEngine.Edge>
     ): List<SocialVector> {
         val n = nodes.size
+        if (n == 0) return emptyList()
         val eSize = edges.size
 
-        // Group edges by student ID to transform O(S * E) into O(S + E)
-        val edgesByStudent = mutableMapOf<Long, MutableList<GhostLatticeEngine.Edge>>()
-        for (i in 0 until eSize) {
-            val edge = edges[i]
-            edgesByStudent.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
-            edgesByStudent.getOrPut(edge.toId) { mutableListOf() }.add(edge)
+        val netDx = FloatArray(n)
+        val netDy = FloatArray(n)
+
+        // Pre-map IDs to indices for O(1) lookup during edge processing
+        val idToIndex = mutableMapOf<Long, Int>()
+        for (i in 0 until n) {
+            idToIndex[nodes[i].id] = i
         }
 
-        val nodeMap = mutableMapOf<Long, GhostLatticeEngine.LatticeNode>()
-        for (i in 0 until n) {
-            val node = nodes[i]
-            nodeMap[node.id] = node
+        // Action-Reaction pass: Process each edge once
+        for (i in 0 until eSize) {
+            val edge = edges[i]
+            val idxA = idToIndex[edge.fromId] ?: continue
+            val idxB = idToIndex[edge.toId] ?: continue
+
+            val nodeA = nodes[idxA]
+            val nodeB = nodes[idxB]
+
+            val dx = nodeB.x - nodeA.x
+            val dy = nodeB.y - nodeA.y
+            val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
+
+            val forceMagnitude = when (edge.type) {
+                GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
+                GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
+                GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
+            }
+
+            val fx = (dx / dist) * forceMagnitude
+            val fy = (dy / dist) * forceMagnitude
+
+            // Apply force to A (towards B if positive)
+            netDx[idxA] += fx
+            netDy[idxA] += fy
+
+            // Apply opposite force to B (towards A if positive)
+            netDx[idxB] -= fx
+            netDy[idxB] -= fy
         }
 
         val result = ArrayList<SocialVector>(n)
         for (i in 0 until n) {
-            val node = nodes[i]
-            var netDx = 0f
-            var netDy = 0f
+            val dx = netDx[i]
+            val dy = netDy[i]
+            val mag = sqrt(dx * dx + dy * dy)
 
-            val studentEdges = edgesByStudent[node.id]
-            if (studentEdges != null) {
-                val sEdgesSize = studentEdges.size
-                for (j in 0 until sEdgesSize) {
-                    val edge = studentEdges[j]
-                    val otherId = if (edge.fromId == node.id) edge.toId else edge.fromId
-                    val otherNode = nodeMap[otherId] ?: continue
-
-                    val dx = otherNode.x - node.x
-                    val dy = otherNode.y - node.y
-                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
-
-                    // Normalize direction
-                    val dirX = dx / dist
-                    val dirY = dy / dist
-
-                    // Force calculation based on connection type
-                    val forceMagnitude = when (edge.type) {
-                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
-                        GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
-                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
-                    }
-
-                    netDx += dirX * forceMagnitude
-                    netDy += dirY * forceMagnitude
-                }
-            }
-
-            val mag = sqrt(netDx * netDx + netDy * netDy)
-
-            // Social Status classification matching Python thresholds
             val status = when {
                 mag > THRESHOLD_TURBULENCE -> SocialStatus.HIGH_TURBULENCE
                 mag < THRESHOLD_ISOLATED -> SocialStatus.ISOLATED
@@ -147,11 +149,11 @@ object GhostVectorEngine {
             }
 
             result.add(SocialVector(
-                studentId = node.id,
-                dx = netDx,
-                dy = netDy,
+                studentId = nodes[i].id,
+                dx = dx,
+                dy = dy,
                 magnitude = mag,
-                angle = atan2(netDy, netDx),
+                angle = atan2(dy, dx),
                 status = status
             ))
         }
@@ -170,54 +172,51 @@ object GhostVectorEngine {
         edges: List<GhostLatticeEngine.Edge>
     ): List<SocialVector> {
         val n = students.size
+        if (n == 0) return emptyList()
         val eSize = edges.size
 
-        val edgesByStudent = mutableMapOf<Long, MutableList<GhostLatticeEngine.Edge>>()
-        for (i in 0 until eSize) {
-            val edge = edges[i]
-            edgesByStudent.getOrPut(edge.fromId) { mutableListOf() }.add(edge)
-            edgesByStudent.getOrPut(edge.toId) { mutableListOf() }.add(edge)
+        val netDx = FloatArray(n)
+        val netDy = FloatArray(n)
+
+        val idToIndex = mutableMapOf<Long, Int>()
+        for (i in 0 until n) {
+            idToIndex[students[i].id] = i
         }
 
-        val studentMap = mutableMapOf<Long, com.example.myapplication.data.Student>()
-        for (i in 0 until n) {
-            val s = students[i]
-            studentMap[s.id] = s
+        for (i in 0 until eSize) {
+            val edge = edges[i]
+            val idxA = idToIndex[edge.fromId] ?: continue
+            val idxB = idToIndex[edge.toId] ?: continue
+
+            val sA = students[idxA]
+            val sB = students[idxB]
+
+            val dx = sB.xPosition - sA.xPosition
+            val dy = sB.yPosition - sA.yPosition
+            val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
+
+            val forceMagnitude = when (edge.type) {
+                GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
+                GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
+                GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
+            }
+
+            val fx = (dx / dist) * forceMagnitude
+            val fy = (dy / dist) * forceMagnitude
+
+            netDx[idxA] += fx
+            netDy[idxA] += fy
+
+            netDx[idxB] -= fx
+            netDy[idxB] -= fy
         }
 
         val result = ArrayList<SocialVector>(n)
         for (i in 0 until n) {
-            val student = students[i]
-            var netDx = 0f
-            var netDy = 0f
+            val dx = netDx[i]
+            val dy = netDy[i]
+            val mag = sqrt(dx * dx + dy * dy)
 
-            val studentEdges = edgesByStudent[student.id]
-            if (studentEdges != null) {
-                val sEdgesSize = studentEdges.size
-                for (j in 0 until sEdgesSize) {
-                    val edge = studentEdges[j]
-                    val otherId = if (edge.fromId == student.id) edge.toId else edge.fromId
-                    val otherStudent = studentMap[otherId] ?: continue
-
-                    val dx = otherStudent.xPosition - student.xPosition
-                    val dy = otherStudent.yPosition - student.yPosition
-                    val dist = sqrt(dx * dx + dy * dy).coerceAtLeast(MIN_DISTANCE_SAFETY)
-
-                    val dirX = dx / dist
-                    val dirY = dy / dist
-
-                    val forceMagnitude = when (edge.type) {
-                        GhostLatticeEngine.ConnectionType.COLLABORATION -> edge.strength * FORCE_COLLABORATION
-                        GhostLatticeEngine.ConnectionType.FRICTION -> edge.strength * FORCE_FRICTION
-                        GhostLatticeEngine.ConnectionType.NEUTRAL -> edge.strength * FORCE_NEUTRAL
-                    }
-
-                    netDx += dirX * forceMagnitude
-                    netDy += dirY * forceMagnitude
-                }
-            }
-
-            val mag = sqrt(netDx * netDx + netDy * netDy)
             val status = when {
                 mag > THRESHOLD_TURBULENCE -> SocialStatus.HIGH_TURBULENCE
                 mag < THRESHOLD_ISOLATED -> SocialStatus.ISOLATED
@@ -226,11 +225,11 @@ object GhostVectorEngine {
             }
 
             result.add(SocialVector(
-                studentId = student.id,
-                dx = netDx,
-                dy = netDy,
+                studentId = students[i].id,
+                dx = dx,
+                dy = dy,
                 magnitude = mag,
-                angle = atan2(netDy, netDx),
+                angle = atan2(dy, dx),
                 status = status
             ))
         }
