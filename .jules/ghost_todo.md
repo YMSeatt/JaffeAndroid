@@ -2,10 +2,15 @@
 - [ ] Idea: Add "Neural Sync" - Real-time collaboration visualizer.
 
 ## 🚧 Active Construction
+- [ACTIVE] Task: Ghost Tiles - Native Quick Settings integration
+  - [ ] Step 1: Implement global activity tracking in Repository
+  - [ ] Step 2: Implement GhostHudTileService for HUD toggle
+  - [ ] Step 3: Implement GhostQuickLogTileService for rapid feedback
+  - [ ] Step 4: Verify Android 15 Tile compatibility
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-02: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-30: Ghost Kinetic - Physics-based momentum for student icons in `/labs/ghost/kinetic/`
-- [DONE] 2028-05-27: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-20: Ghost Glitch - Neural spatial feedback in `/labs/ghost/glitch/`
 - [DONE] 2028-05-15: Ghost Lasso - Neural gesture-based multi-selection tool in `/labs/ghost/lasso/`
 - [DONE] 2028-05-10: Ghost Strategist - Integrated Generative AI Tactical Co-Pilot into Seating Chart & ViewModel

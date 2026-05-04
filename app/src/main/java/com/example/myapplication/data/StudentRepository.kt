@@ -272,4 +272,14 @@ class StudentRepository(
     suspend fun getAllStudentsNonLiveData(): List<Student> {
         return studentDao.getAllStudentsNonLiveData()
     }
+
+    /**
+     * BOLT: Identifies the most recently active student across the entire classroom.
+     * Used by the [GhostQuickLogTileService] for rapid feedback.
+     *
+     * @return The ID of the last active student, or null if no logs exist.
+     */
+    suspend fun getLastActiveStudentId(): Long? {
+        return behaviorEventDao.getLastBehaviorEvent()?.studentId
+    }
 }

@@ -84,6 +84,30 @@
             android:exported="false"
             android:label="Ghost Morph"
             android:theme="@style/Theme.MyApplication" />
+
+        <!-- Ghost Quick Settings Tiles -->
+        <service
+            android:name=".labs.ghost.tiles.GhostHudTileService"
+            android:exported="true"
+            android:label="Ghost HUD"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".labs.ghost.tiles.GhostQuickLogTileService"
+            android:exported="true"
+            android:label="Quick Log"
+            android:icon="@mipmap/ic_launcher"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
         <receiver
             android:name=".util.ReminderReceiver"
             android:exported="false" />
