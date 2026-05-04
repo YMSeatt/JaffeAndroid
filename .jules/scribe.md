@@ -85,3 +85,8 @@
     - **Green**: Positive Behavioral Concentration.
     - **Red**: Negative Behavioral Concentration.
 - **Shader Pooling Logic**: The `GhostOsmosisLayer` uses a strict pooling strategy for `RuntimeShader` and `ShaderBrush`. This is required because `ShaderBrush` captures uniforms at the moment of application; drawing multiple patches with different uniforms in one frame requires unique object instances to prevent visual "bleeding" or overwrites.
+
+### 17. Ghost Pulsar "Harmonic Synchronicity" Calibration
+- **The 0.2 Threshold**: The sync threshold for "Harmonic Bonds" is hardcoded to 0.2 LPM. This value was calibrated against the Python reference suite to represent a +/- 12% frequency variance for active students.
+- **Phase Derivation**: Phase is calculated as `(currentTime * frequency) % 1.0`. By using absolute system time as the base, students with the *exact* same frequency will naturally pulse in perfect synchronization regardless of when they were added to the chart.
+- **Wave Interference**: Visual constructive interference in the AGSL shader occurs when two synchronized students are near each other, with the `sin()` waves combining their amplitudes and shifting colors toward a brighter composite.

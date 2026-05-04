@@ -35,11 +35,13 @@ object GhostPulsarShader {
 
                 float d = distance(p, pos);
 
-                // Calculate wave interference from this student
-                // Frequency is baked into the phase calculation in the engine
+                // Calculate wave interference from this student.
+                // Frequency is baked into the phase calculation in the engine.
+                // 40.0: Wave frequency multiplier (spatial density of rings).
+                // 6.28318: 2*PI, used to map normalized phase to a full sine cycle.
                 float val = sin(d * 40.0 - (iPhases[i] * 6.28318)) * iAmplitudes[i];
 
-                // Attenuation over distance
+                // Attenuation over distance. Ensures waves are localized to students.
                 val *= exp(-d * 3.0);
 
                 wave += val;
@@ -49,13 +51,14 @@ object GhostPulsarShader {
                 compositeColor += studentColor * (val * 0.5 + 0.5) * exp(-d * 5.0);
             }
 
-            // Normalization and thresholding for "Wave Fronts"
+            // Normalization and thresholding for "Wave Fronts".
+            // Values below 0.3 are discarded (dark background), creating the "ring" look.
             float intensity = abs(wave);
             float mask = smoothstep(0.3, 0.8, intensity);
 
             float3 finalColor = mix(float3(0.01, 0.02, 0.05), compositeColor, mask);
 
-            // Add a subtle digital scanline effect
+            // Add a subtle digital scanline effect (800 scanlines across the UI).
             finalColor *= 0.9 + 0.1 * sin(uv.y * 800.0);
 
             return float4(finalColor, mask * 0.4);

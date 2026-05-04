@@ -56,7 +56,8 @@ fun GhostPulsarLayer(
         label = "time"
     )
 
-    // BOLT: Pre-calculate density-dependent values outside the draw loop.
+    // BOLT: Performance Cap. We sample the first 20 students to ensure smooth rendering
+    // on devices that may struggle with too many simultaneous wave sources in AGSL.
     val studentsToDisplay = remember(students) { students.take(20) }
 
     // BOLT: Pre-allocate and remember the FloatArrays to eliminate per-frame object churn.

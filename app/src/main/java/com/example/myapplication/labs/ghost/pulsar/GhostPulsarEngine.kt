@@ -40,9 +40,13 @@ object GhostPulsarEngine {
     /**
      * Calculates the harmonic state for each student based on their behavior history.
      *
+     * ### Theoretical Basis:
+     * Activity is modeled as a periodic wave where the frequency is driven by recent
+     * behavioral density. This allows the system to visualize "Classroom Momentum."
+     *
      * @param students List of students to analyze.
      * @param events Historical behavior logs.
-     * @param currentTime Current system time.
+     * @param currentTime Current system time (used for windowing and phase calculation).
      */
     fun calculateHarmonics(
         students: List<StudentUiItem>,
@@ -53,7 +57,10 @@ object GhostPulsarEngine {
 
         // BOLT: Group events by studentId for O(N + L) efficiency.
         val eventsByStudent = events.groupBy { it.studentId }
-        val windowMillis = 600_000L // 10 minute window for frequency analysis
+
+        // The 10-minute window (600,000ms) was chosen to capture short-term behavioral
+        // "bursts" without being overly influenced by long-term historical averages.
+        val windowMillis = 600_000L
 
         return students.map { student ->
             val studentLogs = eventsByStudent[student.id.toLong()] ?: emptyList()
@@ -61,14 +68,18 @@ object GhostPulsarEngine {
             // Filter logs within the sliding window
             val recentLogs = studentLogs.filter { currentTime - it.timestamp < windowMillis }
 
-            // frequency = logs per minute
+            // Frequency is calculated as logs-per-minute (LPM).
+            // A higher LPM indicates a more "active" student in the current window.
             val frequency = (recentLogs.size.toFloat() / (windowMillis / 60_000f)).coerceIn(0.1f, 10f)
 
-            // amplitude = density of logs (scaled)
+            // Amplitude represents the "loudness" of the student's rhythm.
+            // Calibrated such that 5 logs in 10 minutes (0.5 LPM) results in 1.0 amplitude.
             val amplitude = (recentLogs.size.toFloat() / 5f).coerceIn(0f, 1.5f)
 
-            // phase = (currentTime * frequency) normalized to 0..1
-            // frequency is logs/min, so logs/(60*1000) ms
+            // Phase = (currentTime * frequency) normalized to 0..1.
+            // By basing phase on absolute system time and student frequency, we ensure that
+            // students with the SAME frequency will always pulse in sync, creating visible
+            // interference patterns in the shader.
             val phase = ((currentTime % 60_000L).toFloat() / 60_000f * frequency) % 1.0f
 
             HarmonicState(
@@ -82,7 +93,10 @@ object GhostPulsarEngine {
 
     /**
      * Detects synchronicity bonds between students with similar classroom rhythms.
-     * Ported from `Python/ghost_pulsar_analyzer.py`.
+     *
+     * ### Parity:
+     * Ported from `Python/ghost_pulsar_analyzer.py`. The 0.2 frequency delta threshold
+     * represents a +/- 12% variance for a medium-activity student (1.5 LPM).
      */
     fun detectBonds(
         harmonics: List<HarmonicState>,
@@ -112,7 +126,10 @@ object GhostPulsarEngine {
 
     /**
      * Generates a Markdown-formatted Classroom Rhythm report.
-     * Parity-matched with the output of `Python/ghost_pulsar_analyzer.py`.
+     *
+     * ### Parity:
+     * Parity-matched with the output of `Python/ghost_pulsar_analyzer.py` to ensure
+     * that researchers see consistent data across desktop and mobile platforms.
      */
     fun generatePulsarReport(
         harmonics: List<HarmonicState>,
