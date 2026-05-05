@@ -58,6 +58,9 @@ interface StudentDao {
     @Query("SELECT * FROM students WHERE id = :studentId")
     suspend fun getStudentByIdNonLiveData(studentId: Long): Student?
 
+    @Query("SELECT * FROM students WHERE id = :studentId")
+    fun getStudentByIdFlow(studentId: Long): Flow<Student?>
+
     @Query("SELECT * FROM students WHERE id IN (:studentIds)")
     suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student>
 

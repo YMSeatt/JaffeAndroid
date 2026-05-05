@@ -91,4 +91,32 @@ class GhostPreferencesViewModel @Inject constructor(
             store.updateShakeToRecenterEnabled(enabled)
         }
     }
+
+    fun requestAddHudTile(context: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val statusBarManager = context.getSystemService(android.app.StatusBarManager::class.java)
+            val icon = android.graphics.drawable.Icon.createWithResource(context, com.example.myapplication.R.mipmap.ic_launcher)
+            statusBarManager.requestAddTileService(
+                android.content.ComponentName(context, com.example.myapplication.labs.ghost.tiles.GhostHudTileService::class.java),
+                "Ghost HUD",
+                icon,
+                { it.run() },
+                { /* Handle result */ }
+            )
+        }
+    }
+
+    fun requestAddQuickLogTile(context: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val statusBarManager = context.getSystemService(android.app.StatusBarManager::class.java)
+            val icon = android.graphics.drawable.Icon.createWithResource(context, com.example.myapplication.R.mipmap.ic_launcher)
+            statusBarManager.requestAddTileService(
+                android.content.ComponentName(context, com.example.myapplication.labs.ghost.tiles.GhostQuickLogTileService::class.java),
+                "Quick Log",
+                icon,
+                { it.run() },
+                { /* Handle result */ }
+            )
+        }
+    }
 }

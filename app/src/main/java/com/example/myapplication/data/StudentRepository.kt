@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * StudentRepository: The primary data interface for the application.
@@ -281,5 +282,19 @@ class StudentRepository(
      */
     suspend fun getLastActiveStudentId(): Long? {
         return behaviorEventDao.getLastBehaviorEvent()?.studentId
+    }
+
+    /**
+     * BOLT: Reactive stream of the most recently active student ID.
+     */
+    fun getLastActiveStudentIdFlow(): Flow<Long?> {
+        return behaviorEventDao.getLastBehaviorEventFlow().map { it?.studentId }
+    }
+
+    /**
+     * BOLT: Reactive stream of a student by ID.
+     */
+    fun getStudentByIdFlow(studentId: Long): Flow<Student?> {
+        return studentDao.getStudentByIdFlow(studentId)
     }
 }

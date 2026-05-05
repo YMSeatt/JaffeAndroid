@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -111,6 +112,34 @@ fun GhostPreferencesScreen(
                         checked = lodEnabled,
                         onCheckedChange = viewModel::setLodEnabled
                     )
+                }
+            }
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                GhostSectionTitle("QUICK SETTINGS")
+
+                val context = LocalContext.current
+                GhostGlassmorphicSurface(
+                    modifier = Modifier.fillMaxWidth(),
+                    glassmorphismEnabled = glassmorphismEnabled
+                ) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Button(
+                            onClick = { viewModel.requestAddHudTile(context) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray, contentColor = Color.Cyan)
+                        ) {
+                            Text("ADD HUD TILE")
+                        }
+
+                        Button(
+                            onClick = { viewModel.requestAddQuickLogTile(context) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray, contentColor = Color.Cyan)
+                        ) {
+                            Text("ADD QUICK LOG TILE")
+                        }
+                    }
                 }
             }
 

@@ -27,10 +27,22 @@ class GhostHudTileService : TileService() {
     lateinit var ghostPreferencesStore: GhostPreferencesStore
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var job: Job? = null
 
     override fun onStartListening() {
         super.onStartListening()
-        updateTileState()
+        job?.cancel()
+        job = serviceScope.launch {
+            ghostPreferencesStore.scanlineEffectEnabled.collect { isActive ->
+                updateTileState(isActive)
+            }
+        }
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        job?.cancel()
+        job = null
     }
 
     override fun onClick() {
@@ -42,18 +54,14 @@ class GhostHudTileService : TileService() {
             // in this experiment.
             val current = ghostPreferencesStore.scanlineEffectEnabled.first()
             ghostPreferencesStore.updateScanlineEffectEnabled(!current)
-            updateTileState()
         }
     }
 
-    private fun updateTileState() {
-        serviceScope.launch {
-            val isActive = ghostPreferencesStore.scanlineEffectEnabled.first()
-            val tile = qsTile ?: return@launch
-            tile.state = if (isActive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            tile.label = "Ghost HUD"
-            tile.updateTile()
-        }
+    private fun updateTileState(isActive: Boolean) {
+        val tile = qsTile ?: return
+        tile.state = if (isActive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        tile.label = "Ghost HUD"
+        tile.updateTile()
     }
 
     override fun onDestroy() {

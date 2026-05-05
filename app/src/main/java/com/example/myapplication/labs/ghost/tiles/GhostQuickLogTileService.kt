@@ -8,6 +8,8 @@ import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.StudentRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import javax.inject.Inject
 
 /**
@@ -28,10 +30,31 @@ class GhostQuickLogTileService : TileService() {
     lateinit var studentRepository: StudentRepository
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var job: Job? = null
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onStartListening() {
         super.onStartListening()
-        updateTileState()
+        job?.cancel()
+        job = serviceScope.launch {
+            studentRepository.getLastActiveStudentIdFlow()
+                .flatMapLatest { lastActiveId ->
+                    if (lastActiveId != null) {
+                        studentRepository.getStudentByIdFlow(lastActiveId)
+                    } else {
+                        flowOf(null)
+                    }
+                }
+                .collect { student ->
+                    updateTileState(student)
+                }
+        }
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        job?.cancel()
+        job = null
     }
 
     override fun onClick() {
@@ -60,21 +83,17 @@ class GhostQuickLogTileService : TileService() {
         }
     }
 
-    private fun updateTileState() {
-        serviceScope.launch {
-            val lastActiveId = studentRepository.getLastActiveStudentId()
-            val tile = qsTile ?: return@launch
+    private fun updateTileState(student: com.example.myapplication.data.Student?) {
+        val tile = qsTile ?: return
 
-            if (lastActiveId != null) {
-                val student = studentRepository.getStudentById(lastActiveId)
-                tile.state = Tile.STATE_INACTIVE
-                tile.label = if (student != null) "Log ${student.firstName}" else "Quick Log"
-            } else {
-                tile.state = Tile.STATE_DISABLED
-                tile.label = "No Active Student"
-            }
-            tile.updateTile()
+        if (student != null) {
+            tile.state = Tile.STATE_INACTIVE
+            tile.label = "Log ${student.firstName}"
+        } else {
+            tile.state = Tile.STATE_DISABLED
+            tile.label = "No Active Student"
         }
+        tile.updateTile()
     }
 
     override fun onDestroy() {
