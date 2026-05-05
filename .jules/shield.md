@@ -104,3 +104,8 @@
 - **Vulnerability:** The 'Reminders' screen, which often contains student PII and sensitive classroom tasks, lacked protection against screenshots and screen recordings.
 - **Fix:** Implemented a `DisposableEffect` in `RemindersScreen.kt` to proactively enforce `WindowManager.LayoutParams.FLAG_SECURE` whenever the screen is active.
 - **Location:** `app/src/main/java/com/example/myapplication/ui/screens/RemindersScreen.kt`
+
+## 🛡️ Privacy Hardening: Screen Protection for Ghost Lab Sandbox Activities
+- **Vulnerability:** Experimental sandbox activities (Cortex, Strategist, Vision, Ray, Filter, and Preferences) that process or display sensitive classroom data and student metrics lacked protection against screenshots and screen recordings.
+- **Fix:** Enforced `WindowManager.LayoutParams.FLAG_SECURE` in the `onCreate` method of all relevant sandbox activities.
+- **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/` (Multiple Activities)

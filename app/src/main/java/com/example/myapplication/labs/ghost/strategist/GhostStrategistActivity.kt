@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.strategist
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -34,6 +35,8 @@ class GhostStrategistActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of sensitive tactical data
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             MyApplicationTheme {
                 GhostStrategistScreen(onBack = { finish() })

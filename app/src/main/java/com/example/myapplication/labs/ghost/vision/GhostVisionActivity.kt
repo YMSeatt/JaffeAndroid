@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.vision
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,6 +32,8 @@ class GhostVisionActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of sensitive AR-projected student data
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             MyApplicationTheme {
                 val viewModel: SeatingChartViewModel = viewModel()

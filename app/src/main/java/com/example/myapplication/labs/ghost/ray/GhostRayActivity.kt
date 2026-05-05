@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.ray
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -28,6 +29,8 @@ class GhostRayActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of sensitive neural beam interactions
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             MyApplicationTheme {
                 GhostRayScreen(onBack = { finish() })
