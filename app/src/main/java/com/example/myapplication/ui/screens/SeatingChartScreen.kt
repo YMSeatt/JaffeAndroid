@@ -1117,7 +1117,11 @@ fun SeatingChartScreen(
                 val osmoticNodes = remember(students) {
                     students.mapNotNull { it.osmoticNode.value }
                 }
-                GhostOsmosisLayer(students = osmoticNodes)
+                GhostOsmosisLayer(
+                    students = osmoticNodes,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTANGLEMENT_MODE_ENABLED && isEntanglementActive) {

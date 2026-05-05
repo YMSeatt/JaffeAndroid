@@ -8,7 +8,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.exp
-import kotlin.math.sqrt
 
 /**
  * GhostOsmosisEngine: Calculates Knowledge Diffusion and Behavioral Concentration.
@@ -192,7 +191,9 @@ object GhostOsmosisEngine {
                 var totalBehavior = 0f
                 var totalWeight = 0f
 
-                students.forEach { student ->
+                // BOLT: Replace forEach with manual index loop.
+                for (i in students.indices) {
+                    val student = students[i]
                     val dx = gx - student.x
                     val dy = gy - student.y
                     val distSq = dx * dx + dy * dy
@@ -200,7 +201,7 @@ object GhostOsmosisEngine {
                     if (distSq < diffusionRadiusSq) {
                         // Gaussian decay for diffusion weight
                         // BOLT: Removed sqrt and used pre-calculated denominator
-                        val weight = exp(-distSq / GAUSSIAN_DENOMINATOR)
+                        val weight = exp(-distSq / GAUSSIAN_DENOMINATOR).toFloat()
                         totalKnowledge += student.knowledgePotential * weight
                         totalBehavior += student.behaviorConcentration * weight
                         totalWeight += weight
@@ -223,7 +224,7 @@ object GhostOsmosisEngine {
                         DiffusionGradient(
                             x = gx,
                             y = gy,
-                            potential = (avgK + avgB.let { if (it > 0) it else -it }) / 2f,
+                            potential = (avgK + (if (avgB > 0) avgB else -avgB)) / 2f,
                             color = Triple(r, g, b)
                         )
                     )
@@ -254,7 +255,9 @@ object GhostOsmosisEngine {
             val qAvg = if (quizLogs.isEmpty()) 0.5f else {
                 var totalRatio = 0.0
                 var count = 0
-                for (log in quizLogs) {
+                // BOLT: Manual index loop instead of functional chain.
+                for (i in quizLogs.indices) {
+                    val log = quizLogs[i]
                     val v = log.markValue
                     val m = log.maxMarkValue
                     if (v != null && m != null && m > 0) {
@@ -267,7 +270,9 @@ object GhostOsmosisEngine {
 
             val hAvg = if (homeworkLogs.isEmpty()) 0.5f else {
                 var doneCount = 0
-                for (log in homeworkLogs) {
+                // BOLT: Manual index loop instead of filter/count.
+                for (i in homeworkLogs.indices) {
+                    val log = homeworkLogs[i]
                     if (log.status.contains("Done", ignoreCase = true)) {
                         doneCount++
                     }
@@ -281,7 +286,9 @@ object GhostOsmosisEngine {
         val bConcentration = if (behaviorLogs.isEmpty()) 0f else {
             var pos = 0
             var neg = 0
-            for (event in behaviorLogs) {
+            // BOLT: Manual index loop instead of filter/count.
+            for (i in behaviorLogs.indices) {
+                val event = behaviorLogs[i]
                 if (event.type.contains("Negative", ignoreCase = true)) {
                     neg++
                 } else {
