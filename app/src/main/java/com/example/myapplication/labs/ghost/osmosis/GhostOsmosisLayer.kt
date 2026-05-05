@@ -8,22 +8,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import com.example.myapplication.labs.ghost.GhostConfig
 
 /**
  * GhostOsmosisLayer: Renders the fluid diffusion field on the seating chart.
+ * ⚡ BOLT Optimization: Replaced CPU-side grid sampling with a single-pass GPU shader.
+ * Eliminates thousands of JNI calls and CPU calculations per frame.
  */
 @Composable
 fun GhostOsmosisLayer(
     students: List<GhostOsmosisEngine.OsmoticNode>,
+    canvasScale: Float,
+    canvasOffset: androidx.compose.ui.geometry.Offset,
     modifier: Modifier = Modifier
 ) {
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.OSMOSIS_MODE_ENABLED) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "osmosis")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
@@ -33,55 +35,53 @@ fun GhostOsmosisLayer(
         label = "time"
     )
 
-    val gradients = remember(students) {
-        GhostOsmosisEngine.calculateOsmosis(students)
-    }
+    // BOLT: Performance Cap. Sample first 40 students to fit shader uniform array size.
+    val activeNodes = remember(students) { students.take(40) }
 
-    /**
-     * BOLT Optimization: Shader & Brush Pooling.
-     * We maintain a pool of RuntimeShader and ShaderBrush instances to avoid per-frame
-     * and per-gradient allocations within the DrawScope.
-     *
-     * Why Pooling?
-     * 1. Re-allocating RuntimeShaders triggers JNI overhead and GPU resource thrashing.
-     * 2. ShaderBrush captures the current state of the shader uniforms when applied.
-     *    To draw multiple gradient patches with different uniforms in a single frame,
-     *    each patch MUST use a unique Shader/Brush instance from the pool.
-     */
-    val diffusionShaderPool = remember { mutableListOf<RuntimeShader>() }
-    val diffusionBrushPool = remember { mutableListOf<ShaderBrush>() }
+    // BOLT: Pre-allocate primitive arrays to eliminate per-frame object churn.
+    val points = remember { FloatArray(40 * 2) }
+    val knowledge = remember { FloatArray(40) }
+    val behavior = remember { FloatArray(40) }
+
+    val shader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RuntimeShader(GhostOsmosisShader.DIFFUSION_FIELD)
+        } else null
+    }
+    val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            var gradientIdx = 0
-            gradients.forEach { gradient ->
-                if (gradientIdx >= diffusionShaderPool.size) {
-                    val s = RuntimeShader(GhostOsmosisShader.DIFFUSION_FIELD)
-                    diffusionShaderPool.add(s)
-                    diffusionBrushPool.add(ShaderBrush(s))
-                }
-                val shader = diffusionShaderPool[gradientIdx]
-                val brush = diffusionBrushPool[gradientIdx]
-                gradientIdx++
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && brush != null) {
+            val width = size.width
+            val height = size.height
+            if (width <= 0f || height <= 0f) return@Canvas
 
-                shader.setFloatUniform("iResolution", size.width, size.height)
-                shader.setFloatUniform("iTime", time)
-                shader.setFloatUniform("iColor", gradient.color.first, gradient.color.second, gradient.color.third)
-                shader.setFloatUniform("iPressure", gradient.potential)
+            // BOLT: Clear and populate uniform arrays from active nodes.
+            points.fill(0f)
+            knowledge.fill(0f)
+            behavior.fill(0f)
 
-                // Draw a localized diffusion patch for each gradient point
-                // Note: In a full implementation, we might use a mesh or a single full-screen shader
-                // with more uniforms, but for this PoC, we draw points to demonstrate the field.
-                val radius = 200f // Patch size
-                drawCircle(
-                    brush = brush,
-                    radius = radius,
-                    center = androidx.compose.ui.geometry.Offset(
-                        gradient.x / 4000f * size.width,
-                        gradient.y / 4000f * size.height
-                    )
-                )
+            val count = activeNodes.size
+            for (i in 0 until count) {
+                val node = activeNodes[i]
+                // Map 4000x4000 logical coordinates to screen space
+                points[i * 2] = node.x * canvasScale + canvasOffset.x
+                points[i * 2 + 1] = node.y * canvasScale + canvasOffset.y
+                knowledge[i] = node.knowledgePotential
+                behavior[i] = node.behaviorConcentration
             }
+
+            // BOLT: High-performance uniform updates.
+            // setFloatUniform with arrays is much faster than individual calls.
+            shader.setFloatUniform("iResolution", width, height)
+            shader.setFloatUniform("iTime", timeState.value) // Reading time only inside draw block
+            shader.setFloatUniform("iPoints", points)
+            shader.setFloatUniform("iKnowledge", knowledge)
+            shader.setFloatUniform("iBehavior", behavior)
+            shader.setIntUniform("iNumPoints", count)
+
+            // BOLT: Single draw call for the entire field.
+            drawRect(brush = brush)
         }
     }
 }

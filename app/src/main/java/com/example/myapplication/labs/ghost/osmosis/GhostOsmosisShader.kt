@@ -6,14 +6,18 @@ import org.intellij.lang.annotations.Language
  * GhostOsmosisShader: AGSL script for fluid diffusion and osmotic pressure.
  *
  * Visualizes the Knowledge Diffusion Field with moving fluid-like patterns.
+ * ⚡ BOLT Optimization: Moved Gaussian diffusion field calculation to the GPU
+ * to eliminate CPU-side grid sampling and reduce JNI overhead.
  */
 object GhostOsmosisShader {
     @Language("AGSL")
     const val DIFFUSION_FIELD = """
         uniform float2 iResolution;
         uniform float iTime;
-        uniform float3 iColor;
-        uniform float iPressure; // 0..1
+        uniform float2 iPoints[40];
+        uniform float iKnowledge[40];
+        uniform float iBehavior[40];
+        uniform int iNumPoints;
 
         // Simple Hash function for procedural noise
         float hash(float2 p) {
@@ -35,8 +39,36 @@ object GhostOsmosisShader {
 
         float4 main(float2 fragCoord) {
             float2 uv = fragCoord / iResolution.xy;
+            float2 worldPos = fragCoord;
 
-            // Flow simulation
+            float totalKnowledge = 0.0;
+            float totalBehavior = 0.0;
+            float totalWeight = 0.0;
+
+            // BOLT: GPU-side Gaussian summation (O(N) per pixel)
+            for (int i = 0; i < 40; i++) {
+                if (i >= iNumPoints) break;
+
+                float2 p = iPoints[i];
+                float2 d = worldPos - p;
+                float distSq = dot(d, d);
+
+                // DIFFUSION_RADIUS_SQ = 1000 * 1000
+                if (distSq < 1000000.0) {
+                    // GAUSSIAN_DENOMINATOR = 320000
+                    float weight = exp(-distSq / 320000.0);
+                    totalKnowledge += iKnowledge[i] * weight;
+                    totalBehavior += iBehavior[i] * weight;
+                    totalWeight += weight;
+                }
+            }
+
+            if (totalWeight <= 0.0) return float4(0.0);
+
+            float avgK = clamp(totalKnowledge / totalWeight, 0.0, 1.0);
+            float avgB = clamp(totalBehavior / totalWeight, -1.0, 1.0);
+
+            // Flow simulation driven by local potential
             float2 flow = uv * 5.0;
             flow.x += iTime * 0.2;
             flow.y += sin(iTime * 0.5 + uv.x * 2.0) * 0.1;
@@ -44,7 +76,15 @@ object GhostOsmosisShader {
             float n = noise(flow);
 
             // Diffusion intensity
-            float intensity = n * iPressure;
+            float intensity = n * ((avgK + abs(avgB)) * 0.5);
+
+            // Color mapping: Blue/Cyan (Knowledge) vs Red/Green (Behavior)
+            // Ported from GhostOsmosisEngine.calculateOsmosis
+            float3 iColor = float3(
+                avgB < 0.0 ? -avgB : 0.0, // Red for negative
+                avgB > 0.0 ? avgB : 0.0,  // Green for positive
+                avgK                       // Blue for knowledge
+            );
 
             float3 finalColor = iColor * (0.2 + 0.8 * intensity);
 
