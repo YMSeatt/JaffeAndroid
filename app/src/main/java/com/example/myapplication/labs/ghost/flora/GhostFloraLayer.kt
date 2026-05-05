@@ -29,10 +29,22 @@ import com.example.myapplication.ui.model.StudentUiItem
  * GhostFloraLayer: A Proof of Concept for Neural Botanical Visualization.
  * It renders procedural, data-driven flowers under each student's icon on the seating chart.
  *
- * Each flower's appearance (growth, vitality, complexity) is calculated by [GhostFloraEngine].
+ * Each flower's appearance (growth, vitality, complexity) is calculated by [GhostFloraEngine]
+ * and rendered using an AGSL shader defined in [GhostFloraShader].
  *
- * Optimization: Uses pre-grouped logs and a shader/brush pooling strategy outside the draw loop
- * to maintain 60fps and follow Compose best practices.
+ * BOLT Performance Architecture:
+ * 1. **Pre-grouping**: Groups logs by student ID once per update to avoid O(N*L) complexity.
+ * 2. **Memoization**: Uses `remember` to cache the calculation results and shader objects.
+ * 3. **Zero-Allocation**: Hoists all object creations (RuntimeShader, ShaderBrush) out of
+ *     the `Canvas` draw scope to achieve stable 60fps.
+ *
+ * @param students The list of students currently visible on the chart.
+ * @param behaviorLogs Global list of behavior events for filtering.
+ * @param quizLogs Global list of quiz logs for filtering.
+ * @param homeworkLogs Global list of homework logs for filtering.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ * @param isActive Toggle to enable/disable the layer.
  */
 @Composable
 fun GhostFloraLayer(

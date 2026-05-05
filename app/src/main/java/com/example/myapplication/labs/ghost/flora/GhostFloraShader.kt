@@ -4,18 +4,31 @@ import org.intellij.lang.annotations.Language
 
 /**
  * GhostFloraShader: AGSL procedural flower generation logic.
- * It uses polar warping and multi-layered noise to render organic botanical forms.
+ *
+ * This shader implements organic botanical forms using polar coordinate warping.
+ * It is designed for zero-allocation performance by using purely procedural math.
  */
 object GhostFloraShader {
 
+    /**
+     * AGSL source for the Flora visualizer.
+     *
+     * Uniforms:
+     * - `size`: The viewport size for the individual flower (usually student icon width * 2).
+     * - `time`: Global animation time for the swaying effect.
+     * - `growth`: Maps to academic performance; affects the `petal()` distance function.
+     * - `vitality`: Maps to behavior; interpolates between Cyan (1.0) and Magenta (0.0).
+     * - `complexity`: Maps to activity frequency; determines the number of petal divisions.
+     * - `seed`: Provides stable variation between different student flowers.
+     */
     @Language("AGSL")
     const val FLORA_SHADER_SRC = """
         uniform float2 size;
         uniform float time;
-        uniform float growth;     // Petal length/scale
-        uniform float vitality;   // Color vibrancy (Cyan/Positive, Magenta/Negative)
-        uniform float complexity; // Petal count/noise density
-        uniform float seed;       // Unique student hash
+        uniform float growth;
+        uniform float vitality;
+        uniform float complexity;
+        uniform float seed;
 
         // 2D Rotation matrix
         float2 rotate(float2 p, float a) {

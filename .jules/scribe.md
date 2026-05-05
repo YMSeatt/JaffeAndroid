@@ -90,3 +90,9 @@
 - **The 0.2 Threshold**: The sync threshold for "Harmonic Bonds" is hardcoded to 0.2 LPM. This value was calibrated against the Python reference suite to represent a +/- 12% frequency variance for active students.
 - **Phase Derivation**: Phase is calculated as `(currentTime * frequency) % 1.0`. By using absolute system time as the base, students with the *exact* same frequency will naturally pulse in perfect synchronization regardless of when they were added to the chart.
 - **Wave Interference**: Visual constructive interference in the AGSL shader occurs when two synchronized students are near each other, with the `sin()` waves combining their amplitudes and shifting colors toward a brighter composite.
+
+### 18. Ghost Flora "Neural Botanical" Calibration
+- **The Saturation Point**: The complexity metric is normalized against a **saturation point of 10 logs**. Beyond this, the visual density of petals reaches a maximum to prevent GPU overdraw and maintain 60fps.
+- **Academic Baselines**: In the absence of data, students are assigned a **0.75f average growth factor** (0.7 Quiz, 0.8 Homework). This creates a "healthy baseline" sprout rather than an empty canvas for new students.
+- **Vitality Color Shift**: The color interpolation in the AGSL shader uses a linear `mix()` between Cyan (Positive) and Magenta (Negative). Magenta was chosen specifically for its visual "friction" against the standard app palette.
+- **Stable Seeding**: The procedural seed is derived via `studentId % 1000`. This ensures that while every student has a unique flower, it remains consistent across sessions unless their database ID changes.
