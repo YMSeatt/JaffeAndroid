@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.preferences
 
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -22,6 +23,8 @@ class GhostPreferencesActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // HARDEN: Prevent screenshots and screen recordings of sensitive experimental preferences
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
         setContent {
             val themeMode by viewModel.themeMode.collectAsState()
             val dynamicColor by viewModel.dynamicColorEnabled.collectAsState()
