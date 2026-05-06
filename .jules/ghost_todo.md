@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Add "Neural Sync" - Real-time collaboration visualizer.
+- [ ] Idea: Add "Neural Flux" - Density-aware flow visualization.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-08: Ghost Neural PiP - Native Picture-in-Picture Climate Monitor in `/labs/ghost/pip/`
 - [DONE] 2028-06-05: Ghost Tiles - Native Quick Settings integration (HUD & Quick Log) in `/labs/ghost/tiles/`
 - [DONE] 2028-06-02: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-30: Ghost Kinetic - Physics-based momentum for student icons in `/labs/ghost/kinetic/`

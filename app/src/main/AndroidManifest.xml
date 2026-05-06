@@ -84,6 +84,13 @@
             android:exported="false"
             android:label="Ghost Morph"
             android:theme="@style/Theme.MyApplication" />
+        <activity
+            android:name=".labs.ghost.pip.GhostPipActivity"
+            android:exported="false"
+            android:label="Ghost Neural PiP"
+            android:supportsPictureInPicture="true"
+            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
+            android:theme="@style/Theme.MyApplication" />
 
         <!-- Ghost Quick Settings Tiles -->
         <service
