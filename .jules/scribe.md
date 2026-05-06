@@ -96,3 +96,11 @@
 - **Academic Baselines**: In the absence of data, students are assigned a **0.75f average growth factor** (0.7 Quiz, 0.8 Homework). This creates a "healthy baseline" sprout rather than an empty canvas for new students.
 - **Vitality Color Shift**: The color interpolation in the AGSL shader uses a linear `mix()` between Cyan (Positive) and Magenta (Negative). Magenta was chosen specifically for its visual "friction" against the standard app palette.
 - **Stable Seeding**: The procedural seed is derived via `studentId % 1000`. This ensures that while every student has a unique flower, it remains consistent across sessions unless their database ID changes.
+
+### 19. Ghost Phasing "Neural Backstage" Synchronization
+- **The Metaphor**: The physical classroom UI is treated as a "veil" over a deep-space data void.
+- **Haptic Synchronization**: The `GhostPhasingEngine` triggers specific haptic markers at the 10% and 90% phase thresholds. This provides a tactile "pop" when the transition starts and when the physical UI is nearly extinguished.
+- **RenderEffect Pipeline**: Unlike standard overlays, Phasing uses `RenderEffect.createRuntimeShaderEffect` on the `graphicsLayer`. This allows the shader to sample the *entire* rendered content of the child Composable, enabling global effects like chromatic aberration and jitter that wouldn't be possible with simple brushes.
+
+---
+*Documentation love letter from Scribe 📜*
