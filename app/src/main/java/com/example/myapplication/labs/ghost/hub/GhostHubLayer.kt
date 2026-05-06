@@ -64,7 +64,8 @@ fun GhostHubLayer(
             GhostAction("FUTURE", Icons.Default.Update, "Neural Future"),
             GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"),
             GhostAction("SYNC", Icons.Default.Link, "Neural Sync"),
-            GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso")
+            GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"),
+            GhostAction("PIP", Icons.Default.PictureInPicture, "Neural PiP")
         )
     }
 

@@ -1866,6 +1866,10 @@ fun SeatingChartScreen(
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
                             "LASSO" -> isLassoActive = !isLassoActive
+                            "PIP" -> {
+                                val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
+                                context.startActivity(intent)
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2926,4 +2930,5 @@ fun SeatingChartTopAppBar(
             }
         }
     )
+}
 }
