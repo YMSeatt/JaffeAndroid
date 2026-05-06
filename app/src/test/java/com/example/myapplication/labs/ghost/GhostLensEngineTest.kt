@@ -13,7 +13,8 @@ class GhostLensEngineTest {
     @Test
     fun `getPropheciesForStudentsUnderLens returns prophecies for students within radius`() {
         val engine = GhostLensEngine()
-        engine.updatePosition(Offset(100f, 100f)) // Lens at (100, 100)
+        val lensPos = Offset(100f, 100f)
+        val lensRadius = 250f
 
         val studentUnder = createMockStudent(1, 100f, 100f)
         val studentAway = createMockStudent(2, 500f, 500f)
@@ -22,10 +23,13 @@ class GhostLensEngineTest {
             GhostOracle.Prophecy(1, GhostOracle.ProphecyType.ACADEMIC_SYNERGY, "Synergy predicted", 0.9f),
             GhostOracle.Prophecy(2, GhostOracle.ProphecyType.SOCIAL_FRICTION, "Friction predicted", 0.8f)
         )
+        val propheciesByStudent = prophecies.groupBy { it.studentId }
 
         val result = engine.getPropheciesForStudentsUnderLens(
             students = listOf(studentUnder, studentAway),
-            allProphecies = prophecies,
+            propheciesByStudent = propheciesByStudent,
+            lensPos = lensPos,
+            lensRadius = lensRadius,
             canvasScale = 1.0f,
             canvasOffset = Offset.Zero
         )
@@ -59,7 +63,18 @@ class GhostLensEngineTest {
             groupColor = mutableStateOf(null),
             groupId = mutableStateOf(null),
             sessionLogText = mutableStateOf(emptyList()),
-            temporaryTask = mutableStateOf(null)
+            temporaryTask = mutableStateOf(null),
+            irisParams = mutableStateOf(null),
+            osmoticNode = mutableStateOf(null),
+            altitude = mutableStateOf(0f),
+            behaviorEntropy = mutableStateOf(0f),
+            tectonicStress = mutableStateOf(0f),
+            quasarEnergy = mutableStateOf(0f),
+            quasarPolarity = mutableStateOf(0f),
+            ionCharge = mutableStateOf(0f),
+            ionDensity = mutableStateOf(0f),
+            magneticStrength = mutableStateOf(0f),
+            magneticRadius = mutableStateOf(0f)
         )
     }
 }
