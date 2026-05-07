@@ -36,6 +36,21 @@ The application is currently transitioning from a flat, log-based history to a n
 *   **Benefits**: Easier to perform longitudinal analysis on specific assessments and supports multi-step homework check-ins (Checkboxes, Scores, and Comments).
 *   **Use Case**: Preferred for standardized classroom assessments and structured checking routines.
 
+## 🔄 Comparison: Log Model vs. Normalized Model
+
+To assist with technical decision-making, the following table contrasts the two primary data strategies:
+
+| Feature | Legacy Log Model | Normalized Assignment Model |
+| :--- | :--- | :--- |
+| **Primary Entities** | `QuizLog`, `HomeworkLog` | `Quiz`, `Homework` |
+| **Blueprint** | None (Ad-hoc) | `QuizTemplate`, `HomeworkTemplate` |
+| **Flexibility** | High (Change schema per log) | Strict (Follows template) |
+| **Speed of Entry** | Fast (One-off) | Process-driven (Structured) |
+| **Analytics** | Individual / Time-based | Longitudinal / Comparative |
+| **Relational Depth**| Shallow | Deep (Linked to Templates) |
+
+**Recommendation**: Use the **Log Model** for rapid, eye-free logging during live instruction. Use the **Normalized Model** for planned assessments, weekly homework checks, and data-driven reporting cycles.
+
 ## ⚡ JSON-Backed Flexibility (The "Future-Proofing" Strategy)
 
 To avoid frequent and disruptive schema migrations as the UI evolves, specific entities utilize a hybrid storage approach:

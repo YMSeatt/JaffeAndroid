@@ -6,8 +6,15 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Data Access Object for the Normalized Homework subsystem.
  *
- * This DAO manages the creation of multi-step [HomeworkTemplate] blueprints
- * and student-specific [Homework] completion records.
+ * This DAO orchestrates the management of standardized homework assessments. It
+ * handles both the [HomeworkTemplate] blueprints (which define multi-step checking
+ * routines) and the student-specific [Homework] records.
+ *
+ * ### Comparison: HomeworkDao vs. HomeworkLogDao
+ * - **[HomeworkLogDao]**: Manages legacy, self-contained log entries. Ideal for quick,
+ *   unstructured feedback and notes.
+ * - **[HomeworkDao]**: Manages relational homework records. Required for tracking
+ *   student progress through complex, multi-component assignments defined by a template.
  */
 @Dao
 interface HomeworkDao {

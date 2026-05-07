@@ -2,8 +2,6 @@ package com.example.myapplication.data
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.ColumnInfo
-import androidx.room.ForeignKey
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import java.util.UUID
@@ -41,8 +39,19 @@ data class HomeworkMarkStep(
 /**
  * Represents a reusable blueprint for a complex homework assignment or check-in.
  *
- * A template defines a sequence of [HomeworkMarkStep]s. This allows teachers to
- * create standardized "Checking" routines that are reused across different sessions.
+ * ### Architectural Intent:
+ * A [HomeworkTemplate] defines a sequence of [HomeworkMarkStep]s. This allows teachers to
+ * create standardized "Checking" routines (e.g., a "Weekly Review" consisting of a
+ * reading check, a parent signature, and an effort score) that are reused across
+ * different students and sessions.
+ *
+ * ### Why use Templates?
+ * 1. **Relational Consistency**: Replaces one-off "Logs" with structured records linked
+ *    to a specific assignment definition.
+ * 2. **Multi-Step Tracking**: Supports assignments with multiple distinct checking criteria
+ *    (Checkbox, Score, and Comment simultaneously).
+ * 3. **Pedagogical Alignment**: Facilitates longitudinal tracking of specific types of
+ *    assignments rather than just generic "Homework."
  *
  * @property id Unique identifier for the template.
  * @property name The display name of the assignment template (e.g., "Weekly Math Pack").
@@ -81,40 +90,3 @@ data class HomeworkTemplate(
         }
     }
 }
-
-/**
- * Represents an individual student's completion record for a [HomeworkTemplate].
- *
- * While legacy [HomeworkLog] entities are used for quick, unstructured notes,
- * the [Homework] entity provides a relational link to standardized templates.
- *
- * @property id Unique identifier for this homework record.
- * @property studentId Foreign key referencing the [Student].
- * @property templateId Foreign key referencing the [HomeworkTemplate] blueprint.
- * @property status A summary status of the assignment (e.g., "Incomplete", "Satisfactory").
- * @property timestamp The time the homework status was recorded.
- */
-@Entity(
-    tableName = "homework",
-    foreignKeys = [
-        ForeignKey(
-            entity = Student::class,
-            parentColumns = ["id"],
-            childColumns = ["student_id"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = HomeworkTemplate::class,
-            parentColumns = ["id"],
-            childColumns = ["template_id"],
-            onDelete = ForeignKey.SET_NULL
-        )
-    ]
-)
-data class Homework(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "student_id", index = true) val studentId: Long,
-    @ColumnInfo(name = "template_id", index = true) val templateId: Long?,
-    val status: String,
-    val timestamp: Long = System.currentTimeMillis()
-)
