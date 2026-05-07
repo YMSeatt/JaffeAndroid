@@ -63,15 +63,16 @@ class GhostFluxEngine(private val context: Context) {
 
     companion object {
         /**
-         * Calculates the "Neural Flow" intensity of a classroom based on behavioral events.
-         * Ported from Python blueprint (ghost_flux_simulator.py).
+         * Calculates the "Neural Flow" intensity of a classroom based on behavioral events
+         * and spatial density.
          *
          * @param studentCount Number of students in the classroom.
          * @param logCount Number of behavioral events recorded.
+         * @param spatialDensity Normalized spatial clustering factor (0.0 to 1.0).
          * @return A normalized intensity value between 0.1 and 1.0.
          */
-        fun calculateFlowIntensity(studentCount: Int, logCount: Int): Float {
-            if (logCount == 0) return 0.1f
+        fun calculateFlowIntensity(studentCount: Int, logCount: Int, spatialDensity: Float = 0f): Float {
+            if (logCount == 0 && spatialDensity == 0f) return 0.1f
 
             // student_count = len(students) if students else 1
             val effectiveStudentCount = if (studentCount > 0) studentCount else 1
@@ -84,7 +85,41 @@ class GhostFluxEngine(private val context: Context) {
             // tempo = 1.0 + 0.2 * math.sin(log_count / 5.0)
             val tempo = 1.0f + 0.2f * sin(logCount.toFloat() / 5.0f)
 
-            return (baseIntensity * tempo).coerceIn(0.1f, 1.0f)
+            // Spatial modulation: higher density increases flow turbulence
+            val flowIntensity = (baseIntensity * tempo) + (spatialDensity * 0.3f)
+
+            return flowIntensity.coerceIn(0.1f, 1.0f)
+        }
+
+        /**
+         * Calculates the spatial density (clustering) of students on the logical canvas.
+         * Returns a value between 0.0 (perfectly sparse) and 1.0 (highly clustered).
+         *
+         * BOLT Optimization: Uses primitive FloatArrays and manual loops for performance.
+         */
+        fun calculateSpatialDensity(studentX: FloatArray, studentY: FloatArray, count: Int = studentX.size): Float {
+            if (count < 2) return 0f
+
+            var totalClustering = 0f
+            val threshold = 800f // Radius of "local influence" in logical units (4000x4000)
+
+            // O(N^2) density check
+            val actualCount = count.coerceAtMost(studentX.size)
+            for (i in 0 until actualCount) {
+                var localCount = 0
+                for (j in 0 until actualCount) {
+                    if (i == j) continue
+                    val dx = studentX[i] - studentX[j]
+                    val dy = studentY[i] - studentY[j]
+                    val distSq = dx * dx + dy * dy
+                    if (distSq < threshold * threshold) {
+                        localCount++
+                    }
+                }
+                totalClustering += localCount.toFloat() / (actualCount - 1).coerceAtLeast(1)
+            }
+
+            return (totalClustering / actualCount).coerceIn(0f, 1f)
         }
     }
 }

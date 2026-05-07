@@ -16,13 +16,43 @@ class GhostFluxEngineTest {
     fun testCalculateFlowIntensity_NormalActivity() {
         val studentCount = 20
         val logCount = 50
+        val spatialDensity = 0.0f
         // baseIntensity = 50 / (20 * 5) = 0.5
         // tempo = 1.0 + 0.2 * sin(50 / 5) = 1.0 + 0.2 * sin(10)
         val expectedTempo = 1.0f + 0.2f * sin(50f / 5f)
-        val expectedIntensity = (0.5f * expectedTempo).coerceIn(0.1f, 1.0f)
+        val expectedIntensity = (0.5f * expectedTempo + spatialDensity * 0.3f).coerceIn(0.1f, 1.0f)
 
-        val intensity = GhostFluxEngine.calculateFlowIntensity(studentCount, logCount)
+        val intensity = GhostFluxEngine.calculateFlowIntensity(studentCount, logCount, spatialDensity)
         assertEquals(expectedIntensity, intensity, 0.001f)
+    }
+
+    @Test
+    fun testCalculateFlowIntensity_WithSpatialDensity() {
+        val studentCount = 20
+        val logCount = 50
+        val spatialDensity = 0.5f
+        // baseIntensity = 0.5
+        // tempo = 1.0 + 0.2 * sin(10)
+        val expectedTempo = 1.0f + 0.2f * sin(50f / 5f)
+        val expectedIntensity = (0.5f * expectedTempo + spatialDensity * 0.3f).coerceIn(0.1f, 1.0f)
+
+        val intensity = GhostFluxEngine.calculateFlowIntensity(studentCount, logCount, spatialDensity)
+        assertEquals(expectedIntensity, intensity, 0.001f)
+    }
+
+    @Test
+    fun testCalculateSpatialDensity() {
+        val x = floatArrayOf(100f, 150f, 200f, 3000f)
+        val y = floatArrayOf(100f, 150f, 200f, 3000f)
+        // 100,100 is close to 150,150 and 200,200 (dist ~70, ~141) < 800
+        // 3000,3000 is far from everything
+        // 0: neighbors {1, 2} -> 2/3
+        // 1: neighbors {0, 2} -> 2/3
+        // 2: neighbors {0, 1} -> 2/3
+        // 3: neighbors {} -> 0/3
+        // avg = (2/3 + 2/3 + 2/3 + 0) / 4 = 2 / 4 = 0.5
+        val density = GhostFluxEngine.calculateSpatialDensity(x, y)
+        assertEquals(0.5f, density, 0.001f)
     }
 
     @Test
