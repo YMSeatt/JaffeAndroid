@@ -338,6 +338,9 @@ object ConditionalFormattingEngine {
     ): List<DecodedConditionalFormattingRule> {
         var matchingRules: MutableList<DecodedConditionalFormattingRule>? = null
 
+        // BOLT: Resolve scoring context once per student to utilize QuizScoreEngine's identity-based memoization.
+        val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
+
         for (rule in rules) {
             if (checkCondition(
                     student,
@@ -345,7 +348,7 @@ object ConditionalFormattingEngine {
                     behaviorLog,
                     quizLog,
                     homeworkLog,
-                    quizMarkTypes,
+                    scoringContext,
                     isLiveQuizActive,
                     liveQuizScores,
                     isLiveHomeworkActive,
@@ -404,7 +407,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
-        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
+        scoringContext: QuizScoreEngine.QuizScoringContext,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -478,7 +481,7 @@ object ConditionalFormattingEngine {
                     // BOLT: Removed redundant studentId check as quizLog is already student-specific
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
-                    val percentage = QuizScoreEngine.calculatePercentage(log, quizMarkTypes)
+                    val percentage = QuizScoreEngine.calculatePercentage(log, scoringContext)
                     if (percentage != null) {
                         when (operator) {
                             "<=" -> percentage <= scoreThresholdPercent

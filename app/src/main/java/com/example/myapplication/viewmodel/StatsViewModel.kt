@@ -349,6 +349,9 @@ class StatsViewModel @Inject constructor(
      * @return A sorted list of [QuizSummary] objects.
      */
     internal fun calculateQuizSummary(quizLogs: List<QuizLog>, sortedStudents: List<Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
+        // Optimization: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
+        val scoringContext = com.example.myapplication.util.QuizScoreEngine.getScoringContext(quizMarkTypes)
+
         // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
         val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
 
@@ -356,7 +359,7 @@ class StatsViewModel @Inject constructor(
             val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
             val stats = studentScores.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
 
-            val scorePercent = com.example.myapplication.util.QuizScoreEngine.calculatePercentage(log, quizMarkTypes) ?: 0.0
+            val scorePercent = com.example.myapplication.util.QuizScoreEngine.calculatePercentage(log, scoringContext) ?: 0.0
             stats[0] += scorePercent
             stats[1] += 1.0
         }
