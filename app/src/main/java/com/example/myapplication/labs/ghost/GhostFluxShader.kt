@@ -14,8 +14,8 @@ object GhostFluxShader {
     const val NEURAL_FLOW = """
         uniform float2 iResolution;
         uniform float iTime;
-        uniform float2 iPoints[20];
-        uniform float iWeights[20];
+        uniform float2 iPoints[40];
+        uniform float iWeights[40];
         uniform int iNumPoints;
 
         float hash(float2 p) {
@@ -50,20 +50,25 @@ object GhostFluxShader {
             float2 p = uv;
             p.x *= aspect;
 
-            // Domain Warping for fluid-like flow
-            float2 q = float2(fbm(p + 0.1 * iTime), fbm(p + float2(1.0)));
-            float2 r = float2(fbm(p + 4.0 * q + 0.5 * iTime), fbm(p + 4.0 * q + float2(1.7, 9.2)));
-            float f = fbm(p + 4.0 * r);
-
-            // Student influence "Vortices"
+            // Student influence "Vortices" - calculated first for warping
             float m = 0.0;
-            for (int i = 0; i < 20; i++) {
+            float2 warpOffset = float2(0.0);
+            for (int i = 0; i < 40; i++) {
                 if (i >= iNumPoints) break;
                 float2 pos = iPoints[i] / iResolution.xy;
                 pos.x *= aspect;
                 float d = distance(p, pos);
-                m += iWeights[i] * exp(-15.0 * d);
+                float weight = iWeights[i] * exp(-12.0 * d);
+                m += weight;
+
+                // Add directional warping based on student positions
+                warpOffset += weight * (p - pos);
             }
+
+            // Enhanced Domain Warping influenced by student activity (vortices)
+            float2 q = float2(fbm(p + 0.1 * iTime + 0.1 * warpOffset), fbm(p + float2(1.0) + 0.05 * m));
+            float2 r = float2(fbm(p + 4.0 * q + 0.5 * iTime), fbm(p + 4.0 * q + float2(1.7, 9.2) + 0.2 * warpOffset));
+            float f = fbm(p + 4.0 * r + 0.1 * m);
 
             // Combine flow and student intensity
             float3 baseColor = float3(0.0, 0.05, 0.15); // Deep Neural Blue
@@ -74,9 +79,9 @@ object GhostFluxShader {
             color = mix(color, surgeColor, m);
 
             // Pulse based on time
-            float pulse = 0.8 + 0.2 * sin(iTime * 2.0);
+            float pulse = 0.85 + 0.15 * sin(iTime * 1.5);
 
-            return float4(color * pulse, (0.4 * f + 0.3 * m) * pulse);
+            return float4(color * pulse, (0.35 * f + 0.45 * m) * pulse);
         }
     """
 }

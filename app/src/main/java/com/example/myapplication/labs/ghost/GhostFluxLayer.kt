@@ -50,37 +50,56 @@ fun GhostFluxLayer(
         label = "time"
     )
 
-    // Calculate Global Engagement/Agitation for Haptics using ported Python logic
-    val globalAgitation = remember(students, behaviorLogs) {
-        GhostFluxEngine.calculateFlowIntensity(students.size, behaviorLogs.size)
+    val studentsToDisplay = remember(students) { students.take(40) }
+
+    // Pre-allocated arrays for spatial density and shader uniforms
+    val studentX = remember { FloatArray(40) }
+    val studentY = remember { FloatArray(40) }
+    val points = remember { FloatArray(80) }
+    val weights = remember { FloatArray(40) }
+
+    // Calculate Global Engagement/Agitation for Haptics using enhanced logic
+    val flowMetrics = remember(studentsToDisplay, behaviorLogs) {
+        for (i in studentsToDisplay.indices) {
+            studentX[i] = studentsToDisplay[i].xPosition.value
+            studentY[i] = studentsToDisplay[i].yPosition.value
+        }
+        val density = GhostFluxEngine.calculateSpatialDensity(
+            studentX,
+            studentY,
+            studentsToDisplay.size
+        )
+        val intensity = GhostFluxEngine.calculateFlowIntensity(
+            studentsToDisplay.size,
+            behaviorLogs.size,
+            density
+        )
+        Pair(intensity, density)
     }
+
+    val globalIntensity = flowMetrics.first
 
     /**
      * Neural Haptic Pulse:
      * Triggers periodic haptic feedback that matches the visual rhythm of the flux flow.
      * Uses Android 15's high-fidelity VibrationEffect.Composition via [GhostFluxEngine].
      */
-    LaunchedEffect(globalAgitation) {
+    LaunchedEffect(globalIntensity) {
         while (true) {
-            fluxEngine.triggerFlowPulse(globalAgitation)
-            // Pulse frequency scales inversely with agitation (faster pulses for higher energy)
-            val delayMillis = (4000 - (globalAgitation * 3500)).toLong().coerceAtLeast(400)
+            fluxEngine.triggerFlowPulse(globalIntensity)
+            // Pulse frequency scales inversely with intensity (faster pulses for higher energy)
+            val delayMillis = (4000 - (globalIntensity * 3600)).toLong().coerceAtLeast(300)
             delay(delayMillis)
         }
     }
 
     val shader = remember { RuntimeShader(GhostFluxShader.NEURAL_FLOW) }
     val brush = remember(shader) { ShaderBrush(shader) }
-    val studentsToDisplay = remember(students) { students.take(20) }
 
     // Pre-calculate log counts to avoid O(S * L) in the Canvas draw loop
     val logCountsByStudent = remember(behaviorLogs) {
         behaviorLogs.groupingBy { it.studentId }.eachCount()
     }
-
-    // Pre-allocated arrays to avoid GC pressure during high-frequency Canvas drawing
-    val points = remember { FloatArray(40) }
-    val weights = remember { FloatArray(20) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         shader.setFloatUniform("iResolution", size.width, size.height)
@@ -91,17 +110,18 @@ fun GhostFluxLayer(
         points.fill(0f)
         weights.fill(0f)
 
-        studentsToDisplay.forEachIndexed { index, student ->
+        for (i in studentsToDisplay.indices) {
+            val student = studentsToDisplay[i]
             // Map logical student coordinates to screen space for the shader
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-            points[index * 2] = centerX
-            points[index * 2 + 1] = centerY
+            points[i * 2] = centerX
+            points[i * 2 + 1] = centerY
 
             // Weighting student influence based on log density (O(1) lookup)
             val logCount = logCountsByStudent[student.id.toLong()] ?: 0
-            weights[index] = (logCount.toFloat() / 5f).coerceAtMost(2.0f)
+            weights[i] = (logCount.toFloat() / 5f).coerceAtMost(2.0f)
         }
 
         shader.setFloatUniform("iPoints", points)
