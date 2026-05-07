@@ -6,8 +6,15 @@ import kotlinx.coroutines.flow.Flow
 /**
  * Data Access Object for the Normalized Quiz subsystem.
  *
- * This DAO manages both the creation of reusable [QuizTemplate] blueprints
- * and the recording of individual [Quiz] attempts by students.
+ * This DAO manages the "Source of Truth" for standardized assessments. It maintains
+ * the lifecycle of both [QuizTemplate] blueprints and the individual student [Quiz]
+ * attempts.
+ *
+ * ### Comparison: QuizDao vs. QuizLogDao
+ * - **[QuizLogDao]**: Manages legacy, self-contained logs. Best for rapid entry and
+ *   maintaining compatibility with older data formats.
+ * - **[QuizDao]**: Manages relational assessment data. Preferred for generating
+ *   consistent longitudinal reports based on standardized templates.
  */
 @Dao
 interface QuizDao {
