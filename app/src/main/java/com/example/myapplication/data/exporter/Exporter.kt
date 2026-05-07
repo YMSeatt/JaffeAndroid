@@ -11,6 +11,7 @@ import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentGroup
+import com.example.myapplication.util.QuizScoreEngine
 import com.example.myapplication.util.SecurityUtil
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -343,8 +344,8 @@ class Exporter(
         val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
         val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
 
-        // BOLT: Pre-calculate quiz total possible components
-        val sumDefaultPointsContributing = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+        // BOLT: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
+        val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
 
         // BOLT: Date/Time formatting cache to avoid redundant ZonedDateTime and format() allocations
         var lastTimestamp = -1L
@@ -431,24 +432,17 @@ class Exporter(
                         }
                     }
 
-                    val marksData = parseMarksData(item.marksData)
-
-                    var totalScore = 0.0
-                    val totalPossible = item.numQuestions.toDouble() * sumDefaultPointsContributing
-
+                    val marksDataMap = QuizScoreEngine.getMarksData(item)
                     quizMarkTypes.forEach { markType ->
-                        val rawValue = marksData[markType.name]
-                        val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
+                        val markCount = marksDataMap[markType.id.toString()] ?: marksDataMap[markType.name] ?: 0
                         val markIndex = markTypeIndices[markType.name] ?: -1
                         if (markIndex != -1) row.createCell(markIndex).apply {
                             setCellValue(markCount.toDouble())
                             cellStyle = context.rightAlignmentStyle
                         }
-
-                        totalScore += markCount.toDouble() * markType.defaultPoints
                     }
 
-                    val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                    val scorePercent = QuizScoreEngine.calculatePercentage(item, scoringContext) ?: 0.0
                     if (quizScoreCol != -1) {
                         row.createCell(quizScoreCol).apply {
                             setCellValue(scorePercent)
@@ -608,23 +602,14 @@ class Exporter(
 
             // BOLT: Manual single-pass aggregation with [DoubleArray] for [sum, count] to avoid boxing
             val quizMetrics = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
-            val sumDefaultPointsContributingSummary = quizMarkTypes.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+            val scoringContextSummary = QuizScoreEngine.getScoringContext(quizMarkTypes)
 
             for (log in quizLogs) {
                 val studentMetrics = quizMetrics.getOrPut(log.studentId) { mutableMapOf() }
                 val metrics = studentMetrics.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
 
-                val marksData = parseMarksData(log.marksData)
-                var totalScore = 0.0
-                val totalPossible = log.numQuestions.toDouble() * sumDefaultPointsContributingSummary
-
-                quizMarkTypes.forEach { markType ->
-                    val rawValue = marksData[markType.name]
-                    val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
-                    totalScore += markCount.toDouble() * markType.defaultPoints
-                }
-
-                metrics[0] += if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                val scorePercent = QuizScoreEngine.calculatePercentage(log, scoringContextSummary) ?: 0.0
+                metrics[0] += scorePercent
                 metrics[1] += 1.0
             }
 

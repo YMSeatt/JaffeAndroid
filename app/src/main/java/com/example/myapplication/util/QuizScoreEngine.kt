@@ -10,12 +10,45 @@ import kotlinx.serialization.json.Json
  * QuizScoreEngine: Centralized logic for calculating quiz percentages.
  * Ported from the Python blueprint for strict logical parity.
  *
- * BOLT: Optimized with LruCache to avoid redundant JSON parsing of marksData.
+ * BOLT: Optimized with LruCache and identity-based memoization to avoid redundant
+ * JSON parsing and O(N) list operations.
  */
 object QuizScoreEngine {
 
     val json = Json { ignoreUnknownKeys = true }
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
+
+    /**
+     * BOLT: Holds pre-calculated mappings and configurations for a specific set of quiz mark types.
+     * This avoids redundant O(N) searches and HashMap allocations during bulk calculations.
+     */
+    internal class QuizScoringContext(val markTypesRef: List<QuizMarkType>) {
+        val correctMarkType = markTypesRef.find {
+            it.name.equals("Correct", ignoreCase = true) && it.contributesToTotal
+        } ?: markTypesRef.find { it.contributesToTotal }
+
+        val defaultPointsPerMainQuestion = correctMarkType?.defaultPoints ?: 1.0
+        val markTypeMapById = markTypesRef.associateBy { it.id.toString() }
+        val markTypeMapByName = markTypesRef.associateBy { it.name }
+        val sumDefaultPointsContributing = markTypesRef.filter { it.contributesToTotal }.sumOf { it.defaultPoints }
+    }
+
+    @Volatile
+    private var lastScoringContext: QuizScoringContext? = null
+
+    /**
+     * Internal helper to retrieve or create a scoring context for the given mark types.
+     * Uses identity-based memoization for high-performance reuse.
+     */
+    internal fun getScoringContext(quizMarkTypes: List<QuizMarkType>): QuizScoringContext {
+        val cached = lastScoringContext
+        if (cached?.markTypesRef === quizMarkTypes) {
+            return cached
+        }
+        val newContext = QuizScoringContext(quizMarkTypes)
+        lastScoringContext = newContext
+        return newContext
+    }
 
     /**
      * Decodes the marksData JSON from a QuizLog into a Map of mark type IDs/Names to counts.
@@ -41,9 +74,13 @@ object QuizScoreEngine {
      * @return The calculated percentage (0-100+) or null if calculation is not possible.
      */
     fun calculatePercentage(log: QuizLog, quizMarkTypes: List<QuizMarkType>): Double? {
-        // Handle live quiz session scores or logs with specific score details
-        // In the Android app, granular marks are stored in marksData JSON.
+        return calculatePercentage(log, getScoringContext(quizMarkTypes))
+    }
 
+    /**
+     * Optimized overload that accepts a pre-calculated [QuizScoringContext].
+     */
+    internal fun calculatePercentage(log: QuizLog, context: QuizScoringContext): Double? {
         val marksDataMap = getMarksData(log)
 
         // Python logic: if num_questions <= 0, we can't calculate based on marksData.
@@ -55,14 +92,7 @@ object QuizScoreEngine {
             return null
         }
 
-        // Find the "Correct" mark type to determine the base points per question.
-        // We match by name "Correct" or ID if it matches the default "mark_correct" string.
-        val correctMarkType = quizMarkTypes.find {
-            it.name.equals("Correct", ignoreCase = true) && it.contributesToTotal
-        } ?: quizMarkTypes.find { it.contributesToTotal }
-
-        val defaultPointsPerMainQuestion = correctMarkType?.defaultPoints ?: 1.0
-        val totalPossiblePointsMain = log.numQuestions * defaultPointsPerMainQuestion
+        val totalPossiblePointsMain = log.numQuestions * context.defaultPointsPerMainQuestion
 
         if (marksDataMap.isEmpty()) {
              // If no granular marks but we have markValue, use it.
@@ -73,8 +103,8 @@ object QuizScoreEngine {
         }
 
         var totalEarnedPoints = 0.0
-        val markTypeMapById = quizMarkTypes.associateBy { it.id.toString() }
-        val markTypeMapByName = quizMarkTypes.associateBy { it.name }
+        val markTypeMapById = context.markTypeMapById
+        val markTypeMapByName = context.markTypeMapByName
 
         marksDataMap.forEach { (key, count) ->
             // Try to match mark type by ID first, then by Name.
