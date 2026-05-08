@@ -286,3 +286,10 @@ These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 
 
 ---
 *Documentation love letter from Scribe 📜*
+
+### 47. Ghost Shell (shell/GhostShellLayer.kt, GhostShellEngine.kt, GhostShellShader.kt)
+An immersive bottom dock for classroom management and health monitoring.
+- **Neural Pulse**: Visualizes classroom "Health" and "Activity" as a reactive, glowing wave using an AGSL shader.
+- **Health Metrics**: Calculates a real-time Health Index based on the balance of behavioral logs in a 5-minute sliding window.
+- **Immersive Control**: Provides a glassmorphic interface for toggling high-frequency Ghost modes (HUD, Vision, Strategist, Aurora).
+- **BOLT Optimization**: Uses a single-pass O(N) calculation loop for metrics and hoisted shaders for zero-allocation rendering.

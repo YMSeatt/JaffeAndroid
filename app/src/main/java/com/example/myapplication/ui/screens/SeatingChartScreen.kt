@@ -177,6 +177,7 @@ import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
+import com.example.myapplication.labs.ghost.shell.GhostShellLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
 import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
 import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
@@ -311,6 +312,7 @@ fun SeatingChartScreen(
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
+    var isShellActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) }
     var isGlitchActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) }
     var isGlyphActive by remember { mutableStateOf(false) }
     var isSpotlightActive by remember { mutableStateOf(false) }
@@ -480,7 +482,7 @@ fun SeatingChartScreen(
 
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
-                                   isCortexActive || isHudActive || isArchitectActive
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive
         ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
 
         if (GhostConfig.GHOST_MODE_ENABLED) {
@@ -1250,6 +1252,24 @@ fun SeatingChartScreen(
             }
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) {
+                GhostShellLayer(
+                    behaviorLogs = allBehaviorEvents,
+                    isActive = isShellActive,
+                    isHudActive = isHudActive,
+                    onToggleHud = { isHudActive = !isHudActive },
+                    isVisionActive = isVisionActive,
+                    onToggleVision = { isVisionActive = !isVisionActive },
+                    isStrategistActive = isStrategistActive,
+                    onToggleStrategist = {
+                        isStrategistActive = !isStrategistActive
+                        if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                    },
+                    isAuroraActive = isAuroraActive,
+                    onToggleAurora = { isAuroraActive = !isAuroraActive }
+                )
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
                 GhostLatticeLayer(
                     students = students,
@@ -1870,6 +1890,7 @@ fun SeatingChartScreen(
                                 val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
                                 context.startActivity(intent)
                             }
+                            "SHELL" -> isShellActive = !isShellActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
