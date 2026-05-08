@@ -3,6 +3,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-15: Ghost Shell - Immersive Neural Dock in `/labs/ghost/shell`
 - [DONE] 2028-06-12: Ghost Neural Flux - Density-aware flow visualization in `/labs/ghost/`
 - [DONE] 2028-06-08: Ghost Neural PiP - Native Picture-in-Picture Climate Monitor in `/labs/ghost/pip/`
 - [DONE] 2028-06-05: Ghost Tiles - Native Quick Settings integration (HUD & Quick Log) in `/labs/ghost/tiles/`

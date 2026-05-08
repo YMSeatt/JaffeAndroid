@@ -189,4 +189,7 @@ object GhostConfig {
 
     /** Enables "Ghost Kinetic" physics-based momentum for student icons. */
     const val KINETIC_MODE_ENABLED = true
+
+    /** Enables "Ghost Shell" immersive neural dock. */
+    const val SHELL_MODE_ENABLED = true
 }
