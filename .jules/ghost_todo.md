@@ -1,8 +1,10 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-18: Ghost Seeds - Native Home Screen Shortcuts & Neural Deep-links in `/labs/ghost/util/GhostSeedEngine.kt`
 - [DONE] 2028-06-15: Ghost Shell - Immersive Neural Dock in `/labs/ghost/shell`
 - [DONE] 2028-06-12: Ghost Neural Flux - Density-aware flow visualization in `/labs/ghost/`
 - [DONE] 2028-06-08: Ghost Neural PiP - Native Picture-in-Picture Climate Monitor in `/labs/ghost/pip/`

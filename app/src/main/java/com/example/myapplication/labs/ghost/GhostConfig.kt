@@ -192,4 +192,7 @@ object GhostConfig {
 
     /** Enables "Ghost Shell" immersive neural dock. */
     const val SHELL_MODE_ENABLED = true
+
+    /** Enables "Ghost Seeds" native home screen shortcuts. */
+    const val SEED_MODE_ENABLED = true
 }
