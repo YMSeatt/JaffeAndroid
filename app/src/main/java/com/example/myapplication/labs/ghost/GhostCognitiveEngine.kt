@@ -62,24 +62,44 @@ object GhostCognitiveEngine {
         val forceY = FloatArray(n)
         val negScores = FloatArray(n)
 
-        // Pre-calculate behavioral "toxicity" scores
-        val negativeScoresMap = behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
-            .mapValues { it.value.size.toFloat() }
+        // BOLT: Single-pass for negative behavior counts using manual loop to avoid allocations
+        val negativeCounts = mutableMapOf<Long, Int>()
+        for (i in behaviorLogs.indices) {
+            val log = behaviorLogs[i]
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                negativeCounts[log.studentId] = (negativeCounts[log.studentId] ?: 0) + 1
+            }
+        }
 
+        // BOLT: Single-pass for student data and pre-calculated social multipliers
+        val groupsMap = mutableMapOf<Long, MutableList<Int>>()
         for (i in 0 until n) {
             val student = students[i]
             studentIds[i] = student.id
             posX[i] = student.xPosition
             posY[i] = student.yPosition
-            negScores[i] = negativeScoresMap[student.id] ?: 0f
+
+            val count = negativeCounts[student.id] ?: 0
+            // Pre-calculate: (0.5 + count * multiplier) such that s1 + s2 = 1.0 + (c1+c2)*multiplier
+            negScores[i] = 0.5f + (count.toFloat() * NEGATIVE_BEHAVIOR_MULTIPLIER)
+
+            val gid = student.groupId
+            if (gid != null) {
+                var groupList = groupsMap[gid]
+                if (groupList == null) {
+                    groupList = mutableListOf()
+                    groupsMap[gid] = groupList
+                }
+                groupList.add(i)
+            }
         }
 
-        // Pre-calculate group indices to avoid groupBy in the iteration loop
-        val groupIndicesList = students.withIndex()
-            .filter { it.value.groupId != null }
-            .groupBy { it.value.groupId!! }
-            .map { it.value.map { indexedStudent -> indexedStudent.index }.toIntArray() }
+        // BOLT: Pre-calculate group indices as Array of IntArray for zero-allocation iteration
+        val groupIndices = Array(groupsMap.size) { IntArray(0) }
+        var gIdx = 0
+        for (entry in groupsMap) {
+            groupIndices[gIdx++] = entry.value.toIntArray()
+        }
 
         val canvasW = canvasWidth.toFloat()
         val canvasH = canvasHeight.toFloat()
@@ -93,24 +113,21 @@ object GhostCognitiveEngine {
             for (i in 0 until n) {
                 val p1x = posX[i]
                 val p1y = posY[i]
-                val score1 = negScores[i]
+                val s1 = negScores[i]
 
                 for (j in i + 1 until n) {
                     val dx = p1x - posX[j]
                     val dy = p1y - posY[j]
-                    val distanceSq = dx * dx + dy * dy + 0.01f
+                    // Add small epsilon to avoid division by zero
+                    val distSq = dx * dx + dy * dy + 0.01f
 
-                    var repulsion = REPULSION_CONSTANT / distanceSq
+                    // BOLT: Consolidated repulsion calculation to minimize math overhead
+                    val multiplier = s1 + negScores[j]
+                    val dist = sqrt(distSq)
+                    val factor = (REPULSION_CONSTANT * multiplier) / (distSq * dist)
 
-                    // Extra repulsion for students with negative behavior records
-                    val score2 = negScores[j]
-                    if (score1 > 0 || score2 > 0) {
-                        repulsion *= (1f + (score1 + score2) * NEGATIVE_BEHAVIOR_MULTIPLIER)
-                    }
-
-                    val distance = sqrt(distanceSq)
-                    val fx = (dx / distance) * repulsion
-                    val fy = (dy / distance) * repulsion
+                    val fx = dx * factor
+                    val fy = dy * factor
 
                     forceX[i] += fx
                     forceY[i] += fy
@@ -119,14 +136,16 @@ object GhostCognitiveEngine {
                 }
             }
 
-            // 2. Attraction for group members
-            for (indices in groupIndicesList) {
-                for (i in indices.indices) {
+            // 2. Attraction for group members - O(G * N_g^2)
+            for (g in 0 until groupIndices.size) {
+                val indices = groupIndices[g]
+                val gSize = indices.size
+                for (i in 0 until gSize) {
                     val idx1 = indices[i]
                     val p1x = posX[idx1]
                     val p1y = posY[idx1]
 
-                    for (j in i + 1 until indices.size) {
+                    for (j in i + 1 until gSize) {
                         val idx2 = indices[j]
                         val dx = p1x - posX[idx2]
                         val dy = p1y - posY[idx2]
@@ -147,7 +166,7 @@ object GhostCognitiveEngine {
                 var vx = (velX[i] + forceX[i]) * DAMPING
                 var vy = (velY[i] + forceY[i]) * DAMPING
 
-                // Cap velocity to prevent extreme jumps
+                // BOLT: Velocity capping optimized to avoid sqrt in the common path
                 val speedSq = vx * vx + vy * vy
                 if (speedSq > 2500f) { // 50.0^2
                     val invSpeed = 50f / sqrt(speedSq)
