@@ -205,7 +205,8 @@ class GhostVoiceAssistant(
                     comment = null
                 )
             )
-            Log.d("GhostVoice", "Successfully logged $behaviorType for student_${student.id.toString().hashCode()}")
+            val maskedBehavior = behaviorType?.let { if (it.length > 3) it.take(3) + "****" else "****" } ?: "****"
+            Log.d("GhostVoice", "Successfully logged $maskedBehavior for student_${student.id.toString().hashCode()}")
         } ?: Log.w("GhostVoice", "Could not identify student in log command.")
     }
 }

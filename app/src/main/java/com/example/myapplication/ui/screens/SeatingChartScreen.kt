@@ -516,7 +516,8 @@ fun SeatingChartScreen(
 
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
-                                   isCortexActive || isHudActive || isArchitectActive || isShellActive
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive ||
+                                   isGhostListening
         ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
 
         if (GhostConfig.GHOST_MODE_ENABLED) {
