@@ -90,6 +90,7 @@ import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.labs.ghost.GhostOracle
+import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
 import com.example.myapplication.labs.ghost.memento.GhostMementoStore
 import com.example.myapplication.labs.ghost.memento.GhostMementoMapper
@@ -1923,6 +1924,11 @@ class SeatingChartViewModel @Inject constructor(
             val commands = events.map { LogBehaviorCommand(this@SeatingChartViewModel, it) }
             val compositeCommand = CompositeCommand(commands, "Log ${events.size} behavior(s)")
             executeCommand(compositeCommand)
+
+            // GHOST: Refresh dynamic seeds with recently logged students
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SEED_MODE_ENABLED) {
+                refreshDynamicSeeds()
+            }
         }
     }
 
@@ -2620,6 +2626,26 @@ class SeatingChartViewModel @Inject constructor(
         viewModelScope.launch {
             val command = LogBehaviorCommand(this@SeatingChartViewModel, event)
             executeCommand(command)
+
+            // GHOST: Refresh dynamic seeds with recently logged students
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SEED_MODE_ENABLED) {
+                refreshDynamicSeeds()
+            }
+        }
+    }
+
+    private fun refreshDynamicSeeds() {
+        viewModelScope.launch {
+            val recentLogs = allBehaviorEvents.value ?: emptyList()
+            val recentStudents = recentLogs.take(10)
+                .mapNotNull { log ->
+                    val student = studentsForDisplay.value?.find { it.id.toLong() == log.studentId }
+                    if (student != null) student.id.toLong() to student.fullName.value else null
+                }
+                .distinctBy { it.first }
+                .take(4)
+
+            GhostSeedEngine.refreshDynamicSeeds(application, recentStudents)
         }
     }
 

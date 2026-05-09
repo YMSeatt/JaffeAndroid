@@ -39,6 +39,8 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.myapplication.labs.ghost.util.GhostSeedEngine
+import com.example.myapplication.labs.ghost.morph.GhostDossierScreen
 import kotlinx.coroutines.delay
 
 /**
@@ -60,6 +62,13 @@ import kotlinx.coroutines.delay
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var lastActivityTime by mutableStateOf(System.currentTimeMillis())
+    private var currentIntent by mutableStateOf<Intent?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        currentIntent = intent
+    }
 
     override fun onUserInteraction() {
         super.onUserInteraction()
@@ -138,6 +147,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        currentIntent = intent
+
         // HARDEN: Cleanup temporary files on startup to protect privacy
         lifecycleScope.launch(Dispatchers.IO) {
             val cacheDir = applicationContext.cacheDir
@@ -182,6 +193,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            var deepLinkStudentId by remember { mutableStateOf<Long?>(null) }
+            var deepLinkStudentName by remember { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(currentIntent) {
+                currentIntent?.let { intent ->
+                    if (intent.action == GhostSeedEngine.ACTION_OPEN_DOSSIER) {
+                        deepLinkStudentId = intent.getLongExtra(GhostSeedEngine.EXTRA_STUDENT_ID, -1L)
+                        deepLinkStudentName = intent.getStringExtra(GhostSeedEngine.EXTRA_STUDENT_NAME)
+                        if (deepLinkStudentId == -1L) deepLinkStudentId = null
+                    }
+                }
+            }
+
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
                     AppTheme.LIGHT -> false
@@ -194,7 +218,20 @@ class MainActivity : ComponentActivity() {
                 useBoldFont = useBoldFont
             ) {
                 if (unlocked) {
-                    if (showDataViewer) {
+                    if (deepLinkStudentId != null && deepLinkStudentName != null) {
+                        GhostDossierScreen(
+                            studentId = deepLinkStudentId!!,
+                            studentName = deepLinkStudentName!!,
+                            onDismiss = {
+                                deepLinkStudentId = null
+                                deepLinkStudentName = null
+                            }
+                        )
+                        BackHandler {
+                            deepLinkStudentId = null
+                            deepLinkStudentName = null
+                        }
+                    } else if (showDataViewer) {
                         DataViewerScreen(
                             seatingChartViewModel = seatingChartViewModel,
                             statsViewModel = statsViewModel,

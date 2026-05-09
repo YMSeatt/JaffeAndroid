@@ -20,8 +20,11 @@ import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 
 /**
  * GhostDossierScreen: A high-fidelity, full-screen student dossier.
@@ -159,14 +162,44 @@ fun GhostDossierScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                Button(
-                    onClick = onDismiss,
-                    modifier = Modifier.align(Alignment.CenterHorizontally),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF6200EE)
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("De-Phase Dossier")
+                    Button(
+                        onClick = onDismiss,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF6200EE)
+                        )
+                    ) {
+                        Text("De-Phase")
+                    }
+
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SEED_MODE_ENABLED) {
+                        val context = LocalContext.current
+                        Spacer(modifier = Modifier.width(16.dp))
+                        OutlinedButton(
+                            onClick = { GhostSeedEngine.pinStudentSeed(context, studentId, studentName) },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Cyan),
+                            border = ButtonDefaults.outlinedButtonBorder.copy(
+                                brush = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    ShaderBrush(remember {
+                                        RuntimeShader(GhostMorphShader.NEURAL_FLUID).apply {
+                                            setFloatUniform("iTime", time)
+                                            setFloatUniform("iResolution", 100f, 100f)
+                                            setColorUniform("iColor1", Color.Violet.toArgb())
+                                            setColorUniform("iColor2", Color.Cyan.toArgb())
+                                        }
+                                    })
+                                } else {
+                                    Brush.linearGradient(listOf(Color.Violet, Color.Cyan))
+                                }
+                            )
+                        ) {
+                            Text("Neural Seed")
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(64.dp))
