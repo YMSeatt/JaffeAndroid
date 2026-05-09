@@ -232,6 +232,40 @@ import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * The primary entry point for the Seating Chart experience.
+ *
+ * `SeatingChartScreen` acts as the central hub of the application, orchestrating the
+ * classroom's spatial layout, behavioral logging, and advanced R&D visualizations.
+ *
+ * ### Architectural Design: The Multi-Layered Stack
+ * This screen is implemented as a sophisticated stack of layers (Atmospheric, Environmental,
+ * Social, Interactive, and HUD). This allows for complex analytical overlays (e.g., social
+ * gravity, behavioral heatmaps) to be rendered on top of the physical classroom layout
+ * without compromising performance.
+ *
+ * ### Performance: Fluid Interaction Model
+ * To maintain a fluid 60fps experience—even during high-frequency gestures like dragging
+ * students or zooming a 4000x4000 logical canvas—the screen utilizes several **BOLT**
+ * (Performance-Obsessed) design patterns:
+ * 1. **Optimistic UI**: Drag gestures update local `MutableState` properties for immediate
+ *    feedback, bypassing the database-to-UI update loop during the interaction.
+ * 2. **Identity Preservation**: Existing UI objects are updated in-place rather than replaced,
+ *    allowing Compose to perform highly efficient "diff-and-patch" updates.
+ * 3. **Background Pipeline**: Heavy calculations (e.g., social force simulation, spatial
+ *    clustering) are offloaded to a multi-stage background update pipeline in the [SeatingChartViewModel].
+ *
+ * ### Gesture System
+ * - **Single Finger**: Tapping for student/furniture interaction; Dragging for item movement.
+ * - **Two Fingers**: Panning and Pinch-to-Zoom navigation across the 4000-unit logical world.
+ * - **Long Press**: Triggers contextual radial menus ([GhostHubLayer]) or bulk selection tools.
+ *
+ * @param seatingChartViewModel The primary state manager and command invoker.
+ * @param settingsViewModel Manages user preferences and system-level configuration.
+ * @param studentGroupsViewModel Handles the relational management of classroom clusters.
+ * @param onNavigateToSettings Navigation callback to the Settings screen.
+ * @param onNavigateToDataViewer Navigation callback to the historical log viewer.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SeatingChartScreen(
