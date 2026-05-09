@@ -109,3 +109,10 @@
 - **Vulnerability:** Experimental sandbox activities (Cortex, Strategist, Vision, Ray, Filter, and Preferences) that process or display sensitive classroom data and student metrics lacked protection against screenshots and screen recordings.
 - **Fix:** Enforced `WindowManager.LayoutParams.FLAG_SECURE` in the `onCreate` method of all relevant sandbox activities.
 - **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/` (Multiple Activities)
+
+## 🛡️ Privacy Hardening: Voice Assistant PII Protection
+- **Vulnerability:** The Ghost Voice Assistant transcribes spoken student names and behavioral logs directly onto the UI. Without `FLAG_SECURE` being active during this period, this sensitive PII is vulnerable to capture via screenshots or screen recordings. Additionally, the specific behavior type was logged in plain text in the system logcat.
+- **Fix:**
+    - Integrated `isGhostListening` into the `isSensitiveModeActive` check in `SeatingChartScreen.kt` to enforce `FLAG_SECURE` whenever the voice assistant is active.
+    - Implemented null-safe behavior type masking in `GhostVoiceAssistant.kt` logs to prevent PII leakage to the system logcat.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostVoiceAssistant.kt`
