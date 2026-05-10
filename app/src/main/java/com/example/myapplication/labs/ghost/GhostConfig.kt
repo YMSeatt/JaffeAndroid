@@ -195,4 +195,7 @@ object GhostConfig {
 
     /** Enables "Ghost Seeds" native home screen shortcuts. */
     const val SEED_MODE_ENABLED = true
+
+    /** Enables "Ghost Deck" neural student card stack for rapid review. */
+    const val DECK_MODE_ENABLED = true
 }

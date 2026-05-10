@@ -1,9 +1,11 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
+- [ ] Idea: "Ghost Palette" - Gesture-driven color harmony engine.
+- [ ] Idea: "Ghost Anchor" - Persistent student pinning system.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-20: Ghost Deck - Neural Student Card Stack in `/labs/ghost/`
 - [DONE] 2028-06-18: Ghost Seeds - Native Home Screen Shortcuts & Neural Deep-links in `/labs/ghost/util/GhostSeedEngine.kt`
 - [DONE] 2028-06-15: Ghost Shell - Immersive Neural Dock in `/labs/ghost/shell`
 - [DONE] 2028-06-12: Ghost Neural Flux - Density-aware flow visualization in `/labs/ghost/`
