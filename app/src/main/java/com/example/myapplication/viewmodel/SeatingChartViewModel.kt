@@ -1267,6 +1267,12 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 // --- Stage 2/3: Transformation & Sync ---
+
+                // BOLT: Hoist context and session data resolution out of the per-student loop.
+                val scoringContext = com.example.myapplication.util.QuizScoreEngine.getScoringContext(markTypes)
+                val liveQuizScoresSnapshot = liveQuizScores.value ?: emptyMap()
+                val liveHomeworkScoresSnapshot = liveHomeworkScores.value ?: emptyMap()
+
                 val studentsWithBehavior = ArrayList<StudentUiItem>(students.size)
                 for (idx in 0 until students.size) {
                     val student = students[idx]
@@ -1408,7 +1414,7 @@ class SeatingChartViewModel @Inject constructor(
 
                         // 2c. Live Quiz Progress Calculation (Ported from Python)
                         val liveQuizProgressColor = if (sessionActive && currentModeValue == "quiz") {
-                            val studentLiveScore = liveQuizScores.value?.get(student.id)
+                            val studentLiveScore = liveQuizScoresSnapshot[student.id]
                             val questionsAnswered = studentLiveScore?.get("total_asked") as? Int ?: 0
 
                             if (questionsAnswered > 0) {
@@ -1429,11 +1435,11 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorLog = behaviorList ?: emptyList(),
                             quizLog = quizList ?: emptyList(),
                             homeworkLog = homeworkList ?: emptyList(),
-                            quizMarkTypes = markTypes,
+                            scoringContext = scoringContext,
                             isLiveQuizActive = sessionActive,
-                            liveQuizScores = liveQuizScores.value ?: emptyMap(),
+                            liveQuizScores = liveQuizScoresSnapshot,
                             isLiveHomeworkActive = sessionActive,
-                            liveHomeworkScores = liveHomeworkScores.value ?: emptyMap(),
+                            liveHomeworkScores = liveHomeworkScoresSnapshot,
                             currentMode = currentModeValue,
                             currentTimeMillis = currentTime,
                             timeContext = timeContext

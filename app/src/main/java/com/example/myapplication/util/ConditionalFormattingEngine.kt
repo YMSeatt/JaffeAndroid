@@ -292,7 +292,7 @@ object ConditionalFormattingEngine {
             behaviorLog = behaviorLog,
             quizLog = quizLog,
             homeworkLog = homeworkLog,
-            quizMarkTypes = quizMarkTypes,
+            scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes),
             isLiveQuizActive = isLiveQuizActive,
             liveQuizScores = liveQuizScores,
             isLiveHomeworkActive = isLiveHomeworkActive,
@@ -312,6 +312,7 @@ object ConditionalFormattingEngine {
      * @param behaviorLog Complete list of behavior events for context.
      * @param quizLog Complete list of quiz logs for context.
      * @param homeworkLog Complete list of homework logs for context.
+     * @param scoringContext Optimized scoring metadata, resolved once per update cycle.
      * @param isLiveQuizActive Whether a live quiz session is currently in progress.
      * @param liveQuizScores Map of student ID to their current session data.
      * @param isLiveHomeworkActive Whether a live homework check is currently in progress.
@@ -327,7 +328,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
-        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
+        scoringContext: QuizScoreEngine.QuizScoringContext,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -337,9 +338,6 @@ object ConditionalFormattingEngine {
         timeContext: FormattingTimeContext
     ): List<DecodedConditionalFormattingRule> {
         var matchingRules: MutableList<DecodedConditionalFormattingRule>? = null
-
-        // BOLT: Resolve scoring context once per student to utilize QuizScoreEngine's identity-based memoization.
-        val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
 
         for (rule in rules) {
             if (checkCondition(
