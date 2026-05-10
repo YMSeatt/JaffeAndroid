@@ -21,7 +21,6 @@ object GhostSeedEngine {
 
     const val ACTION_OPEN_DOSSIER = "com.example.myapplication.labs.ghost.ACTION_OPEN_DOSSIER"
     const val EXTRA_STUDENT_ID = "EXTRA_STUDENT_ID"
-    const val EXTRA_STUDENT_NAME = "EXTRA_STUDENT_NAME"
 
     /**
      * Requests the OS to pin a "Neural Seed" (shortcut) for a specific student.
@@ -35,7 +34,6 @@ object GhostSeedEngine {
                 val intent = Intent(context, MainActivity::class.java).apply {
                     action = ACTION_OPEN_DOSSIER
                     putExtra(EXTRA_STUDENT_ID, studentId)
-                    putExtra(EXTRA_STUDENT_NAME, studentName)
                     // Ensure the intent opens a fresh dossier context
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
@@ -63,7 +61,6 @@ object GhostSeedEngine {
                 val intent = Intent(context, MainActivity::class.java).apply {
                     action = ACTION_OPEN_DOSSIER
                     putExtra(EXTRA_STUDENT_ID, id)
-                    putExtra(EXTRA_STUDENT_NAME, name)
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
 

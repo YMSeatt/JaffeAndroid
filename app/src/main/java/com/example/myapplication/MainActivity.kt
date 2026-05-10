@@ -199,9 +199,16 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(currentIntent) {
                 currentIntent?.let { intent ->
                     if (intent.action == GhostSeedEngine.ACTION_OPEN_DOSSIER) {
-                        deepLinkStudentId = intent.getLongExtra(GhostSeedEngine.EXTRA_STUDENT_ID, -1L)
-                        deepLinkStudentName = intent.getStringExtra(GhostSeedEngine.EXTRA_STUDENT_NAME)
-                        if (deepLinkStudentId == -1L) deepLinkStudentId = null
+                        val id = intent.getLongExtra(GhostSeedEngine.EXTRA_STUDENT_ID, -1L)
+                        if (id != -1L) {
+                            deepLinkStudentId = id
+                            // HARDEN: Securely resolve student name from the database instead of trusting Intent extras
+                            val student = seatingChartViewModel.getStudentForEditing(id)
+                            deepLinkStudentName = student?.let { "${it.firstName} ${it.lastName}" }
+                        } else {
+                            deepLinkStudentId = null
+                            deepLinkStudentName = null
+                        }
                     }
                 }
             }
