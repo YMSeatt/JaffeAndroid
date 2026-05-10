@@ -102,5 +102,10 @@
 - **Haptic Synchronization**: The `GhostPhasingEngine` triggers specific haptic markers at the 10% and 90% phase thresholds. This provides a tactile "pop" when the transition starts and when the physical UI is nearly extinguished.
 - **RenderEffect Pipeline**: Unlike standard overlays, Phasing uses `RenderEffect.createRuntimeShaderEffect` on the `graphicsLayer`. This allows the shader to sample the *entire* rendered content of the child Composable, enabling global effects like chromatic aberration and jitter that wouldn't be possible with simple brushes.
 
+### 20. Quiz Scoring & Mark Type Heuristics
+- **The "Correct" Dependency**: The `QuizScoreEngine` and `ConditionalFormattingEngine` rely on a specific naming convention to calculate percentages. The engine scans the `QuizMarkType` list for an entry named **"Correct"** (case-insensitive) to establish the base point value for the quiz denominator (`numQuestions * defaultPoints`).
+- **BOLT Scoring Context**: To maintain 60fps during bulk updates (where every student icon might trigger a score calculation), the engine utilizes a `QuizScoringContext`. This object pre-calculates mark type HashMaps once and is shared across all students in a single update pass using identity-based memoization (`===`).
+- **Legacy Fallback**: If a quiz has 0 questions or no granular mark data, the engine automatically falls back to the legacy `markValue / maxMarkValue` calculation to ensure historical data remains visible.
+
 ---
 *Documentation love letter from Scribe 📜*
