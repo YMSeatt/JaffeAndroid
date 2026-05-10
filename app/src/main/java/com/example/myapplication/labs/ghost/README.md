@@ -293,3 +293,10 @@ An immersive bottom dock for classroom management and health monitoring.
 - **Health Metrics**: Calculates a real-time Health Index based on the balance of behavioral logs in a 5-minute sliding window.
 - **Immersive Control**: Provides a glassmorphic interface for toggling high-frequency Ghost modes (HUD, Vision, Strategist, Aurora).
 - **BOLT Optimization**: Uses a single-pass O(N) calculation loop for metrics and hoisted shaders for zero-allocation rendering.
+
+### 48. Ghost Deck (GhostDeckLayer.kt, GhostDeckEngine.kt, GhostDeckShader.kt)
+A high-fidelity **Neural Student Card Stack** for rapid classroom review.
+- **Swipe-to-Log**: Allows teachers to rapidly review student cards and log behavior with intuitive swipe gestures (Right = Positive, Left = Negative).
+- **Neural Affinity**: Calculates a priority-based "Affinity" score (Student Turbulence) to drive card order and visual intensity.
+- **AGSL Neural Flux**: Features a reactive domain-warping background shader that reflects student affinity and real-time swipe progress.
+- **BOLT Optimization**: Uses manual index-based loops for deck synthesis and hoisted AGSL shaders for zero-allocation 60fps rendering.

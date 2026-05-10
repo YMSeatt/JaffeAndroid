@@ -175,6 +175,8 @@ import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.GhostDeckLayer
+import com.example.myapplication.labs.ghost.GhostDeckEngine
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
 import com.example.myapplication.labs.ghost.shell.GhostShellLayer
@@ -345,6 +347,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var isDeckActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
     var isShellActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) }
     var isGlitchActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) }
@@ -1926,9 +1929,25 @@ fun SeatingChartScreen(
                                 context.startActivity(intent)
                             }
                             "SHELL" -> isShellActive = !isShellActive
+                            "DECK" -> isDeckActive = !isDeckActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.DECK_MODE_ENABLED && isDeckActive) {
+                val deck = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    GhostDeckEngine.createDeck(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+                }
+                GhostDeckLayer(
+                    deck = deck,
+                    onLog = { id, isPositive ->
+                        val type = if (isPositive) "Positive (Deck Swipe)" else "Negative (Deck Swipe)"
+                        seatingChartViewModel.addBehaviorEvent(com.example.myapplication.data.BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis()))
+                        hapticManager.perform(if (isPositive) GhostHapticManager.Pattern.SUCCESS else GhostHapticManager.Pattern.ERROR)
+                    },
+                    onDismiss = { isDeckActive = false }
                 )
             }
 
