@@ -47,6 +47,18 @@ class GhostHudTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
+
+        // HARDEN: Require device unlock before toggling experimental HUD state
+        if (isLocked) {
+            unlockAndRun {
+                toggleHud()
+            }
+        } else {
+            toggleHud()
+        }
+    }
+
+    private fun toggleHud() {
         serviceScope.launch {
             // HUD state is currently modeled via scanline effect in preferences for this PoC
             // or we could add a dedicated HUD toggle to preferences.
