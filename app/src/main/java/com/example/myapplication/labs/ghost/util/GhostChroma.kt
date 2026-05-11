@@ -4,8 +4,12 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.ui.theme.*
 
 /**
@@ -51,17 +55,29 @@ private val GhostLightColorScheme = lightColorScheme(
 fun GhostChromaTheme(
     themeMode: String = "GHOST",
     dynamicColor: Boolean = true,
+    prefsViewModel: GhostPreferencesViewModel = viewModel(),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
     val darkTheme = isSystemInDarkTheme()
 
+    val customPrimary by prefsViewModel.ghostPrimaryColor.collectAsState()
+    val customSecondary by prefsViewModel.ghostSecondaryColor.collectAsState()
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-        themeMode == "GHOST" -> GhostDarkColorScheme
-        themeMode == "DARK" -> darkColorScheme(primary = GhostCyan, secondary = GhostElectricBlue)
+        themeMode == "GHOST" -> GhostDarkColorScheme.copy(
+            primary = Color(customPrimary),
+            secondary = Color(customSecondary),
+            onBackground = Color(customPrimary),
+            onSurface = Color(customPrimary)
+        )
+        themeMode == "DARK" -> darkColorScheme(
+            primary = Color(customPrimary),
+            secondary = Color(customSecondary)
+        )
         themeMode == "LIGHT" -> lightColorScheme(primary = Color(0xFF008877), secondary = Color(0xFF006699))
         else -> if (darkTheme) darkColorScheme() else lightColorScheme()
     }

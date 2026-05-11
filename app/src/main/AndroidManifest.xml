@@ -85,6 +85,11 @@
             android:label="Ghost Morph"
             android:theme="@style/Theme.MyApplication" />
         <activity
+            android:name=".labs.ghost.palette.GhostPaletteActivity"
+            android:exported="false"
+            android:label="Ghost Palette"
+            android:theme="@style/Theme.MyApplication" />
+        <activity
             android:name=".labs.ghost.pip.GhostPipActivity"
             android:exported="false"
             android:label="Ghost Neural PiP"
