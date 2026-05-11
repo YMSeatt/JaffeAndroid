@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.preferencesDataStore
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -36,6 +37,8 @@ class GhostPreferencesStore @Inject constructor(
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
         val GHOST_THEME_MODE = stringPreferencesKey("ghost_theme_mode")
         val SHAKE_TO_RECENTER_ENABLED = booleanPreferencesKey("shake_to_recenter_enabled")
+        val GHOST_PRIMARY_COLOR = longPreferencesKey("ghost_primary_color")
+        val GHOST_SECONDARY_COLOR = longPreferencesKey("ghost_secondary_color")
     }
 
     /** Flow of the experimental glow intensity for AGSL shaders. */
@@ -78,6 +81,16 @@ class GhostPreferencesStore @Inject constructor(
         prefs[Keys.SHAKE_TO_RECENTER_ENABLED] ?: false
     }
 
+    /** Flow of the custom Ghost primary color. */
+    val ghostPrimaryColor: Flow<Long> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.GHOST_PRIMARY_COLOR] ?: 0xFF00FFCC // GhostCyan
+    }
+
+    /** Flow of the custom Ghost secondary color. */
+    val ghostSecondaryColor: Flow<Long> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.GHOST_SECONDARY_COLOR] ?: 0xFF6699FF // GhostElectricBlue
+    }
+
     suspend fun updateGlowIntensity(intensity: Float) {
         context.ghostDataStore.edit { it[Keys.GHOST_GLOW_INTENSITY] = intensity }
     }
@@ -108,5 +121,13 @@ class GhostPreferencesStore @Inject constructor(
 
     suspend fun updateShakeToRecenterEnabled(enabled: Boolean) {
         context.ghostDataStore.edit { it[Keys.SHAKE_TO_RECENTER_ENABLED] = enabled }
+    }
+
+    suspend fun updateGhostPrimaryColor(color: Long) {
+        context.ghostDataStore.edit { it[Keys.GHOST_PRIMARY_COLOR] = color }
+    }
+
+    suspend fun updateGhostSecondaryColor(color: Long) {
+        context.ghostDataStore.edit { it[Keys.GHOST_SECONDARY_COLOR] = color }
     }
 }

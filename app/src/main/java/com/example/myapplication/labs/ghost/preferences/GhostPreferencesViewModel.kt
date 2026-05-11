@@ -44,6 +44,12 @@ class GhostPreferencesViewModel @Inject constructor(
     val shakeToRecenterEnabled: StateFlow<Boolean> = store.shakeToRecenterEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val ghostPrimaryColor: StateFlow<Long> = store.ghostPrimaryColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF00FFCC)
+
+    val ghostSecondaryColor: StateFlow<Long> = store.ghostSecondaryColor
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF6699FF)
+
     fun setGlowIntensity(intensity: Float) {
         viewModelScope.launch {
             store.updateGlowIntensity(intensity)
@@ -89,6 +95,18 @@ class GhostPreferencesViewModel @Inject constructor(
     fun setShakeToRecenterEnabled(enabled: Boolean) {
         viewModelScope.launch {
             store.updateShakeToRecenterEnabled(enabled)
+        }
+    }
+
+    fun setGhostPrimaryColor(color: Long) {
+        viewModelScope.launch {
+            store.updateGhostPrimaryColor(color)
+        }
+    }
+
+    fun setGhostSecondaryColor(color: Long) {
+        viewModelScope.launch {
+            store.updateGhostSecondaryColor(color)
         }
     }
 

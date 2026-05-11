@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import android.content.Intent
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -145,11 +146,23 @@ fun GhostPreferencesScreen(
 
             GhostSectionTitle("CHROMA ENGINE")
 
+            val context = LocalContext.current
             GhostGlassmorphicSurface(
                 modifier = Modifier.fillMaxWidth(),
                 glassmorphismEnabled = glassmorphismEnabled
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Button(
+                        onClick = {
+                            val intent = Intent(context, com.example.myapplication.labs.ghost.palette.GhostPaletteActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray, contentColor = Color.Cyan)
+                    ) {
+                        Text("OPEN GHOST PALETTE 🎨")
+                    }
+
                     GhostPreferenceSwitch(
                         label = "Dynamic Color",
                         description = "Use Material You dynamic color extraction (API 31+).",
