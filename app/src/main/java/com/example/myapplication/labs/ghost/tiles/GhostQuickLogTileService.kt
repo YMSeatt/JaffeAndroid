@@ -59,6 +59,18 @@ class GhostQuickLogTileService : TileService() {
 
     override fun onClick() {
         super.onClick()
+
+        // HARDEN: Require device unlock before performing data entry to prevent unauthorized logs
+        if (isLocked) {
+            unlockAndRun {
+                performQuickLog()
+            }
+        } else {
+            performQuickLog()
+        }
+    }
+
+    private fun performQuickLog() {
         serviceScope.launch {
             val lastActiveId = studentRepository.getLastActiveStudentId() ?: return@launch
 
@@ -88,7 +100,12 @@ class GhostQuickLogTileService : TileService() {
 
         if (student != null) {
             tile.state = Tile.STATE_INACTIVE
-            tile.label = "Log ${student.firstName}"
+            // PRIVACY: Mask student names on the lockscreen to prevent PII leakage
+            if (isLocked) {
+                tile.label = "Log Active Student"
+            } else {
+                tile.label = "Log ${student.firstName}"
+            }
         } else {
             tile.state = Tile.STATE_DISABLED
             tile.label = "No Active Student"
