@@ -32,6 +32,12 @@ object QuizScoreEngine {
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
 
     /**
+     * BOLT: Cache for calculated percentage results.
+     * Keyed by a composite string of log identity and scoring context identity.
+     */
+    private val scoreResultCache = LruCache<String, Double>(1000)
+
+    /**
      * A performance-optimized snapshot of mark type metadata.
      *
      * This internal class pre-calculates the necessary mappings and heuristics required
@@ -140,6 +146,11 @@ object QuizScoreEngine {
      * @return The calculated percentage (0.0 to 100.0+), or null if the log lacks sufficient data.
      */
     internal fun calculatePercentage(log: QuizLog, context: QuizScoringContext): Double? {
+        // BOLT: Result memoization to avoid redundant arithmetic in high-frequency rule evaluation.
+        val cacheKey = "${System.identityHashCode(log)}_${System.identityHashCode(context)}"
+        val cached = scoreResultCache.get(cacheKey)
+        if (cached != null) return cached
+
         val marksDataMap = getMarksData(log)
 
         // Python logic: if num_questions <= 0, we can't calculate based on marksData.
@@ -173,12 +184,15 @@ object QuizScoreEngine {
             }
         }
 
-        return if (totalPossiblePointsMain > 0) {
+        val result = if (totalPossiblePointsMain > 0) {
             (totalEarnedPoints / totalPossiblePointsMain) * 100.0
         } else if (totalEarnedPoints > 0) {
             100.0 // Extra credit only scenario
         } else {
             0.0
         }
+
+        scoreResultCache.put(cacheKey, result)
+        return result
     }
 }

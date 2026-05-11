@@ -124,6 +124,7 @@ import org.json.JSONObject
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.ArrayDeque
+import java.util.HashSet
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import kotlin.math.abs
@@ -2416,12 +2417,18 @@ class SeatingChartViewModel @Inject constructor(
     private fun updateFurnitureForDisplay(furnitureList: List<Furniture>) {
         // BOLT: Robust cleanup of furniture cache when the list changes.
         if (furnitureList !== memoizedFurniture) {
-            val currentFurnitureIds = furnitureList.map { it.id }.toSet()
+            val currentFurnitureIds = HashSet<Int>(furnitureList.size * 2)
+            for (i in 0 until furnitureList.size) {
+                currentFurnitureIds.add(furnitureList[i].id)
+            }
             furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
             memoizedFurniture = furnitureList
         }
 
-        val mappedList = furnitureList.map { furniture ->
+        val size = furnitureList.size
+        val mappedList = ArrayList<FurnitureUiItem>(size)
+        for (i in 0 until size) {
+            val furniture = furnitureList[i]
             val pending = pendingFurniturePositions[furniture.id]
             val furnitureToSync = if (pending != null) {
                 if (abs(furniture.xPosition - pending.first) < 0.1f && abs(furniture.yPosition - pending.second) < 0.1f) {
@@ -2437,11 +2444,11 @@ class SeatingChartViewModel @Inject constructor(
             val existingItem = furnitureUiItemCache[furniture.id]
             if (existingItem != null) {
                 furnitureToSync.updateFurnitureUiItem(existingItem)
-                existingItem
+                mappedList.add(existingItem)
             } else {
                 val newItem = furnitureToSync.toFurnitureUiItem()
                 furnitureUiItemCache[furniture.id] = newItem
-                newItem
+                mappedList.add(newItem)
             }
         }
         furnitureForDisplay.postValue(mappedList)

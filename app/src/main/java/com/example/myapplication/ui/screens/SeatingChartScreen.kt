@@ -924,49 +924,64 @@ fun SeatingChartScreen(
             }
         }
     ) { paddingValues ->
-        val onStudentClick: (StudentUiItem) -> Unit = { studentItem ->
-            if (selectMode) {
-                val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
-                val currentSelected = selectedItemIds.toMutableSet()
-                if (currentSelected.contains(itemId)) {
-                    currentSelected.remove(itemId)
+        // BOLT: Stabilize high-frequency callbacks using rememberUpdatedState to capture volatile state
+        // without breaking lambda identity. This allows SeatingChartContent to skip recomposition.
+        val currentSelectMode by androidx.compose.runtime.rememberUpdatedState(selectMode)
+        val currentSelectedItemIds by androidx.compose.runtime.rememberUpdatedState(selectedItemIds)
+        val currentSessionType by androidx.compose.runtime.rememberUpdatedState(sessionType)
+        val currentIsSessionActive by androidx.compose.runtime.rememberUpdatedState(isSessionActive)
+
+        val onStudentClick: (StudentUiItem) -> Unit = remember {
+            { studentItem ->
+                if (currentSelectMode) {
+                    val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
+                    val currentSelected = currentSelectedItemIds.toMutableSet()
+                    if (currentSelected.contains(itemId)) {
+                        currentSelected.remove(itemId)
+                    } else {
+                        currentSelected.add(itemId)
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
                 } else {
-                    currentSelected.add(itemId)
+                    selectedStudentUiItemForAction = studentItem
+                    when (currentSessionType) {
+                        SessionType.BEHAVIOR -> showBehaviorDialog = true
+                        SessionType.QUIZ -> if (currentIsSessionActive) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                        SessionType.HOMEWORK -> if (currentIsSessionActive) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                    }
                 }
-                seatingChartViewModel.selectedItemIds.value = currentSelected
-            } else {
+            }
+        }
+
+        val onStudentLongClick: (StudentUiItem, Offset) -> Unit = remember {
+            { studentItem, pos ->
                 selectedStudentUiItemForAction = studentItem
-                when (sessionType) {
-                    SessionType.BEHAVIOR -> showBehaviorDialog = true
-                    SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
-                    SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                studentHubPosition = pos
+                isStudentHubVisible = true
+            }
+        }
+
+        val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = remember {
+            { furnitureItem ->
+                if (currentSelectMode) {
+                    val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
+                    val currentSelected = currentSelectedItemIds.toMutableSet()
+                    if (currentSelected.contains(itemId)) {
+                        currentSelected.remove(itemId)
+                    } else {
+                        currentSelected.add(itemId)
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
                 }
             }
         }
 
-        val onStudentLongClick: (StudentUiItem, Offset) -> Unit = { studentItem, pos ->
-            selectedStudentUiItemForAction = studentItem
-            studentHubPosition = pos
-            isStudentHubVisible = true
-        }
-
-        val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
-            if (selectMode) {
-                val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
-                val currentSelected = selectedItemIds.toMutableSet()
-                if (currentSelected.contains(itemId)) {
-                    currentSelected.remove(itemId)
-                } else {
-                    currentSelected.add(itemId)
+        val onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = remember {
+            { furnitureItem ->
+                coroutineScope.launch {
+                    editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                    showAddEditFurnitureDialog = true
                 }
-                seatingChartViewModel.selectedItemIds.value = currentSelected
-            }
-        }
-
-        val onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
-            coroutineScope.launch {
-                editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                showAddEditFurnitureDialog = true
             }
         }
 
