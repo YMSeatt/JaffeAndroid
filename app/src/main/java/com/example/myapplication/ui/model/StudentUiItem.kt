@@ -84,5 +84,6 @@ data class StudentUiItem(
     val ionCharge: MutableState<Float>,
     val ionDensity: MutableState<Float>,
     val magneticStrength: MutableState<Float>,
-    val magneticRadius: MutableState<Float>
+    val magneticRadius: MutableState<Float>,
+    val isPinned: MutableState<Boolean>
 )

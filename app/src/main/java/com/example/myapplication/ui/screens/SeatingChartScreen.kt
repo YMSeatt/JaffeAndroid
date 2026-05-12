@@ -1896,6 +1896,11 @@ fun SeatingChartScreen(
                                     context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
                                 }
                             }
+                            "PIN_STUDENT" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    seatingChartViewModel.toggleStudentPin(student.id.toLong())
+                                }
+                            }
                             "NEURAL_MORPH" -> {
                                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MORPH_MODE_ENABLED) {
                                     selectedStudentUiItemForAction?.let { student ->

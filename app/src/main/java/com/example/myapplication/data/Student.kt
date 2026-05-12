@@ -66,7 +66,9 @@ data class Student(
     /** A temporary instruction or task assigned to the student, displayed on their icon. */
     var temporaryTask: String? = null,
     /** Whether to show recent behavior/homework logs on the student's chart icon. */
-    var showLogs: Boolean = true
+    var showLogs: Boolean = true,
+    /** Whether the student is pinned (anchored) to their current position. */
+    var isPinned: Boolean = false
 ) {
     // Secondary constructor or init block could be used for auto-generation
     // if a more complex logic is needed, or handle it in the ViewModel/Repository

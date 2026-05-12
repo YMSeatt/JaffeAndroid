@@ -94,7 +94,8 @@ fun Student.toStudentUiItem(
         ionCharge = mutableStateOf(ionCharge),
         ionDensity = mutableStateOf(ionDensity),
         magneticStrength = mutableStateOf(magneticStrength),
-        magneticRadius = mutableStateOf(magneticRadius)
+        magneticRadius = mutableStateOf(magneticRadius),
+        isPinned = mutableStateOf(this.isPinned)
     )
 }
 
@@ -173,6 +174,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.ionDensity, ionDensity)
     updateIfChanged(item.magneticStrength, magneticStrength)
     updateIfChanged(item.magneticRadius, magneticRadius)
+    updateIfChanged(item.isPinned, this.isPinned)
 }
 
 /**
