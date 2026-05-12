@@ -107,5 +107,14 @@
 - **BOLT Scoring Context**: To maintain 60fps during bulk updates (where every student icon might trigger a score calculation), the engine utilizes a `QuizScoringContext`. This object pre-calculates mark type HashMaps once and is shared across all students in a single update pass using identity-based memoization (`===`).
 - **Legacy Fallback**: If a quiz has 0 questions or no granular mark data, the engine automatically falls back to the legacy `markValue / maxMarkValue` calculation to ensure historical data remains visible.
 
+### 21. Global Performance Tuning via Animation Spec
+- **The Pattern**: The application uses a custom `CompositionLocal` named `LocalAnimationSpec` (defined in `Theme.kt`) to globally control the duration and easing of visual transitions.
+- **Performance Toggle**: The `SettingsNavHost` and various UI components observe the `noAnimations` preference. When enabled, `LocalAnimationSpec` provides a `tween(durationMillis = 0)`, effectively bypassing Compose's animation overhead for a high-performance "instant" feel.
+
+### 22. Shield Preference Hardening
+- **Transparent Security**: The `AppPreferencesRepository` acts as a high-integrity gateway for sensitive settings. It utilizes `securityUtil.decryptSafe()` on read and `securityUtil.encrypt()` on write.
+- **Relational Metadata**: Complex preference structures, such as `EmailSchedule` or `SmtpSettings`, are serialized to JSON before encryption, allowing for rich configuration storage within DataStore's flat key-value model.
+- **Safe Decryption Migration**: The use of `decryptSafe()` is a critical compatibility pattern that allows the repository to handle unencrypted legacy DataStore entries from older versions while automatically hardening them on the next write cycle.
+
 ---
 *Documentation love letter from Scribe 📜*
