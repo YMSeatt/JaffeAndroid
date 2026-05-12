@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: "Ghost Anchor" - Persistent student pinning system.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-28: Ghost Anchor - Persistent student pinning system in `/labs/ghost/`
 - [DONE] 2028-06-25: Ghost Palette - Gesture-driven color harmony engine in `/labs/ghost/palette/`
 - [DONE] 2028-06-20: Ghost Deck - Neural Student Card Stack in `/labs/ghost/`
 - [DONE] 2028-06-18: Ghost Seeds - Native Home Screen Shortcuts & Neural Deep-links in `/labs/ghost/util/GhostSeedEngine.kt`

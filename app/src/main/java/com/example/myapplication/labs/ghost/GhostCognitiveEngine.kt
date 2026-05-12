@@ -61,6 +61,7 @@ object GhostCognitiveEngine {
         val forceX = FloatArray(n)
         val forceY = FloatArray(n)
         val negScores = FloatArray(n)
+        val pinned = BooleanArray(n)
 
         // BOLT: Single-pass for negative behavior counts using manual loop to avoid allocations
         val negativeCounts = mutableMapOf<Long, Int>()
@@ -78,6 +79,7 @@ object GhostCognitiveEngine {
             studentIds[i] = student.id
             posX[i] = student.xPosition
             posY[i] = student.yPosition
+            pinned[i] = student.isPinned
 
             val count = negativeCounts[student.id] ?: 0
             // Pre-calculate: (0.5 + count * multiplier) such that s1 + s2 = 1.0 + (c1+c2)*multiplier
@@ -163,6 +165,13 @@ object GhostCognitiveEngine {
 
             // 3. Apply forces and update positions
             for (i in 0 until n) {
+                // BOLT: Pinned students do not move, but they still exert repulsion/attraction forces.
+                if (pinned[i]) {
+                    velX[i] = 0f
+                    velY[i] = 0f
+                    continue
+                }
+
                 var vx = (velX[i] + forceX[i]) * DAMPING
                 var vy = (velY[i] + forceY[i]) * DAMPING
 

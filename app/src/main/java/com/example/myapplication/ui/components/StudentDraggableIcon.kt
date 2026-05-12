@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -243,6 +244,7 @@ fun StudentDraggableIcon(
                          */
                         detectDragGestures(
                             onDragStart = {
+                                if (studentUiItem.isPinned.value) return@detectDragGestures
                                 kineticJob?.cancel()
                                 velocityTracker.resetTracking()
                                 viewModel.onStudentDragStarted(
@@ -254,6 +256,7 @@ fun StudentDraggableIcon(
                                 )
                             },
                             onDrag = { change, dragAmount ->
+                                if (studentUiItem.isPinned.value) return@detectDragGestures
                                 change.consume()
                                 offsetX += dragAmount.x / canvasScale
                                 offsetY += dragAmount.y / canvasScale
@@ -411,6 +414,17 @@ fun StudentDraggableIcon(
                                 )
                             }
                         }
+                    }
+                    if (studentUiItem.isPinned.value) {
+                        Icon(
+                            imageVector = Icons.Default.PushPin,
+                            contentDescription = "Student Pinned",
+                            tint = Color.Red,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .size(16.dp)
+                                .scale(1.2f)
+                        )
                     }
                     if (studentUiItem.temporaryTask.value != null) {
                         Icon(

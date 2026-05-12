@@ -1546,7 +1546,8 @@ class SeatingChartViewModel @Inject constructor(
                                 existingItem.ionCharge.value != derivedData.ionCharge ||
                                 existingItem.ionDensity.value != derivedData.ionDensity ||
                                 existingItem.magneticStrength.value != derivedData.magneticStrength ||
-                                existingItem.magneticRadius.value != derivedData.magneticRadius
+                                existingItem.magneticRadius.value != derivedData.magneticRadius ||
+                                existingItem.isPinned.value != studentForUi.isPinned
 
                         if (!isCacheHit || volatileChanged) {
                             studentForUi.updateStudentUiItem(
@@ -1952,6 +1953,16 @@ class SeatingChartViewModel @Inject constructor(
     /**
      * Triggers an update for a student's data via the Command pattern.
      */
+    fun toggleStudentPin(studentId: Long) {
+        viewModelScope.launch {
+            val student = getStudentForEditing(studentId)
+            if (student != null) {
+                val updatedStudent = student.copy(isPinned = !student.isPinned)
+                updateStudent(student, updatedStudent)
+            }
+        }
+    }
+
     fun updateStudent(oldStudent: Student, newStudent: Student) {
         viewModelScope.launch {
             val command =
