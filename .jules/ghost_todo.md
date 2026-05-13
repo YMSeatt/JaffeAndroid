@@ -1,8 +1,10 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Ghost Comet - High-momentum student activity visualization with trailing AGSL effects.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-06-30: Ghost Comet - High-momentum activity trails in `/labs/ghost/comet/`
 - [DONE] 2028-06-28: Ghost Anchor - Persistent student pinning system in `/labs/ghost/`
 - [DONE] 2028-06-25: Ghost Palette - Gesture-driven color harmony engine in `/labs/ghost/palette/`
 - [DONE] 2028-06-20: Ghost Deck - Neural Student Card Stack in `/labs/ghost/`
