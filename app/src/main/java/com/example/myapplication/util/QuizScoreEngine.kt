@@ -33,9 +33,9 @@ object QuizScoreEngine {
 
     /**
      * BOLT: Cache for calculated percentage results.
-     * Keyed by a composite string of log identity and scoring context identity.
+     * Keyed by a composite long of log identity and scoring context identity.
      */
-    private val scoreResultCache = LruCache<String, Double>(1000)
+    private val scoreResultCache = LruCache<Long, Double>(1000)
 
     /**
      * A performance-optimized snapshot of mark type metadata.
@@ -146,8 +146,8 @@ object QuizScoreEngine {
      * @return The calculated percentage (0.0 to 100.0+), or null if the log lacks sufficient data.
      */
     internal fun calculatePercentage(log: QuizLog, context: QuizScoringContext): Double? {
-        // BOLT: Result memoization to avoid redundant arithmetic in high-frequency rule evaluation.
-        val cacheKey = "${System.identityHashCode(log)}_${System.identityHashCode(context)}"
+        // BOLT: Result memoization using bit-packed Long key to avoid String allocation.
+        val cacheKey = (System.identityHashCode(log).toLong() shl 32) or (System.identityHashCode(context).toLong() and 0xFFFFFFFFL)
         val cached = scoreResultCache.get(cacheKey)
         if (cached != null) return cached
 

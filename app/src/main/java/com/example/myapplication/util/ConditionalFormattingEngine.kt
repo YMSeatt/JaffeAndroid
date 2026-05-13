@@ -457,11 +457,25 @@ object ConditionalFormattingEngine {
                 val timeWindowHours = condition.timeWindowHours ?: 24
                 val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 3600000L
 
-                // BOLT: Manual count with early break since behaviorLog is sorted DESC
+                // BOLT: Manual count with early break since behaviorLog is sorted DESC.
+                // Optimization: Cache the last processed type to avoid redundant lowercase/set lookups for consecutive identical types.
                 var count = 0
+                var lastType: String? = null
+                var lastMatch = false
+
                 for (event in behaviorLog) {
                     if (event.timestamp < cutoffTime) break
-                    if (behaviorNames.contains(boltLowercase(event.type))) {
+
+                    val currentType = event.type
+                    val isMatch = if (currentType == lastType) {
+                        lastMatch
+                    } else {
+                        lastType = currentType
+                        lastMatch = behaviorNames.contains(boltLowercase(currentType))
+                        lastMatch
+                    }
+
+                    if (isMatch) {
                         count++
                         if (count >= countThreshold) return true // BOLT: Return early if threshold met
                     }
