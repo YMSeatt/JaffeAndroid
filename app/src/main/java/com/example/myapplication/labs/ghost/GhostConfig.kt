@@ -198,4 +198,7 @@ object GhostConfig {
 
     /** Enables "Ghost Deck" neural student card stack for rapid review. */
     const val DECK_MODE_ENABLED = true
+
+    /** Enables "Ghost Comet" high-momentum activity trails. */
+    const val COMET_MODE_ENABLED = true
 }

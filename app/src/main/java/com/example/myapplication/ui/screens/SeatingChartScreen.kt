@@ -175,6 +175,8 @@ import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.comet.GhostCometEngine
+import com.example.myapplication.labs.ghost.comet.GhostCometLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
@@ -347,6 +349,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isDeckActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
     var isShellActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) }
@@ -497,6 +500,7 @@ fun SeatingChartScreen(
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
+    val ghostCometEngine = remember { GhostCometEngine() }
 
     DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, shakeToRecenterEnabled) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -1104,6 +1108,13 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isActive = isQuasarActive
             )
+            GhostCometLayer(
+                engine = ghostCometEngine,
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCometActive
+            )
             GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
@@ -1640,12 +1651,20 @@ fun SeatingChartScreen(
                     behaviorTypes = behaviorTypeNames,
                     onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null },
                     onBehaviorLogged = { count ->
+                    val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                     if (isSparkActive) {
-                        val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                         targets.forEach { id ->
                             val s = students.find { it.id.toLong() == id }
                             if (s != null) {
                                 ghostSparkEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
+                            }
+                        }
+                    }
+                    if (isCometActive) {
+                        targets.forEach { id ->
+                            val s = students.find { it.id.toLong() == id }
+                            if (s != null) {
+                                ghostCometEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
                             }
                         }
                     }
@@ -1943,6 +1962,7 @@ fun SeatingChartScreen(
                                 if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
+                            "COMET" -> isCometActive = !isCometActive
                             "LASSO" -> isLassoActive = !isLassoActive
                             "PIP" -> {
                                 val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
@@ -2941,6 +2961,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isCometActive) "Disable Ghost Comet 👻" else "Ghost Comet 👻") },
+                            onClick = {
+                                isCometActive = !isCometActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAY_MODE_ENABLED) {
