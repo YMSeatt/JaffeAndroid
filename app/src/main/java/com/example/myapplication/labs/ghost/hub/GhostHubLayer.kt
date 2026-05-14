@@ -65,6 +65,7 @@ fun GhostHubLayer(
             GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"),
             GhostAction("SYNC", Icons.Default.Link, "Neural Sync"),
             GhostAction("COMET", Icons.Default.AutoFixHigh, "Ghost Comet"),
+            GhostAction("HALO", Icons.Default.BrightnessHigh, "Neural Halo"),
             GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"),
             GhostAction("PIP", Icons.Default.PictureInPicture, "Neural PiP"),
             GhostAction("SHELL", Icons.Default.GridView, "Neural Shell"),
