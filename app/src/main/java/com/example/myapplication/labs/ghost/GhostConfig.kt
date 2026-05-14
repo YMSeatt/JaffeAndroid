@@ -201,4 +201,7 @@ object GhostConfig {
 
     /** Enables "Ghost Comet" high-momentum activity trails. */
     const val COMET_MODE_ENABLED = true
+
+    /** Enables "Ghost Halo" peak performer neural visualization. */
+    const val HALO_MODE_ENABLED = true
 }

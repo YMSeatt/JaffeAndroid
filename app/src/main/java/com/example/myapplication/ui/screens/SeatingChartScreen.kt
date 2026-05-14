@@ -177,6 +177,7 @@ import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometLayer
+import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
 import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
@@ -350,6 +351,7 @@ fun SeatingChartScreen(
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
+    var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
     var isDeckActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
     var isShellActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) }
@@ -1114,6 +1116,15 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isCometActive
+            )
+            GhostHaloLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                quizLogs = allQuizLogs,
+                homeworkLogs = allHomeworkLogs,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isHaloActive
             )
             GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
@@ -1963,6 +1974,7 @@ fun SeatingChartScreen(
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
                             "COMET" -> isCometActive = !isCometActive
+                            "HALO" -> isHaloActive = !isHaloActive
                             "LASSO" -> isLassoActive = !isLassoActive
                             "PIP" -> {
                                 val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)

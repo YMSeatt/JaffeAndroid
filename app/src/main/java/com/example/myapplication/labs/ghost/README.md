@@ -300,3 +300,9 @@ A high-fidelity **Neural Student Card Stack** for rapid classroom review.
 - **Neural Affinity**: Calculates a priority-based "Affinity" score (Student Turbulence) to drive card order and visual intensity.
 - **AGSL Neural Flux**: Features a reactive domain-warping background shader that reflects student affinity and real-time swipe progress.
 - **BOLT Optimization**: Uses manual index-based loops for deck synthesis and hoisted AGSL shaders for zero-allocation 60fps rendering.
+
+### 49. Ghost Halo (GhostHaloLayer.kt, GhostHaloShader.kt)
+A **Neural Halo** visualization for peak performing students.
+- **Peak Performance Identification**: Queries [GhostInsightEngine] to identify students in the "OPTIMAL" state based on high grades and zero negative behaviors.
+- **AGSL Neural Halo**: Renders a thin, rotating, and pulsing golden/cyan ring with an ethereal light scatter around student icons.
+- **BOLT Optimization**: Uses `derivedStateOf` and identity-based caching to minimize recompositions and zero-allocation shader drawing.
