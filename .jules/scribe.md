@@ -116,5 +116,10 @@
 - **Relational Metadata**: Complex preference structures, such as `EmailSchedule` or `SmtpSettings`, are serialized to JSON before encryption, allowing for rich configuration storage within DataStore's flat key-value model.
 - **Safe Decryption Migration**: The use of `decryptSafe()` is a critical compatibility pattern that allows the repository to handle unencrypted legacy DataStore entries from older versions while automatically hardening them on the next write cycle.
 
+### 23. Ghost Shell "Neural Pulse" Dynamics
+- **Temporal Sensitivity**: The 300,000ms (5-minute) window was selected to ensure the dock reflects *current* classroom state. A longer window would dilute immediate behavioral shifts, while a shorter one would be too volatile.
+- **Health Fallback**: In the absence of data, the engine defaults to a **0.7 Health Index**. This "Stable" baseline was chosen to provide a calm visual state (Cyan) rather than an alarming one (Red) for new or quiet sessions.
+- **Frequency Calibration**: The pulse frequency scales linearly with activity ($0.5 + \text{count}/20$). A max of 4.0 Hz was found to be the upper limit before the visual flickering became distracting during high-intensity classroom periods.
+
 ---
 *Documentation love letter from Scribe 📜*

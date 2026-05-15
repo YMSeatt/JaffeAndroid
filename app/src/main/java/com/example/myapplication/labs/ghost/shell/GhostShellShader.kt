@@ -3,9 +3,25 @@ package com.example.myapplication.labs.ghost.shell
 import org.intellij.lang.annotations.Language
 
 /**
- * GhostShellShader: AGSL shaders for the neural dock visualization.
+ * GhostShellShader: High-performance AGSL shaders for the neural dock visualization.
+ *
+ * This object contains the GPU programs used to render the immersive UI components
+ * of the Ghost Shell.
  */
 object GhostShellShader {
+    /**
+     * NEURAL_PULSE: A data-driven wave interference shader.
+     *
+     * This shader visualizes the classroom's "heartbeat" by combining three sine waves
+     * with different frequencies and phases. The resulting interference pattern
+     * creates an organic, non-mechanical movement.
+     *
+     * ### Shader Parameters (Uniforms):
+     * - `iHealth`: A normalized float [0.0..1.0]. Low values (< 0.4) trigger a
+     *   "Refraction Shift" toward Red, signaling behavioral tension.
+     * - `iFrequency`: A scaling factor that drives wave momentum and glow intensity.
+     * - `iColor`: The baseline color of the pulse (typically Cyan).
+     */
     @Language("AGSL")
     const val NEURAL_PULSE = """
         uniform float2 iResolution;

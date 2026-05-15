@@ -25,7 +25,28 @@ import androidx.compose.ui.platform.LocalContext
 
 /**
  * GhostShellLayer: An immersive bottom dock for managing Ghost experiments
- * and monitoring classroom health.
+ * and monitoring real-time classroom "Health" and "Pulse".
+ *
+ * This layer acts as the "Mission Control" for the Ghost Lab suite. It provides
+ * a centralized HUD for activating R&D features and visualizes the classroom's
+ * data-driven heartbeat using a high-performance AGSL shader.
+ *
+ * ### AGSL Uniform Mapping:
+ * - `iHealth`: Drives the color shift of the neural pulse. Health below 40%
+ *   causes the pulse to refract toward Red, providing ambient tension feedback.
+ * - `iFrequency`: Scales the wave speed and intensity, reflecting the "tempo"
+ *   of recent classroom interactions.
+ *
+ * @param behaviorLogs Reactive stream of classroom behavioral incidents.
+ * @param isActive Master toggle for the shell's visibility.
+ * @param isHudActive State of the Ghost HUD experiment.
+ * @param onToggleHud Callback to activate/deactivate HUD mode.
+ * @param isVisionActive State of the Ghost Vision AR experiment.
+ * @param onToggleVision Callback to activate/deactivate Vision mode.
+ * @param isStrategistActive State of the Ghost Strategist tactical AI.
+ * @param onToggleStrategist Callback to activate/deactivate Strategist mode.
+ * @param isAuroraActive State of the Ghost Aurora atmospheric experiment.
+ * @param onToggleAurora Callback to activate/deactivate Aurora mode.
  */
 @Composable
 fun GhostShellLayer(
