@@ -523,10 +523,13 @@ fun SeatingChartScreen(
             }
         }
 
-        // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments are active
+        // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
                                    isCortexActive || isHudActive || isArchitectActive || isShellActive ||
-                                   isGhostListening
+                                   isGhostListening || showGhostInsightDialog || showGhostSynapseDialog ||
+                                   showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
+                                   showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
+                                   showLiveHomeworkMarkDialog || showAddEditStudentDialog
         ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
 
         if (GhostConfig.GHOST_MODE_ENABLED) {

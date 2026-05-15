@@ -116,3 +116,8 @@
     - Integrated `isGhostListening` into the `isSensitiveModeActive` check in `SeatingChartScreen.kt` to enforce `FLAG_SECURE` whenever the voice assistant is active.
     - Implemented null-safe behavior type masking in `GhostVoiceAssistant.kt` logs to prevent PII leakage to the system logcat.
 - **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostVoiceAssistant.kt`
+
+## 🛡️ Privacy Hardening: Comprehensive Screen Capture Protection
+- **Vulnerability:** Sensitive student data (behavior logs, quiz scores, homework status) and experimental AI analysis (Neural Insights, Synapses, Oracle Prophecies) were exposed to screen capture (screenshots/recordings) because the corresponding dialogs were not included in the "Privacy Shield" logic.
+- **Fix:** Extended the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include all identified sensitive dialog states, proactively enforcing `WindowManager.LayoutParams.FLAG_SECURE` whenever student PII or predictive analysis is on screen.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
