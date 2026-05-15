@@ -11,18 +11,43 @@ import kotlin.math.min
  * behavior of the [GhostShellLayer] and its AGSL [GhostShellShader].
  */
 object GhostShellEngine {
-    private const val WINDOW_MS = 300_000L // 5 minute sliding window
+    /**
+     * The sliding window duration (5 minutes) used to focus on current classroom energy.
+     */
+    private const val WINDOW_MS = 300_000L
 
+    /**
+     * ShellMetrics: A data container for synthesized classroom dynamics.
+     *
+     * @property healthIndex A normalized value [0.0..1.0] where 1.0 represents a purely positive
+     * atmosphere and 0.0 represents high behavioral friction.
+     * @property pulseFrequency A frequency value in Hz used to drive the visual "heartbeat" of the dock.
+     * @property totalActivity The raw count of behavioral events within the current sliding window.
+     * @property positiveRatio The percentage of positive logs relative to total activity.
+     */
     data class ShellMetrics(
-        val healthIndex: Float,    // 0.0 (Critical) to 1.0 (Optimal)
-        val pulseFrequency: Float, // 0.5 (Slow) to 4.0 (Hyper-active)
+        val healthIndex: Float,
+        val pulseFrequency: Float,
         val totalActivity: Int,
         val positiveRatio: Float
     )
 
     /**
-     * BOLT ⚡ Optimization: Single-pass calculation to derive health and pulse.
-     * Uses manual loops to avoid list churn.
+     * BOLT ⚡ Optimization: Single-pass calculation to derive health and pulse metrics.
+     *
+     * This method implements a high-performance analysis of the behavioral log stream.
+     * By using a manual index-based loop and avoiding functional operators, it achieves
+     * zero object allocations and sub-millisecond execution times.
+     *
+     * ### Algorithm:
+     * 1. **Temporal Filtering**: Only events within the [WINDOW_MS] window are considered.
+     * 2. **Balance Calculation**: Health is derived from the net difference between
+     *    positive and negative events, normalized around a 0.5 center.
+     * 3. **Frequency Scaling**: Pulse frequency scales linearly with activity volume,
+     *    capped at 4.0 Hz to prevent visual overwhelming.
+     *
+     * @param behaviorLogs The raw list of behavioral events from the database.
+     * @return A [ShellMetrics] object containing the synthesized classroom state.
      */
     fun calculateMetrics(behaviorLogs: List<BehaviorEvent>): ShellMetrics {
         val now = System.currentTimeMillis()
