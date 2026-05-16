@@ -68,6 +68,7 @@ fun GhostHubLayer(
             GhostAction("HALO", Icons.Default.BrightnessHigh, "Neural Halo"),
             GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"),
             GhostAction("PIP", Icons.Default.PictureInPicture, "Neural PiP"),
+            GhostAction("FLARE", Icons.Default.Flare, "Ghost Flare"),
             GhostAction("SHELL", Icons.Default.GridView, "Neural Shell"),
             GhostAction("DECK", Icons.Default.Style, "Neural Deck")
         )

@@ -177,6 +177,8 @@ import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometLayer
+import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
+import com.example.myapplication.labs.ghost.flare.GhostFlareLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -350,6 +352,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
     var isDeckActive by remember { mutableStateOf(false) }
@@ -503,6 +506,7 @@ fun SeatingChartScreen(
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
     val ghostCometEngine = remember { GhostCometEngine() }
+    val ghostFlareEngine = remember { GhostFlareEngine() }
 
     DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, shakeToRecenterEnabled) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -640,6 +644,12 @@ fun SeatingChartScreen(
             ghostSupernovaEngine.updatePressure(allBehaviorEvents)
         } else {
             ghostSupernovaEngine.reset()
+        }
+    }
+
+    LaunchedEffect(isFlareActive, students) {
+        if (isFlareActive) {
+            ghostFlareEngine.checkMilestones(students)
         }
     }
 
@@ -1119,6 +1129,12 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isCometActive
+            )
+            GhostFlareLayer(
+                engine = ghostFlareEngine,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isFlareActive
             )
             GhostHaloLayer(
                 students = students,
@@ -1977,6 +1993,7 @@ fun SeatingChartScreen(
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
                             "COMET" -> isCometActive = !isCometActive
+                            "FLARE" -> isFlareActive = !isFlareActive
                             "HALO" -> isHaloActive = !isHaloActive
                             "LASSO" -> isLassoActive = !isLassoActive
                             "PIP" -> {
