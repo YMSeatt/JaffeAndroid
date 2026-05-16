@@ -80,11 +80,21 @@ class ReminderReceiver : BroadcastReceiver() {
                         notificationManager.createNotificationChannel(channel)
                     }
 
+                    // PRIVACY: Create a "public" version of the notification for the lockscreen.
+                    // This masks PII while the device is locked, but automatically reveals the
+                    // full content once the user unlocks their device.
+                    val publicNotification = NotificationCompat.Builder(context, "reminder_channel")
+                        .setContentTitle("Classroom Reminder")
+                        .setContentText("Unlock to view details")
+                        .setSmallIcon(R.drawable.ic_launcher_foreground)
+                        .build()
+
                     val notification = NotificationCompat.Builder(context, "reminder_channel")
                         .setContentTitle(reminder.title)
                         .setContentText(reminder.description)
                         .setSmallIcon(R.drawable.ic_launcher_foreground)
-                        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // HARDEN: Protect PII on lockscreen for individual notifications
+                        .setPublicVersion(publicNotification) // HARDEN: Use native masking API
+                        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE) // HARDEN: Protect PII on lockscreen
                         .build()
 
                     notificationManager.notify(reminderId.toInt(), notification)
