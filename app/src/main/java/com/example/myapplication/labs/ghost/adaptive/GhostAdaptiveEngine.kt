@@ -1,6 +1,6 @@
 package com.example.myapplication.labs.ghost.adaptive
 
-import com.example.myapplication.ui.model.StudentUiItem
+import com.example.myapplication.data.Student
 import kotlin.math.*
 
 /**
@@ -42,7 +42,7 @@ object GhostAdaptiveEngine {
      * @param students The current list of students.
      * @return A list of [DensityZone] objects representing the classroom's spatial pressure.
      */
-    fun calculateDensityMetrics(students: List<StudentUiItem>): List<DensityZone> {
+    fun calculateDensityMetrics(students: List<Student>): List<DensityZone> {
         val grid = FloatArray(GRID_SIZE * GRID_SIZE)
         if (students.isEmpty()) return emptyList()
 
@@ -50,8 +50,8 @@ object GhostAdaptiveEngine {
         // BOLT: Manual loop to avoid iterator allocation in high-frequency engine
         for (i in students.indices) {
             val student = students[i]
-            val x = student.xPosition.value.coerceIn(0f, CANVAS_SIZE - 1f)
-            val y = student.yPosition.value.coerceIn(0f, CANVAS_SIZE - 1f)
+            val x = student.xPosition.coerceIn(0f, CANVAS_SIZE - 1f)
+            val y = student.yPosition.coerceIn(0f, CANVAS_SIZE - 1f)
             val gx = (x / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
             val gy = (y / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
 
@@ -97,7 +97,7 @@ object GhostAdaptiveEngine {
      * @return A list of proposed [AdaptiveMove]s.
      */
     fun proposeAdaptiveLayout(
-        students: List<StudentUiItem>,
+        students: List<Student>,
         zones: List<DensityZone>
     ): List<AdaptiveMove> {
         val proposals = mutableListOf<AdaptiveMove>()
@@ -111,8 +111,8 @@ object GhostAdaptiveEngine {
 
         for (i in students.indices) {
             val student = students[i]
-            val x = student.xPosition.value
-            val y = student.yPosition.value
+            val x = student.xPosition
+            val y = student.yPosition
             val gx = (x / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
             val gy = (y / CELL_SIZE).toInt().coerceIn(0, GRID_SIZE - 1)
 

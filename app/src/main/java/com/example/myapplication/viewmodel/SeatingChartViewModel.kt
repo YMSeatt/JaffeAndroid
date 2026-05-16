@@ -1140,39 +1140,7 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Calculate adaptive density zones in the background pipeline (Memoized)
                 if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
-                    val uiItemsForDensity = ArrayList<StudentUiItem>(studentsForEngines.size)
-                    for (i in 0 until studentsForEngines.size) {
-                        val s = studentsForEngines[i]
-                        val item = studentUiItemCache[s.id.toInt()] ?: s.toStudentUiItem(
-                            recentBehaviorDescription = emptyList(),
-                            recentHomeworkDescription = emptyList(),
-                            recentQuizDescription = emptyList(),
-                            sessionLogText = emptyList(),
-                            groupColor = null,
-                            backgroundColors = listOf(Color.Gray),
-                            outlineColors = listOf(Color.DarkGray),
-                            textColor = Color.White,
-                            fontColor = Color.White,
-                            defaultWidth = 100,
-                            defaultHeight = 100,
-                            defaultOutlineThickness = 2,
-                            defaultCornerRadius = 8,
-                            defaultPadding = 4,
-                            defaultFontFamily = "sans-serif",
-                            defaultFontSize = 12,
-                            irisParams = com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters(0f, Color.White, Color.Blue, 0.5f),
-                            osmoticNode = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode(s.id, s.xPosition, s.yPosition, 0.5f, 0.5f),
-                            altitude = 0.5f,
-                            behaviorEntropy = 0f,
-                            tectonicStress = 0f,
-                            quasarEnergy = 0f,
-                            quasarPolarity = 0f,
-                            ionCharge = 0f,
-                            ionDensity = 0f
-                        )
-                        uiItemsForDensity.add(item)
-                    }
-                    _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(uiItemsForDensity)
+                    _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(studentsForEngines)
                     ghostMetricsAdaptiveStudentsRef = studentsForEngines
                 }
 
