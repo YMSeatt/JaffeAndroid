@@ -204,4 +204,7 @@ object GhostConfig {
 
     /** Enables "Ghost Halo" peak performer neural visualization. */
     const val HALO_MODE_ENABLED = true
+
+    /** Enables "Ghost Flare" high-intensity behavioral milestone visualization. */
+    const val FLARE_MODE_ENABLED = true
 }
