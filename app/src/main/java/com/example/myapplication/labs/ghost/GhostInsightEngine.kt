@@ -49,15 +49,40 @@ object GhostInsightEngine {
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): GhostInsight {
-        // Simple analysis logic
-        val positiveBehavior = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-        val negativeBehavior = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
+        // BOLT: Optimized using manual index-based loops and single-pass analysis to eliminate
+        // iterator allocations and intermediate list creation (count/mapNotNull/average).
 
-        val quizScores = quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }
-        val avgQuiz = if (quizScores.isNotEmpty()) quizScores.average() else 0.5
+        var positiveBehavior = 0
+        var negativeBehavior = 0
+        for (i in 0 until behaviorLogs.size) {
+            if (behaviorLogs[i].type.contains("Negative", ignoreCase = true)) {
+                negativeBehavior++
+            } else {
+                positiveBehavior++
+            }
+        }
 
+        var quizSum = 0.0
+        var quizCount = 0
+        for (i in 0 until quizLogs.size) {
+            val log = quizLogs[i]
+            val v = log.markValue
+            val m = log.maxMarkValue
+            if (v != null && m != null && m > 0.0) {
+                quizSum += v / m
+                quizCount++
+            }
+        }
+        val avgQuiz = if (quizCount > 0) quizSum / quizCount else 0.5
+
+        var homeworkDoneCount = 0
+        for (i in 0 until homeworkLogs.size) {
+            if (homeworkLogs[i].status.contains("Done", ignoreCase = true)) {
+                homeworkDoneCount++
+            }
+        }
         val homeworkCompletion = if (homeworkLogs.isNotEmpty()) {
-            homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toDouble() / homeworkLogs.size
+            homeworkDoneCount.toDouble() / homeworkLogs.size
         } else 1.0
 
         return when {
