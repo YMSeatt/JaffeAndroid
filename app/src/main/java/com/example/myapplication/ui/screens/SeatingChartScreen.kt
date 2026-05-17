@@ -533,7 +533,11 @@ fun SeatingChartScreen(
                                    isGhostListening || showGhostInsightDialog || showGhostSynapseDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
-                                   showLiveHomeworkMarkDialog || showAddEditStudentDialog
+                                   showLiveHomeworkMarkDialog || showAddEditStudentDialog ||
+                                   showStudentActionMenu || showSaveLayoutDialog || showLoadLayoutDialog ||
+                                   showExportDialog || showUndoHistoryDialog || showChangeBoxSizeDialog ||
+                                   showStudentStyleDialog || showAssignTaskDialog || showAddEditFurnitureDialog ||
+                                   showEmailDialog
         ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
 
         if (GhostConfig.GHOST_MODE_ENABLED) {

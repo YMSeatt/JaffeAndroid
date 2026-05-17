@@ -121,3 +121,8 @@
 - **Vulnerability:** Sensitive student data (behavior logs, quiz scores, homework status) and experimental AI analysis (Neural Insights, Synapses, Oracle Prophecies) were exposed to screen capture (screenshots/recordings) because the corresponding dialogs were not included in the "Privacy Shield" logic.
 - **Fix:** Extended the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include all identified sensitive dialog states, proactively enforcing `WindowManager.LayoutParams.FLAG_SECURE` whenever student PII or predictive analysis is on screen.
 - **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
+
+## 🛡️ Privacy Hardening: Expanded Screen Capture Protection
+- **Vulnerability:** Several sensitive UI states in the seating chart (Student Action Menus, Export/Email dialogs, Layout management, and Box styling) were still vulnerable to screen capture because they were not integrated into the "Privacy Shield" logic.
+- **Fix:** Expanded the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include 10 additional sensitive states: `showStudentActionMenu`, `showSaveLayoutDialog`, `showLoadLayoutDialog`, `showExportDialog`, `showUndoHistoryDialog`, `showChangeBoxSizeDialog`, `showStudentStyleDialog`, `showAssignTaskDialog`, `showAddEditFurnitureDialog`, and `showEmailDialog`.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
