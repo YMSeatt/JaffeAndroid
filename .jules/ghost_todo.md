@@ -5,6 +5,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-07-08: Ghost Snapshot - High-fidelity full-canvas archival in `/labs/ghost/snapshot/`
 - [DONE] 2028-07-05: Ghost Flare - High-intensity behavioral milestone visualization in `/labs/ghost/flare/`
 - [DONE] 2028-07-02: Ghost Halo - Neural halo visualization for peak performers in `/labs/ghost/`
 - [DONE] 2028-06-30: Ghost Comet - High-momentum activity trails in `/labs/ghost/comet/`
