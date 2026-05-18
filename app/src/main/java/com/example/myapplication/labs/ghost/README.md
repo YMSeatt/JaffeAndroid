@@ -306,3 +306,106 @@ A **Neural Halo** visualization for peak performing students.
 - **Peak Performance Identification**: Queries [GhostInsightEngine] to identify students in the "OPTIMAL" state based on high grades and zero negative behaviors.
 - **AGSL Neural Halo**: Renders a thin, rotating, and pulsing golden/cyan ring with an ethereal light scatter around student icons.
 - **BOLT Optimization**: Uses `derivedStateOf` and identity-based caching to minimize recompositions and zero-allocation shader drawing.
+
+### 50. Ghost Flare (flare/GhostFlareLayer.kt, flare/GhostFlareEngine.kt, flare/GhostFlareShader.kt)
+High-intensity behavioral milestone visualization.
+- **Milestone Detection**: Scans for students with 3+ recent logs and a high positive balance.
+- **AGSL Flare**: Renders an anamorphic lens flare and starburst effect using a high-performance shader.
+- **BOLT Optimization**: Offloads detection logic to a background pipeline to maintain 60fps.
+
+### 51. Ghost Comet (comet/GhostCometLayer.kt, comet/GhostCometEngine.kt, comet/GhostCometShader.kt)
+High-momentum activity trails for student interactions.
+- **Social Gravity**: Activity trails are attracted to neighboring students, simulating "social contagion."
+- **Physics Engine**: BOLT-optimized zero-allocation physics with 0.97 drag.
+- **AGSL Trails**: Renders tapering, glowing streaks using API 33+ `RuntimeShader`.
+
+### 52. Ghost Glyph (glyph/GhostGlyphLayer.kt, glyph/GhostGlyphEngine.kt, glyph/GhostGlyphShader.kt)
+Neural gesture-based logging system.
+- **Gesture Recognition**: Translates custom touch patterns (glyphs) directly into behavior logs.
+- **AGSL Feedback**: Provides real-time visual feedback as the user draws the glyph.
+
+### 53. Ghost Strategist (strategist/GhostStrategistLayer.kt, strategist/GhostStrategistEngine.kt)
+A generative AI tactical engine for pedagogical planning.
+- **Strategic Advice**: Analyzes classroom entropy and tension to suggest seating changes or intervention strategies.
+
+### 54. Ghost Vision (vision/GhostVisionLayer.kt, vision/GhostVisionEngine.kt, vision/GhostVisionActivity.kt)
+A sensor-driven AR viewport for the classroom.
+- **AR Overlay**: Uses device orientation to project data-rich overlays onto a camera-mediated view of the classroom.
+
+### 55. Ghost Architect (architect/GhostArchitectLayer.kt, architect/GhostArchitectEngine.kt, architect/GhostArchitectShader.kt)
+A strategic layout generative engine.
+- **Generative Design**: Proposes optimal seating arrangements based on predicted academic synergy and minimized social friction.
+
+### 56. Ghost Navigator (navigator/GhostNavigatorLayer.kt, navigator/GhostNavigatorEngine.kt)
+A high-performance mini-map for spatial navigation.
+- **Global Overview**: Provides a persistent, interactive thumbnail of the 4000x4000 canvas.
+- **Fast-Travel**: Allows users to rapidly pan the main canvas by interacting with the navigator.
+
+### 57. Ghost Spotlight (spotlight/GhostSpotlightLayer.kt, spotlight/GhostSpotlightShader.kt)
+A focused pedagogical assessment mode.
+- **Attention Isolation**: Dims the rest of the chart to highlight a single student or group during assessment.
+
+### 58. Ghost Glance (glance/GhostGlanceSurface.kt, glance/GhostGlanceEngine.kt)
+Double-tap preview for student dossiers.
+- **Rapid Insight**: Provides a non-interruptive popup showing recent logs and insights when a student icon is double-tapped.
+
+### 59. Ghost Filter (filtering/GhostFilterScreen.kt, filtering/GhostFilterViewModel.kt)
+An optimized student list and filtering system.
+- **High-Speed Search**: Leverages BOLT patterns to filter large student lists with sub-millisecond latency.
+
+### 60. Ghost LOD (lod/GhostLODEngine.kt)
+Adaptive Level of Detail rendering.
+- **Dynamic Detail**: Automatically simplifies student icons and disables complex shaders when zooming out or when high student counts are detected.
+
+### 61. Ghost Adaptive (adaptive/GhostAdaptiveLayer.kt, adaptive/GhostAdaptiveEngine.kt)
+Density-aware layout optimization.
+- **UI Scaling**: Adjusts icon sizes and spacing dynamically based on classroom density to prevent overlap.
+
+### 62. Ghost Memento (memento/GhostMementoMapper.kt, memento/GhostMementoStore.kt)
+Persistent command history and "Long-Term Memory."
+- **Atomic Recovery**: Re-hydrates undo/redo stacks across app restarts using encrypted DataStore storage.
+- **Encryption**: History is hardened using `SecurityUtil` to ensure privacy.
+
+### 63. Ghost Silhouette (silhouette/GhostSilhouetteLayer.kt, silhouette/GhostSilhouetteShader.kt)
+Neural drag placeholders.
+- **Spatial Memory**: Renders a glowing "ghost" icon at the student's original position during drag operations.
+
+### 64. Ghost Morph (morph/GhostDossierScreen.kt)
+Shared-element neural transitions.
+- **Fluid Continuity**: Implements seamless transitions between the seating chart and detailed student views.
+
+### 65. Ghost Lasso (lasso/GhostLassoLayer.kt, lasso/GhostLassoEngine.kt)
+Gesture-based multi-selection.
+- **Neural Lasso**: Allows users to select multiple students by drawing a freeform path around them.
+
+### 66. Ghost Glitch (glitch/GhostGlitchLayer.kt, glitch/GhostGlitchEngine.kt, glitch/GhostGlitchShader.kt)
+Neural feedback during spatial conflicts.
+- **Collision Feedback**: Renders a "digital glitch" effect when student icons are moved into invalid or conflicting positions.
+
+### 67. Ghost Kinetic (kinetic/GhostKineticEngine.kt)
+Physics-based momentum for student icons.
+- **Inertial Drag**: Icons exhibit momentum and friction when released after a drag gesture.
+
+### 68. Ghost Seeds (util/GhostSeedEngine.kt)
+Native Android Home Screen shortcuts.
+- **Neural Seeds**: Allows teachers to "seed" specific students to the home screen for instant access to their dossiers.
+- **PII Masking**: Labels are hardened (e.g., "J. DOE") to prevent data leakage on the OS level.
+
+## 💡 Tribal Knowledge & Implementation Secrets
+
+### 1. Spatial Coordinate Mapping
+- **The "Flip"**: Composable `Canvas` coordinates (0,0 at top-left) often need translation when passed to shaders that expect normalized UVs or centered coordinates.
+- **Aura Centering**: Absolute pixel coordinates must be normalized *inside* the shader using `iResolution` to maintain visual consistency across screen sizes.
+- **The 4000x4000 Canvas**: The logical seating chart operates on a fixed 4000-unit coordinate system, independent of device resolution.
+
+### 2. BOLT Performance Strategies
+- **Zero-Allocation Rendering**: High-frequency draw loops (60fps) use primitive arrays and manual index-based loops to eliminate iterator churn and GC pressure.
+- **Shader Pooling**: To avoid the "Uniform Overwrite" bug, complex layers maintain a pool of `RuntimeShader` instances, ensuring each student node has its own isolated GPU state.
+- **O(Recent) Logic**: Analysis engines (like Quasar and Pulse) utilize chronologically DESC-sorted logs with early-exit loops to achieve $O(\text{Recent})$ performance rather than $O(\text{Total})$.
+
+### 3. Physics & Metaphors
+- **Social Friction (1.5x/2.5x)**: The engines (Cognitive, Magnetar, Vector) apply higher mathematical weights to negative logs, modeling the disproportionate impact disruptive behavior has on classroom dynamics.
+- **Atmospheric Proxy**: Hardware sensors like battery temperature and ambient light are used as metaphors for classroom "energy" and "mood," driving background visualizations like Ghost Ion and Ghost Horizon.
+
+---
+*Documentation love letter from Scribe 📜*
