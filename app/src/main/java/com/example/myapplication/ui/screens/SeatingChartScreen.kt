@@ -179,6 +179,8 @@ import com.example.myapplication.labs.ghost.comet.GhostCometEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometLayer
 import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
 import com.example.myapplication.labs.ghost.flare.GhostFlareLayer
+import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
+import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -352,6 +354,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
@@ -1024,6 +1027,10 @@ fun SeatingChartScreen(
                 .padding(paddingValues)
                 .fillMaxSize()
         ) {
+            GhostSnapshotLayer(
+                trigger = isSnapshotTriggered,
+                onAnimationComplete = { isSnapshotTriggered = false }
+            )
             GhostGlitchLayer(
                 intensity = glitchIntensity,
                 isActive = isGlitchActive
@@ -2003,6 +2010,20 @@ fun SeatingChartScreen(
                             "PIP" -> {
                                 val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
                                 context.startActivity(intent)
+                            }
+                            "SNAPSHOT" -> {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SNAPSHOT_MODE_ENABLED) {
+                                    isSnapshotTriggered = true
+                                    coroutineScope.launch {
+                                        val bgColor = try { android.graphics.Color.parseColor(canvasBackgroundColor) } catch (e: Exception) { android.graphics.Color.BLACK }
+                                        val uri = GhostSnapshotEngine.captureFullCanvas(context, students, furniture, bgColor)
+                                        if (uri != null) {
+                                            Toast.makeText(context, "Ghost Snapshot Saved to Gallery! 👻", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Snapshot Failed", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
                             }
                             "SHELL" -> isShellActive = !isShellActive
                             "DECK" -> isDeckActive = !isDeckActive

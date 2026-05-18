@@ -207,4 +207,7 @@ object GhostConfig {
 
     /** Enables "Ghost Flare" high-intensity behavioral milestone visualization. */
     const val FLARE_MODE_ENABLED = true
+
+    /** Enables "Ghost Snapshot" high-fidelity full-canvas archival. */
+    const val SNAPSHOT_MODE_ENABLED = true
 }
