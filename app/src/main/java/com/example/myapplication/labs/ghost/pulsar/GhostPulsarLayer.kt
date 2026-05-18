@@ -2,16 +2,19 @@ package com.example.myapplication.labs.ghost.pulsar
 
 import android.graphics.RuntimeShader
 import android.os.Build
-import androidx.annotation.RequiresApi
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 
@@ -31,14 +34,19 @@ fun GhostPulsarLayer(
 ) {
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    val currentTimeMillis = System.currentTimeMillis()
-    val harmonics = remember(students, behaviorLogs) {
-        GhostPulsarEngine.calculateHarmonics(students, behaviorLogs, currentTimeMillis)
+    // BOLT: Performance Cap. We sample the first 20 students to ensure smooth rendering
+    // on devices that may struggle with too many simultaneous wave sources in AGSL.
+    val studentsToDisplay = remember(students) { students.take(20) }
+
+    // BOLT: Pre-calculate the grouped behavior logs to avoid re-grouping inside the engine.
+    val eventsByStudent = remember(behaviorLogs) {
+        behaviorLogs.groupBy { it.studentId }
     }
 
-    // BOLT: Transform harmonics list to map for O(1) lookup in the draw loop.
-    val harmonicsMap = remember(harmonics) {
-        harmonics.associateBy { it.studentId }
+    val currentTimeMillis = System.currentTimeMillis()
+    // BOLT: Pass pre-grouped logs and the limited student list to the optimized engine.
+    val harmonics = remember(studentsToDisplay, eventsByStudent) {
+        GhostPulsarEngine.calculateHarmonics(studentsToDisplay, eventsByStudent, currentTimeMillis)
     }
 
     val shader = remember { RuntimeShader(GhostPulsarShader.PULSAR_WAVES) }
@@ -55,10 +63,6 @@ fun GhostPulsarLayer(
         ),
         label = "time"
     )
-
-    // BOLT: Performance Cap. We sample the first 20 students to ensure smooth rendering
-    // on devices that may struggle with too many simultaneous wave sources in AGSL.
-    val studentsToDisplay = remember(students) { students.take(20) }
 
     // BOLT: Pre-allocate and remember the FloatArrays to eliminate per-frame object churn.
     val points = remember { FloatArray(20 * 2) }
@@ -93,8 +97,8 @@ fun GhostPulsarLayer(
             points[index * 2] = sx
             points[index * 2 + 1] = sy
 
-            // BOLT: O(1) lookup instead of O(N) find
-            val h = harmonicsMap[student.id.toLong()]
+            // BOLT: Direct indexing instead of harmonicsMap[id] lookup, as order is preserved.
+            val h = if (index < harmonics.size) harmonics[index] else null
             val freq = h?.frequency ?: 0.1f
             // Smoothly calculate phase at 60fps based on frequency
             val phase = ((currentTime % 60_000L).toFloat() / 60_000f * freq) % 1.0f

@@ -23,7 +23,6 @@ object GhostPulsarEngine {
 
     data class HarmonicState(
         val studentId: Long,
-        val phase: Float,      // 0.0 to 1.0 (Current position in the cycle)
         val frequency: Float,  // Oscillations per minute
         val amplitude: Float   // Strength of the harmonic (based on log density)
     )
@@ -46,7 +45,7 @@ object GhostPulsarEngine {
      *
      * @param students List of students to analyze.
      * @param events Historical behavior logs.
-     * @param currentTime Current system time (used for windowing and phase calculation).
+     * @param currentTime Current system time (used for windowing).
      */
     fun calculateHarmonics(
         students: List<StudentUiItem>,
@@ -57,38 +56,61 @@ object GhostPulsarEngine {
 
         // BOLT: Group events by studentId for O(N + L) efficiency.
         val eventsByStudent = events.groupBy { it.studentId }
+        return calculateHarmonics(students, eventsByStudent, currentTime)
+    }
+
+    /**
+     * BOLT: High-performance overload that accepts pre-grouped logs.
+     */
+    fun calculateHarmonics(
+        students: List<StudentUiItem>,
+        eventsByStudent: Map<Long, List<BehaviorEvent>>,
+        currentTime: Long
+    ): List<HarmonicState> {
+        if (students.isEmpty()) return emptyList()
 
         // The 10-minute window (600,000ms) was chosen to capture short-term behavioral
         // "bursts" without being overly influenced by long-term historical averages.
         val windowMillis = 600_000L
+        val results = ArrayList<HarmonicState>(students.size)
 
-        return students.map { student ->
+        // BOLT: Use manual index-based loop to eliminate iterator allocations.
+        for (i in students.indices) {
+            val student = students[i]
             val studentLogs = eventsByStudent[student.id.toLong()] ?: emptyList()
 
-            // Filter logs within the sliding window
-            val recentLogs = studentLogs.filter { currentTime - it.timestamp < windowMillis }
+            // BOLT: Optimized count loop with early break.
+            // Behavior logs are typically sorted DESC by timestamp in the database layer.
+            var recentCount = 0
+            for (j in studentLogs.indices) {
+                val log = studentLogs[j]
+                if (currentTime - log.timestamp < windowMillis) {
+                    recentCount++
+                } else {
+                    // Logs are sorted DESC, so once we hit a log outside the window,
+                    // all subsequent logs are also outside the window.
+                    break
+                }
+            }
 
             // Frequency is calculated as logs-per-minute (LPM).
             // A higher LPM indicates a more "active" student in the current window.
-            val frequency = (recentLogs.size.toFloat() / (windowMillis / 60_000f)).coerceIn(0.1f, 10f)
+            val frequency = (recentCount.toFloat() / (windowMillis / 60_000f)).coerceIn(0.1f, 10f)
 
             // Amplitude represents the "loudness" of the student's rhythm.
             // Calibrated such that 5 logs in 10 minutes (0.5 LPM) results in 1.0 amplitude.
-            val amplitude = (recentLogs.size.toFloat() / 5f).coerceIn(0f, 1.5f)
+            val amplitude = (recentCount.toFloat() / 5f).coerceIn(0f, 1.5f)
 
-            // Phase = (currentTime * frequency) normalized to 0..1.
-            // By basing phase on absolute system time and student frequency, we ensure that
-            // students with the SAME frequency will always pulse in sync, creating visible
-            // interference patterns in the shader.
-            val phase = ((currentTime % 60_000L).toFloat() / 60_000f * frequency) % 1.0f
-
-            HarmonicState(
-                studentId = student.id.toLong(),
-                phase = phase,
-                frequency = frequency,
-                amplitude = amplitude
+            results.add(
+                HarmonicState(
+                    studentId = student.id.toLong(),
+                    frequency = frequency,
+                    amplitude = amplitude
+                )
             )
         }
+
+        return results
     }
 
     /**
