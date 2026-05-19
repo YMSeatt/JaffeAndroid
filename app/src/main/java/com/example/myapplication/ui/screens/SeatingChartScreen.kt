@@ -2015,10 +2015,21 @@ fun SeatingChartScreen(
                                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SNAPSHOT_MODE_ENABLED) {
                                     isSnapshotTriggered = true
                                     coroutineScope.launch {
+                                        // SHIELD: Clean up previous artifact before creating a new one
+                                        lastSharedArtifactUri?.let { oldUri ->
+                                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                                        }
+
                                         val bgColor = try { android.graphics.Color.parseColor(canvasBackgroundColor) } catch (e: Exception) { android.graphics.Color.BLACK }
                                         val uri = GhostSnapshotEngine.captureFullCanvas(context, students, furniture, bgColor)
                                         if (uri != null) {
-                                            Toast.makeText(context, "Ghost Snapshot Saved to Gallery! 👻", Toast.LENGTH_SHORT).show()
+                                            lastSharedArtifactUri = uri
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "image/png"
+                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Ghost Snapshot"))
                                         } else {
                                             Toast.makeText(context, "Snapshot Failed", Toast.LENGTH_SHORT).show()
                                         }

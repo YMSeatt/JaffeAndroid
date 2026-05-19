@@ -1,18 +1,17 @@
 package com.example.myapplication.labs.ghost.snapshot
 
-import android.content.ContentValues
 import android.content.Context
 import android.graphics.*
 import android.net.Uri
-import android.os.Build
-import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
+import androidx.core.content.FileProvider
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.FurnitureUiItem
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.OutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.util.Locale
 
 /**
  * GhostSnapshotEngine: A high-fidelity spatial archival engine.
@@ -29,19 +28,28 @@ import java.io.OutputStream
  * - Uses [Dispatchers.IO] for heavy Bitmap rendering and disk I/O.
  * - Implements manual rendering using [android.graphics.Canvas] to bypass
  *   the overhead of the Compose UI tree for a 16-megapixel image.
+ *
+ * ### Shield (Security Hardening):
+ * 1. **PII Masking**: Student names are automatically masked (e.g., "J. DOE") during
+ *    the rendering process to prevent data leakage in shared images.
+ * 2. **Secure Storage**: Snapshots are stored in the app's internal shared cache
+ *    directory instead of the public Gallery.
+ * 3. **Controlled Access**: Uses [FileProvider] to grant temporary access to the
+ *    snapshot URI for sharing, ensuring no other apps can access the PII without
+ *    explicit user intent.
  */
 object GhostSnapshotEngine {
     private const val TAG = "GhostSnapshotEngine"
     private const val CANVAS_SIZE = 4000f
 
     /**
-     * Renders the seating chart and saves it to the device's gallery.
+     * Renders the seating chart and saves it to the app's internal secure cache.
      *
-     * @param context Android context for MediaStore access.
+     * @param context Android context for file operations and FileProvider access.
      * @param students List of students to render.
      * @param furniture List of furniture to render.
      * @param backgroundColor Background color of the canvas.
-     * @return The Uri of the saved image, or null if failed.
+     * @return The secure content Uri of the saved image, or null if failed.
      */
     suspend fun captureFullCanvas(
         context: Context,
@@ -121,17 +129,17 @@ object GhostSnapshotEngine {
                 }
                 canvas.drawText(student.initials.value, x + w / 2, y + h / 2 + (initialsPaint.textSize / 3), initialsPaint)
 
-                // Full Name
+                // Full Name (HARDEN: Masked PII)
                 val namePaint = Paint().apply {
                     color = Color.WHITE
                     textSize = 24f
                     textAlign = Paint.Align.CENTER
                 }
-                canvas.drawText(student.fullName.value, x + w / 2, y + h + 30, namePaint)
+                canvas.drawText(maskName(student.fullName.value), x + w / 2, y + h + 30, namePaint)
             }
 
-            // 5. Save to MediaStore
-            val savedUri = saveBitmapToGallery(context, bitmap)
+            // 5. Save to Internal Cache
+            val savedUri = saveBitmapToCache(context, bitmap)
             bitmap.recycle()
             savedUri
         } catch (e: Exception) {
@@ -140,37 +148,38 @@ object GhostSnapshotEngine {
         }
     }
 
-    private fun saveBitmapToGallery(context: Context, bitmap: Bitmap): Uri? {
+    /**
+     * Masks a student's name to prevent PII leakage in shared snapshots.
+     * Example: "John Doe" -> "J. DOE"
+     */
+    private fun maskName(name: String): String {
+        val parts = name.trim().split(Regex("\\s+"))
+        return if (parts.size >= 2) {
+            "${parts.first().take(1).uppercase(Locale.US)}. ${parts.last().uppercase(Locale.US)}"
+        } else {
+            name.uppercase(Locale.US)
+        }
+    }
+
+    private fun saveBitmapToCache(context: Context, bitmap: Bitmap): Uri? {
         val filename = "GhostSnapshot_${System.currentTimeMillis()}.png"
-        val contentValues = ContentValues().apply {
-            put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
-            put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/GhostSnapshots")
-                put(MediaStore.MediaColumns.IS_PENDING, 1)
+        val sharedDir = File(context.cacheDir, "shared")
+        if (!sharedDir.exists()) sharedDir.mkdirs()
+
+        val file = File(sharedDir, filename)
+
+        try {
+            FileOutputStream(file).use { outputStream ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
             }
+            return FileProvider.getUriForFile(
+                context,
+                "com.example.myapplication.fileprovider",
+                file
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save snapshot to cache", e)
+            return null
         }
-
-        val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-
-        uri?.let {
-            var outputStream: OutputStream? = null
-            try {
-                outputStream = resolver.openOutputStream(it)
-                if (outputStream != null) {
-                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
-                }
-            } finally {
-                outputStream?.close()
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                contentValues.clear()
-                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
-                resolver.update(it, contentValues, null, null)
-            }
-        }
-        return uri
     }
 }
