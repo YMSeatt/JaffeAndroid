@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.labs.ghost.util.GhostHapticManager
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import com.example.myapplication.labs.ghost.GhostConfig
 import kotlin.math.*
 
 /**
@@ -55,24 +56,27 @@ fun GhostHubLayer(
     val hapticManager = remember { GhostHapticManager(context) }
 
     val actions = remember {
-        listOf(
-            GhostAction("HUD", Icons.Default.AutoFixHigh, "Tactical HUD"),
-            GhostAction("VISION", Icons.Default.PhotoCamera, "Ghost Vision"),
-            GhostAction("PHANTASM", Icons.Default.BlurOn, "Neural Presence"),
-            GhostAction("SPECTRA", Icons.Default.Palette, "Data Refraction"),
-            GhostAction("AURORA", Icons.Default.Waves, "Climate Visualization"),
-            GhostAction("FUTURE", Icons.Default.Update, "Neural Future"),
-            GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"),
-            GhostAction("SYNC", Icons.Default.Link, "Neural Sync"),
-            GhostAction("COMET", Icons.Default.AutoFixHigh, "Ghost Comet"),
-            GhostAction("HALO", Icons.Default.BrightnessHigh, "Neural Halo"),
-            GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"),
-            GhostAction("PIP", Icons.Default.PictureInPicture, "Neural PiP"),
-            GhostAction("FLARE", Icons.Default.Flare, "Ghost Flare"),
-            GhostAction("SNAPSHOT", Icons.Default.PhotoCamera, "Ghost Snapshot"),
-            GhostAction("SHELL", Icons.Default.GridView, "Neural Shell"),
-            GhostAction("DECK", Icons.Default.Style, "Neural Deck")
-        )
+        buildList {
+            add(GhostAction("HUD", Icons.Default.AutoFixHigh, "Tactical HUD"))
+            add(GhostAction("VISION", Icons.Default.PhotoCamera, "Ghost Vision"))
+            add(GhostAction("PHANTASM", Icons.Default.BlurOn, "Neural Presence"))
+            add(GhostAction("SPECTRA", Icons.Default.Palette, "Data Refraction"))
+            add(GhostAction("AURORA", Icons.Default.Waves, "Climate Visualization"))
+            add(GhostAction("FUTURE", Icons.Default.Update, "Neural Future"))
+            add(GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"))
+            add(GhostAction("SYNC", Icons.Default.Link, "Neural Sync"))
+            add(GhostAction("COMET", Icons.Default.AutoFixHigh, "Ghost Comet"))
+            add(GhostAction("HALO", Icons.Default.BrightnessHigh, "Neural Halo"))
+            add(GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"))
+            add(GhostAction("PIP", Icons.Default.PictureInPicture, "Neural PiP"))
+            add(GhostAction("FLARE", Icons.Default.Flare, "Ghost Flare"))
+            add(GhostAction("SNAPSHOT", Icons.Default.PhotoCamera, "Ghost Snapshot"))
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.STREAM_MODE_ENABLED) {
+                add(GhostAction("STREAM", Icons.Default.ListAlt, "Neural Stream"))
+            }
+            add(GhostAction("SHELL", Icons.Default.GridView, "Neural Shell"))
+            add(GhostAction("DECK", Icons.Default.Style, "Neural Deck"))
+        }
     }
 
     var selectedAngle by remember { mutableFloatStateOf(0f) }

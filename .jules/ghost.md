@@ -287,4 +287,22 @@ In 2027, "One Size Fits All" is a relic of the past. **Ghost Preferences** demon
 - **Isolated R&D:** By keeping experimental preferences in a separate DataStore (`ghost_settings`), we maintain a clean boundary between production logic and high-velocity R&D experiments.
 
 ---
+
+## 📻 Experiment: Ghost Stream (Neural Activity Ticker)
+**Date:** 2028-07-12
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, classroom data is a continuous, high-velocity stream. "Ghost Stream" provides teachers with a "Neural Ticker"—a real-time activity feed that keeps them connected to every behavior log, quiz score, and homework status update without manual navigation.
+
+### 🛠️ The Tech
+- **Event Synthesis Engine**: Implemented `GhostStreamEngine` to perform a single-pass O(N) synthesis of the latest logs from disparate DAOs into a unified reactive stream.
+- **Glassmorphic UI**: Created a high-fidelity Compose overlay utilizing `GhostGlassmorphicSurface` and `AnimatedVisibility` for a non-intrusive "HUD-like" experience.
+- **AGSL Data Flow**: Integrated `GhostStreamShader` to provide a scrolling "Matrix-inspired" background that reflects the velocity of incoming data.
+
+### 🔦 The Discovery
+- **Cognitive Continuity**: We discovered that having a persistent, low-friction ticker reduces the mental overhead of "remembering" what was just logged, especially during fast-paced classroom sessions.
+- **Visual Weighting**: Using distinct colors for behavior types (Cyan for Positive, Magenta for Negative) in the ticker allowed for "peripheral pattern recognition" of the classroom mood.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*
