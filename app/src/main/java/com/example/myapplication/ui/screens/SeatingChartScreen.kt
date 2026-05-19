@@ -181,6 +181,8 @@ import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
 import com.example.myapplication.labs.ghost.flare.GhostFlareLayer
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
+import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
+import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -355,6 +357,7 @@ fun SeatingChartScreen(
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var isSnapshotTriggered by remember { mutableStateOf(false) }
+    var isStreamActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
@@ -532,7 +535,7 @@ fun SeatingChartScreen(
 
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
-                                   isCortexActive || isHudActive || isArchitectActive || isShellActive ||
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive || isStreamActive ||
                                    isGhostListening || showGhostInsightDialog || showGhostSynapseDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
@@ -1030,6 +1033,14 @@ fun SeatingChartScreen(
             GhostSnapshotLayer(
                 trigger = isSnapshotTriggered,
                 onAnimationComplete = { isSnapshotTriggered = false }
+            )
+            val streamEntries = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                GhostStreamEngine.synthesizeStream(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+            }
+            GhostStreamLayer(
+                entries = streamEntries,
+                isActive = isStreamActive,
+                modifier = Modifier.align(Alignment.CenterEnd)
             )
             GhostGlitchLayer(
                 intensity = glitchIntensity,
@@ -2011,6 +2022,7 @@ fun SeatingChartScreen(
                                 val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
                                 context.startActivity(intent)
                             }
+                            "STREAM" -> isStreamActive = !isStreamActive
                             "SNAPSHOT" -> {
                                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SNAPSHOT_MODE_ENABLED) {
                                     isSnapshotTriggered = true

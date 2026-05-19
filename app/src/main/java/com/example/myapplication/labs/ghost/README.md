@@ -391,6 +391,12 @@ Native Android Home Screen shortcuts.
 - **Neural Seeds**: Allows teachers to "seed" specific students to the home screen for instant access to their dossiers.
 - **PII Masking**: Labels are hardened (e.g., "J. DOE") to prevent data leakage on the OS level.
 
+### 69. Ghost Stream (stream/GhostStreamLayer.kt, GhostStreamEngine.kt, GhostStreamShader.kt)
+A real-time neural activity ticker for classroom events.
+- **Event Synthesis**: Aggregates behavior, quiz, and homework logs into a unified data stream using O(N) single-pass analysis.
+- **Glassmorphic Ticker**: Renders a translucent, scrolling overlay with high-fidelity typography and entry/exit animations.
+- **Data Flow Shader**: Uses an AGSL background shader to visualize the "velocity" of classroom data.
+
 ## 💡 Tribal Knowledge & Implementation Secrets
 
 ### 1. Spatial Coordinate Mapping

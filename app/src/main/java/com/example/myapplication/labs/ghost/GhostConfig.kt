@@ -210,4 +210,7 @@ object GhostConfig {
 
     /** Enables "Ghost Snapshot" high-fidelity full-canvas archival. */
     const val SNAPSHOT_MODE_ENABLED = true
+
+    /** Enables "Ghost Stream" neural activity ticker. */
+    const val STREAM_MODE_ENABLED = true
 }

@@ -1,10 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Comet - High-momentum student activity visualization with trailing AGSL effects.
-- [ ] Idea: Ghost Flare: High-intensity behavioral milestone visualization
+- [ ] Idea: Ghost Stream - Neural activity ticker for real-time classroom events.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-07-12: Ghost Stream - Neural activity ticker in `/labs/ghost/stream/`
 - [DONE] 2028-07-08: Ghost Snapshot - High-fidelity full-canvas archival in `/labs/ghost/snapshot/`
 - [DONE] 2028-07-05: Ghost Flare - High-intensity behavioral milestone visualization in `/labs/ghost/flare/`
 - [DONE] 2028-07-02: Ghost Halo - Neural halo visualization for peak performers in `/labs/ghost/`
