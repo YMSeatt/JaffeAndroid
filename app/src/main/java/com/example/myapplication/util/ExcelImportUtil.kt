@@ -132,21 +132,22 @@ object ExcelImportUtil {
                     try {
                         val row = rows.next()
 
-                        fun getVal(key: String): String? {
-                            return colIndices[key]?.let { idx ->
-                                row.getCell(idx)?.let { formatter.formatCellValue(it).trim() }
-                            }
-                        }
+                        // BOLT: Inline value extraction to avoid repeated function object allocations in the loop.
+                        val firstNameRaw = colIndices["first_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val lastNameRaw = colIndices["last_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val nicknameRaw = colIndices["nickname"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val genderStrRaw = colIndices["gender"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val groupNameRaw = colIndices["group_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
 
-                        var firstName = getVal("first_name") ?: ""
-                        var lastName = getVal("last_name") ?: ""
-                        val nickname = getVal("nickname") ?: ""
-                        val genderStr = getVal("gender") ?: "Boy"
-                        val groupName = getVal("group_name")
+                        var firstName = firstNameRaw ?: ""
+                        var lastName = lastNameRaw ?: ""
+                        val nickname = nicknameRaw ?: ""
+                        val genderStr = genderStrRaw ?: "Boy"
+                        val groupName = groupNameRaw
 
                         // Combined Name Parsing (Ported from Python)
                         if (firstName.isBlank() || lastName.isBlank()) {
-                            val fullNameStr = getVal("full_name")
+                            val fullNameStr = colIndices["full_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
                             if (!fullNameStr.isNullOrBlank()) {
                                 when {
                                     fullNameStr.contains(",") -> {
