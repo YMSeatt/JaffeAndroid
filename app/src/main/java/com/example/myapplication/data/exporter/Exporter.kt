@@ -344,6 +344,11 @@ class Exporter(
         val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
         val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
 
+        // BOLT: Pre-calculate status names set to avoid O(N) lookups in the homework log loop.
+        val statusNamesSet = HashSet<String>(customHomeworkStatuses.size).apply {
+            customHomeworkStatuses.forEach { add(it.name) }
+        }
+
         // BOLT: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
         val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
 
@@ -466,7 +471,7 @@ class Exporter(
                     if (marksData != null && marksData.isNotEmpty()) {
                         var totalPoints = 0.0
                         var effort = ""
-                        
+
                         // Populate values for all known headers (Custom Types, Statuses, and Dynamic Keys)
                         // We iterate the map entries to find matching headers
                         marksData.forEach { (key, value) ->
@@ -479,15 +484,15 @@ class Exporter(
                                 }
                                 val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
                                 if (doubleValue != null) {
-                                    // Heuristic: only add to total points if it's likely a score? 
+                                    // Heuristic: only add to total points if it's likely a score?
                                     // Or maybe we should only count known "Types"?
                                     // For now, let's include it if it's numeric and NOT in Statuses
-                                    if (customHomeworkStatuses.none { it.name == key }) {
+                                    if (key !in statusNamesSet) {
                                          totalPoints += doubleValue
                                     }
                                 }
-                                if (key.lowercase(Locale.getDefault()).contains("effort") || 
-                                    customHomeworkStatuses.any { it.name == key && it.name.lowercase().contains("effort") }) {
+                                // BOLT: Simplified effort detection logic to avoid redundant O(N) status scans.
+                                if (key.contains("effort", ignoreCase = true)) {
                                     effort = stringValue
                                 }
                             }

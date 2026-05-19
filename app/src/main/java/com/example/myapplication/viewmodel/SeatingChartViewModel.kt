@@ -1501,52 +1501,41 @@ class SeatingChartViewModel @Inject constructor(
                     val existingItem = studentUiItemCache[student.id.toInt()]
                     if (existingItem != null) {
                         // BOLT: Skip Stage 3 Sync if Stage 2 was a cache hit and volatile fields haven't changed.
-                        // This eliminates ~30 property checks and several list/string allocations per student.
-                        val volatileChanged = existingItem.xPosition.value != studentForUi.xPosition ||
-                                existingItem.yPosition.value != studentForUi.yPosition ||
-                                existingItem.irisParams.value !== irisParams ||
-                                existingItem.osmoticNode.value !== osmoticNode ||
-                                existingItem.altitude.value != derivedData.altitude ||
-                                existingItem.behaviorEntropy.value != derivedData.behaviorEntropy ||
-                                existingItem.tectonicStress.value != derivedData.tectonicStress ||
-                                existingItem.quasarEnergy.value != derivedData.quasarEnergy ||
-                                existingItem.quasarPolarity.value != derivedData.quasarPolarity ||
-                                existingItem.ionCharge.value != derivedData.ionCharge ||
-                                existingItem.ionDensity.value != derivedData.ionDensity ||
-                                existingItem.magneticStrength.value != derivedData.magneticStrength ||
-                                existingItem.magneticRadius.value != derivedData.magneticRadius ||
-                                existingItem.isPinned.value != studentForUi.isPinned
+                        // This eliminates ~15 property checks and several list/string allocations per student.
+                        val needsSync = !isCacheHit ||
+                                existingItem.xPosition.value != studentForUi.xPosition ||
+                                existingItem.yPosition.value != studentForUi.yPosition
 
-                        if (!isCacheHit || volatileChanged) {
+                        if (needsSync) {
                             studentForUi.updateStudentUiItem(
                                 item = existingItem,
-                            recentBehaviorDescription = behaviorDescription,
-                            recentHomeworkDescription = homeworkDescription,
-                            recentQuizDescription = quizDescription,
-                            sessionLogText = sessionLogs,
-                            groupColor = groupColorMap[student.groupId],
-                            backgroundColors = styles.backgroundColors,
-                            outlineColors = styles.outlineColors,
-                            textColor = styles.textColor,
-                            fontColor = styles.fontColor,
-                            defaultWidth = defaultStyle.width,
-                            defaultHeight = defaultStyle.height,
-                            defaultOutlineThickness = defaultStyle.outlineThickness,
-                            defaultCornerRadius = defaultStyle.cornerRadius,
-                            defaultPadding = defaultStyle.padding,
-                            defaultFontFamily = defaultStyle.fontFamily,
-                            defaultFontSize = defaultStyle.fontSize,
-                            irisParams = irisParams,
-                            osmoticNode = osmoticNode,
-                            altitude = derivedData.altitude,
-                            behaviorEntropy = derivedData.behaviorEntropy,
-                            tectonicStress = derivedData.tectonicStress,
-                            quasarEnergy = derivedData.quasarEnergy,
-                            quasarPolarity = derivedData.quasarPolarity,
-                            ionCharge = derivedData.ionCharge,
-                            ionDensity = derivedData.ionDensity,
-                            magneticStrength = derivedData.magneticStrength,
-                            magneticRadius = derivedData.magneticRadius
+                                recentBehaviorDescription = behaviorDescription,
+                                recentHomeworkDescription = homeworkDescription,
+                                recentQuizDescription = quizDescription,
+                                sessionLogText = sessionLogs,
+                                groupColor = groupColorMap[student.groupId],
+                                backgroundColors = styles.backgroundColors,
+                                outlineColors = styles.outlineColors,
+                                textColor = styles.textColor,
+                                fontColor = styles.fontColor,
+                                defaultWidth = defaultStyle.width,
+                                defaultHeight = defaultStyle.height,
+                                defaultOutlineThickness = defaultStyle.outlineThickness,
+                                defaultCornerRadius = defaultStyle.cornerRadius,
+                                defaultPadding = defaultStyle.padding,
+                                defaultFontFamily = defaultStyle.fontFamily,
+                                defaultFontSize = defaultStyle.fontSize,
+                                irisParams = irisParams,
+                                osmoticNode = osmoticNode,
+                                altitude = derivedData.altitude,
+                                behaviorEntropy = derivedData.behaviorEntropy,
+                                tectonicStress = derivedData.tectonicStress,
+                                quasarEnergy = derivedData.quasarEnergy,
+                                quasarPolarity = derivedData.quasarPolarity,
+                                ionCharge = derivedData.ionCharge,
+                                ionDensity = derivedData.ionDensity,
+                                magneticStrength = derivedData.magneticStrength,
+                                magneticRadius = derivedData.magneticRadius
                             )
                         }
                         studentsWithBehavior.add(existingItem)
@@ -2950,6 +2939,7 @@ class SeatingChartViewModel @Inject constructor(
         result = 31 * result + (student.customFontColor?.hashCode() ?: 0)
         result = 31 * result + (student.temporaryTask?.hashCode() ?: 0)
         result = 31 * result + student.showLogs.hashCode()
+        result = 31 * result + student.isPinned.hashCode()
         return result
     }
 }
