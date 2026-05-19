@@ -38,7 +38,9 @@ class StudentRepository(
 
     /**
      * Retrieves all homework logs for a specific student as a reactive [LiveData] stream.
+     *
      * @param studentId The unique ID of the student.
+     * @return A LiveData list of [HomeworkLog] entities, ordered by time.
      */
     fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>> {
         return homeworkLogDao.getHomeworkLogsForStudent(studentId)
@@ -46,6 +48,8 @@ class StudentRepository(
 
     /**
      * Persists a new homework log entry.
+     *
+     * @param homeworkLog The log to insert.
      * @return The row ID of the newly inserted log.
      */
     suspend fun insertHomeworkLog(homeworkLog: HomeworkLog): Long {
@@ -54,13 +58,15 @@ class StudentRepository(
 
     /**
      * Removes a homework log entry by its primary key.
+     *
+     * @param logId The ID of the log to delete.
      */
     suspend fun deleteHomeworkLogById(logId: Long) {
         homeworkLogDao.deleteHomeworkLog(logId)
     }
 
     /**
-     * Returns a reactive stream of all furniture items on the seating chart.
+     * Returns a reactive stream of all furniture items currently on the seating chart.
      */
     fun getAllFurniture(): Flow<List<Furniture>> {
         return furnitureDao.getAllFurniture()
@@ -68,6 +74,8 @@ class StudentRepository(
 
     /**
      * Returns a reactive stream of all saved layout templates.
+     *
+     * Templates allow users to store and restore student and furniture positions.
      */
     fun getAllLayoutTemplates(): Flow<List<LayoutTemplate>> {
         return layoutTemplateDao.getAllLayoutTemplates().asFlow()
@@ -75,6 +83,8 @@ class StudentRepository(
 
     /**
      * Returns a reactive stream of all available quiz mark types.
+     *
+     * Mark types define how quiz scores are calculated (e.g., "Correct", "Extra Credit").
      */
     fun getAllQuizMarkTypes(): Flow<List<QuizMarkType>> {
         return quizMarkTypeDao.getAllQuizMarkTypes()
@@ -82,6 +92,9 @@ class StudentRepository(
 
     /**
      * Inserts a single [Student] record into the database.
+     *
+     * @param student The student to persist.
+     * @return The row ID of the new student.
      */
     suspend fun insertStudent(student: Student): Long {
         return studentDao.insert(student)
@@ -89,6 +102,8 @@ class StudentRepository(
 
     /**
      * Bulk inserts multiple [Student] records.
+     *
+     * @param students The list of students to insert.
      * @return A list of the new row IDs.
      */
     suspend fun insertStudents(students: List<Student>): List<Long> {
@@ -96,14 +111,18 @@ class StudentRepository(
     }
 
     /**
-     * Updates an existing student's data.
+     * Updates an existing student's attributes.
+     *
+     * @param student The student entity with updated fields.
      */
     suspend fun updateStudent(student: Student) {
         studentDao.updateStudent(student)
     }
 
     /**
-     * Removes a student from the database.
+     * Removes a student and all their associated history from the database.
+     *
+     * @param student The student to delete.
      */
     suspend fun deleteStudent(student: Student) {
         studentDao.deleteStudent(student)
@@ -111,6 +130,8 @@ class StudentRepository(
 
     /**
      * Bulk deletes multiple student records.
+     *
+     * @param students The list of students to delete.
      */
     suspend fun deleteStudents(students: List<Student>) {
         studentDao.deleteAll(students)
@@ -118,6 +139,8 @@ class StudentRepository(
 
     /**
      * Fetches a single student entity by their unique ID.
+     *
+     * @param studentId The primary key ID of the student.
      * @return The student object, or null if not found.
      */
     suspend fun getStudentById(studentId: Long): Student? {
@@ -126,6 +149,10 @@ class StudentRepository(
 
     /**
      * Checks if a student with the given names already exists (case-insensitive).
+     *
+     * @param firstName The student's first name.
+     * @param lastName The student's last name.
+     * @return True if a match is found, false otherwise.
      */
     suspend fun studentExists(firstName: String, lastName: String): Boolean {
         return studentDao.studentExists(firstName, lastName)
@@ -133,20 +160,28 @@ class StudentRepository(
 
     /**
      * Persists a new furniture item.
+     *
+     * @param furniture The furniture entity to insert.
+     * @return The row ID of the new item.
      */
     suspend fun insertFurniture(furniture: Furniture): Long {
         return furnitureDao.insert(furniture)
     }
 
     /**
-     * Updates existing furniture attributes.
+     * Updates existing furniture attributes (e.g., position, name).
+     *
+     * @param furniture The updated furniture entity.
      */
     suspend fun updateFurniture(furniture: Furniture) {
         furnitureDao.update(furniture)
     }
 
     /**
-     * Fetches a furniture item by its ID.
+     * Fetches a furniture item by its primary key ID.
+     *
+     * @param furnitureId The ID of the item.
+     * @return The furniture object, or null if not found.
      */
     suspend fun getFurnitureById(furnitureId: Long): Furniture? {
         return furnitureDao.getFurnitureById(furnitureId)
@@ -154,13 +189,17 @@ class StudentRepository(
 
     /**
      * Removes a furniture item from the seating chart.
+     *
+     * @param furniture The item to delete.
      */
     suspend fun deleteFurniture(furniture: Furniture) {
         furnitureDao.delete(furniture)
     }
 
     /**
-     * Saves a snapshot of the current seating chart as a template.
+     * Saves a snapshot of the current seating chart as a named template.
+     *
+     * @param layout The template to save.
      */
     suspend fun insertLayoutTemplate(layout: LayoutTemplate) {
         layoutTemplateDao.insertLayoutTemplate(layout)
@@ -168,13 +207,18 @@ class StudentRepository(
 
     /**
      * Deletes a saved layout template.
+     *
+     * @param layout The template to remove.
      */
     suspend fun deleteLayoutTemplate(layout: LayoutTemplate) {
         layoutTemplateDao.deleteLayoutTemplate(layout)
     }
 
     /**
-     * Persists a behavioral event (Positive/Negative/Neutral).
+     * Persists a behavioral event (Positive, Negative, or Neutral).
+     *
+     * @param event The event to log.
+     * @return The row ID of the new log.
      */
     suspend fun insertBehaviorEvent(event: BehaviorEvent): Long {
         return behaviorEventDao.insert(event)
@@ -248,6 +292,9 @@ class StudentRepository(
 
     /**
      * Persists a quiz result.
+     *
+     * @param log The quiz log to insert.
+     * @return The row ID of the new log entry.
      */
     suspend fun insertQuizLog(log: QuizLog): Long {
         return quizLogDao.insert(log)
@@ -255,6 +302,8 @@ class StudentRepository(
 
     /**
      * Deletes a quiz result entry.
+     *
+     * @param log The log entry to remove.
      */
     suspend fun deleteQuizLog(log: QuizLog) {
         quizLogDao.deleteQuizLog(log)
@@ -262,6 +311,9 @@ class StudentRepository(
 
     /**
      * Fetches students for a given set of IDs.
+     *
+     * @param studentIds The list of IDs to retrieve.
+     * @return A list of matching student entities.
      */
     suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student> {
         return studentDao.getStudentsByIdsList(studentIds)
@@ -269,6 +321,8 @@ class StudentRepository(
 
     /**
      * Fetches all students as a simple list for background processing.
+     *
+     * Use this when reactive [LiveData] or [Flow] streams are not required.
      */
     suspend fun getAllStudentsNonLiveData(): List<Student> {
         return studentDao.getAllStudentsNonLiveData()
@@ -276,7 +330,9 @@ class StudentRepository(
 
     /**
      * BOLT: Identifies the most recently active student across the entire classroom.
-     * Used by the [GhostQuickLogTileService] for rapid feedback.
+     *
+     * This is used by the Ghost Quick Settings tiles to provide rapid access to the
+     * last student the teacher interacted with.
      *
      * @return The ID of the last active student, or null if no logs exist.
      */
@@ -285,14 +341,14 @@ class StudentRepository(
     }
 
     /**
-     * BOLT: Reactive stream of the most recently active student ID.
+     * BOLT: Returns a reactive stream of the most recently active student ID.
      */
     fun getLastActiveStudentIdFlow(): Flow<Long?> {
         return behaviorEventDao.getLastBehaviorEventFlow().map { it?.studentId }
     }
 
     /**
-     * BOLT: Reactive stream of a student by ID.
+     * BOLT: Returns a reactive stream of a single student by their ID.
      */
     fun getStudentByIdFlow(studentId: Long): Flow<Student?> {
         return studentDao.getStudentByIdFlow(studentId)
