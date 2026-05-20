@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost.vortex
 
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.labs.ghost.util.GhostActivityMetrics
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.sqrt
 
@@ -53,63 +54,47 @@ object GhostVortexEngine {
     )
 
     /**
-     * Identifies behavioral vortices based on student proximity and log density.
+     * Identifies behavioral vortices based on student proximity and pre-calculated activity metrics.
      *
      * ### Algorithm Steps:
-     * 1. **Activity Filtering**: Scans all students and filters those with behavior logs
-     *    within the [windowMillis] (default: 10 minutes).
-     * 2. **Energy Calculation**: Computes 'Intensity' based on log frequency (capped at 5 logs)
-     *    and 'Polarity' based on the ratio of positive vs negative logs.
+     * 1. **Activity Filtering**: Scans pre-calculated [activityMetrics] and identifies students
+     *    with recent activity.
+     * 2. **Energy Calculation**: Reuses 'Intensity' and 'Polarity' from the centralized analysis.
      * 3. **Spatial Clustering**: Groups high-intensity students (intensity > 0.4) that are
      *    within the **800-logical-unit** cluster threshold.
      * 4. **Momentum Synthesis**: Calculates the average momentum and polarity of each cluster,
      *    identifying the "Vortex" center.
      *
+     * BOLT: Optimized to accept pre-calculated [activityMetrics], removing O(S*L) temporal scans.
+     *
      * @param students List of raw student entities.
-     * @param behaviorLogsByStudent Pre-grouped behavior logs for O(1) student lookup.
-     * @param windowMillis The temporal window for defining "recent" activity (default 10m).
+     * @param activityMetrics Pre-calculated activity metrics for students.
      * @return A list of the top 5 most intense vortices.
      */
     fun identifyVortices(
         students: List<com.example.myapplication.data.Student>,
-        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>,
-        windowMillis: Long = 600_000L
+        activityMetrics: Map<Long, GhostActivityMetrics>
     ): List<VortexPoint> {
         if (students.isEmpty()) return emptyList()
-
-        val currentTime = System.currentTimeMillis()
-        val startTime = currentTime - windowMillis
 
         // BOLT: Collect only active students to transform O(N^2) into O(A^2)
         val activeNodes = mutableListOf<VortexNode>()
 
         for (student in students) {
-            val logs = behaviorLogsByStudent[student.id] ?: continue
-            var posCount = 0
-            var negCount = 0
-            var recentCount = 0
+            val metrics = activityMetrics[student.id] ?: continue
 
-            // BOLT: Manual loop with early break assuming logs are DESC sorted by timestamp
-            for (log in logs) {
-                if (log.timestamp < startTime) break
-                recentCount++
-                if (log.type.contains("Negative", ignoreCase = true)) {
-                    negCount++
-                } else {
-                    posCount++
-                }
+            val name = if (student.firstName.isNotBlank() || student.lastName.isNotBlank()) {
+                "${student.firstName} ${student.lastName}".trim()
+            } else {
+                "Student ${student.id}"
             }
-
-            if (recentCount > 0) {
-                val netPolarity = if (negCount > posCount) -1.0f else 1.0f
-                val intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f)
-                val name = if (student.firstName.isNotBlank() || student.lastName.isNotBlank()) {
-                    "${student.firstName} ${student.lastName}".trim()
-                } else {
-                    "Student ${student.id}"
-                }
-                activeNodes.add(VortexNode(student.xPosition, student.yPosition, intensity, netPolarity, name))
-            }
+            activeNodes.add(VortexNode(
+                student.xPosition,
+                student.yPosition,
+                metrics.intensity,
+                metrics.polarity,
+                name
+            ))
         }
 
         if (activeNodes.isEmpty()) return emptyList()
@@ -176,6 +161,42 @@ object GhostVortexEngine {
         }
 
         return vortices.sortedByDescending { it.momentum }.take(5)
+    }
+
+    /**
+     * Legacy structure for compatibility. Prefer the activityMetrics overload.
+     */
+    fun identifyVortices(
+        students: List<com.example.myapplication.data.Student>,
+        behaviorLogsByStudent: Map<Long, List<BehaviorEvent>>,
+        windowMillis: Long = 600_000L
+    ): List<VortexPoint> {
+        val currentTime = System.currentTimeMillis()
+        val startTime = currentTime - windowMillis
+        val activityMap = mutableMapOf<Long, GhostActivityMetrics>()
+
+        for (student in students) {
+            val logs = behaviorLogsByStudent[student.id] ?: continue
+            var posCount = 0
+            var negCount = 0
+            var recentCount = 0
+            for (log in logs) {
+                if (log.timestamp < startTime) break
+                recentCount++
+                if (log.type.contains("Negative", ignoreCase = true)) negCount++ else posCount++
+            }
+            if (recentCount > 0) {
+                activityMap[student.id] = GhostActivityMetrics(
+                    studentId = student.id,
+                    posCount = posCount,
+                    negCount = negCount,
+                    recentCount = recentCount,
+                    intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f),
+                    polarity = if (negCount > posCount) -1.0f else 1.0f
+                )
+            }
+        }
+        return identifyVortices(students, activityMap)
     }
 
     /**

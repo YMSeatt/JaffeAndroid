@@ -89,6 +89,7 @@ import com.example.myapplication.util.FormattingTimeContext
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
+import com.example.myapplication.labs.ghost.util.GhostActivityMetrics
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
@@ -403,6 +404,11 @@ class SeatingChartViewModel @Inject constructor(
     private var memoizedBehaviorEvents: List<BehaviorEvent>? = null
     /** Caches behavior logs grouped by student ID to avoid O(B) filtering inside student loops. */
     private var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
+
+    /** BOLT: Centralized Recent Activity Analysis (Memoized) */
+    private var memoizedRecentActivityMap: Map<Long, GhostActivityMetrics> = emptyMap()
+    private var lastActivityCalculationTime: Long = 0L
+    private var activityLogRef: List<BehaviorEvent>? = null
 
     /** BOLT: Incremental caches for behavior metrics used by AI engines. */
     private val negativeCountsCache = ConcurrentHashMap<Long, Int>()
@@ -766,6 +772,55 @@ class SeatingChartViewModel @Inject constructor(
                 }
                 val behaviorLogsByStudent = behaviorLogsByStudentCache
 
+                // BOLT: Centralized Recent Activity Analysis (Memoized)
+                // Scans logs once to generate metrics used by multiple Ghost engines.
+                // Invalidated if logs change OR every 1 minute to account for the sliding window.
+                val currentTimeMillis = System.currentTimeMillis()
+                val isLogChanged = behaviorEvents !== activityLogRef
+                val isTimeWindowShifted = currentTimeMillis - lastActivityCalculationTime > 60000L
+
+                if (isLogChanged || isTimeWindowShifted) {
+                    val activityMap = mutableMapOf<Long, GhostActivityMetrics>()
+                    val windowMillis = 600000L // 10 minutes
+                    val startTime = currentTimeMillis - windowMillis
+
+                    for (i in 0 until students.size) {
+                        val student = students[i]
+                        val logs = behaviorLogsByStudent[student.id] ?: continue
+                        var posCount = 0
+                        var negCount = 0
+                        var recentCount = 0
+
+                        for (j in 0 until logs.size) {
+                            val log = logs[j]
+                            if (log.timestamp < startTime) break
+                            recentCount++
+                            if (log.type.contains("Negative", ignoreCase = true)) {
+                                negCount++
+                            } else {
+                                posCount++
+                            }
+                        }
+
+                        if (recentCount > 0) {
+                            val netPolarity = if (negCount > posCount) -1.0f else 1.0f
+                            val intensity = (recentCount.toFloat() / 5.0f).coerceIn(0f, 1.0f)
+                            activityMap[student.id] = GhostActivityMetrics(
+                                studentId = student.id,
+                                posCount = posCount,
+                                negCount = negCount,
+                                recentCount = recentCount,
+                                intensity = intensity,
+                                polarity = netPolarity
+                            )
+                        }
+                    }
+                    memoizedRecentActivityMap = activityMap
+                    lastActivityCalculationTime = currentTimeMillis
+                    activityLogRef = behaviorEvents
+                }
+                val recentActivityMap = memoizedRecentActivityMap
+
                 // BOLT: Memoized AI prophecies to avoid redundant O(N^2) analysis.
                 if (students !== prophecyStudentsRef || behaviorEvents !== prophecyLogsRef) {
                     memoizedProphecies = GhostOracle.consult(
@@ -1055,10 +1110,10 @@ class SeatingChartViewModel @Inject constructor(
                         edges = newEdges
                     )
 
-                    // BOLT: Calculate behavioral vortices in the background pipeline
+                    // BOLT: Calculate behavioral vortices in the background pipeline using centralized metrics
                     _vortices.value = com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.identifyVortices(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        activityMetrics = recentActivityMap
                     )
 
                     // BOLT: Calculate tectonic stress nodes in the background pipeline
@@ -1094,11 +1149,11 @@ class SeatingChartViewModel @Inject constructor(
                     ghostMetricsEntanglementStudentsRef = studentsForEngines
                 }
 
-                // BOLT: Calculate neural sync links in the background pipeline (Memoized)
-                if (behaviorEvents !== ghostMetricsSyncBehaviorLogsRef || studentsForEngines !== ghostMetricsSyncStudentsRef) {
+                // BOLT: Calculate neural sync links in the background pipeline (Memoized) using centralized metrics
+                if (behaviorEvents !== ghostMetricsSyncBehaviorLogsRef || studentsForEngines !== ghostMetricsSyncStudentsRef || isTimeWindowShifted) {
                     _syncLinks.value = com.example.myapplication.labs.ghost.sync.GhostSyncEngine.calculateSyncLinksForStudents(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        activityMetrics = recentActivityMap
                     )
                     ghostMetricsSyncBehaviorLogsRef = behaviorEvents
                     ghostMetricsSyncStudentsRef = studentsForEngines
