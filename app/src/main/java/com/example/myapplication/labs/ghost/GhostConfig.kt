@@ -213,4 +213,7 @@ object GhostConfig {
 
     /** Enables "Ghost Stream" neural activity ticker. */
     const val STREAM_MODE_ENABLED = true
+
+    /** Enables "Ghost Ink" persistent spatial annotations. */
+    const val INK_MODE_ENABLED = true
 }

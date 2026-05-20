@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Stream - Neural activity ticker for real-time classroom events.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-07-15: Ghost Ink - Persistent spatial annotations in `/labs/ghost/ink/`
 - [DONE] 2028-07-12: Ghost Stream - Neural activity ticker in `/labs/ghost/stream/`
 - [DONE] 2028-07-08: Ghost Snapshot - High-fidelity full-canvas archival in `/labs/ghost/snapshot/`
 - [DONE] 2028-07-05: Ghost Flare - High-intensity behavioral milestone visualization in `/labs/ghost/flare/`
