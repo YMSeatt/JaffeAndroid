@@ -183,6 +183,7 @@ import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
+import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -358,6 +359,7 @@ fun SeatingChartScreen(
     var isArchitectActive by remember { mutableStateOf(false) }
     var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isStreamActive by remember { mutableStateOf(false) }
+    var isInkActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
@@ -514,7 +516,7 @@ fun SeatingChartScreen(
     val ghostCometEngine = remember { GhostCometEngine() }
     val ghostFlareEngine = remember { GhostFlareEngine() }
 
-    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, shakeToRecenterEnabled) {
+    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, isInkActive, shakeToRecenterEnabled) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val shakeDetector = if (shakeToRecenterEnabled && sensorManager != null) {
             GhostShakeDetector {
@@ -535,7 +537,7 @@ fun SeatingChartScreen(
 
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
-                                   isCortexActive || isHudActive || isArchitectActive || isShellActive || isStreamActive ||
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive || isStreamActive || isInkActive ||
                                    isGhostListening || showGhostInsightDialog || showGhostSynapseDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
@@ -882,6 +884,8 @@ fun SeatingChartScreen(
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isSupernovaActive = isSupernovaActive,
                 onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
+                isInkActive = isInkActive,
+                onToggleInk = { isInkActive = !isInkActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         // SHIELD: Clean up previous artifact before creating a new one
@@ -1045,6 +1049,12 @@ fun SeatingChartScreen(
             GhostGlitchLayer(
                 intensity = glitchIntensity,
                 isActive = isGlitchActive
+            )
+            GhostInkLayer(
+                engine = seatingChartViewModel.ghostInkEngine,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isInkActive
             )
             Box(
                 modifier = Modifier
@@ -2050,6 +2060,7 @@ fun SeatingChartScreen(
                             }
                             "SHELL" -> isShellActive = !isShellActive
                             "DECK" -> isDeckActive = !isDeckActive
+                            "INK" -> isInkActive = !isInkActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2377,6 +2388,8 @@ fun SeatingChartTopAppBar(
     onToggleVision: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
+    isInkActive: Boolean,
+    onToggleInk: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -3041,6 +3054,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.INK_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isInkActive) "Static Canvas 👻" else "Neural Ink 👻") },
+                            onClick = {
+                                onToggleInk()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {

@@ -76,6 +76,9 @@ fun GhostHubLayer(
             }
             add(GhostAction("SHELL", Icons.Default.GridView, "Neural Shell"))
             add(GhostAction("DECK", Icons.Default.Style, "Neural Deck"))
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.INK_MODE_ENABLED) {
+                add(GhostAction("INK", Icons.Default.Edit, "Neural Ink"))
+            }
         }
     }
 

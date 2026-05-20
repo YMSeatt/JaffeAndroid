@@ -89,6 +89,7 @@ import com.example.myapplication.util.FormattingTimeContext
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
+import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
@@ -277,6 +278,8 @@ class SeatingChartViewModel @Inject constructor(
      * The current pedagogical goal for the Ghost Strategist co-pilot.
      */
     val strategistGoal: StateFlow<GhostStrategistEngine.StrategistGoal> = _strategistGoal.asStateFlow()
+
+    val ghostInkEngine = GhostInkEngine()
 
     private val _chronosHeatmap = MutableStateFlow(FloatArray(100))
     /** BOLT: Global behavioral heatmap pre-calculated in background. */
