@@ -21,6 +21,11 @@ The data model is organized into three primary clusters:
     *   **LayoutTemplate**: Snapshots of student/furniture arrangements.
     *   **QuizTemplate** / **HomeworkTemplate**: Reusable structures for common classroom assignments.
 
+4.  **Customization Models (Teacher-Defined Categories)**:
+    *   **CustomBehavior**: Allows teachers to define classroom-specific behavior categories (e.g., "Helping Others") that appear in the logging UI.
+    *   **CustomHomeworkType**: Used to group and filter assignments into categories like "Reading", "Project", or "Lab".
+    *   **CustomHomeworkStatus**: Defines rich status labels (e.g., "Submitted Late", "Missing", "Redo Required") to provide context beyond binary completion.
+
 ## 🧪 Normalized Assignment Model (Modern) vs. Legacy Log Model
 
 The application is currently transitioning from a flat, log-based history to a normalized, template-based assignment system.
