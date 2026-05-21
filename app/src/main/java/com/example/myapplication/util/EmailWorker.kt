@@ -73,6 +73,7 @@ class EmailWorker(
             val quizMarkTypeDao = db.quizMarkTypeDao()
             val customHomeworkTypeDao = db.customHomeworkTypeDao()
             val customHomeworkStatusDao = db.customHomeworkStatusDao()
+            val homeworkMarkMetadataDao = db.homeworkMarkMetadataDao()
             val pendingEmailDao = db.pendingEmailDao()
 
             val exporter = Exporter(applicationContext)
@@ -141,6 +142,7 @@ class EmailWorker(
                         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
                         val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
                         val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+                        val homeworkMarkMetadata = homeworkMarkMetadataDao.getAllHomeworkMarkMetadataList()
 
                         val uri = FileProvider.getUriForFile(
                             applicationContext,
@@ -159,6 +161,7 @@ class EmailWorker(
                             quizMarkTypes = quizMarkTypes,
                             customHomeworkTypes = customHomeworkTypes,
                             customHomeworkStatuses = customHomeworkStatuses,
+                            homeworkMarkMetadata = homeworkMarkMetadata,
                             encrypt = finalOptions.encrypt
                         )
 
@@ -274,6 +277,7 @@ class EmailWorker(
                             quizMarkTypes = quizMarkTypes,
                             customHomeworkTypes = customHomeworkTypes,
                             customHomeworkStatuses = customHomeworkStatuses,
+                            homeworkMarkMetadata = homeworkMarkMetadata,
                             encrypt = exportOptions.encrypt
                         )
 
