@@ -144,7 +144,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                         Text("Student: ${it.studentName}")
                         Text("Days Present: ${it.daysPresent}")
                         Text("Days Absent: ${it.daysAbsent}")
-                        Text("Attendance: ${"%.1f".format(it.attendancePercentage)}%")
+                        Text("Attendance: ${it.attendancePercentageFormatted}%")
                     }
                 }
             }
@@ -170,7 +170,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text("Student: ${it.studentName}")
                         Text("Quiz: ${it.quizName}")
-                        Text("Average Score: ${"%.2f".format(it.averageScore)}%")
+                        Text("Average Score: ${it.averageScoreFormatted}%")
                         Text("Times Taken: ${it.timesTaken}")
                     }
                 }

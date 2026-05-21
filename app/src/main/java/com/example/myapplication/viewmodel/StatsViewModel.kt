@@ -30,7 +30,13 @@ data class BehaviorSummary(val studentName: String, val behavior: String, val co
  * @property averageScore The mean percentage score across all attempts.
  * @property timesTaken The number of times the student has attempted this quiz.
  */
-data class QuizSummary(val studentName: String, val quizName: String, val averageScore: Double, val timesTaken: Int)
+data class QuizSummary(
+    val studentName: String,
+    val quizName: String,
+    val averageScore: Double,
+    val averageScoreFormatted: String,
+    val timesTaken: Int
+)
 
 /**
  * Summary of homework completion and achievement for a student.
@@ -48,7 +54,13 @@ data class HomeworkSummary(val studentName: String, val assignmentName: String, 
  * @property daysAbsent Number of days in the reporting range where no activity was detected.
  * @property attendancePercentage Ratio of presence to the total reporting window.
  */
-data class AttendanceSummary(val studentName: String, val daysPresent: Int, val daysAbsent: Int, val attendancePercentage: Double)
+data class AttendanceSummary(
+    val studentName: String,
+    val daysPresent: Int,
+    val daysAbsent: Int,
+    val attendancePercentage: Double,
+    val attendancePercentageFormatted: String
+)
 
 /**
  * Consolidated statistics data to reduce UI recomposition triggers.
@@ -119,9 +131,10 @@ class StatsViewModel @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
 
     /**
-     * Cache for decoded homework marks data.
+     * Cache for pre-calculated points sum from homework marks data.
+     * BOLT: Caching the Double sum directly avoids map iterations and string-to-double conversions in loops.
      */
-    private val decodedHomeworkMarksCache = LruCache<String, Map<String, String>>(1000)
+    private val decodedHomeworkPointsCache = LruCache<String, Double>(1000)
 
     init {
         // Load initial data with default options
@@ -154,6 +167,8 @@ class StatsViewModel @Inject constructor(
                 }
 
                 val sortedStudents = students.sortedWith(compareBy({ it.lastName }, { it.firstName }))
+                // BOLT: Pre-calculate student names once to avoid thousands of string concatenations in loops.
+                val studentNameMap = sortedStudents.associate { it.id to "${it.firstName} ${it.lastName}" }
 
                 val behaviorEvents = if (studentIds != null && studentIds.isNotEmpty()) {
                     behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
@@ -194,10 +209,10 @@ class StatsViewModel @Inject constructor(
                 val filteredQuizLogs = quizLogs
 
                 // Calculate summaries
-                val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, sortedStudents)
-                val quizSummaryList = calculateQuizSummary(filteredQuizLogs, sortedStudents, quizMarkTypes)
-                val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, sortedStudents)
-                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, sortedStudents, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs)
+                val behaviorSummaryList = calculateBehaviorSummary(filteredBehaviorEvents, sortedStudents, studentNameMap)
+                val quizSummaryList = calculateQuizSummary(filteredQuizLogs, sortedStudents, quizMarkTypes, studentNameMap)
+                val homeworkSummaryList = calculateHomeworkSummary(filteredHomeworkLogs, sortedStudents, studentNameMap)
+                val (attendanceSummaryList, totalDays) = calculateAttendanceSummary(options, sortedStudents, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs, studentNameMap)
 
                 _statsData.postValue(
                     StatsData(
@@ -231,7 +246,8 @@ class StatsViewModel @Inject constructor(
         students: List<Student>,
         behaviorEvents: List<BehaviorEvent>,
         homeworkLogs: List<HomeworkLog>,
-        quizLogs: List<QuizLog>
+        quizLogs: List<QuizLog>,
+        studentNameMap: Map<Long, String>
     ): Pair<List<AttendanceSummary>, Int> {
         val zoneId = ZoneId.systemDefault()
 
@@ -291,10 +307,11 @@ class StatsViewModel @Inject constructor(
             val percentage = if (totalDaysInRange > 0) (presentCount.toDouble() / totalDaysInRange) * 100 else 0.0
             summaryList.add(
                 AttendanceSummary(
-                    studentName = "${student.firstName} ${student.lastName}",
+                    studentName = studentNameMap[student.id] ?: "",
                     daysPresent = presentCount,
                     daysAbsent = absentCount,
-                    attendancePercentage = percentage
+                    attendancePercentage = percentage,
+                    attendancePercentageFormatted = "%.1f".format(percentage)
                 )
             )
         }
@@ -312,7 +329,11 @@ class StatsViewModel @Inject constructor(
      * @param students Map for resolving student IDs to display names.
      * @return A sorted list of [BehaviorSummary] objects.
      */
-    internal fun calculateBehaviorSummary(behaviorEvents: List<BehaviorEvent>, sortedStudents: List<Student>): List<BehaviorSummary> {
+    internal fun calculateBehaviorSummary(
+        behaviorEvents: List<BehaviorEvent>,
+        sortedStudents: List<Student>,
+        studentNameMap: Map<Long, String>
+    ): List<BehaviorSummary> {
         // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists
         val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
         for (event in behaviorEvents) {
@@ -323,11 +344,12 @@ class StatsViewModel @Inject constructor(
         val summaryList = mutableListOf<BehaviorSummary>()
         for (student in sortedStudents) {
             val studentBehaviors = behaviorCounts[student.id] ?: continue
+            val studentName = studentNameMap[student.id] ?: ""
             // BOLT: Sorting the keys (behavior types) is acceptable as the count is small (usually < 20)
             studentBehaviors.keys.sorted().forEach { behavior ->
                 summaryList.add(
                     BehaviorSummary(
-                        studentName = "${student.firstName} ${student.lastName}",
+                        studentName = studentName,
                         behavior = behavior,
                         count = studentBehaviors[behavior] ?: 0
                     )
@@ -348,7 +370,12 @@ class StatsViewModel @Inject constructor(
      * @param quizMarkTypes Configuration for mark point values.
      * @return A sorted list of [QuizSummary] objects.
      */
-    internal fun calculateQuizSummary(quizLogs: List<QuizLog>, sortedStudents: List<Student>, quizMarkTypes: List<QuizMarkType>): List<QuizSummary> {
+    internal fun calculateQuizSummary(
+        quizLogs: List<QuizLog>,
+        sortedStudents: List<Student>,
+        quizMarkTypes: List<QuizMarkType>,
+        studentNameMap: Map<Long, String>
+    ): List<QuizSummary> {
         // Optimization: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
         val scoringContext = com.example.myapplication.util.QuizScoreEngine.getScoringContext(quizMarkTypes)
 
@@ -367,13 +394,16 @@ class StatsViewModel @Inject constructor(
         val summaryList = mutableListOf<QuizSummary>()
         for (student in sortedStudents) {
             val studentQuizzes = quizScores[student.id] ?: continue
+            val studentName = studentNameMap[student.id] ?: ""
             studentQuizzes.keys.sorted().forEach { quizName ->
                 val stats = studentQuizzes[quizName]!!
+                val avg = if (stats[1] > 0) stats[0] / stats[1] else 0.0
                 summaryList.add(
                     QuizSummary(
-                        studentName = "${student.firstName} ${student.lastName}",
+                        studentName = studentName,
                         quizName = quizName,
-                        averageScore = if (stats[1] > 0) stats[0] / stats[1] else 0.0,
+                        averageScore = avg,
+                        averageScoreFormatted = "%.2f".format(avg),
                         timesTaken = stats[1].toInt()
                     )
                 )
@@ -392,7 +422,11 @@ class StatsViewModel @Inject constructor(
      * @param students Student lookup map.
      * @return A sorted list of [HomeworkSummary] objects.
      */
-    internal fun calculateHomeworkSummary(homeworkLogs: List<HomeworkLog>, sortedStudents: List<Student>): List<HomeworkSummary> {
+    internal fun calculateHomeworkSummary(
+        homeworkLogs: List<HomeworkLog>,
+        sortedStudents: List<Student>,
+        studentNameMap: Map<Long, String>
+    ): List<HomeworkSummary> {
         // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop
         val homeworkCountMap = mutableMapOf<Long, MutableMap<String, Int>>()
         val homeworkPointsMap = mutableMapOf<Long, MutableMap<String, Double>>()
@@ -403,15 +437,18 @@ class StatsViewModel @Inject constructor(
 
             var points = 0.0
             log.marksData?.let { jsonStr ->
-                // Optimization: LruCache for JSON parsing
-                val marks = decodedHomeworkMarksCache.get(jsonStr) ?: try {
-                    json.decodeFromString<Map<String, String>>(jsonStr).also {
-                        decodedHomeworkMarksCache.put(jsonStr, it)
-                    }
-                } catch (e: Exception) { emptyMap() }
-
-                for (value in marks.values) {
-                    value.toDoubleOrNull()?.let { points += it }
+                // Optimization: LruCache for JSON parsing and point summation.
+                // BOLT: Storing the Double sum directly avoids map iterations and string conversions.
+                points = decodedHomeworkPointsCache.get(jsonStr) ?: run {
+                    var sum = 0.0
+                    try {
+                        val marks = json.decodeFromString<Map<String, String>>(jsonStr)
+                        for (value in marks.values) {
+                            value.toDoubleOrNull()?.let { sum += it }
+                        }
+                    } catch (e: Exception) { }
+                    decodedHomeworkPointsCache.put(jsonStr, sum)
+                    sum
                 }
             }
             if (points != 0.0) {
@@ -423,12 +460,13 @@ class StatsViewModel @Inject constructor(
         val summaryList = mutableListOf<HomeworkSummary>()
         for (student in sortedStudents) {
             val studentHomeworks = homeworkCountMap[student.id] ?: continue
+            val studentName = studentNameMap[student.id] ?: ""
             studentHomeworks.keys.sorted().forEach { assignmentName ->
                 val count = studentHomeworks[assignmentName] ?: 0
                 val totalPoints = homeworkPointsMap[student.id]?.get(assignmentName) ?: 0.0
                 summaryList.add(
                     HomeworkSummary(
-                        studentName = "${student.firstName} ${student.lastName}",
+                        studentName = studentName,
                         assignmentName = assignmentName,
                         count = count,
                         totalPoints = totalPoints

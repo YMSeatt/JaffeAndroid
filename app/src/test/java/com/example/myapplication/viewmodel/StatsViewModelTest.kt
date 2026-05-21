@@ -80,12 +80,14 @@ class StatsViewModelTest {
 
         val options = ExportOptions(startDate = day1, endDate = day3)
 
+        val studentNameMap = mapOf(1L to "John Doe")
         val (summaryList, totalDays) = viewModel.calculateAttendanceSummary(
             options,
             listOf(student),
             listOf(behaviorEvent),
             listOf(homeworkLog),
-            emptyList()
+            emptyList(),
+            studentNameMap
         )
 
         assertThat(totalDays).isEqualTo(3)
@@ -110,7 +112,8 @@ class StatsViewModelTest {
             BehaviorEvent(studentId = 2, type = "Participation", timestamp = 1500L, comment = null)
         )
 
-        val summary = viewModel.calculateBehaviorSummary(events, students)
+        val studentNameMap = students.associate { it.id to "${it.firstName} ${it.lastName}" }
+        val summary = viewModel.calculateBehaviorSummary(events, students, studentNameMap)
 
         assertThat(summary).hasSize(2)
         // Bob Alpha comes first because Alpha < Zuberi
@@ -138,7 +141,8 @@ class StatsViewModelTest {
             QuizLog(studentId = 2, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 1}", loggedAt = 1000L)
         )
 
-        val summary = viewModel.calculateQuizSummary(logs, students, markTypes)
+        val studentNameMap = students.associate { it.id to "${it.firstName} ${it.lastName}" }
+        val summary = viewModel.calculateQuizSummary(logs, students, markTypes, studentNameMap)
 
         assertThat(summary).hasSize(2)
         assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
@@ -159,7 +163,8 @@ class StatsViewModelTest {
             HomeworkLog(studentId = 2, assignmentName = "History", status = "Done", marksData = "{\"effort\": \"5\"}", loggedAt = 1000L)
         )
 
-        val summary = viewModel.calculateHomeworkSummary(logs, students)
+        val studentNameMap = students.associate { it.id to "${it.firstName} ${it.lastName}" }
+        val summary = viewModel.calculateHomeworkSummary(logs, students, studentNameMap)
 
         assertThat(summary).hasSize(2)
         assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
