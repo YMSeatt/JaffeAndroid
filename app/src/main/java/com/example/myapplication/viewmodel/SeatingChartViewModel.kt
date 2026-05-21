@@ -1804,6 +1804,7 @@ class SeatingChartViewModel @Inject constructor(
         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
         val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
         val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
+        val homeworkMarkMetadata = AppDatabase.getDatabase(context).homeworkMarkMetadataDao().getAllHomeworkMarkMetadataList()
 
         val exporter = com.example.myapplication.data.exporter.Exporter(context)
         exporter.export(
@@ -1817,6 +1818,7 @@ class SeatingChartViewModel @Inject constructor(
             quizMarkTypes = quizMarkTypes,
             customHomeworkTypes = customHomeworkTypes,
             customHomeworkStatuses = customHomeworkStatuses,
+            homeworkMarkMetadata = homeworkMarkMetadata,
             encrypt = options.encrypt
         )
         return@withContext Result.success(Unit)
