@@ -216,4 +216,7 @@ object GhostConfig {
 
     /** Enables "Ghost Ink" persistent spatial annotations. */
     const val INK_MODE_ENABLED = true
+
+    /** Enables "Ghost Trace" spatiotemporal path visualization. */
+    const val TRACE_MODE_ENABLED = true
 }

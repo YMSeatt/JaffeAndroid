@@ -183,6 +183,8 @@ import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
+import com.example.myapplication.labs.ghost.GhostTraceEngine
+import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
@@ -311,6 +313,7 @@ fun SeatingChartScreen(
     val socialVectors by seatingChartViewModel.socialVectors.collectAsState()
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
+    val studentTraces by seatingChartViewModel.studentTraces.collectAsState()
     val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
@@ -360,6 +363,7 @@ fun SeatingChartScreen(
     var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isStreamActive by remember { mutableStateOf(false) }
     var isInkActive by remember { mutableStateOf(false) }
+    var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
@@ -886,6 +890,8 @@ fun SeatingChartScreen(
                 onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
                 isInkActive = isInkActive,
                 onToggleInk = { isInkActive = !isInkActive },
+                isTraceActive = isTraceActive,
+                onToggleTrace = { isTraceActive = !isTraceActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
                         // SHIELD: Clean up previous artifact before creating a new one
@@ -1055,6 +1061,12 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isInkActive
+            )
+            GhostTraceLayer(
+                traces = studentTraces,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isTraceActive
             )
             Box(
                 modifier = Modifier
@@ -2061,6 +2073,7 @@ fun SeatingChartScreen(
                             "SHELL" -> isShellActive = !isShellActive
                             "DECK" -> isDeckActive = !isDeckActive
                             "INK" -> isInkActive = !isInkActive
+                            "TRACE" -> isTraceActive = !isTraceActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2390,6 +2403,8 @@ fun SeatingChartTopAppBar(
     onToggleMagnetar: () -> Unit,
     isInkActive: Boolean,
     onToggleInk: () -> Unit,
+    isTraceActive: Boolean,
+    onToggleTrace: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -3064,6 +3079,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Edit, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TRACE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isTraceActive) "Hide Neural Trace 👻" else "Ghost Trace 👻") },
+                            onClick = {
+                                onToggleTrace()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Route, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {

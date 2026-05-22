@@ -337,6 +337,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Spatial conflict intensity calculated in background update pipeline. */
     val glitchIntensity: StateFlow<Float> = _glitchIntensity.asStateFlow()
 
+    private val _studentTraces = MutableStateFlow<Map<Long, List<com.example.myapplication.labs.ghost.GhostTraceEngine.TracePoint>>>(emptyMap())
+    /** BOLT: Historical student traces calculated in background update pipeline. */
+    val studentTraces: StateFlow<Map<Long, List<com.example.myapplication.labs.ghost.GhostTraceEngine.TracePoint>>> = _studentTraces.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -1145,6 +1149,12 @@ class SeatingChartViewModel @Inject constructor(
                 if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
                     _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(studentsForEngines)
                     ghostMetricsAdaptiveStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate historical traces in the background pipeline (Memoized)
+                val templates = allLayoutTemplates.value ?: emptyList()
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TRACE_MODE_ENABLED) {
+                    _studentTraces.value = com.example.myapplication.labs.ghost.GhostTraceEngine.calculateTraces(templates)
                 }
 
                 // BOLT: Check if any rules are time-based to avoid global cache invalidation every minute

@@ -79,6 +79,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.INK_MODE_ENABLED) {
                 add(GhostAction("INK", Icons.Default.Edit, "Neural Ink"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TRACE_MODE_ENABLED) {
+                add(GhostAction("TRACE", Icons.Default.Route, "Neural Trace"))
+            }
         }
     }
 
