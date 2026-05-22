@@ -213,11 +213,14 @@ object ConditionalFormattingEngine {
      * **Why**: Behavior comparisons are case-insensitive. Calling `.lowercase()` creates
      * a new string allocation every time. In a loop of thousands of logs, this adds up.
      * This cache memoizes the lowercase version of common behavior types.
+     *
+     * BOLT: Switched from LruCache to ConcurrentHashMap to eliminate lock contention
+     * in the high-frequency seating chart interaction path.
      */
-    private val lowercaseCache = LruCache<String, String>(256)
+    private val lowercaseCache = ConcurrentHashMap<String, String>()
 
     private fun boltLowercase(input: String): String {
-        return lowercaseCache.get(input) ?: input.lowercase().also { lowercaseCache.put(input, it) }
+        return lowercaseCache.get(input) ?: input.lowercase().also { lowercaseCache[input] = it }
     }
 
     /**

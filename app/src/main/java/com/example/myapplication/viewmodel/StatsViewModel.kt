@@ -267,11 +267,14 @@ class StatsViewModel @Inject constructor(
         }
 
         // Determine date range from options or fallback to log boundaries
-        val startMillis = options.startDate ?: listOfNotNull(
-            behaviorEvents.minOfOrNull { it.timestamp },
-            homeworkLogs.minOfOrNull { it.loggedAt },
-            quizLogs.minOfOrNull { it.loggedAt }
-        ).minOrNull() ?: System.currentTimeMillis()
+        // BOLT: Use firstOrNull() for O(1) start detection as logs are pre-sorted ASC.
+        val startMillis = options.startDate ?: run {
+            val bStart = behaviorEvents.firstOrNull()?.timestamp ?: Long.MAX_VALUE
+            val hStart = homeworkLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val qStart = quizLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val min = minOf(bStart, minOf(hStart, qStart))
+            if (min == Long.MAX_VALUE) System.currentTimeMillis() else min
+        }
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
         val reportStartDay = getEpochDay(startMillis)
@@ -284,24 +287,37 @@ class StatsViewModel @Inject constructor(
         val lastReportDay = reportStartDay + totalDaysInRange - 1
 
         // Track active days per student (optimized for O(1) presence checks using epoch day)
+        // BOLT: Replaced forEach with manual index-based loops to avoid iterator allocations.
         val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
-        behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(getEpochDay(event.timestamp))
+        for (i in behaviorEvents.indices) {
+            val event = behaviorEvents[i]
+            val day = getEpochDay(event.timestamp)
+            if (day in reportStartDay..lastReportDay) {
+                studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(day)
+            }
         }
-        homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
+        for (i in homeworkLogs.indices) {
+            val log = homeworkLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(day)
+            }
         }
-        quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
+        for (i in quizLogs.indices) {
+            val log = quizLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(day)
+            }
         }
 
         val summaryList = mutableListOf<AttendanceSummary>()
         for (student in students) {
             val presentDaysSet = studentActiveDays[student.id] ?: emptySet()
 
-            // BOLT: Optimize nested loop by counting active days within the report range
-            // This replaces the O(S*D) loop with O(S + active_days), which is much faster.
-            val presentCount = presentDaysSet.count { it in reportStartDay..lastReportDay }
+            // BOLT: Optimize nested loop by counting active days within the report range.
+            // Since we filtered days during collection, we can now use O(1) size lookup.
+            val presentCount = presentDaysSet.size
 
             val absentCount = totalDaysInRange - presentCount
             val percentage = if (totalDaysInRange > 0) (presentCount.toDouble() / totalDaysInRange) * 100 else 0.0
