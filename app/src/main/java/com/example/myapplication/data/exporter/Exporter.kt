@@ -55,30 +55,6 @@ class Exporter(
     private val gson = Gson()
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
-    /**
-     * Cache for decoded marks data JSON strings to avoid redundant deserialization
-     * during large export operations involving many log entries.
-     *
-     * BOLT: Converted to LruCache to prevent unbounded memory growth.
-     */
-    private val parsedMarksCache = LruCache<String, Map<String, Any>>(1000)
-
-    /**
-     * Helper to safely deserialize JSON-based mark data.
-     *
-     * @param json The raw JSON string from the database (e.g., [QuizLog.marksData]).
-     * @return A map of keys to values, or an empty map if parsing fails.
-     */
-    private fun parseMarksData(json: String?): Map<String, Any> {
-        if (json.isNullOrEmpty()) return emptyMap()
-        return parsedMarksCache.get(json) ?: try {
-            gson.fromJson<Map<String, Any>>(json, mapType).also {
-                parsedMarksCache.put(json, it)
-            }
-        } catch (e: Exception) {
-            emptyMap()
-        }
-    }
 
     private data class FormattingContext(
         val headerStyle: org.apache.poi.ss.usermodel.CellStyle,
@@ -118,7 +94,7 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        homeworkMarkMetadata: List<HomeworkMarkMetadata>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         encrypt: Boolean
     ) {
         val workbook = XSSFWorkbook()
@@ -171,9 +147,12 @@ class Exporter(
             customHomeworkStatuses.forEach { add(it.name) }
         }
         val dynamicHomeworkKeys = mutableSetOf<String>()
+        var lastKeysJson: String? = null
         for (log in filteredHomeworkLogs) {
-            log.marksData?.let { json ->
-                dynamicHomeworkKeys.addAll(parseMarksData(json).keys)
+            val json = log.marksData
+            if (json != null && json != lastKeysJson) {
+                dynamicHomeworkKeys.addAll(HomeworkScoreEngine.parseMarksData(json).keys)
+                lastKeysJson = json
             }
         }
         val sortedDynamicKeys = dynamicHomeworkKeys.filter { it !in knownHomeworkKeys }.sorted()
@@ -183,13 +162,22 @@ class Exporter(
             addAll(filteredBehaviorEvents)
             addAll(filteredHomeworkLogs)
             addAll(filteredQuizLogs)
-        }.sortedBy {
-            when (it) {
-                is BehaviorEvent -> it.timestamp
-                is HomeworkLog -> it.loggedAt
-                is QuizLog -> it.loggedAt
-                else -> 0
+        }
+        // BOLT: In-place sort to avoid intermediate list allocation.
+        allLogs.sortWith { a, b ->
+            val tA = when (a) {
+                is BehaviorEvent -> a.timestamp
+                is HomeworkLog -> a.loggedAt
+                is QuizLog -> a.loggedAt
+                else -> 0L
             }
+            val tB = when (b) {
+                is BehaviorEvent -> b.timestamp
+                is HomeworkLog -> b.loggedAt
+                is QuizLog -> b.loggedAt
+                else -> 0L
+            }
+            tA.compareTo(tB)
         }
         val studentMap = students.associateBy { it.id }
         val studentGroupMap = studentGroups.associateBy { it.id }
@@ -198,27 +186,27 @@ class Exporter(
         // Create sheets
         if (options.separateSheets) {
             if (options.includeBehaviorLogs) {
-                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeQuizLogs) {
-                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeHomeworkLogs) {
-                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeMasterLog) {
-                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
         } else {
-            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeSummarySheet) {
-            createSummarySheet(workbook, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext)
+            createSummarySheet(workbook, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext)
         }
 
         if (options.includeIndividualStudentSheets) {
-            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkMarkMetadata, formattingContext, sortedDynamicKeys)
+            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeStudentInfoSheet) {
@@ -276,7 +264,7 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        homeworkMarkMetadata: List<HomeworkMarkMetadata>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         context: FormattingContext,
         dynamicHomeworkKeys: List<String>,
         precalculatedHeaders: List<String>? = null,
@@ -347,11 +335,6 @@ class Exporter(
         val homeworkScoreCol = headerIndices["Homework Score (Total Pts)"] ?: -1
         val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
         val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
-
-        // BOLT: Pre-calculate status names set to avoid O(N) lookups in the homework log loop.
-        val statusNamesSet = HashSet<String>(customHomeworkStatuses.size).apply {
-            customHomeworkStatuses.forEach { add(it.name) }
-        }
 
         // BOLT: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
         val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
@@ -470,7 +453,7 @@ class Exporter(
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(sanitize(item.assignmentName))
                     }
-                    val marksData = if (item.marksData != null) parseMarksData(item.marksData) else null
+                    val marksData = if (item.marksData != null) HomeworkScoreEngine.parseMarksData(item.marksData) else null
 
                     if (marksData != null && marksData.isNotEmpty()) {
                         var effort = ""
@@ -492,7 +475,7 @@ class Exporter(
                             }
                         }
 
-                        val totalPoints = HomeworkScoreEngine.calculateTotalPoints(item, homeworkMarkMetadata)
+                        val totalPoints = HomeworkScoreEngine.calculateTotalPoints(item, homeworkScoringContext)
                         if (homeworkScoreCol != -1) {
                             row.createCell(homeworkScoreCol).apply {
                                 setCellValue(totalPoints)
@@ -551,7 +534,7 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        homeworkMarkMetadata: List<HomeworkMarkMetadata>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         context: FormattingContext
     ) {
         val sheet = workbook.createSheet("Summary")
@@ -645,7 +628,7 @@ class Exporter(
             homeworkLogs.forEach { log ->
                 val studentSummary = homeworkSummary.getOrPut(log.studentId) { mutableMapOf() }
                 val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
-                val points = HomeworkScoreEngine.calculateTotalPoints(log, homeworkMarkMetadata)
+                val points = HomeworkScoreEngine.calculateTotalPoints(log, homeworkScoringContext)
                 studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)
             }
 
@@ -682,7 +665,7 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        homeworkMarkMetadata: List<HomeworkMarkMetadata>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         context: FormattingContext,
         dynamicHomeworkKeys: List<String>
     ) {
@@ -721,7 +704,7 @@ class Exporter(
                     quizMarkTypes = quizMarkTypes,
                     customHomeworkTypes = customHomeworkTypes,
                     customHomeworkStatuses = customHomeworkStatuses,
-                    homeworkMarkMetadata = homeworkMarkMetadata,
+                    homeworkScoringContext = homeworkScoringContext,
                     context = context,
                     dynamicHomeworkKeys = dynamicHomeworkKeys,
                     precalculatedHeaders = studentHeaders,

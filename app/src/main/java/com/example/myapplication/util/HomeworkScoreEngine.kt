@@ -20,6 +20,41 @@ import com.google.gson.reflect.TypeToken
  */
 object HomeworkScoreEngine {
 
+    /**
+     * A performance-optimized snapshot of homework mark metadata.
+     *
+     * By resolving these values once per UI update cycle or export, the engine eliminates
+     * redundant $O(N)$ searches and allocations inside the per-log loop.
+     *
+     * @property markMetadataRef The source list of metadata used to build this context.
+     */
+    internal class HomeworkScoringContext(val markMetadataRef: List<HomeworkMarkMetadata>) {
+        /** Fast lookup by Name (case-insensitive keys). */
+        val markMetadataMapByName = markMetadataRef.associateBy { it.name.lowercase() }
+
+        /** Pre-resolved "Complete" metadata for 'Yes' status mapping. */
+        val completeMetadata = markMetadataRef.find { it.name.equals("Complete", ignoreCase = true) }
+    }
+
+    @Volatile
+    private var lastScoringContext: HomeworkScoringContext? = null
+
+    /**
+     * Resolves a [HomeworkScoringContext] for the given list of metadata.
+     *
+     * This method utilizes identity-based memoization (`===`). If the [markMetadata] list
+     * is the same object instance as the last call, the cached context is returned immediately.
+     */
+    internal fun getScoringContext(markMetadata: List<HomeworkMarkMetadata>): HomeworkScoringContext {
+        val cached = lastScoringContext
+        if (cached?.markMetadataRef === markMetadata) {
+            return cached
+        }
+        val newContext = HomeworkScoringContext(markMetadata)
+        lastScoringContext = newContext
+        return newContext
+    }
+
     private val gson = Gson()
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
@@ -27,9 +62,15 @@ object HomeworkScoreEngine {
     private val parsedMarksCache = LruCache<String, Map<String, Any>>(1000)
 
     /**
+     * BOLT: Cache for calculated point results.
+     * Keyed by a composite long of log identity and scoring context identity.
+     */
+    private val scoreResultCache = LruCache<Long, Double>(1000)
+
+    /**
      * Helper to safely deserialize JSON-based mark data.
      */
-    private fun parseMarksData(json: String?): Map<String, Any> {
+    internal fun parseMarksData(json: String?): Map<String, Any> {
         if (json.isNullOrEmpty()) return emptyMap()
         return parsedMarksCache.get(json) ?: try {
             gson.fromJson<Map<String, Any>>(json, mapType).also {
@@ -43,6 +84,19 @@ object HomeworkScoreEngine {
     /**
      * Calculates the total points for a homework entry.
      *
+     * This is a convenience overload that resolves a [HomeworkScoringContext] internally.
+     *
+     * @param log The homework log entry to evaluate.
+     * @param markMetadata The list of available mark metadata.
+     * @return The calculated total points.
+     */
+    fun calculateTotalPoints(log: HomeworkLog, markMetadata: List<HomeworkMarkMetadata>): Double {
+        return calculateTotalPoints(log, getScoringContext(markMetadata))
+    }
+
+    /**
+     * Calculates the total points for a homework entry using a pre-resolved context.
+     *
      * ### Algorithm Logic (Parity with Python):
      * 1. **Numeric Accumulation**: Sums all numeric values found in the `marksData` JSON.
      * 2. **Status Mapping**:
@@ -51,10 +105,15 @@ object HomeworkScoreEngine {
      * 3. **Granular Status Mapping**: Also checks keys in `marksData` against metadata names.
      *
      * @param log The homework log entry to evaluate.
-     * @param markMetadata The list of available mark metadata.
+     * @param context The pre-calculated scoring metadata.
      * @return The calculated total points.
      */
-    fun calculateTotalPoints(log: HomeworkLog, markMetadata: List<HomeworkMarkMetadata>): Double {
+    internal fun calculateTotalPoints(log: HomeworkLog, context: HomeworkScoringContext): Double {
+        // BOLT: Result memoization using bit-packed Long key to avoid String allocation.
+        val cacheKey = (System.identityHashCode(log).toLong() shl 32) or (System.identityHashCode(context).toLong() and 0xFFFFFFFFL)
+        val cached = scoreResultCache.get(cacheKey)
+        if (cached != null) return cached
+
         var totalPoints = 0.0
         val marksData = parseMarksData(log.marksData)
 
@@ -66,15 +125,16 @@ object HomeworkScoreEngine {
 
         // 2. Status-based points (Parity with Python session logic)
         val statusNormalized = log.status.trim()
+        val metadataMap = context.markMetadataMapByName
 
         // Python parity: 'yes' adds points from 'hmark_complete' (we use name "Complete")
         if (statusNormalized.equals("Yes", ignoreCase = true)) {
-            markMetadata.find { it.name.equals("Complete", ignoreCase = true) }?.let {
+            context.completeMetadata?.let {
                 totalPoints += it.defaultPoints
             }
         } else {
-            // Check if status matches any metadata name directly
-            markMetadata.find { it.name.equals(statusNormalized, ignoreCase = true) }?.let {
+            // BOLT: Check if status matches any metadata name directly using O(1) lookup
+            metadataMap[statusNormalized.lowercase()]?.let {
                 totalPoints += it.defaultPoints
             }
         }
@@ -87,12 +147,14 @@ object HomeworkScoreEngine {
             // we might be double-counting if we already summed it as numeric.
             // But if it's NOT a number (e.g. "Done": "Yes"), we should handle it.
             if (value !is Number && value.toString().toDoubleOrNull() == null) {
-                markMetadata.find { it.name.equals(key, ignoreCase = true) }?.let {
+                // BOLT: O(1) lookup for metadata names
+                metadataMap[key.lowercase()]?.let {
                     totalPoints += it.defaultPoints
                 }
             }
         }
 
+        scoreResultCache.put(cacheKey, totalPoints)
         return totalPoints
     }
 }

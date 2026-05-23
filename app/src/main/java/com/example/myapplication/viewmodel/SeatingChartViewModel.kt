@@ -1829,6 +1829,7 @@ class SeatingChartViewModel @Inject constructor(
         val customHomeworkTypes = AppDatabase.getDatabase(context).customHomeworkTypeDao().getAllCustomHomeworkTypesList()
         val customHomeworkStatuses = AppDatabase.getDatabase(context).customHomeworkStatusDao().getAllCustomHomeworkStatusesList()
         val homeworkMarkMetadata = AppDatabase.getDatabase(context).homeworkMarkMetadataDao().getAllHomeworkMarkMetadataList()
+        val homeworkScoringContext = com.example.myapplication.util.HomeworkScoreEngine.getScoringContext(homeworkMarkMetadata)
 
         val exporter = com.example.myapplication.data.exporter.Exporter(context)
         exporter.export(
@@ -1842,7 +1843,7 @@ class SeatingChartViewModel @Inject constructor(
             quizMarkTypes = quizMarkTypes,
             customHomeworkTypes = customHomeworkTypes,
             customHomeworkStatuses = customHomeworkStatuses,
-            homeworkMarkMetadata = homeworkMarkMetadata,
+            homeworkScoringContext = homeworkScoringContext,
             encrypt = options.encrypt
         )
         return@withContext Result.success(Unit)

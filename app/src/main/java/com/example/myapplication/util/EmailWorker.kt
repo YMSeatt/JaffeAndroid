@@ -143,6 +143,7 @@ class EmailWorker(
                         val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
                         val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
                         val homeworkMarkMetadata = homeworkMarkMetadataDao.getAllHomeworkMarkMetadataList()
+                        val homeworkScoringContext = HomeworkScoreEngine.getScoringContext(homeworkMarkMetadata)
 
                         val uri = FileProvider.getUriForFile(
                             applicationContext,
@@ -161,7 +162,7 @@ class EmailWorker(
                             quizMarkTypes = quizMarkTypes,
                             customHomeworkTypes = customHomeworkTypes,
                             customHomeworkStatuses = customHomeworkStatuses,
-                            homeworkMarkMetadata = homeworkMarkMetadata,
+                            homeworkScoringContext = homeworkScoringContext,
                             encrypt = finalOptions.encrypt
                         )
 
@@ -259,6 +260,8 @@ class EmailWorker(
                         val quizMarkTypes = quizMarkTypeDao.getAllQuizMarkTypesList()
                         val customHomeworkTypes = customHomeworkTypeDao.getAllCustomHomeworkTypesList()
                         val customHomeworkStatuses = customHomeworkStatusDao.getAllCustomHomeworkStatusesList()
+                        val homeworkMarkMetadata = homeworkMarkMetadataDao.getAllHomeworkMarkMetadataList()
+                        val homeworkScoringContext = HomeworkScoreEngine.getScoringContext(homeworkMarkMetadata)
 
                         val uri = FileProvider.getUriForFile(
                             applicationContext,
@@ -277,7 +280,7 @@ class EmailWorker(
                             quizMarkTypes = quizMarkTypes,
                             customHomeworkTypes = customHomeworkTypes,
                             customHomeworkStatuses = customHomeworkStatuses,
-                            homeworkMarkMetadata = homeworkMarkMetadata,
+                            homeworkScoringContext = homeworkScoringContext,
                             encrypt = exportOptions.encrypt
                         )
 
