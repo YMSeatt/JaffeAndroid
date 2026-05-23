@@ -219,4 +219,7 @@ object GhostConfig {
 
     /** Enables "Ghost Trace" spatiotemporal path visualization. */
     const val TRACE_MODE_ENABLED = true
+
+    /** Enables "Ghost Carbon" behavioral twin visualization. */
+    const val CARBON_MODE_ENABLED = true
 }

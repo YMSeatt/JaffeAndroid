@@ -341,6 +341,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Historical student traces calculated in background update pipeline. */
     val studentTraces: StateFlow<Map<Long, List<com.example.myapplication.labs.ghost.GhostTraceEngine.TracePoint>>> = _studentTraces.asStateFlow()
 
+    private val _carbonTwins = MutableStateFlow<List<com.example.myapplication.labs.ghost.carbon.GhostCarbonEngine.CarbonTwin>>(emptyList())
+    /** BOLT: Behavioral twins pre-calculated in background update pipeline. */
+    val carbonTwins: StateFlow<List<com.example.myapplication.labs.ghost.carbon.GhostCarbonEngine.CarbonTwin>> = _carbonTwins.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -458,6 +462,8 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsFutureStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsFutureBehaviorLogsRef: List<BehaviorEvent>? = null
     private var ghostMetricsFuturePropheciesRef: List<com.example.myapplication.labs.ghost.GhostOracle.Prophecy>? = null
+
+    private var ghostMetricsCarbonBehaviorLogsRef: List<BehaviorEvent>? = null
 
     private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
 
@@ -1124,6 +1130,14 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsCatalystBehaviorLogsRef = behaviorEvents
                     ghostMetricsCatalystStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate behavioral twins in the background pipeline (Memoized)
+                if (behaviorEvents !== ghostMetricsCarbonBehaviorLogsRef) {
+                    _carbonTwins.value = com.example.myapplication.labs.ghost.carbon.GhostCarbonEngine.identifyTwins(
+                        behaviorLogsByStudent = behaviorLogsByStudent
+                    )
+                    ghostMetricsCarbonBehaviorLogsRef = behaviorEvents
                 }
 
                 // BOLT: Calculate simulated future events in the background pipeline (Memoized)
