@@ -183,6 +183,7 @@ import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
+import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
@@ -314,6 +315,7 @@ fun SeatingChartScreen(
     val vortices by seatingChartViewModel.vortices.collectAsState()
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
     val studentTraces by seatingChartViewModel.studentTraces.collectAsState()
+    val carbonTwins by seatingChartViewModel.carbonTwins.collectAsState()
     val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
@@ -362,6 +364,7 @@ fun SeatingChartScreen(
     var isArchitectActive by remember { mutableStateOf(false) }
     var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isStreamActive by remember { mutableStateOf(false) }
+    var isCarbonActive by remember { mutableStateOf(false) }
     var isInkActive by remember { mutableStateOf(false) }
     var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
@@ -886,6 +889,8 @@ fun SeatingChartScreen(
                 onToggleVision = { isVisionActive = !isVisionActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
+                isCarbonActive = isCarbonActive,
+                onToggleCarbon = { isCarbonActive = !isCarbonActive },
                 isSupernovaActive = isSupernovaActive,
                 onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
                 isInkActive = isInkActive,
@@ -1067,6 +1072,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isTraceActive
+            )
+            GhostCarbonLayer(
+                students = students,
+                twins = carbonTwins,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCarbonActive
             )
             Box(
                 modifier = Modifier
@@ -2074,6 +2086,7 @@ fun SeatingChartScreen(
                             "DECK" -> isDeckActive = !isDeckActive
                             "INK" -> isInkActive = !isInkActive
                             "TRACE" -> isTraceActive = !isTraceActive
+                            "CARBON" -> isCarbonActive = !isCarbonActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2401,6 +2414,8 @@ fun SeatingChartTopAppBar(
     onToggleVision: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
+    isCarbonActive: Boolean,
+    onToggleCarbon: () -> Unit,
     isInkActive: Boolean,
     onToggleInk: () -> Unit,
     isTraceActive: Boolean,
@@ -3089,6 +3104,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Route, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CARBON_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isCarbonActive) "Collapse Resonance 👻" else "Ghost Carbon 👻") },
+                            onClick = {
+                                onToggleCarbon()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Grain, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {

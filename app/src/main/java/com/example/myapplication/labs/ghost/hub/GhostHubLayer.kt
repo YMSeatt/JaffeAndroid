@@ -82,6 +82,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TRACE_MODE_ENABLED) {
                 add(GhostAction("TRACE", Icons.Default.Route, "Neural Trace"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CARBON_MODE_ENABLED) {
+                add(GhostAction("CARBON", Icons.Default.Grain, "Ghost Carbon"))
+            }
         }
     }
 
