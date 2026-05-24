@@ -85,6 +85,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CARBON_MODE_ENABLED) {
                 add(GhostAction("CARBON", Icons.Default.Grain, "Ghost Carbon"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEAVER_MODE_ENABLED) {
+                add(GhostAction("WEAVER", Icons.Default.AccountTree, "Ghost Weaver"))
+            }
         }
     }
 

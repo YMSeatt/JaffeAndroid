@@ -184,6 +184,7 @@ import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
 import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
+import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
@@ -316,6 +317,7 @@ fun SeatingChartScreen(
     val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
     val studentTraces by seatingChartViewModel.studentTraces.collectAsState()
     val carbonTwins by seatingChartViewModel.carbonTwins.collectAsState()
+    val weaverThreads by seatingChartViewModel.weaverThreads.collectAsState()
     val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
@@ -365,6 +367,7 @@ fun SeatingChartScreen(
     var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isStreamActive by remember { mutableStateOf(false) }
     var isCarbonActive by remember { mutableStateOf(false) }
+    var isWeaverActive by remember { mutableStateOf(false) }
     var isInkActive by remember { mutableStateOf(false) }
     var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
@@ -890,7 +893,9 @@ fun SeatingChartScreen(
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
                 isCarbonActive = isCarbonActive,
+                isWeaverActive = isWeaverActive,
                 onToggleCarbon = { isCarbonActive = !isCarbonActive },
+                onToggleWeaver = { isWeaverActive = !isWeaverActive },
                 isSupernovaActive = isSupernovaActive,
                 onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
                 isInkActive = isInkActive,
@@ -1079,6 +1084,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isCarbonActive
+            )
+            GhostWeaverLayer(
+                students = students,
+                threads = weaverThreads,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isWeaverActive
             )
             Box(
                 modifier = Modifier
@@ -2087,6 +2099,7 @@ fun SeatingChartScreen(
                             "INK" -> isInkActive = !isInkActive
                             "TRACE" -> isTraceActive = !isTraceActive
                             "CARBON" -> isCarbonActive = !isCarbonActive
+                            "WEAVER" -> isWeaverActive = !isWeaverActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -3114,6 +3127,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.Grain, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEAVER_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isWeaverActive) "Collapse Threads 👻" else "Ghost Weaver 👻") },
+                            onClick = {
+                                onToggleWeaver()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AccountTree, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {

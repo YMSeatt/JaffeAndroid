@@ -222,4 +222,7 @@ object GhostConfig {
 
     /** Enables "Ghost Carbon" behavioral twin visualization. */
     const val CARBON_MODE_ENABLED = true
+
+    /** Enables "Ghost Weaver" academic milestone visualization. */
+    const val WEAVER_MODE_ENABLED = true
 }
