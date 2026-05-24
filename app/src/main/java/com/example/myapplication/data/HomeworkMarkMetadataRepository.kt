@@ -27,4 +27,12 @@ class HomeworkMarkMetadataRepository @Inject constructor(
     suspend fun deleteAll() {
         homeworkMarkMetadataDao.deleteAll()
     }
+
+    suspend fun insertAll(metadataList: List<HomeworkMarkMetadata>) {
+        homeworkMarkMetadataDao.insertAll(metadataList)
+    }
+
+    suspend fun replaceAll(metadataList: List<HomeworkMarkMetadata>) {
+        homeworkMarkMetadataDao.replaceAll(metadataList)
+    }
 }

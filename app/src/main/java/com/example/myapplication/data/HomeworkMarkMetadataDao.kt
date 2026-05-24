@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -27,4 +28,13 @@ interface HomeworkMarkMetadataDao {
 
     @Query("DELETE FROM homework_mark_metadata")
     suspend fun deleteAll()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(metadataList: List<HomeworkMarkMetadata>)
+
+    @Transaction
+    suspend fun replaceAll(metadataList: List<HomeworkMarkMetadata>) {
+        deleteAll()
+        insertAll(metadataList)
+    }
 }
