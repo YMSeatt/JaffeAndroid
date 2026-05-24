@@ -345,6 +345,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral twins pre-calculated in background update pipeline. */
     val carbonTwins: StateFlow<List<com.example.myapplication.labs.ghost.carbon.GhostCarbonEngine.CarbonTwin>> = _carbonTwins.asStateFlow()
 
+    private val _weaverThreads = MutableStateFlow<List<com.example.myapplication.labs.ghost.weaver.GhostWeaverEngine.NeuralThread>>(emptyList())
+    /** BOLT: Neural threads pre-calculated in background update pipeline. */
+    val weaverThreads: StateFlow<List<com.example.myapplication.labs.ghost.weaver.GhostWeaverEngine.NeuralThread>> = _weaverThreads.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -464,6 +468,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsFuturePropheciesRef: List<com.example.myapplication.labs.ghost.GhostOracle.Prophecy>? = null
 
     private var ghostMetricsCarbonBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsWeaverQuizLogsRef: List<QuizLog>? = null
+    private var ghostMetricsWeaverHomeworkLogsRef: List<HomeworkLog>? = null
 
     private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
 
@@ -1138,6 +1145,16 @@ class SeatingChartViewModel @Inject constructor(
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
                     ghostMetricsCarbonBehaviorLogsRef = behaviorEvents
+                }
+
+                // BOLT: Calculate neural threads in the background pipeline (Memoized)
+                if (quizLogs !== ghostMetricsWeaverQuizLogsRef || homeworkLogs !== ghostMetricsWeaverHomeworkLogsRef) {
+                    _weaverThreads.value = com.example.myapplication.labs.ghost.weaver.GhostWeaverEngine.identifyThreads(
+                        quizLogsByStudent = quizLogsByStudent,
+                        homeworkLogsByStudent = homeworkLogsByStudent
+                    )
+                    ghostMetricsWeaverQuizLogsRef = quizLogs
+                    ghostMetricsWeaverHomeworkLogsRef = homeworkLogs
                 }
 
                 // BOLT: Calculate simulated future events in the background pipeline (Memoized)

@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Weaver - Visualize shared academic milestones as neural threads between students.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-07-24: Ghost Weaver - Academic milestone visualization in `/labs/ghost/weaver/`
 - [DONE] 2028-07-22: Ghost Carbon - Behavioral Twin detection and visualization in `/labs/ghost/carbon/`
 - [DONE] 2028-07-20: Ghost Trace - Spatiotemporal path visualization in `/labs/ghost/GhostTraceLayer.kt`
 - [DONE] 2028-07-15: Ghost Ink - Persistent spatial annotations in `/labs/ghost/ink/`
