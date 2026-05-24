@@ -38,16 +38,26 @@ object GhostStreamEngine {
         SYSTEM
     }
 
+    /** BOLT: Lightweight holder for unsorted logs to avoid pre-mature formatting. */
+    private data class PendingEntry(
+        val log: Any,
+        val timestamp: Long,
+        val type: EntryType
+    )
+
     /**
      * Synthesizes a unified stream of recent classroom events.
      *
-     * BOLT ⚡ Optimization: Uses manual index loops and pre-allocation to minimize churn
-     * when processing large log lists.
+     * BOLT ⚡ Optimization: Dramatically reduced complexity from O(L) to O(maxEntries).
+     * 1. Leverages pre-sorted DAO inputs to only process the first [maxEntries] of each list.
+     * 2. Defers expensive string formatting, ID generation, and student lookups until
+     *    AFTER the final top-N items are identified.
+     * 3. Uses manual index loops to eliminate iterator allocations.
      *
      * @param students The current list of students for name resolution.
-     * @param behaviorLogs Recent behavior events.
-     * @param quizLogs Recent quiz scores.
-     * @param homeworkLogs Recent homework status updates.
+     * @param behaviorLogs Recent behavior events (Pre-sorted DESC).
+     * @param quizLogs Recent quiz scores (Pre-sorted DESC).
+     * @param homeworkLogs Recent homework status updates (Pre-sorted DESC).
      * @param maxEntries Maximum number of entries to return.
      * @return A list of [StreamEntry] objects, sorted by timestamp (newest first).
      */
@@ -58,53 +68,80 @@ object GhostStreamEngine {
         homeworkLogs: List<HomeworkLog>,
         maxEntries: Int = 20
     ): List<StreamEntry> {
-        val studentMap = students.associateBy { it.id.toLong() }
-        val entries = mutableListOf<StreamEntry>()
+        if (maxEntries <= 0) return emptyList()
 
-        // Process Behavior Logs
-        for (i in behaviorLogs.indices) {
+        // BOLT: Process only the first N items of each pre-sorted list.
+        // This transforms O(B+Q+H) processing into O(maxEntries * 3) max.
+        val pending = ArrayList<PendingEntry>(maxEntries * 3)
+
+        // Behavior Logs
+        val bSize = behaviorLogs.size.coerceAtMost(maxEntries)
+        for (i in 0 until bSize) {
             val log = behaviorLogs[i]
-            val student = studentMap[log.studentId] ?: continue
             val type = if (log.type.contains("Negative", ignoreCase = true)) EntryType.NEGATIVE else EntryType.POSITIVE
-            entries.add(StreamEntry(
-                id = "b_${log.timestamp}_${log.studentId}",
-                timestamp = log.timestamp,
-                formattedTime = TIME_FORMATTER.format(Instant.ofEpochMilli(log.timestamp)),
-                studentName = student.fullName.value,
-                content = log.type + (if (log.comment.isNullOrBlank()) "" else ": ${log.comment}"),
-                type = type
-            ))
+            pending.add(PendingEntry(log, log.timestamp, type))
         }
 
-        // Process Quiz Logs
-        for (i in quizLogs.indices) {
+        // Quiz Logs
+        val qSize = quizLogs.size.coerceAtMost(maxEntries)
+        for (i in 0 until qSize) {
             val log = quizLogs[i]
-            val student = studentMap[log.studentId] ?: continue
-            entries.add(StreamEntry(
-                id = "q_${log.loggedAt}_${log.studentId}",
-                timestamp = log.loggedAt,
-                formattedTime = TIME_FORMATTER.format(Instant.ofEpochMilli(log.loggedAt)),
-                studentName = student.fullName.value,
-                content = "Quiz: ${log.quizName} (${log.markValue ?: 0}/${log.maxMarkValue ?: 0})",
-                type = EntryType.ACADEMIC
-            ))
+            pending.add(PendingEntry(log, log.loggedAt, EntryType.ACADEMIC))
         }
 
-        // Process Homework Logs
-        for (i in homeworkLogs.indices) {
+        // Homework Logs
+        val hSize = homeworkLogs.size.coerceAtMost(maxEntries)
+        for (i in 0 until hSize) {
             val log = homeworkLogs[i]
-            val student = studentMap[log.studentId] ?: continue
-            entries.add(StreamEntry(
-                id = "h_${log.loggedAt}_${log.studentId}",
-                timestamp = log.loggedAt,
-                formattedTime = TIME_FORMATTER.format(Instant.ofEpochMilli(log.loggedAt)),
-                studentName = student.fullName.value,
-                content = "Homework: ${log.assignmentName} -> ${log.status}",
-                type = EntryType.ACADEMIC
-            ))
+            pending.add(PendingEntry(log, log.loggedAt, EntryType.ACADEMIC))
         }
 
-        // Sort by timestamp descending and take the limit
-        return entries.sortedByDescending { it.timestamp }.take(maxEntries)
+        // Sort the truncated combined list
+        pending.sortByDescending { it.timestamp }
+        val finalCount = pending.size.coerceAtMost(maxEntries)
+
+        if (finalCount == 0) return emptyList()
+
+        // BOLT: Perform expensive formatting and lookups ONLY for the items we're keeping.
+        val studentMap = students.associateBy { it.id.toLong() }
+        val result = ArrayList<StreamEntry>(finalCount)
+
+        for (i in 0 until finalCount) {
+            val p = pending[i]
+            val item = p.log
+            val studentId = when (item) {
+                is BehaviorEvent -> item.studentId
+                is QuizLog -> item.studentId
+                is HomeworkLog -> item.studentId
+                else -> 0L
+            }
+
+            val student = studentMap[studentId] ?: continue
+            val studentName = student.fullName.value
+            val formattedTime = try {
+                TIME_FORMATTER.format(Instant.ofEpochMilli(p.timestamp))
+            } catch (e: Exception) {
+                "00:00:00"
+            }
+
+            val (id, content) = when (item) {
+                is BehaviorEvent -> {
+                    "b_${item.timestamp}_${item.studentId}" to (item.type + (if (item.comment.isNullOrBlank()) "" else ": ${item.comment}"))
+                }
+                is QuizLog -> {
+                    "q_${item.loggedAt}_${item.studentId}" to "Quiz: ${item.quizName} (${item.markValue ?: 0.0}/${item.maxMarkValue ?: 0.0})"
+                }
+                is HomeworkLog -> {
+                    "h_${item.loggedAt}_${item.studentId}" to "Homework: ${item.assignmentName} -> ${item.status}"
+                }
+                else -> "" to ""
+            }
+
+            if (id.isNotEmpty()) {
+                result.add(StreamEntry(id, p.timestamp, formattedTime, studentName, content, p.type))
+            }
+        }
+
+        return result
     }
 }
