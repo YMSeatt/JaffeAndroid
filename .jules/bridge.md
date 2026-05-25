@@ -41,3 +41,7 @@ LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTi
 ## 2028-05-15 - Homework Initials Logic Parity
 **Discrepancy:** The Python prototype maps homework initials based on the status string (e.g., "Done", "Late") rather than the assignment name. The Android application was incorrectly using the assignment name for initials mapping and displayed assignment types in the "Manage Initials" screen.
 **Adaptation:** Modified `SeatingChartViewModel.kt` to apply `homeworkInitialsMap` to the `log.status` field. Updated `ManageInitialsScreen.kt` to populate the "Homework" tab with `customHomeworkStatuses` to ensure the user can configure initials for the correct set of labels, matching Python's logical behavior.
+
+## 2024-05-20 - Quiz Mark Initials Discrepancy
+**Discrepancy:** Python combines Behaviors and Quiz Mark Types in a single initials map (`behavior_initial_overrides`). Android split them into tabs but omitted Quiz Mark Types from the customization UI entirely.
+**Adaptation:** Unified Quiz Mark Types into the "Behaviors" tab of `ManageInitialsScreen.kt` while maintaining the separate "Quizzes" tab for Template-specific initials to provide superior organization while keeping functional parity.
