@@ -185,6 +185,8 @@ import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
 import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
 import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
+import com.example.myapplication.labs.ghost.rain.GhostRainEngine
+import com.example.myapplication.labs.ghost.rain.GhostRainLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
@@ -368,6 +370,7 @@ fun SeatingChartScreen(
     var isStreamActive by remember { mutableStateOf(false) }
     var isCarbonActive by remember { mutableStateOf(false) }
     var isWeaverActive by remember { mutableStateOf(false) }
+    var isRainActive by remember { mutableStateOf(false) }
     var isInkActive by remember { mutableStateOf(false) }
     var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
@@ -510,6 +513,7 @@ fun SeatingChartScreen(
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostRainEngine = remember { GhostRainEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
@@ -1091,6 +1095,14 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isWeaverActive
+            )
+            GhostRainLayer(
+                engine = ghostRainEngine,
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isRainActive
             )
             Box(
                 modifier = Modifier
@@ -2100,6 +2112,7 @@ fun SeatingChartScreen(
                             "TRACE" -> isTraceActive = !isTraceActive
                             "CARBON" -> isCarbonActive = !isCarbonActive
                             "WEAVER" -> isWeaverActive = !isWeaverActive
+                            "RAIN" -> isRainActive = !isRainActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -3137,6 +3150,16 @@ fun SeatingChartTopAppBar(
                                 showMoreMenu = false
                             },
                             leadingIcon = { Icon(Icons.Default.AccountTree, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAIN_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isRainActive) "Stabilize Atmosphere 👻" else "Neural Rain 👻") },
+                            onClick = {
+                                isRainActive = !isRainActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.WaterDrop, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
                     }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {
