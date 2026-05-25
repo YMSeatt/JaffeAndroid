@@ -225,4 +225,7 @@ object GhostConfig {
 
     /** Enables "Ghost Weaver" academic milestone visualization. */
     const val WEAVER_MODE_ENABLED = true
+
+    /** Enables "Ghost Neural Rain" data-driven atmospheric visualization. */
+    const val RAIN_MODE_ENABLED = true
 }

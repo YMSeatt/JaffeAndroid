@@ -88,6 +88,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEAVER_MODE_ENABLED) {
                 add(GhostAction("WEAVER", Icons.Default.AccountTree, "Ghost Weaver"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAIN_MODE_ENABLED) {
+                add(GhostAction("RAIN", Icons.Default.WaterDrop, "Neural Rain"))
+            }
         }
     }
 
