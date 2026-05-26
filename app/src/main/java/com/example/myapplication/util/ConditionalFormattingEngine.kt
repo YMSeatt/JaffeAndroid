@@ -235,7 +235,24 @@ object ConditionalFormattingEngine {
             try {
                 val condition = json.decodeFromString<Condition>(rule.conditionJson)
                 val format = json.decodeFromString<Format>(rule.formatJson)
-                val behaviorNamesSet = condition.behaviorNames?.split(',')?.map { it.trim().lowercase() }?.toSet() ?: emptySet()
+                val behaviorNamesSet = condition.behaviorNames?.let { input ->
+                    if (input.isBlank()) emptySet()
+                    else {
+                        val result = HashSet<String>()
+                        var start = 0
+                        val length = input.length
+                        while (start < length) {
+                            var end = input.indexOf(',', start)
+                            if (end == -1) end = length
+                            val part = input.substring(start, end).trim().lowercase()
+                            if (part.isNotEmpty()) {
+                                result.add(part)
+                            }
+                            start = end + 1
+                        }
+                        result
+                    }
+                } ?: emptySet()
                 DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format, behaviorNamesSet)
             } catch (e: Exception) {
                 Log.e("ConditionalFormattingEngine", "Error decoding rule ${rule.id}: ${e.message}")
@@ -342,7 +359,8 @@ object ConditionalFormattingEngine {
     ): List<DecodedConditionalFormattingRule> {
         var matchingRules: MutableList<DecodedConditionalFormattingRule>? = null
 
-        for (rule in rules) {
+        for (i in rules.indices) {
+            val rule = rules[i]
             if (checkCondition(
                     student,
                     rule,
@@ -466,7 +484,8 @@ object ConditionalFormattingEngine {
                 var lastType: String? = null
                 var lastMatch = false
 
-                for (event in behaviorLog) {
+                for (i in behaviorLog.indices) {
+                    val event = behaviorLog[i]
                     if (event.timestamp < cutoffTime) break
 
                     val currentType = event.type
