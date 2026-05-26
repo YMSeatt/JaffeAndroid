@@ -382,12 +382,24 @@ class SeatingChartViewModel @Inject constructor(
                 // Limit history to 50 items to prevent DataStore bloat.
                 // commandUndoStack is an ArrayDeque where 'push' adds to the front (newest first).
                 // We want to save the 50 newest commands in oldest-to-newest order for restoration.
-                val undoList = commandUndoStack.take(50).reversed()
-                val redoList = commandRedoStack.take(50).reversed()
+                // BOLT: Manual loop instead of take(50).reversed() to avoid intermediate list copies.
+                val undoMemento = ArrayList<com.example.myapplication.labs.ghost.memento.MementoCommand>()
+                val undoIter = commandUndoStack.iterator()
+                var count = 0
+                while (undoIter.hasNext() && count < 50) {
+                    ghostMementoMapper.toMemento(undoIter.next())?.let { undoMemento.add(0, it) }
+                    count++
+                }
 
-                val undoMemento = undoList.mapNotNull { ghostMementoMapper.toMemento(it) }
-                val redoMemento = redoList.mapNotNull { ghostMementoMapper.toMemento(it) }
-                ghostMementoStore.saveHistory(MementoHistory(undoMemento, redoMemento))
+                val redoMemento = ArrayList<com.example.myapplication.labs.ghost.memento.MementoCommand>()
+                val redoIter = commandRedoStack.iterator()
+                count = 0
+                while (redoIter.hasNext() && count < 50) {
+                    ghostMementoMapper.toMemento(redoIter.next())?.let { redoMemento.add(0, it) }
+                    count++
+                }
+
+                ghostMementoStore.saveHistory(com.example.myapplication.labs.ghost.memento.MementoHistory(undoMemento, redoMemento))
             }
         }
     }
@@ -729,7 +741,8 @@ class SeatingChartViewModel @Inject constructor(
                 val behaviorEvents = allBehaviorEvents.value ?: emptyList()
                 if (behaviorEvents !== memoizedBehaviorEvents) {
                     val newGrouped = mutableMapOf<Long, MutableList<BehaviorEvent>>()
-                    for (event in behaviorEvents) {
+                    for (i in behaviorEvents.indices) {
+                        val event = behaviorEvents[i]
                         newGrouped.getOrPut(event.studentId) { mutableListOf() }.add(event)
                     }
 
@@ -808,7 +821,8 @@ class SeatingChartViewModel @Inject constructor(
                 val homeworkLogs = allHomeworkLogs.value ?: emptyList()
                 if (homeworkLogs !== memoizedHomeworkLogs) {
                     val newGrouped = mutableMapOf<Long, MutableList<HomeworkLog>>()
-                    for (log in homeworkLogs) {
+                    for (i in homeworkLogs.indices) {
+                        val log = homeworkLogs[i]
                         newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
 
@@ -840,7 +854,8 @@ class SeatingChartViewModel @Inject constructor(
                 val quizLogs = allQuizLogs.value ?: emptyList()
                 if (quizLogs !== memoizedQuizLogs) {
                     val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
-                    for (log in quizLogs) {
+                    for (i in quizLogs.indices) {
+                        val log = quizLogs[i]
                         newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
 
@@ -1199,7 +1214,8 @@ class SeatingChartViewModel @Inject constructor(
                 val defaultFontColor = com.example.myapplication.util.safeParseColor(defaultStyle.fontColor)
 
                 // BOLT: Incremental update for Ghost metrics based on changed log identities.
-                for (student in students) {
+                for (i in students.indices) {
+                    val student = students[i]
                     if (changedLogStudentIds.contains(student.id) || !irisParamsCache.containsKey(student.id)) {
                         val bLogs = behaviorLogsByStudent[student.id] ?: emptyList()
                         val qLogs = quizLogsByStudent[student.id] ?: emptyList()
@@ -1672,12 +1688,25 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     private fun parseKeyValueString(input: String): Map<String, String> {
-        return input.split(",")
-            .mapNotNull {
-                val parts = it.split(":", limit = 2)
-                if (parts.size == 2) parts[0].trim() to parts[1].trim() else null
+        if (input.isBlank()) return emptyMap()
+        val result = mutableMapOf<String, String>()
+        var start = 0
+        val length = input.length
+        while (start < length) {
+            var end = input.indexOf(',', start)
+            if (end == -1) end = length
+
+            val colonIndex = input.indexOf(':', start)
+            if (colonIndex != -1 && colonIndex < end) {
+                val key = input.substring(start, colonIndex).trim()
+                val value = input.substring(colonIndex + 1, end).trim()
+                if (key.isNotEmpty()) {
+                    result[key] = value
+                }
             }
-            .toMap()
+            start = end + 1
+        }
+        return result
     }
 
     fun clearRecentLogsForStudent(studentId: Long) {
