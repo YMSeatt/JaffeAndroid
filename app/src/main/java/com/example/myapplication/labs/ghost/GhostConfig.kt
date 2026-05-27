@@ -228,4 +228,7 @@ object GhostConfig {
 
     /** Enables "Ghost Neural Rain" data-driven atmospheric visualization. */
     const val RAIN_MODE_ENABLED = true
+
+    /** Enables "Ghost Beacon" neural student selection and volumetric attention. */
+    const val BEACON_MODE_ENABLED = true
 }
