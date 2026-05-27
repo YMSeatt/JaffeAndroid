@@ -46,6 +46,12 @@ interface FurnitureDao {
     fun getAllFurniture(): Flow<List<Furniture>>
 
     /**
+     * Non-reactive version of [getAllFurniture] for background processing.
+     */
+    @Query("SELECT * FROM furniture")
+    suspend fun getAllFurnitureList(): List<Furniture>
+
+    /**
      * Fetches a single furniture item by its unique [Furniture.id].
      */
     @Query("SELECT * FROM furniture WHERE id = :id")
