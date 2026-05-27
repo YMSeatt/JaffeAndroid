@@ -2579,9 +2579,10 @@ class SeatingChartViewModel @Inject constructor(
 
     suspend fun internalLoadLayout(layout: LayoutTemplate) = withContext(Dispatchers.IO) {
         val currentStudents = studentDao.getAllStudentsNonLiveData()
+        val currentFurniture = furnitureDao.getAllFurnitureList()
         val matchedStudentIds = mutableSetOf<Long>()
 
-        // BOLT: Pre-index students to replace O(N) searches with O(1) lookups.
+        // BOLT: Pre-index items to replace O(N) searches with O(1) lookups.
         // Combined into a single pass to minimize iterations and string concatenations.
         val studentsById = HashMap<Long, Student>(currentStudents.size * 2)
         val studentsByName = HashMap<String, MutableList<Student>>(currentStudents.size * 2)
@@ -2593,6 +2594,11 @@ class SeatingChartViewModel @Inject constructor(
             studentsByName.getOrPut(fullName.lowercase()) { mutableListOf() }.add(student)
             studentNamePairs.add(student to fullName)
         }
+
+        val furnitureById = currentFurniture.associateBy { it.id.toLong() }
+
+        val studentsToUpdate = mutableListOf<Student>()
+        val furnitureToUpdate = mutableListOf<Furniture>()
 
         try {
             val layoutData = Json.decodeFromString<LayoutData>(layout.layoutDataJson)
@@ -2636,15 +2642,23 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 if (targetStudentId != null) {
-                    studentDao.updatePosition(targetStudentId, studentLayout.x, studentLayout.y)
+                    studentsById[targetStudentId]?.let { student ->
+                        studentsToUpdate.add(student.copy(xPosition = studentLayout.x, yPosition = studentLayout.y))
+                    }
                     matchedStudentIds.add(targetStudentId)
                 }
             }
 
             layoutData.furniture.forEach { furnitureLayout ->
-                furnitureDao.updatePosition(furnitureLayout.id.toLong(), furnitureLayout.x, furnitureLayout.y)
+                furnitureById[furnitureLayout.id.toLong()]?.let { furniture ->
+                    furnitureToUpdate.add(furniture.copy(xPosition = furnitureLayout.x, yPosition = furnitureLayout.y))
+                }
             }
         } catch (e: Exception) {
+            // BOLT: Reset lists for fallback attempt
+            studentsToUpdate.clear()
+            furnitureToUpdate.clear()
+
             // Fallback for older JSON format or parsing errors
             val layoutData = JSONObject(layout.layoutDataJson)
             val studentPositions = JSONArray(layoutData.getString("students"))
@@ -2654,9 +2668,9 @@ class SeatingChartViewModel @Inject constructor(
                 val x = pos.getDouble("x").toFloat()
                 val y = pos.getDouble("y").toFloat()
 
-                // For legacy format, we only have ID
-                if (currentStudents.any { it.id == id }) {
-                    studentDao.updatePosition(id, x, y)
+                // BOLT: Optimized check using Map instead of currentStudents.any (O(1) vs O(N))
+                studentsById[id]?.let { student ->
+                    studentsToUpdate.add(student.copy(xPosition = x, yPosition = y))
                 }
             }
 
@@ -2665,8 +2679,17 @@ class SeatingChartViewModel @Inject constructor(
                 val pos = furniturePositions.getJSONObject(i)
                 val x = pos.getDouble("x").toFloat()
                 val y = pos.getDouble("y").toFloat()
-                furnitureDao.updatePosition(pos.getLong("id"), x, y)
+                val id = pos.getLong("id")
+
+                furnitureById[id]?.let { furniture ->
+                    furnitureToUpdate.add(furniture.copy(xPosition = x, yPosition = y))
+                }
             }
+        }
+
+        // BOLT: Perform bulk updates in a single transaction
+        if (studentsToUpdate.isNotEmpty() || furnitureToUpdate.isNotEmpty()) {
+            internalUpdateAll(studentsToUpdate, furnitureToUpdate)
         }
     }
 
