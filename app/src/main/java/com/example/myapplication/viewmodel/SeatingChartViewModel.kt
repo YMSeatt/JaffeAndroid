@@ -2169,20 +2169,36 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     fun assignStudentToGroup(studentId: Long, groupId: Long) {
-        viewModelScope.launch {
-            val student = getStudentForEditing(studentId) ?: return@launch
-            val updatedStudent = student.copy(groupId = groupId)
-            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
-            executeCommand(command)
-        }
+        assignStudentsToGroup(listOf(studentId), groupId)
     }
 
     fun removeStudentFromGroup(studentId: Long) {
+        assignStudentsToGroup(listOf(studentId), null)
+    }
+
+    /**
+     * BOLT: Bulk student group assignment. Encapsulates multiple assignments into a single
+     * CompositeCommand to ensure atomic history updates and consistent undo/redo.
+     */
+    fun assignStudentsToGroup(studentIds: List<Long>, groupId: Long?) {
+        if (studentIds.isEmpty()) return
         viewModelScope.launch {
-            val student = getStudentForEditing(studentId) ?: return@launch
-            val updatedStudent = student.copy(groupId = null)
-            val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
-            executeCommand(command)
+            val commands = studentIds.mapNotNull { id ->
+                val student = getStudentForEditing(id)
+                if (student != null && student.groupId != groupId) {
+                    val updatedStudent = student.copy(groupId = groupId)
+                    UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
+                } else {
+                    null
+                }
+            }
+            if (commands.isNotEmpty()) {
+                val groupName = if (groupId != null) {
+                    allGroups.value.find { it.id == groupId }?.name ?: "Group $groupId"
+                } else "No Group"
+                val compositeCommand = CompositeCommand(commands, "Assign ${commands.size} student(s) to $groupName")
+                executeCommand(compositeCommand)
+            }
         }
     }
 

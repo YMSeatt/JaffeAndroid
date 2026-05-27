@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MoreVert
@@ -773,6 +774,7 @@ fun SeatingChartScreen(
                 editModeEnabled = editModeEnabled,
                 seatingChartViewModel = seatingChartViewModel,
                 settingsViewModel = settingsViewModel,
+                studentGroupsViewModel = studentGroupsViewModel,
                 onShowSaveLayout = { showSaveLayoutDialog = true },
                 onShowLoadLayout = { showLoadLayoutDialog = true },
                 onShowExport = { showExportDialog = true },
@@ -2364,6 +2366,7 @@ fun SeatingChartTopAppBar(
     editModeEnabled: Boolean,
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
+    studentGroupsViewModel: StudentGroupsViewModel,
     onShowSaveLayout: () -> Unit,
     onShowLoadLayout: () -> Unit,
     onShowExport: () -> Unit,
@@ -2500,25 +2503,62 @@ fun SeatingChartTopAppBar(
 
             // Behaviors Dropdown
             val behaviorTargetCount = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.size else if (selectedStudentUiItemForAction != null) 1 else 0
-            if (behaviorTargetCount > 0 && behaviorTypeNames.isNotEmpty()) {
-                var showQuickBehaviorMenu by remember { mutableStateOf(false) }
+            if (behaviorTargetCount > 0) {
+                if (behaviorTypeNames.isNotEmpty()) {
+                    var showQuickBehaviorMenu by remember { mutableStateOf(false) }
+                    Box {
+                        TextButton(onClick = { showQuickBehaviorMenu = true }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text("Log ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showQuickBehaviorMenu,
+                            onDismissRequest = { showQuickBehaviorMenu = false }
+                        ) {
+                            behaviorTypeNames.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type) },
+                                    onClick = {
+                                        onBehaviorLog(type)
+                                        showQuickBehaviorMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Groups Dropdown (Ported from Python bulk group assignment)
+                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                var showQuickGroupMenu by remember { mutableStateOf(false) }
                 Box {
-                    TextButton(onClick = { showQuickBehaviorMenu = true }) {
+                    TextButton(onClick = { showQuickGroupMenu = true }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text("Log ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
+                            Icon(Icons.Default.Group, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("Group ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                     DropdownMenu(
-                        expanded = showQuickBehaviorMenu,
-                        onDismissRequest = { showQuickBehaviorMenu = false }
+                        expanded = showQuickGroupMenu,
+                        onDismissRequest = { showQuickGroupMenu = false }
                     ) {
-                        behaviorTypeNames.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text("No Group") },
+                            onClick = {
+                                val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                                seatingChartViewModel.assignStudentsToGroup(targets, null)
+                                showQuickGroupMenu = false
+                            }
+                        )
+                        groups.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(group.name) },
                                 onClick = {
-                                    onBehaviorLog(type)
-                                    showQuickBehaviorMenu = false
+                                    val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                                    seatingChartViewModel.assignStudentsToGroup(targets, group.id)
+                                    showQuickGroupMenu = false
                                 }
                             )
                         }
