@@ -187,6 +187,8 @@ import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
 import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
 import com.example.myapplication.labs.ghost.rain.GhostRainEngine
 import com.example.myapplication.labs.ghost.rain.GhostRainLayer
+import com.example.myapplication.labs.ghost.beacon.GhostBeaconEngine
+import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
@@ -371,6 +373,8 @@ fun SeatingChartScreen(
     var isCarbonActive by remember { mutableStateOf(false) }
     var isWeaverActive by remember { mutableStateOf(false) }
     var isRainActive by remember { mutableStateOf(false) }
+    var isBeaconActive by remember { mutableStateOf(false) }
+    var beaconTargetPosition by remember { mutableStateOf(Offset.Zero) }
     var isInkActive by remember { mutableStateOf(false) }
     var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
@@ -1103,6 +1107,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isRainActive
+            )
+            GhostBeaconLayer(
+                targetPosition = beaconTargetPosition,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isBeaconActive,
+                onAnimationComplete = { isBeaconActive = false }
             )
             Box(
                 modifier = Modifier
@@ -2113,6 +2124,22 @@ fun SeatingChartScreen(
                             "CARBON" -> isCarbonActive = !isCarbonActive
                             "WEAVER" -> isWeaverActive = !isWeaverActive
                             "RAIN" -> isRainActive = !isRainActive
+                            "BEACON" -> {
+                                val targetId = GhostBeaconEngine.pickBeaconTarget(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+                                if (targetId != null) {
+                                    val target = students.find { it.id.toLong() == targetId }
+                                    if (target != null) {
+                                        beaconTargetPosition = Offset(target.xPosition.value, target.yPosition.value)
+                                        isBeaconActive = true
+                                        coroutineScope.launch {
+                                            kotlinx.coroutines.delay(5000)
+                                            isBeaconActive = false
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No beacon target found", Toast.LENGTH_SHORT).show()
+                                }
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }

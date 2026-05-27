@@ -91,6 +91,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAIN_MODE_ENABLED) {
                 add(GhostAction("RAIN", Icons.Default.WaterDrop, "Neural Rain"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BEACON_MODE_ENABLED) {
+                add(GhostAction("BEACON", Icons.Default.FlashlightOn, "Neural Beacon"))
+            }
         }
     }
 
