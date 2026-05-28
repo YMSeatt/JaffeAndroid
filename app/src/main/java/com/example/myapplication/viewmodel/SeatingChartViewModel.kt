@@ -2032,9 +2032,6 @@ class SeatingChartViewModel @Inject constructor(
     suspend fun internalDeleteStudent(student: Student) {
         withContext(Dispatchers.IO) {
             repository.deleteStudent(student)
-            withContext(Dispatchers.Main) {
-                updateStudentsForDisplay(allStudents.value ?: emptyList())
-            }
         }
     }
 
@@ -2747,11 +2744,7 @@ class SeatingChartViewModel @Inject constructor(
 
     suspend fun internalAddBehaviorEvent(event: BehaviorEvent): Long {
         return withContext(Dispatchers.IO) {
-            val id = repository.insertBehaviorEvent(event)
-            withContext(Dispatchers.Main) {
-                updateStudentsForDisplay(allStudents.value ?: emptyList())
-            }
-            id
+            repository.insertBehaviorEvent(event)
         }
     }
 
