@@ -287,37 +287,53 @@ class StatsViewModel @Inject constructor(
         val lastReportDay = reportStartDay + totalDaysInRange - 1
 
         // Track active days per student (optimized for O(1) presence checks using epoch day)
-        // BOLT: Replaced forEach with manual index-based loops to avoid iterator allocations.
-        val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
+        // BOLT: Replaced MutableMap<Long, MutableSet<Long>> with LongSparseArray<BitSet>
+        // to eliminate boxed Long allocations and reduce memory footprint.
+        val studentActiveDays = android.util.LongSparseArray<java.util.BitSet>()
         for (i in behaviorEvents.indices) {
             val event = behaviorEvents[i]
             val day = getEpochDay(event.timestamp)
             if (day in reportStartDay..lastReportDay) {
-                studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(day)
+                var bitSet = studentActiveDays.get(event.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(event.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
             }
         }
         for (i in homeworkLogs.indices) {
             val log = homeworkLogs[i]
             val day = getEpochDay(log.loggedAt)
             if (day in reportStartDay..lastReportDay) {
-                studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(day)
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
             }
         }
         for (i in quizLogs.indices) {
             val log = quizLogs[i]
             val day = getEpochDay(log.loggedAt)
             if (day in reportStartDay..lastReportDay) {
-                studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(day)
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
             }
         }
 
         val summaryList = mutableListOf<AttendanceSummary>()
         for (student in students) {
-            val presentDaysSet = studentActiveDays[student.id] ?: emptySet()
+            val bitSet = studentActiveDays.get(student.id)
 
             // BOLT: Optimize nested loop by counting active days within the report range.
-            // Since we filtered days during collection, we can now use O(1) size lookup.
-            val presentCount = presentDaysSet.size
+            // Using bitSet.cardinality() provides an efficient O(1) population count.
+            val presentCount = bitSet?.cardinality() ?: 0
 
             val absentCount = totalDaysInRange - presentCount
             val percentage = if (totalDaysInRange > 0) (presentCount.toDouble() / totalDaysInRange) * 100 else 0.0
@@ -350,16 +366,21 @@ class StatsViewModel @Inject constructor(
         sortedStudents: List<Student>,
         studentNameMap: Map<Long, String>
     ): List<BehaviorSummary> {
-        // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists
-        val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
+        // Optimization: Single-pass iteration to count behaviors per student without creating intermediate lists.
+        // BOLT: Use LongSparseArray to eliminate boxed Long student ID keys.
+        val behaviorCounts = android.util.LongSparseArray<MutableMap<String, Int>>()
         for (event in behaviorEvents) {
-            val studentBehaviors = behaviorCounts.getOrPut(event.studentId) { mutableMapOf() }
+            var studentBehaviors = behaviorCounts.get(event.studentId)
+            if (studentBehaviors == null) {
+                studentBehaviors = mutableMapOf()
+                behaviorCounts.put(event.studentId, studentBehaviors)
+            }
             studentBehaviors[event.type] = (studentBehaviors[event.type] ?: 0) + 1
         }
 
         val summaryList = mutableListOf<BehaviorSummary>()
         for (student in sortedStudents) {
-            val studentBehaviors = behaviorCounts[student.id] ?: continue
+            val studentBehaviors = behaviorCounts.get(student.id) ?: continue
             val studentName = studentNameMap[student.id] ?: ""
             // BOLT: Sorting the keys (behavior types) is acceptable as the count is small (usually < 20)
             studentBehaviors.keys.sorted().forEach { behavior ->
@@ -395,11 +416,16 @@ class StatsViewModel @Inject constructor(
         // Optimization: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
         val scoringContext = com.example.myapplication.util.QuizScoreEngine.getScoringContext(quizMarkTypes)
 
-        // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging
-        val quizScores = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
+        // Optimization: Use a sum/count Pair (via custom class or primitive arrays to avoid boxing) for averaging.
+        // BOLT: Use LongSparseArray to eliminate boxed Long student ID keys.
+        val quizScores = android.util.LongSparseArray<MutableMap<String, DoubleArray>>()
 
         for (log in quizLogs) {
-            val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
+            var studentScores = quizScores.get(log.studentId)
+            if (studentScores == null) {
+                studentScores = mutableMapOf()
+                quizScores.put(log.studentId, studentScores)
+            }
             val stats = studentScores.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
 
             val scorePercent = com.example.myapplication.util.QuizScoreEngine.calculatePercentage(log, scoringContext) ?: 0.0
@@ -409,7 +435,7 @@ class StatsViewModel @Inject constructor(
 
         val summaryList = mutableListOf<QuizSummary>()
         for (student in sortedStudents) {
-            val studentQuizzes = quizScores[student.id] ?: continue
+            val studentQuizzes = quizScores.get(student.id) ?: continue
             val studentName = studentNameMap[student.id] ?: ""
             studentQuizzes.keys.sorted().forEach { quizName ->
                 val stats = studentQuizzes[quizName]!!
@@ -443,12 +469,17 @@ class StatsViewModel @Inject constructor(
         sortedStudents: List<Student>,
         studentNameMap: Map<Long, String>
     ): List<HomeworkSummary> {
-        // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop
-        val homeworkCountMap = mutableMapOf<Long, MutableMap<String, Int>>()
-        val homeworkPointsMap = mutableMapOf<Long, MutableMap<String, Double>>()
+        // Optimization: Single-pass iteration to calculate homework summary and avoid Pair object allocations in loop.
+        // BOLT: Use LongSparseArray to eliminate boxed Long student ID keys.
+        val homeworkCountMap = android.util.LongSparseArray<MutableMap<String, Int>>()
+        val homeworkPointsMap = android.util.LongSparseArray<MutableMap<String, Double>>()
 
         for (log in homeworkLogs) {
-            val studentCounts = homeworkCountMap.getOrPut(log.studentId) { mutableMapOf() }
+            var studentCounts = homeworkCountMap.get(log.studentId)
+            if (studentCounts == null) {
+                studentCounts = mutableMapOf()
+                homeworkCountMap.put(log.studentId, studentCounts)
+            }
             studentCounts[log.assignmentName] = (studentCounts[log.assignmentName] ?: 0) + 1
 
             var points = 0.0
@@ -468,18 +499,22 @@ class StatsViewModel @Inject constructor(
                 }
             }
             if (points != 0.0) {
-                val studentPoints = homeworkPointsMap.getOrPut(log.studentId) { mutableMapOf() }
+                var studentPoints = homeworkPointsMap.get(log.studentId)
+                if (studentPoints == null) {
+                    studentPoints = mutableMapOf()
+                    homeworkPointsMap.put(log.studentId, studentPoints)
+                }
                 studentPoints[log.assignmentName] = (studentPoints[log.assignmentName] ?: 0.0) + points
             }
         }
 
         val summaryList = mutableListOf<HomeworkSummary>()
         for (student in sortedStudents) {
-            val studentHomeworks = homeworkCountMap[student.id] ?: continue
+            val studentHomeworks = homeworkCountMap.get(student.id) ?: continue
             val studentName = studentNameMap[student.id] ?: ""
             studentHomeworks.keys.sorted().forEach { assignmentName ->
                 val count = studentHomeworks[assignmentName] ?: 0
-                val totalPoints = homeworkPointsMap[student.id]?.get(assignmentName) ?: 0.0
+                val totalPoints = homeworkPointsMap.get(student.id)?.get(assignmentName) ?: 0.0
                 summaryList.add(
                     HomeworkSummary(
                         studentName = studentName,
