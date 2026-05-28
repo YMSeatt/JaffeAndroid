@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.pulse
 
 import android.graphics.RuntimeShader
 import android.os.Build
@@ -9,7 +9,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.platform.LocalContext
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.labs.ghost.GhostConfig
+import com.example.myapplication.labs.ghost.util.GhostHapticManager
 import com.example.myapplication.ui.model.StudentUiItem
 
 /**
@@ -28,6 +31,9 @@ fun GhostPulseLayer(
 ) {
     if (!GhostConfig.GHOST_MODE_ENABLED) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+
+    val context = LocalContext.current
+    val hapticManager = remember { GhostHapticManager(context) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulseTime")
     val time by infiniteTransition.animateFloat(
@@ -51,6 +57,18 @@ fun GhostPulseLayer(
 
     val resonances = remember(behaviorLogs, currentTime) {
         GhostPulseEngine.calculateResonance(behaviorLogs, currentTime)
+    }
+
+    // Haptic Resonance: Trigger a tactile pulse when new high-intensity resonance is detected.
+    var lastPulseTime by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(resonances) {
+        if (resonances.isNotEmpty()) {
+            val mostRecent = resonances.maxByOrNull { it.startTime }
+            if (mostRecent != null && mostRecent.startTime > lastPulseTime && mostRecent.intensity > 0.8f) {
+                hapticManager.perform(GhostHapticManager.Pattern.SPARK_POP)
+                lastPulseTime = mostRecent.startTime
+            }
+        }
     }
 
     if (resonances.isEmpty()) return
@@ -88,9 +106,9 @@ fun GhostPulseLayer(
             centers[i * 2] = centerX
             centers[i * 2 + 1] = centerY
 
-            colors[i * 3] = resonance.color.first
-            colors[i * 3 + 1] = resonance.color.second
-            colors[i * 3 + 2] = resonance.color.third
+            colors[i * 3] = resonance.r
+            colors[i * 3 + 1] = resonance.g
+            colors[i * 3 + 2] = resonance.b
 
             intensities[i] = resonance.intensity
 

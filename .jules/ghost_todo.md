@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Pulse - Temporal resonance visualization
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-07-30: Ghost Pulse - Temporal resonance visualization in `/labs/ghost/pulse/`
 - [DONE] 2028-07-28: Ghost Beacon - Data-driven student picker & volumetric beacon in `/labs/ghost/beacon/`
 - [DONE] 2028-07-25: Ghost Neural Rain - Data-driven atmospheric visualization in `/labs/ghost/rain/`
 - [DONE] 2028-07-24: Ghost Weaver - Academic milestone visualization in `/labs/ghost/weaver/`

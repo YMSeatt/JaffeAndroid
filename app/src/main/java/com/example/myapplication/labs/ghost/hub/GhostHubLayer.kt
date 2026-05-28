@@ -94,6 +94,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BEACON_MODE_ENABLED) {
                 add(GhostAction("BEACON", Icons.Default.FlashlightOn, "Neural Beacon"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PULSE_MODE_ENABLED) {
+                add(GhostAction("PULSE", Icons.Default.Waves, "Neural Pulse"))
+            }
         }
     }
 

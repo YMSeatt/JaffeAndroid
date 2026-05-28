@@ -133,7 +133,7 @@ import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
-import com.example.myapplication.labs.ghost.GhostPulseLayer
+import com.example.myapplication.labs.ghost.pulse.GhostPulseLayer
 import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
@@ -2142,6 +2142,7 @@ fun SeatingChartScreen(
                                     Toast.makeText(context, "No beacon target found", Toast.LENGTH_SHORT).show()
                                 }
                             }
+                            "PULSE" -> isPulseActive = !isPulseActive
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
