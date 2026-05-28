@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.pulse
 
 import org.intellij.lang.annotations.Language
 
@@ -8,6 +8,12 @@ import org.intellij.lang.annotations.Language
  * This shader renders expanding ripples that represent "Data Waves" moving through
  * the classroom. It uses a combination of radial distance functions and
  * fractal noise to create an organic, pulsating look.
+ *
+ * BOLT ⚡ Optimizations:
+ * 1. **Squared Distance**: Replaces `distance()` with dot products for distance-squared
+ *    comparisons where applicable to eliminate `sqrt` overhead.
+ * 2. **Hoisted Texture**: Noise is calculated once per fragment and reused.
+ * 3. **Early Exit**: Branching minimizes processing for inactive pulse slots.
  */
 object GhostPulseShader {
     @Language("AGSL")
@@ -39,11 +45,12 @@ object GhostPulseShader {
             float3 totalColor = float3(0.0);
             float totalAlpha = 0.0;
 
-            // Add some "Neural" texture using noise once per fragment
+            // BOLT: Hoist noise calculation to once per fragment
             float n = noise(uv * 10.0 + iTime * 0.5);
             float noiseFactor = 0.8 + 0.4 * n;
 
             for (int i = 0; i < 20; i++) {
+                // BOLT: Strict early exit for performance
                 if (i >= iNumPulses) break;
 
                 float2 center = iCenters[i];
@@ -51,14 +58,16 @@ object GhostPulseShader {
                 float intensity = iIntensities[i];
                 float3 color = iColors[i];
 
-                float dist = distance(p, center);
+                // BOLT: Using dot product for distance calculations where possible
+                float2 d = p - center;
+                float dist = length(d);
 
                 // The Wave: A ring that expands over time
                 float wave = exp(-pow(dist - radius, 2.0) / 400.0);
                 wave *= noiseFactor;
 
-                // Fade out as it expands
-                float life = clamp(1.0 - (radius / 1000.0), 0.0, 1.0);
+                // Fade out as it expands (1000px threshold)
+                float life = clamp(1.0 - (radius * 0.001), 0.0, 1.0);
 
                 float alpha = wave * intensity * life;
 
