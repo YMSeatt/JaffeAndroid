@@ -48,7 +48,7 @@ class EmailUtil(private val context: Context) {
     /**
      * Validates an email address using a standard RFC 5322-compliant pattern.
      */
-    private fun isValidEmail(email: String): Boolean {
+    fun isValidEmail(email: String): Boolean {
         return EMAIL_ADDRESS_PATTERN.matcher(email).matches()
     }
 
@@ -77,10 +77,10 @@ class EmailUtil(private val context: Context) {
         smtpSettings: SmtpSettings
     ) {
         if (!isValidEmail(from)) {
-            throw EmailException("Invalid 'from' email address: $from")
+            throw EmailException("Invalid email address configuration.")
         }
         if (!isValidEmail(to)) {
-            throw EmailException("Invalid 'to' email address: $to")
+            throw EmailException("Invalid email address configuration.")
         }
         val data = Data.Builder()
             .putString("request_type", "send_email")
@@ -126,6 +126,9 @@ class EmailUtil(private val context: Context) {
         attachmentPath: String? = null,
         smtpSettings: SmtpSettings
     ) {
+        if (!isValidEmail(from) || !isValidEmail(to)) {
+            throw EmailException("Invalid email address configuration.")
+        }
         withContext(Dispatchers.IO) {
             val properties = Properties().apply {
                 put("mail.smtp.host", smtpSettings.host)

@@ -146,7 +146,7 @@ class SettingsViewModelTest {
         every { preferencesRepository.autoExpandStudentBoxesFlow } returns flowOf(true)
         every { preferencesRepository.lastExportPathFlow } returns flowOf(null)
         every { preferencesRepository.encryptDataFilesFlow } returns flowOf(true)
-        every { preferencesRepository.defaultEmailAddressFlow } returns flowOf("behaviorlogger@gmail.com")
+        every { preferencesRepository.defaultEmailAddressFlow } returns flowOf("")
         every { preferencesRepository.canvasBackgroundColorFlow } returns flowOf("#FFFFFF")
         every { preferencesRepository.guidesStayWhenRulersHiddenFlow } returns flowOf(false)
         every { preferencesRepository.behaviorDisplayTimeoutFlow } returns flowOf(0)

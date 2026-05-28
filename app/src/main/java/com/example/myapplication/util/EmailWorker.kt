@@ -84,8 +84,9 @@ class EmailWorker(
             val from = preferencesRepository.defaultEmailAddressFlow.first()
             val password = preferencesRepository.emailPasswordFlow.first()
             val smtpSettings = preferencesRepository.smtpSettingsFlow.first()
+            val emailUtil = EmailUtil(applicationContext)
 
-            if (password.isNullOrBlank()) {
+            if (password.isNullOrBlank() || !emailUtil.isValidEmail(from)) {
                 return@withContext Result.failure()
             }
 
@@ -167,8 +168,8 @@ class EmailWorker(
                         )
 
                         val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: from
-                        if (to.isNotBlank()) {
-                            EmailUtil(applicationContext).sendEmail(
+                        if (emailUtil.isValidEmail(to)) {
+                            emailUtil.sendEmail(
                                 from = from,
                                 password = password,
                                 to = to,
@@ -188,6 +189,8 @@ class EmailWorker(
                     val attachmentPath = inputData.getString("attachment_path")?.let { securityUtil.decryptSafe(it) }
                     try {
                         val to = inputData.getString("to")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                        if (!emailUtil.isValidEmail(to)) return@withContext Result.failure()
+
                         val subject = inputData.getString("subject")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                         val body = inputData.getString("body")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                         val workerSmtpSettings = inputData.getString("smtp_settings")?.let {
@@ -222,15 +225,20 @@ class EmailWorker(
                     val pendingEmails = emailRepository.getAllPendingEmails()
                     pendingEmails.forEach { email ->
                         try {
-                            EmailUtil(applicationContext).sendEmail(
-                                from = from,
-                                password = password,
-                                to = email.recipientAddress,
-                                subject = email.subject,
-                                body = email.body,
-                                smtpSettings = smtpSettings
-                            )
-                            emailRepository.deletePendingEmail(email.id)
+                            if (emailUtil.isValidEmail(email.recipientAddress)) {
+                                emailUtil.sendEmail(
+                                    from = from,
+                                    password = password,
+                                    to = email.recipientAddress,
+                                    subject = email.subject,
+                                    body = email.body,
+                                    smtpSettings = smtpSettings
+                                )
+                                emailRepository.deletePendingEmail(email.id)
+                            } else {
+                                Log.e("EmailWorker", "Skipping pending email ${email.id} due to invalid recipient address.")
+                                emailRepository.deletePendingEmail(email.id)
+                            }
                         } catch (e: Exception) {
                             Log.e("EmailWorker", "Failed to send pending email ${email.id}", e)
                         }
@@ -243,6 +251,7 @@ class EmailWorker(
                     val file = File.createTempFile("on_stop_export_", ".xlsx", sharedDir)
                     try {
                         val to = inputData.getString("email_address")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
+                        if (!emailUtil.isValidEmail(to)) return@withContext Result.failure()
                         val exportOptionsJson = inputData.getString("export_options")?.let { securityUtil.decryptSafe(it) } ?: return@withContext Result.failure()
                         val exportOptions = Json.decodeFromString<ExportOptions>(exportOptionsJson)
 
@@ -284,7 +293,7 @@ class EmailWorker(
                             encrypt = exportOptions.encrypt
                         )
 
-                        EmailUtil(applicationContext).sendEmail(
+                        emailUtil.sendEmail(
                             from = from,
                             password = password,
                             to = to,

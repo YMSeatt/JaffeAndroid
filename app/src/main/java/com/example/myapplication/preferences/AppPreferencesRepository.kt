@@ -1075,7 +1075,7 @@ class AppPreferencesRepository @Inject constructor(
     /** Reactive stream of the default email address for reports. Decrypted for use. */
     val defaultEmailAddressFlow: Flow<String> = context.dataStore.data
         .map { preferences ->
-            val value = preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: "behaviorlogger@gmail.com"
+            val value = preferences[PreferencesKeys.DEFAULT_EMAIL_ADDRESS] ?: ""
             securityUtil.decryptSafe(value)
         }
 

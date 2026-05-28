@@ -1037,7 +1037,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val defaultEmailAddress: StateFlow<String> = preferencesRepository.defaultEmailAddressFlow
-        .stateIn(viewModelScope, SharingStarted.Eagerly, "behaviorlogger@gmail.com")
+        .stateIn(viewModelScope, SharingStarted.Eagerly, "")
     val defaultEmailAddressValue: String
         get() = defaultEmailAddress.value
     fun updateDefaultEmailAddress(email: String) {
