@@ -126,3 +126,12 @@
 - **Vulnerability:** Several sensitive UI states in the seating chart (Student Action Menus, Export/Email dialogs, Layout management, and Box styling) were still vulnerable to screen capture because they were not integrated into the "Privacy Shield" logic.
 - **Fix:** Expanded the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include 10 additional sensitive states: `showStudentActionMenu`, `showSaveLayoutDialog`, `showLoadLayoutDialog`, `showExportDialog`, `showUndoHistoryDialog`, `showChangeBoxSizeDialog`, `showStudentStyleDialog`, `showAssignTaskDialog`, `showAddEditFurnitureDialog`, and `showEmailDialog`.
 - **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
+
+## 🛡️ Privacy and Configuration Hardening: Removal of Hardcoded Email Fallback
+- **Vulnerability:** The application used a hardcoded fallback email address (`behaviorlogger@gmail.com`) when a user-defined address was missing. This created a privacy risk of leaking student PII to an unauthorized developer-owned inbox and was identified as a security risk for automated reporting. Additionally, the email-sending pipeline lacked robust input validation.
+- **Fix:**
+    - Removed the hardcoded fallback from `AppPreferencesRepository.kt` and `SettingsViewModel.kt`, transitioning to an empty-string default.
+    - Enhanced `EmailUtil.kt` by making `isValidEmail` public and enforcing address validation at the start of all sending methods.
+    - Hardened `EmailWorker.kt` by adding mandatory `isValidEmail` checks for both sender and recipient in all background reporting paths (`daily_report`, `send_email`, `process_pending_emails`, `on_stop_export`).
+    - Standardized exception messages in the email pipeline to be generic ("Invalid email address configuration") to prevent PII leakage to system logs or UI toasts.
+- **Location:** `app/src/main/java/com/example/myapplication/preferences/AppPreferencesRepository.kt`, `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`, `app/src/main/java/com/example/myapplication/util/EmailUtil.kt`, `app/src/main/java/com/example/myapplication/util/EmailWorker.kt`
