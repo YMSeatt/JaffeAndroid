@@ -1,8 +1,11 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Add Neural "Mood Board" visualization
+- [ ] Idea: Implement "Ghost Link" proximity-based pairing
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-01: Ghost Mirror - Spatial perspective flipping in `/labs/ghost/mirror/`
 - [DONE] 2028-07-30: Ghost Pulse - Temporal resonance visualization in `/labs/ghost/pulse/`
 - [DONE] 2028-07-28: Ghost Beacon - Data-driven student picker & volumetric beacon in `/labs/ghost/beacon/`
 - [DONE] 2028-07-25: Ghost Neural Rain - Data-driven atmospheric visualization in `/labs/ghost/rain/`
@@ -21,7 +24,7 @@
 - [DONE] 2028-06-18: Ghost Seeds - Native Home Screen Shortcuts & Neural Deep-links in `/labs/ghost/util/GhostSeedEngine.kt`
 - [DONE] 2028-06-15: Ghost Shell - Immersive Neural Dock in `/labs/ghost/shell`
 - [DONE] 2028-06-12: Ghost Neural Flux - Density-aware flow visualization in `/labs/ghost/`
-- [DONE] 2028-06-08: Ghost Neural PiP - Native Picture-in-Picture Climate Monitor in `/labs/ghost/pip/`
+- [DONE] 2028-06-08: Ghost Neural PiP - Native Picture-in-Picture Climate monitor in `/labs/ghost/pip/`
 - [DONE] 2028-06-05: Ghost Tiles - Native Quick Settings integration (HUD & Quick Log) in `/labs/ghost/tiles/`
 - [DONE] 2028-06-02: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-30: Ghost Kinetic - Physics-based momentum for student icons in `/labs/ghost/kinetic/`
