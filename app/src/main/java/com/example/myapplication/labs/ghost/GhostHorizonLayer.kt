@@ -21,11 +21,11 @@ fun GhostHorizonLayer(
     if (!GhostConfig.GHOST_MODE_ENABLED || !isActive) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    val lightLevel by engine.lightLevel.collectAsState()
-    val pressureLevel by engine.pressureLevel.collectAsState()
+    val lightLevelState = engine.lightLevel.collectAsState()
+    val pressureLevelState = engine.pressureLevel.collectAsState()
 
     val infiniteTransition = rememberInfiniteTransition(label = "horizonTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -39,6 +39,12 @@ fun GhostHorizonLayer(
     val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        // BOLT: Access sensor-driven and animation state inside the draw block.
+        // We use engine helpers that read the latest value directly from state.
+        val time = timeState.value
+        val lightLevel = lightLevelState.value
+        val pressureLevel = pressureLevelState.value
+
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iLight", engine.getAtmosphericFactor())

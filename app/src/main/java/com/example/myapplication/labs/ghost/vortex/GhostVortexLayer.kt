@@ -33,7 +33,7 @@ fun GhostVortexLayer(
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || vortices.isEmpty()) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "vortexRotation")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28318f,
         animationSpec = infiniteRepeatable(
@@ -52,11 +52,17 @@ fun GhostVortexLayer(
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
+        // BOLT: Access time value inside the draw block to avoid whole-layer recomposition.
+        val time = timeState.value
+
         val width = size.width
         val height = size.height
 
-        vortices.forEachIndexed { index, vortex ->
-            if (index >= shaderPool.size) return@forEachIndexed
+        val count = vortices.size
+        val poolSize = shaderPool.size
+        for (index in 0 until count) {
+            if (index >= poolSize) break
+            val vortex = vortices[index]
 
             val shader = shaderPool[index]
 
