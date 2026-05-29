@@ -26,8 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import kotlin.math.roundToInt
@@ -57,7 +59,8 @@ fun FurnitureDraggableIcon(
     noAnimations: Boolean,
     editModeEnabled: Boolean,
     gridSnapEnabled: Boolean,
-    gridSize: Int
+    gridSize: Int,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     key(furnitureUiItem.id) {
         Box(
@@ -70,6 +73,11 @@ fun FurnitureDraggableIcon(
                 }
                 .width(furnitureUiItem.displayWidth.value)
                 .height(furnitureUiItem.displayHeight.value)
+                .graphicsLayer {
+                    // Counter-transformation for Mirror/Perspective
+                    rotationZ = -mirrorPerspective.rotationZ
+                    scaleX = mirrorPerspective.scaleX
+                }
         ) {
             Card(
                 modifier = Modifier

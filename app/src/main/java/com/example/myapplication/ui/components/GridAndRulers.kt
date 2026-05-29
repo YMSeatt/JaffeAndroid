@@ -18,8 +18,10 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.graphicsLayer
 import com.example.myapplication.data.Guide
 import com.example.myapplication.data.GuideType
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
@@ -51,7 +53,8 @@ fun GridAndRulers(
     seatingChartViewModel: SeatingChartViewModel,
     scale: Float,
     offset: Offset,
-    canvasSize: androidx.compose.ui.geometry.Size
+    canvasSize: androidx.compose.ui.geometry.Size,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     val showGrid by settingsViewModel.showGrid.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
@@ -95,7 +98,12 @@ fun GridAndRulers(
 
     Canvas(modifier = Modifier
         .fillMaxSize()
-        .pointerInput(guides, scale, offset) {
+        .graphicsLayer {
+            // BOLT: Synchronize grid/ruler transformations with the main seating chart perspective.
+            rotationZ = mirrorPerspective.rotationZ
+            scaleX = mirrorPerspective.scaleX
+        }
+        .pointerInput(guides, scale, offset, mirrorPerspective) {
             detectDragGestures(
                 onDragStart = { startOffset ->
                     val worldStartOffset = (startOffset - offset) / scale
@@ -210,10 +218,16 @@ fun GridAndRulers(
                             end = Offset(screenX, rulerThickness / 2),
                             color = Color.Black, strokeWidth = 1f
                         )
+                        // BOLT: Counter-transform ruler text for legibility.
+                        canvas.nativeCanvas.save()
+                        canvas.nativeCanvas.translate(screenX, rulerThickness)
+                        canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
+                        canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.drawText(
                             (worldX).toLong().toString(),
-                            screenX, rulerThickness, rulerPaint
+                            0f, 0f, rulerPaint
                         )
+                        canvas.nativeCanvas.restore()
                     }
                 }
 
@@ -232,11 +246,15 @@ fun GridAndRulers(
                             end = Offset(rulerThickness / 2, screenY),
                             color = Color.Black, strokeWidth = 1f
                         )
+                        // BOLT: Counter-transform ruler text for legibility.
                         canvas.nativeCanvas.save()
-                        canvas.nativeCanvas.rotate(-90f, rulerThickness, screenY)
+                        canvas.nativeCanvas.translate(rulerThickness, screenY)
+                        canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
+                        canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
+                        canvas.nativeCanvas.rotate(-90f)
                         canvas.nativeCanvas.drawText(
                             (worldY).toLong().toString(),
-                            rulerThickness, screenY, rulerPaint
+                            0f, 0f, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
                     }

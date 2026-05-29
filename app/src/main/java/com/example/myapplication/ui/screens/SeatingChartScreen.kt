@@ -212,6 +212,7 @@ import com.example.myapplication.labs.ghost.hub.GhostHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostStudentHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostAction
 import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.labs.ghost.util.GhostHapticManager
 import com.example.myapplication.labs.ghost.util.GhostShakeDetector
@@ -534,6 +535,8 @@ fun SeatingChartScreen(
     val ghostRayEngine = remember { GhostRayEngine(context) }
     val ghostCometEngine = remember { GhostCometEngine() }
     val ghostFlareEngine = remember { GhostFlareEngine() }
+    val ghostMirrorEngine = remember { GhostMirrorEngine() }
+    val mirrorPerspective by ghostMirrorEngine.perspective
 
     DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, isInkActive, shakeToRecenterEnabled) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
@@ -1484,7 +1487,8 @@ fun SeatingChartScreen(
                 seatingChartViewModel = seatingChartViewModel,
                 scale = scale,
                 offset = offset,
-                canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat()),
+                mirrorPerspective = mirrorPerspective
             )
 
             // Main Content Rendering
@@ -1496,6 +1500,7 @@ fun SeatingChartScreen(
                     canvasSize = canvasSize,
                     students = students,
                     furniture = furniture,
+                    mirrorPerspective = mirrorPerspective,
                     selectedItemIds = selectedItemIds,
                     selectMode = selectMode,
                     sessionType = sessionType,
@@ -2143,6 +2148,11 @@ fun SeatingChartScreen(
                                 }
                             }
                             "PULSE" -> isPulseActive = !isPulseActive
+                            "MIRROR" -> {
+                                ghostMirrorEngine.togglePerspective()
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                                Toast.makeText(context, "Perspective: ${mirrorPerspective.name}", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2251,7 +2261,8 @@ fun SeatingChartContent(
     onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
     seatingChartViewModel: SeatingChartViewModel,
     isZenithActive: Boolean = false,
-    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null
+    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     Box(
         modifier = Modifier
@@ -2264,12 +2275,13 @@ fun SeatingChartContent(
                     onTransformChange(newScale, newOffset)
                 }
             }
-            .graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offset.x,
+            .graphicsLayer {
+                scaleX = scale * mirrorPerspective.scaleX
+                scaleY = scale
+                rotationZ = mirrorPerspective.rotationZ
+                translationX = offset.x
                 translationY = offset.y
-            )
+            }
     ) {
         Box(modifier = Modifier.size(4000.dp)) {
             val noAnimations = userPreferences?.noAnimations ?: false
@@ -2317,7 +2329,8 @@ fun SeatingChartContent(
                     quizLogFontColor = quizLogFontColor,
                     homeworkLogFontColor = homeworkLogFontColor,
                     quizLogFontBold = quizLogFontBold,
-                    homeworkLogFontBold = homeworkLogFontBold
+                    homeworkLogFontBold = homeworkLogFontBold,
+                    mirrorPerspective = mirrorPerspective
                 )
             }
             for (i in furniture.indices) {
@@ -2334,7 +2347,8 @@ fun SeatingChartContent(
                     noAnimations = noAnimations,
                     editModeEnabled = editModeEnabled,
                     gridSnapEnabled = gridSnapEnabled,
-                    gridSize = gridSize
+                    gridSize = gridSize,
+                    mirrorPerspective = mirrorPerspective
                 )
             }
         }

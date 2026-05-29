@@ -72,6 +72,7 @@ import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.labs.ghost.kinetic.GhostKineticEngine
 import com.example.myapplication.labs.ghost.lod.GhostLODEngine
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
@@ -134,7 +135,8 @@ fun StudentDraggableIcon(
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
     quizLogFontBold: Boolean = true,
-    homeworkLogFontBold: Boolean = true
+    homeworkLogFontBold: Boolean = true,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
@@ -216,6 +218,11 @@ fun StudentDraggableIcon(
                     } else Modifier
                 )
                 .scale(scale)
+                .graphicsLayer {
+                    // Counter-transformation for Mirror/Perspective
+                    rotationZ = -mirrorPerspective.rotationZ
+                    scaleX = mirrorPerspective.scaleX
+                }
         ) {
             Card(
                 modifier = Modifier

@@ -231,4 +231,7 @@ object GhostConfig {
 
     /** Enables "Ghost Beacon" neural student selection and volumetric attention. */
     const val BEACON_MODE_ENABLED = true
+
+    /** Enables "Ghost Mirror" spatial perspective flipping. */
+    const val MIRROR_MODE_ENABLED = true
 }
