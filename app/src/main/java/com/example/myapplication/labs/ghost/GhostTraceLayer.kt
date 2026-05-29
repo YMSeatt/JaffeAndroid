@@ -27,7 +27,7 @@ fun GhostTraceLayer(
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || traces.isEmpty()) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "trace_pulse")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
@@ -37,8 +37,20 @@ fun GhostTraceLayer(
         label = "time"
     )
 
-    // BOLT ⚡ Optimization: Render all traces in a single full-screen Canvas to avoid
-    // extreme overdraw from multiple full-screen graphicsLayers.
+    // BOLT ⚡ Optimization: Pre-allocate a pool of shaders to avoid per-frame allocations
+    // while bypassing the "Uniform Overwrite" bug in RenderNode recording.
+    val shaderPool = remember {
+        List(10) { RuntimeShader(GhostTraceShader.TRACE_PATH) }
+    }
+    val brushPool = remember(shaderPool) {
+        shaderPool.map { ShaderBrush(it) }
+    }
+
+    // BOLT ⚡ Optimization: Pre-allocate buffers and transform map to list for zero-allocation iteration.
+    val pointBuffer = remember { FloatArray(200) }
+    val ageBuffer = remember { FloatArray(100) }
+    val traceList = remember(traces) { traces.values.toList() }
+
     Canvas(
         modifier = Modifier
             .fillMaxSize()
@@ -49,38 +61,38 @@ fun GhostTraceLayer(
                 translationY = canvasOffset.y
             )
     ) {
-        // Shader pooling to avoid "Uniform Overwrite" bug during the single-pass draw loop.
-        // Traces are drawn sequentially.
-        traces.forEach { (studentId, points) ->
-            if (points.size < 2) return@forEach
+        // BOLT: Access time value inside the draw block to avoid whole-layer recomposition.
+        val time = timeState.value
 
-            // key(studentId) equivalent in the draw loop isn't needed as we are in the draw phase,
-            // but we use student-specific shader instances for state isolation if required.
-            // However, since we are drawing sequentially in one Canvas pass, we can re-use
-            // a single shader if we update uniforms before each draw call.
+        val maxTraces = minOf(traceList.size, shaderPool.size)
+        for (i in 0 until maxTraces) {
+            val points = traceList[i]
+            if (points.size < 2) continue
 
-            val shader = RuntimeShader(GhostTraceShader.TRACE_PATH)
+            val shader = shaderPool[i]
+            val count = minOf(points.size, 100)
+            val maxTs = points.last().timestamp.toFloat()
+            val minTs = points.first().timestamp.toFloat()
 
-            // Prepare uniforms
-            val pointArray = FloatArray(minOf(points.size, 100) * 2)
-            val ageArray = FloatArray(minOf(points.size, 100))
-            val maxId = points.last().timestamp.toFloat()
-            val minId = points.first().timestamp.toFloat()
+            // BOLT: Reuse buffers and clear to avoid stale data
+            pointBuffer.fill(0f)
+            ageBuffer.fill(0f)
 
-            for (i in 0 until minOf(points.size, 100)) {
-                pointArray[i * 2] = points[i].position.x
-                pointArray[i * 2 + 1] = points[i].position.y
-                ageArray[i] = if (maxId == minId) 1.0f else (points[i].timestamp - minId) / (maxId - minId)
+            for (j in 0 until count) {
+                val pt = points[j]
+                pointBuffer[j * 2] = pt.position.x
+                pointBuffer[j * 2 + 1] = pt.position.y
+                ageBuffer[j] = if (maxTs == minTs) 1.0f else (pt.timestamp - minTs) / (maxTs - minTs)
             }
 
             shader.setFloatUniform("iResolution", 4000f, 4000f)
             shader.setFloatUniform("iTime", time)
-            shader.setFloatUniform("iPointCount", minOf(points.size, 100).toFloat())
-            shader.setFloatUniform("iPoints", pointArray)
-            shader.setFloatUniform("iAges", ageArray)
+            shader.setFloatUniform("iPointCount", count.toFloat())
+            shader.setFloatUniform("iPoints", pointBuffer)
+            shader.setFloatUniform("iAges", ageBuffer)
 
             drawRect(
-                brush = ShaderBrush(shader),
+                brush = brushPool[i],
                 size = androidx.compose.ui.geometry.Size(4000f, 4000f)
             )
         }

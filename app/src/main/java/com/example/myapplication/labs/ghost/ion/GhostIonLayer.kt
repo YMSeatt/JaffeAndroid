@@ -45,7 +45,7 @@ fun GhostIonLayer(
     val tempFactor = remember(batteryTemp) { (batteryTemp - 25f).coerceIn(0f, 20f) / 20f }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ionPulse")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 100f,
         animationSpec = infiniteRepeatable(
@@ -62,6 +62,9 @@ fun GhostIonLayer(
         val pointsArray = remember { FloatArray(10 * 4) }
 
         Canvas(modifier = modifier.fillMaxSize()) {
+            // BOLT: Access animation state inside the draw block to avoid whole-layer recomposition.
+            val time = timeState.value
+
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iGlobalBalance", globalBalance)

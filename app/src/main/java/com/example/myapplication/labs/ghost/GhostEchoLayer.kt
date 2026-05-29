@@ -33,11 +33,11 @@ fun GhostEchoLayer(
     // AGSL RuntimeShader requires Android 13+ (API 33)
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    val amplitude by engine.amplitude.collectAsState()
+    val amplitudeState = engine.amplitude.collectAsState()
 
     // Smoothly animate the time uniform for continuous procedural motion
     val infiniteTransition = rememberInfiniteTransition(label = "echoPulse")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -59,6 +59,10 @@ fun GhostEchoLayer(
     Canvas(modifier = modifier.fillMaxSize()) {
         if (shader != null && brush != null) {
             try {
+                // BOLT: Access high-frequency state values inside the draw block to avoid redundant recompositions.
+                val time = timeState.value
+                val amplitude = amplitudeState.value
+
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iAmplitude", amplitude)

@@ -44,7 +44,7 @@ fun GhostPhantasmLayer(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "phantasmTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 100f,
         animationSpec = infiniteRepeatable(
@@ -92,18 +92,24 @@ fun GhostPhantasmLayer(
     val colorsArray = remember { FloatArray(60) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        // BOLT: Access time value inside the draw block to avoid whole-layer recomposition.
+        val time = timeState.value
+
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iAgitation", agitationLevel)
         shader.setFloatUniform("iIsRecording", if (isRecording) 1.0f else 0.0f)
-        shader.setIntUniform("iNumPoints", studentsToDisplay.size)
+
+        val count = studentsToDisplay.size
+        shader.setIntUniform("iNumPoints", count)
 
         // Clear arrays for reuse
         pointsArray.fill(0f)
         weightsArray.fill(0f)
         colorsArray.fill(0f)
 
-        studentsToDisplay.forEachIndexed { index, student ->
+        for (index in 0 until count) {
+            val student = studentsToDisplay[index]
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
