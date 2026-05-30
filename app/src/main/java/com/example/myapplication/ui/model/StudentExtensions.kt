@@ -31,6 +31,7 @@ import com.example.myapplication.util.safeParseColor
  * @param defaultFontColor Global default font color from user preferences.
  */
 fun Student.toStudentUiItem(
+    fullName: String,
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
@@ -61,7 +62,7 @@ fun Student.toStudentUiItem(
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
-        fullName = mutableStateOf("$firstName $lastName"),
+        fullName = mutableStateOf(fullName),
         nickname = mutableStateOf(nickname),
         initials = mutableStateOf(getEffectiveInitials()),
         xPosition = mutableStateOf(xPosition),
@@ -112,6 +113,7 @@ fun Student.toStudentUiItem(
  */
 fun Student.updateStudentUiItem(
     item: StudentUiItem,
+    fullName: String,
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
@@ -140,7 +142,7 @@ fun Student.updateStudentUiItem(
     magneticStrength: Float,
     magneticRadius: Float
 ) {
-    updateIfChanged(item.fullName, "$firstName $lastName")
+    updateIfChanged(item.fullName, fullName)
     updateIfChanged(item.nickname, nickname)
     updateIfChanged(item.initials, getEffectiveInitials())
     updateIfChanged(item.xPosition, xPosition)
