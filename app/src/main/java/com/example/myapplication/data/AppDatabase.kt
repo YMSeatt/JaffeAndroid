@@ -851,5 +851,15 @@ abstract class AppDatabase : RoomDatabase() {
             INSTANCE?.close()
             INSTANCE = getDatabase(context, DATABASE_NAME)
         }
+
+        /**
+         * Closes the active database connection and clears the singleton instance.
+         * Essential for file-level operations like deletion or restoration to ensure
+         * no stale handles or journal locks remain.
+         */
+        fun closeDatabase() {
+            INSTANCE?.close()
+            INSTANCE = null
+        }
     }
 }
