@@ -113,17 +113,8 @@ class SettingsViewModel @Inject constructor(
     fun archiveCurrentYear() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
-            AppDatabase.getDatabase(context).close()
-            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
-            val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault()).format(java.util.Date())
-
-            // HARDEN: Use a dedicated archives directory to allow exclusion from cloud backups
-            val archiveDir = File(context.filesDir, "archives")
-            if (!archiveDir.exists()) archiveDir.mkdirs()
-
-            val archiveFile = File(archiveDir, "archive_$timestamp.db")
-            dbFile.copyTo(archiveFile, overwrite = true)
-            // The database will be re-created on next access
+            internalArchiveDatabase(context, "archive")
+            // The database remains active for continued use after archival
             _restoreComplete.postValue(true)
         }
     }
@@ -766,6 +757,69 @@ class SettingsViewModel @Inject constructor(
         val mainIntent = Intent.makeRestartActivityTask(componentName)
         application.startActivity(mainIntent)
         Runtime.getRuntime().exit(0)
+    }
+
+    /**
+     * Resets the entire application to a factory-fresh state.
+     *
+     * This method:
+     * 1. Creates a safety archive of the current database (Force Backup).
+     * 2. Wipes all classroom data (Students, Logs, Templates, Groups).
+     * 3. Wipes all user preferences and encryption metadata.
+     * 4. Restarts the application process to ensure all caches are cleared.
+     *
+     * **Logical Parity**: Matches the `_perform_reset` logic in the Python blueprint.
+     */
+    fun resetApplication() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val context = application
+
+            // 1. Safety Archive (Force Backup)
+            internalArchiveDatabase(context, "safety_backup")
+
+            // 2. Wipe Classroom Data - CLOSE CONNECTION FIRST
+            AppDatabase.closeDatabase()
+            val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+            internalDeleteDatabaseFiles(dbFile)
+
+            // 3. Wipe User Preferences
+            preferencesRepository.clearAllPreferences()
+
+            // 4. Force Restart
+            withContext(Dispatchers.Main) {
+                triggerRebirth()
+            }
+        }
+    }
+
+    /**
+     * Creates a timestamped archive of the database file.
+     * Encapsulates the shared logic between manual archival and application reset.
+     *
+     * @param prefix The prefix for the archive filename (e.g., "archive" or "safety_backup").
+     */
+    private fun internalArchiveDatabase(context: android.content.Context, prefix: String) {
+        val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
+        if (!dbFile.exists()) return
+
+        val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.getDefault()).format(java.util.Date())
+        val archiveDir = File(context.filesDir, "archives")
+        if (!archiveDir.exists()) archiveDir.mkdirs()
+
+        val archiveFile = File(archiveDir, "${prefix}_$timestamp.db")
+        dbFile.copyTo(archiveFile, overwrite = true)
+    }
+
+    /**
+     * Deletes a database file and its associated sidecars (WAL, SHM).
+     * This ensures the SQLite engine doesn't attempt to recover from stale journals.
+     */
+    private fun internalDeleteDatabaseFiles(dbFile: File) {
+        if (dbFile.exists()) dbFile.delete()
+        val walFile = File(dbFile.path + "-wal")
+        val shmFile = File(dbFile.path + "-shm")
+        if (walFile.exists()) walFile.delete()
+        if (shmFile.exists()) shmFile.delete()
     }
 
     val stickyQuizNameDurationSeconds: StateFlow<Int> = preferencesRepository.stickyQuizNameDurationSecondsFlow

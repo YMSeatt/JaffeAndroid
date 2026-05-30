@@ -158,6 +158,50 @@ fun DataSettingsTab(
     var showResetHomeworkTypesConfirm by remember { mutableStateOf(false) }
     var showResetHomeworkStatusesConfirm by remember { mutableStateOf(false) }
     var showResetQuizMarkTypesConfirm by remember { mutableStateOf(false) }
+    var showResetApplicationConfirm1 by remember { mutableStateOf(false) }
+    var showResetApplicationConfirm2 by remember { mutableStateOf(false) }
+
+    if (showResetApplicationConfirm1) {
+        AlertDialog(
+            onDismissRequest = { showResetApplicationConfirm1 = false },
+            title = { Text("Confirm Application Reset") },
+            text = { Text("This will reset ALL application data including students, furniture, logs, settings, custom behaviors, templates, and groups. This action CANNOT be undone.\n\nAre you absolutely sure you want to reset the application to its default state?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetApplicationConfirm1 = false
+                    showResetApplicationConfirm2 = true
+                }) {
+                    Text("Continue", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetApplicationConfirm1 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetApplicationConfirm2) {
+        AlertDialog(
+            onDismissRequest = { showResetApplicationConfirm2 = false },
+            title = { Text("Final Confirmation") },
+            text = { Text("Really reset everything? This is your last chance to cancel.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetApplication()
+                    showResetApplicationConfirm2 = false
+                }) {
+                    Text("Reset Everything", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetApplicationConfirm2 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showResetQuizMarkTypesConfirm) {
         AlertDialog(
@@ -287,6 +331,17 @@ fun DataSettingsTab(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { showArchiveViewerDialog = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("View Archived Data")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { showResetApplicationConfirm1 = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("Reset Application (Caution!)")
             }
             Spacer(Modifier.height(8.dp))
             Row(

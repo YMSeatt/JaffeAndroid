@@ -1298,6 +1298,14 @@ class AppPreferencesRepository @Inject constructor(
             homeworkLogFontBold = args[28] as Boolean
         )
     }
+
+    /**
+     * Wipes all user configuration and resets every setting to its application default.
+     * This operation is atomic and immediate across all reactive streams.
+     */
+    suspend fun clearAllPreferences() {
+        context.dataStore.edit { it.clear() }
+    }
 }
 
 /**
