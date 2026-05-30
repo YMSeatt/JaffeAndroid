@@ -582,6 +582,13 @@ class SeatingChartViewModel @Inject constructor(
     private val studentUiItemCache = ConcurrentHashMap<Int, StudentUiItem>()
 
     /**
+     * Cache for pre-calculated student full names.
+     * BOLT: Pre-calculating these during the background Stage 1 pass eliminates thousands
+     * of string concatenations in the high-frequency Stage 3 sync loop.
+     */
+    private var studentNameMapCache = emptyMap<Long, String>()
+
+    /**
      * A persistent cache of [FurnitureUiItem] instances.
      */
     private val furnitureUiItemCache = ConcurrentHashMap<Int, FurnitureUiItem>()
@@ -1269,6 +1276,9 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Robust cleanup of all student-associated caches when the roster changes.
                 // Detects additions/removals even if the total count remains the same.
                 if (students !== memoizedStudents) {
+                    // BOLT: Pre-calculate student names once per roster change to avoid redundant allocations in loops.
+                    studentNameMapCache = students.associate { it.id to "${it.firstName} ${it.lastName}" }
+
                     val currentStudentIds = HashSet<Long>(students.size * 2)
                     for (s in students) currentStudentIds.add(s.id)
 
@@ -1569,6 +1579,7 @@ class SeatingChartViewModel @Inject constructor(
                         if (needsSync) {
                             studentForUi.updateStudentUiItem(
                                 item = existingItem,
+                                fullName = studentNameMapCache[student.id] ?: "",
                                 recentBehaviorDescription = behaviorDescription,
                                 recentHomeworkDescription = homeworkDescription,
                                 recentQuizDescription = quizDescription,
@@ -1601,6 +1612,7 @@ class SeatingChartViewModel @Inject constructor(
                         studentsWithBehavior.add(existingItem)
                     } else {
                         val newItem = studentForUi.toStudentUiItem(
+                            fullName = studentNameMapCache[student.id] ?: "",
                             recentBehaviorDescription = behaviorDescription,
                             recentHomeworkDescription = homeworkDescription,
                             recentQuizDescription = quizDescription,
@@ -2035,17 +2047,30 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Deletes a batch of students and furniture items from the database.
+     *
+     * **BOLT Optimization**: Uses direct O(1) lookups against the [itemIds] Set to identify
+     * items for deletion. This transforms the complexity from O(N*M) to O(N) where N is
+     * the total number of items in the classroom.
+     */
     fun deleteSelectedItems(itemIds: Set<ChartItemId>) {
         viewModelScope.launch {
             val commands = mutableListOf<Command>()
 
-            val studentIds = itemIds.filter { it.type == ItemType.STUDENT }.map { it.id }
-            val studentsToDelete = allStudents.value?.filter { studentIds.contains(it.id.toInt()) } ?: emptyList()
-            commands.addAll(studentsToDelete.map { DeleteStudentCommand(this@SeatingChartViewModel, it) })
+            // BOLT: Single-pass iteration over students with O(1) set lookups
+            allStudents.value?.forEach { student ->
+                if (itemIds.contains(ChartItemId(student.id.toInt(), ItemType.STUDENT))) {
+                    commands.add(DeleteStudentCommand(this@SeatingChartViewModel, student))
+                }
+            }
 
-            val furnitureIds = itemIds.filter { it.type == ItemType.FURNITURE }.map { it.id }
-            val furnitureToDelete = allFurniture.value?.filter { furnitureIds.contains(it.id.toInt()) } ?: emptyList()
-            commands.addAll(furnitureToDelete.map { DeleteFurnitureCommand(this@SeatingChartViewModel, it) })
+            // BOLT: Single-pass iteration over furniture with O(1) set lookups
+            allFurniture.value?.forEach { furniture ->
+                if (itemIds.contains(ChartItemId(furniture.id.toInt(), ItemType.FURNITURE))) {
+                    commands.add(DeleteFurnitureCommand(this@SeatingChartViewModel, furniture))
+                }
+            }
 
             if (commands.isEmpty()) return@launch
 
