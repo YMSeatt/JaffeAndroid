@@ -471,6 +471,7 @@ fun SeatingChartScreen(
     var showLiveQuizMarkDialog by remember { mutableStateOf(false) }
     var showAdvancedHomeworkLogDialog by remember { mutableStateOf(false) }
     var showLiveHomeworkMarkDialog by remember { mutableStateOf(false) }
+    var showBehaviorLogViewer by remember { mutableStateOf(false) }
     var showStudentActionMenu by remember { mutableStateOf(false) }
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
@@ -559,15 +560,20 @@ fun SeatingChartScreen(
 
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
-                                   isCortexActive || isHudActive || isArchitectActive || isShellActive || isStreamActive || isInkActive ||
-                                   isGhostListening || showGhostInsightDialog || showGhostSynapseDialog ||
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive ||
+                                   isStreamActive || isInkActive || isLensActive || isSyncActive ||
+                                   isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
+                                   isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
+                                   isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
+                                   isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
+                                   showGhostInsightDialog || showGhostSynapseDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
                                    showLiveHomeworkMarkDialog || showAddEditStudentDialog ||
                                    showStudentActionMenu || showSaveLayoutDialog || showLoadLayoutDialog ||
                                    showExportDialog || showUndoHistoryDialog || showChangeBoxSizeDialog ||
                                    showStudentStyleDialog || showAssignTaskDialog || showAddEditFurnitureDialog ||
-                                   showEmailDialog
+                                   showEmailDialog || showBehaviorLogViewer
         ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
 
         if (GhostConfig.GHOST_MODE_ENABLED) {
@@ -1643,7 +1649,6 @@ fun SeatingChartScreen(
                 selectedStudentUiItemForAction?.let { student ->
                     val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
                     var showGroupMenu by remember { mutableStateOf(false) }
-                    var showBehaviorLogViewer by remember { mutableStateOf(false) }
 
                     DropdownMenu(
                         expanded = true,
@@ -1746,13 +1751,6 @@ fun SeatingChartScreen(
                                 showStudentActionMenu = false
                             })
                         }
-                    }
-                    if (showBehaviorLogViewer) {
-                        BehaviorLogViewerDialog(
-                            studentId = student.id.toLong(),
-                            viewModel = seatingChartViewModel,
-                            onDismiss = { showBehaviorLogViewer = false }
-                        )
                     }
                     DropdownMenu(
                         expanded = showGroupMenu,
@@ -1880,6 +1878,16 @@ fun SeatingChartScreen(
                         showExportDialog = false
                     }
                 )
+            }
+
+            if (showBehaviorLogViewer) {
+                selectedStudentUiItemForAction?.let { student ->
+                    BehaviorLogViewerDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        onDismiss = { showBehaviorLogViewer = false }
+                    )
+                }
             }
 
             if (showEmailDialog) {
