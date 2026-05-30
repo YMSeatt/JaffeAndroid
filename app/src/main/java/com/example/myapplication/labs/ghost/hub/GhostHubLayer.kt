@@ -100,6 +100,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRROR_MODE_ENABLED) {
                 add(GhostAction("MIRROR", Icons.Default.Flip, "Ghost Mirror"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOOD_MODE_ENABLED) {
+                add(GhostAction("MOOD", Icons.Default.AutoAwesome, "Neural Mood"))
+            }
         }
     }
 

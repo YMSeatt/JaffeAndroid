@@ -234,4 +234,7 @@ object GhostConfig {
 
     /** Enables "Ghost Mirror" spatial perspective flipping. */
     const val MIRROR_MODE_ENABLED = true
+
+    /** Enables the "Neural Mood Board" atmospheric visualization. */
+    const val MOOD_MODE_ENABLED = true
 }
