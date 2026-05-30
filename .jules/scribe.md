@@ -121,5 +121,13 @@
 - **Health Fallback**: In the absence of data, the engine defaults to a **0.7 Health Index**. This "Stable" baseline was chosen to provide a calm visual state (Cyan) rather than an alarming one (Red) for new or quiet sessions.
 - **Frequency Calibration**: The pulse frequency scales linearly with activity ($0.5 + \text{count}/20$). A max of 4.0 Hz was found to be the upper limit before the visual flickering became distracting during high-intensity classroom periods.
 
+### 24. UI List Performance (Date Hoisting)
+- **The Pattern**: In high-density log lists (Data Viewer), the UI utilizes a "Hoisted Date" pattern.
+- **BOLT Optimization**: Instead of allocating a new `Date` object for every row in a `LazyColumn` (which could trigger thousands of allocations during scrolling), a single `Date` is `remember`ed at the top level and its `time` property is updated in-place for each row. This significantly reduces GC pressure and prevents frame drops on mid-range hardware.
+
+### 25. Source Artifact Discovery (The `srcal` Anomaly)
+- **The Finding**: A duplicate source directory `app/src/main/srcal` was identified.
+- **Tribal Knowledge**: This directory appears to be a legacy artifact or a misconfigured alternative source set. Maintainers should prioritize files in `app/src/main/java` as the primary source of truth, as `srcal` contains outdated versions of core UI components (e.g., `DataViewerScreen.kt` in `srcal` lacks modern security features like `FLAG_SECURE`).
+
 ---
 *Documentation love letter from Scribe 📜*
