@@ -38,14 +38,47 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
+/**
+ * Defines the available tabs within the [DataViewerScreen].
+ */
 enum class ViewerTab {
+    /** List of students and their current chart positions. */
     STUDENTS,
+    /** Chronological log of behavioral incidents. */
     BEHAVIOR_LOGS,
+    /** Historical homework completion records. */
     HOMEWORK_LOGS,
+    /** Longitudinal quiz performance data. */
     QUIZ_LOGS,
+    /** Integrated classroom analytics dashboard. */
     STATS
 }
 
+/**
+ * DataViewerScreen: A high-level auditing and inspection tool for classroom data.
+ *
+ * This screen provides a tab-based interface for teachers to review raw database entities
+ * and aggregated statistics in a unified view. It serves as the primary "Audit Log" for
+ * behavioral and academic history.
+ *
+ * ### Shield Security (PII Protection):
+ * To prevent unauthorized capture of student data, this screen implements **`FLAG_SECURE`**
+ * via a [DisposableEffect]. This blocks system-level screenshots and screen recordings
+ * while the viewer is active, ensuring that sensitive Personally Identifiable Information
+ * (PII) remains protected.
+ *
+ * ### BOLT Performance Patterns:
+ * - **Tab State Persistence**: Uses [remember] to maintain the current tab selection
+ *   during configuration changes.
+ * - **Date Hoisting**: Individual log tabs (Behavior, Homework, Quiz) utilize a "Hoisted
+ *   Date" pattern. By reusing a single [Date] object across all items in a [LazyColumn],
+ *   the UI minimizes object churn and GC pressure during high-speed scrolling.
+ *
+ * @param seatingChartViewModel The primary coordinator for classroom state.
+ * @param statsViewModel The specialized ViewModel for analytics.
+ * @param onDismiss Callback to exit the viewer.
+ * @param settingsViewModel The configuration manager.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DataViewerScreen(
@@ -110,6 +143,9 @@ fun DataViewerScreen(
     }
 }
 
+/**
+ * Displays a list of all students and their logical canvas coordinates.
+ */
 @Composable
 fun StudentsTab(seatingChartViewModel: SeatingChartViewModel) {
     val students by seatingChartViewModel.allStudents.observeAsState(initial = emptyList())
@@ -121,6 +157,12 @@ fun StudentsTab(seatingChartViewModel: SeatingChartViewModel) {
     }
 }
 
+/**
+ * Displays a chronological list of behavioral incidents for all students.
+ *
+ * BOLT: Reuses a single [Date] object across all log items to eliminate thousands
+ * of allocations during high-frequency scrolling.
+ */
 @Composable
 fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val behaviorLogs by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
@@ -141,6 +183,11 @@ fun BehaviorLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     }
 }
 
+/**
+ * Displays a list of historical homework completion records.
+ *
+ * BOLT: Reuses a single [Date] object for timestamp formatting.
+ */
 @Composable
 fun HomeworkLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val homeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
@@ -157,6 +204,11 @@ fun HomeworkLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     }
 }
 
+/**
+ * Displays a list of longitudinal quiz performance data.
+ *
+ * BOLT: Reuses a single [Date] object for timestamp formatting.
+ */
 @Composable
 fun QuizLogsTab(seatingChartViewModel: SeatingChartViewModel) {
     val quizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())

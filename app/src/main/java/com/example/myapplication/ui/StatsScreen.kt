@@ -15,6 +15,26 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/**
+ * StatsScreen: A comprehensive dashboard for classroom analytics and trend analysis.
+ *
+ * This screen provides a high-level overview of student performance and engagement,
+ * including attendance summaries, behavioral distributions, and academic achievements
+ * across quizzes and homework assignments.
+ *
+ * ### Reactive Filter Pipeline:
+ * The screen implements a reactive filtering system where any change to the UI filters
+ * (date range, student selection, or log categories) automatically triggers a background
+ * data synthesis via the [StatsViewModel.updateStats] method.
+ *
+ * ### BOLT Performance Integration:
+ * - **Optimized State Observation**: Observes the consolidated [com.example.myapplication.viewmodel.StatsData]
+ *   object to minimize recomposition triggers.
+ * - **Lazy Loading**: Utilizes [LazyColumn] to handle large summaries efficiently, ensuring
+ *   60fps scrolling even with extensive classroom history.
+ *
+ * @param viewModel The ViewModel responsible for data aggregation and synthesis.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(viewModel: StatsViewModel) {
