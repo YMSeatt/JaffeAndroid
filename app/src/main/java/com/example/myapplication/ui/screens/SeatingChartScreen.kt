@@ -125,6 +125,8 @@ import com.example.myapplication.labs.ghost.GhostSpectraLayer
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
+import com.example.myapplication.labs.ghost.mood.GhostMoodLayer
 import com.example.myapplication.labs.ghost.silhouette.GhostSilhouetteLayer
 import com.example.myapplication.labs.ghost.ion.GhostIonLayer
 import com.example.myapplication.labs.ghost.sync.GhostSyncLayer
@@ -345,6 +347,7 @@ fun SeatingChartScreen(
     var isSpectraActive by remember { mutableStateOf(false) }
     var isFluxActive by remember { mutableStateOf(false) }
     var isAuroraActive by remember { mutableStateOf(false) }
+    var isMoodActive by remember { mutableStateOf(false) }
     var isNebulaActive by remember { mutableStateOf(false) }
     var isPulseActive by remember { mutableStateOf(false) }
     var isLensActive by remember { mutableStateOf(false) }
@@ -1295,6 +1298,27 @@ fun SeatingChartScreen(
                 )
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOOD_MODE_ENABLED && isMoodActive) {
+                val studentMoods = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    val behaviorMap = allBehaviorEvents.groupBy { it.studentId }
+                    val quizMap = allQuizLogs.groupBy { it.studentId }
+                    val homeworkMap = allHomeworkLogs.groupBy { it.studentId }
+                    GhostMoodEngine.calculateStudentMoods(
+                        students.map { it.id.toLong() },
+                        behaviorMap,
+                        quizMap,
+                        homeworkMap
+                    )
+                }
+                val classroomMood = remember(studentMoods) {
+                    GhostMoodEngine.calculateClassroomMood(studentMoods)
+                }
+                GhostMoodLayer(
+                    classroomMood = classroomMood,
+                    isVisible = isMoodActive
+                )
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.NEBULA_MODE_ENABLED && isNebulaActive) {
                 GhostNebulaLayer(
                     students = students,
@@ -2088,6 +2112,7 @@ fun SeatingChartScreen(
                     onActionSelected = { action ->
                         when (action.id) {
                             "HUD" -> isHudActive = !isHudActive
+                            "MOOD" -> isMoodActive = !isMoodActive
                             "VISION" -> isVisionActive = !isVisionActive
                             "PHANTASM" -> isPhantasmActive = !isPhantasmActive
                             "SPECTRA" -> isSpectraActive = !isSpectraActive
