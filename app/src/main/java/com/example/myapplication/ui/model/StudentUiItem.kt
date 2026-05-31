@@ -85,5 +85,13 @@ data class StudentUiItem(
     val ionDensity: MutableState<Float>,
     val magneticStrength: MutableState<Float>,
     val magneticRadius: MutableState<Float>,
-    val isPinned: MutableState<Boolean>
+    val isPinned: MutableState<Boolean>,
+    /** Pre-calculated Insight Status for the student. */
+    val insightStatus: MutableState<com.example.myapplication.labs.ghost.InsightStatus>,
+    /** Pre-calculated Mood State for the student. */
+    val moodState: MutableState<com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState>,
+    /** Pre-calculated Mood Intensity (0.0 to 1.0). */
+    val moodIntensity: MutableState<Float>,
+    /** Pre-calculated Mood Valence (-1.0 to 1.0). */
+    val moodValence: MutableState<Float>
 )

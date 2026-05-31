@@ -721,6 +721,7 @@ fun SeatingChartScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+    val classroomMood by seatingChartViewModel.classroomMood.collectAsState()
     val globalIonBalance by seatingChartViewModel.globalIonBalance.collectAsState()
     val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
 
@@ -1243,9 +1244,6 @@ fun SeatingChartScreen(
             )
             GhostHaloLayer(
                 students = students,
-                behaviorLogs = allBehaviorEvents,
-                quizLogs = allQuizLogs,
-                homeworkLogs = allHomeworkLogs,
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isHaloActive
@@ -1299,20 +1297,8 @@ fun SeatingChartScreen(
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOOD_MODE_ENABLED && isMoodActive) {
-                val studentMoods = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
-                    val behaviorMap = allBehaviorEvents.groupBy { it.studentId }
-                    val quizMap = allQuizLogs.groupBy { it.studentId }
-                    val homeworkMap = allHomeworkLogs.groupBy { it.studentId }
-                    GhostMoodEngine.calculateStudentMoods(
-                        students.map { it.id.toLong() },
-                        behaviorMap,
-                        quizMap,
-                        homeworkMap
-                    )
-                }
-                val classroomMood = remember(studentMoods) {
-                    GhostMoodEngine.calculateClassroomMood(studentMoods)
-                }
+                // BOLT: Removed redundant O(S*L) calculation in UI.
+                // Observed from SeatingChartViewModel background pipeline.
                 GhostMoodLayer(
                     classroomMood = classroomMood,
                     isVisible = isMoodActive
