@@ -89,6 +89,9 @@ import com.example.myapplication.util.FormattingTimeContext
 import com.example.myapplication.util.EmailWorker
 import com.example.myapplication.util.StringSimilarity
 import com.example.myapplication.labs.ghost.GhostCognitiveEngine
+import com.example.myapplication.labs.ghost.GhostInsightEngine
+import com.example.myapplication.labs.ghost.InsightStatus
+import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
@@ -349,6 +352,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Neural threads pre-calculated in background update pipeline. */
     val weaverThreads: StateFlow<List<com.example.myapplication.labs.ghost.weaver.GhostWeaverEngine.NeuralThread>> = _weaverThreads.asStateFlow()
 
+    private val _classroomMood = MutableStateFlow(GhostMoodEngine.ClassroomMood(GhostMoodEngine.MoodState.CALM, 0.2f, 0f, 1.0f))
+    /** BOLT: Aggregated classroom mood pre-calculated in background update pipeline. */
+    val classroomMood: StateFlow<GhostMoodEngine.ClassroomMood> = _classroomMood.asStateFlow()
+
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
@@ -568,7 +575,11 @@ class SeatingChartViewModel @Inject constructor(
         val ionCharge: Float,
         val ionDensity: Float,
         val magneticStrength: Float,
-        val magneticRadius: Float
+        val magneticRadius: Float,
+        val insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
+        val moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
+        val moodIntensity: Float,
+        val moodValence: Float
     )
 
     private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
@@ -587,6 +598,9 @@ class SeatingChartViewModel @Inject constructor(
      * of string concatenations in the high-frequency Stage 3 sync loop.
      */
     private var studentNameMapCache = emptyMap<Long, String>()
+
+    /** BOLT: Track the last list sent to studentsForDisplay to implement List Identity Preservation. */
+    private var lastSentStudentsList: List<StudentUiItem>? = null
 
     /**
      * A persistent cache of [FurnitureUiItem] instances.
@@ -1509,6 +1523,26 @@ class SeatingChartViewModel @Inject constructor(
                         val mStrength = magneticStrengthCache[student.id] ?: 0f
                         val mRadius = magneticRadiusCache[student.id] ?: 100f
 
+                        // BOLT: Pre-calculate student-level mood and insight
+                        val studentInsight = GhostInsightEngine.generateInsight(
+                            studentName = studentNameMapCache[student.id] ?: "",
+                            behaviorLogs = behaviorList ?: emptyList(),
+                            quizLogs = quizList ?: emptyList(),
+                            homeworkLogs = homeworkList ?: emptyList()
+                        )
+
+                        // Mood calculation usually requires student IDs list, but GhostMoodEngine.calculateStudentMoods
+                        // is fine with single student map entries. We use 15m window.
+                        val moodList = GhostMoodEngine.calculateStudentMoods(
+                            students = listOf(student.id),
+                            behaviorLogs = mapOf(student.id to (behaviorList ?: emptyList())),
+                            quizLogs = mapOf(student.id to (quizList ?: emptyList())),
+                            homeworkLogs = mapOf(student.id to (homeworkList ?: emptyList()))
+                        )
+                        val studentMood = moodList.firstOrNull() ?: GhostMoodEngine.StudentMood(
+                            student.id, GhostMoodEngine.MoodState.CALM, 0.2f, 0f
+                        )
+
                         StudentDerivedData(
                             behaviorDescription,
                             homeworkDescription,
@@ -1528,7 +1562,11 @@ class SeatingChartViewModel @Inject constructor(
                             iMetrics.first,
                             iMetrics.second,
                             mStrength,
-                            mRadius
+                            mRadius,
+                            studentInsight.status,
+                            studentMood.state,
+                            studentMood.intensity,
+                            studentMood.valence
                         ).also {
                             studentDerivedDataCache[student.id] = cacheKey to it
                         }
@@ -1606,7 +1644,11 @@ class SeatingChartViewModel @Inject constructor(
                                 ionCharge = derivedData.ionCharge,
                                 ionDensity = derivedData.ionDensity,
                                 magneticStrength = derivedData.magneticStrength,
-                                magneticRadius = derivedData.magneticRadius
+                                magneticRadius = derivedData.magneticRadius,
+                                insightStatus = derivedData.insightStatus,
+                                moodState = derivedData.moodState,
+                                moodIntensity = derivedData.moodIntensity,
+                                moodValence = derivedData.moodValence
                             )
                         }
                         studentsWithBehavior.add(existingItem)
@@ -1639,12 +1681,24 @@ class SeatingChartViewModel @Inject constructor(
                             ionCharge = derivedData.ionCharge,
                             ionDensity = derivedData.ionDensity,
                             magneticStrength = derivedData.magneticStrength,
-                            magneticRadius = derivedData.magneticRadius
+                            magneticRadius = derivedData.magneticRadius,
+                            insightStatus = derivedData.insightStatus,
+                            moodState = derivedData.moodState,
+                            moodIntensity = derivedData.moodIntensity,
+                            moodValence = derivedData.moodValence
                         )
                         studentUiItemCache[student.id.toInt()] = newItem
                         studentsWithBehavior.add(newItem)
                     }
                 }
+
+                // BOLT: Aggregate classroom mood after processing all students
+                val studentMoods = ArrayList<GhostMoodEngine.StudentMood>(studentsWithBehavior.size)
+                for (i in 0 until studentsWithBehavior.size) {
+                    val s = studentsWithBehavior[i]
+                    studentMoods.add(GhostMoodEngine.StudentMood(s.id.toLong(), s.moodState.value, s.moodIntensity.value, s.moodValence.value))
+                }
+                _classroomMood.value = GhostMoodEngine.calculateClassroomMood(studentMoods)
 
                 // BOLT: Calculate spatial glitch intensity in the background pipeline.
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) {
@@ -1654,7 +1708,27 @@ class SeatingChartViewModel @Inject constructor(
                     _glitchIntensity.value = 0f
                 }
 
-                studentsForDisplay.postValue(studentsWithBehavior)
+                // BOLT: List Identity Preservation.
+                // Only post a new list if the contents (identities or order) have changed.
+                // This prevents redundant recompositions of the entire Seating Chart UI.
+                val prevList = lastSentStudentsList
+                val listChanged = if (prevList == null || prevList.size != studentsWithBehavior.size) {
+                    true
+                } else {
+                    var changed = false
+                    for (i in 0 until prevList.size) {
+                        if (prevList[i] !== studentsWithBehavior[i]) {
+                            changed = true
+                            break
+                        }
+                    }
+                    changed
+                }
+
+                if (listChanged) {
+                    lastSentStudentsList = studentsWithBehavior
+                    studentsForDisplay.postValue(studentsWithBehavior)
+                }
             }
         }
     }

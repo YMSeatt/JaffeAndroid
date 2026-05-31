@@ -58,7 +58,11 @@ fun Student.toStudentUiItem(
     ionCharge: Float,
     ionDensity: Float,
     magneticStrength: Float,
-    magneticRadius: Float
+    magneticRadius: Float,
+    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
+    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
+    moodIntensity: Float,
+    moodValence: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -96,7 +100,11 @@ fun Student.toStudentUiItem(
         ionDensity = mutableStateOf(ionDensity),
         magneticStrength = mutableStateOf(magneticStrength),
         magneticRadius = mutableStateOf(magneticRadius),
-        isPinned = mutableStateOf(this.isPinned)
+        isPinned = mutableStateOf(this.isPinned),
+        insightStatus = mutableStateOf(insightStatus),
+        moodState = mutableStateOf(moodState),
+        moodIntensity = mutableStateOf(moodIntensity),
+        moodValence = mutableStateOf(moodValence)
     )
 }
 
@@ -140,7 +148,11 @@ fun Student.updateStudentUiItem(
     ionCharge: Float,
     ionDensity: Float,
     magneticStrength: Float,
-    magneticRadius: Float
+    magneticRadius: Float,
+    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
+    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
+    moodIntensity: Float,
+    moodValence: Float
 ) {
     updateIfChanged(item.fullName, fullName)
     updateIfChanged(item.nickname, nickname)
@@ -177,6 +189,10 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.magneticStrength, magneticStrength)
     updateIfChanged(item.magneticRadius, magneticRadius)
     updateIfChanged(item.isPinned, this.isPinned)
+    updateIfChanged(item.insightStatus, insightStatus)
+    updateIfChanged(item.moodState, moodState)
+    updateIfChanged(item.moodIntensity, moodIntensity)
+    updateIfChanged(item.moodValence, moodValence)
 }
 
 /**

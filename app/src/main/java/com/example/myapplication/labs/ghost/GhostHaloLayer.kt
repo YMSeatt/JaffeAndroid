@@ -31,9 +31,6 @@ import com.example.myapplication.ui.model.StudentUiItem
 @Composable
 fun GhostHaloLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
-    quizLogs: List<QuizLog>,
-    homeworkLogs: List<HomeworkLog>,
     canvasScale: Float,
     canvasOffset: Offset,
     isActive: Boolean = true
@@ -41,46 +38,16 @@ fun GhostHaloLayer(
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     // 1. Identify Peak Performers (Cached)
-    // BOLT: Refactored to pre-group logs once per update, avoiding O(S*L) nested filtering.
-    val peakPerformers by remember(students, behaviorLogs, quizLogs, homeworkLogs) {
+    // BOLT: Consumes pre-calculated insightStatus from the background pipeline.
+    // This eliminates O(S*L) analysis and log grouping in the UI layer.
+    val peakPerformers by remember(students) {
         derivedStateOf {
             if (students.isEmpty()) return@derivedStateOf emptyList<StudentUiItem>()
 
-            // 1a. Pre-group logs for O(1) lookup
-            val bMap = mutableMapOf<Long, MutableList<BehaviorEvent>>()
-            for (i in 0 until behaviorLogs.size) {
-                val log = behaviorLogs[i]
-                bMap.getOrPut(log.studentId) { mutableListOf() }.add(log)
-            }
-
-            val qMap = mutableMapOf<Long, MutableList<QuizLog>>()
-            for (i in 0 until quizLogs.size) {
-                val log = quizLogs[i]
-                qMap.getOrPut(log.studentId) { mutableListOf() }.add(log)
-            }
-
-            val hMap = mutableMapOf<Long, MutableList<HomeworkLog>>()
-            for (i in 0 until homeworkLogs.size) {
-                val log = homeworkLogs[i]
-                hMap.getOrPut(log.studentId) { mutableListOf() }.add(log)
-            }
-
-            // 1b. Analyze students using O(1) grouped data
             val list = mutableListOf<StudentUiItem>()
             for (i in 0 until students.size) {
                 val student = students[i]
-                val sId = student.id.toLong()
-                val sBehaviors = bMap[sId] ?: emptyList()
-                val sQuizzes = qMap[sId] ?: emptyList()
-                val sHomework = hMap[sId] ?: emptyList()
-
-                val insight = GhostInsightEngine.generateInsight(
-                    studentName = student.name.value,
-                    behaviorLogs = sBehaviors,
-                    quizLogs = sQuizzes,
-                    homeworkLogs = sHomework
-                )
-                if (insight.status == InsightStatus.OPTIMAL) {
+                if (student.insightStatus.value == InsightStatus.OPTIMAL) {
                     list.add(student)
                 }
             }
