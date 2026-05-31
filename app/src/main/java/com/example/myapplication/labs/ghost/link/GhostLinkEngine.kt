@@ -1,8 +1,10 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.link
 
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.random.Random
 
 /**
@@ -12,13 +14,65 @@ import kotlin.random.Random
  * 2027-era AI analysis, transforming simple student metadata into a high-fidelity
  * report featuring predictive trajectories and complex neural metrics.
  *
- * The output is formatted in Markdown, suitable for display in stylized UI components.
- *
- * ### Logic Parity
- * This implementation maintains strict logical parity with the Python prototype,
- * including identical metric ranges, trajectory steps, and report structure.
+ * Enhanced with "Neural Pairing" logic to identify high-synergy student connections
+ * based on spatial proximity and behavioral alignment.
  */
 object GhostLinkEngine {
+
+    /** BOLT: Distance threshold for neural pairing on the 4000x4000 canvas. */
+    private const val LINK_DISTANCE_THRESHOLD = 600f
+    private const val LINK_DISTANCE_THRESHOLD_SQ = LINK_DISTANCE_THRESHOLD * LINK_DISTANCE_THRESHOLD
+
+    data class StudentNode(
+        val id: Long,
+        val x: Float,
+        val y: Float,
+        val behavioralBalance: Float // 0..1, where 1.0 is perfectly positive
+    )
+
+    data class NeuralLink(
+        val studentA: Long,
+        val studentB: Long,
+        val strength: Float // 0..1
+    )
+
+    /**
+     * Identifies neural pairings between students based on proximity and behavioral synergy.
+     *
+     * BOLT: O(N^2) complexity but optimized with primitive math and early exits.
+     */
+    fun calculateLinks(nodes: List<StudentNode>): List<NeuralLink> {
+        if (nodes.size < 2) return emptyList()
+
+        val links = mutableListOf<NeuralLink>()
+
+        for (i in nodes.indices) {
+            val nodeA = nodes[i]
+            for (j in i + 1 until nodes.size) {
+                val nodeB = nodes[j]
+
+                val dx = nodeA.x - nodeB.x
+                val dy = nodeA.y - nodeB.y
+                val distSq = dx * dx + dy * dy
+
+                if (distSq < LINK_DISTANCE_THRESHOLD_SQ * 4) { // Scan up to 2x threshold
+                    val proximity = exp(-distSq / (2 * LINK_DISTANCE_THRESHOLD_SQ))
+
+                    // Synergy: Students with similar behavioral balance have higher synergy
+                    val synergy = 1f - abs(nodeA.behavioralBalance - nodeB.behavioralBalance)
+
+                    val strength = (proximity * 0.7f + synergy * 0.3f)
+
+                    if (strength > 0.65f) {
+                        links.add(NeuralLink(nodeA.id, nodeB.id, strength))
+                    }
+                }
+            }
+        }
+
+        // BOLT: Limit to top 10 strongest links to avoid visual clutter
+        return links.sortedByDescending { it.strength }.take(10)
+    }
 
     /**
      * Generates a "Neural Dossier" report for a student.

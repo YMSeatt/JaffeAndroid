@@ -187,6 +187,7 @@ import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
 import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
 import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
 import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
+import com.example.myapplication.labs.ghost.link.GhostLinkLayer
 import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
 import com.example.myapplication.labs.ghost.rain.GhostRainEngine
 import com.example.myapplication.labs.ghost.rain.GhostRainLayer
@@ -213,7 +214,7 @@ import com.example.myapplication.labs.ghost.spotlight.GhostSpotlightLayer
 import com.example.myapplication.labs.ghost.hub.GhostHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostStudentHubLayer
 import com.example.myapplication.labs.ghost.hub.GhostAction
-import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.labs.ghost.util.GhostHapticManager
@@ -327,6 +328,7 @@ fun SeatingChartScreen(
     val carbonTwins by seatingChartViewModel.carbonTwins.collectAsState()
     val weaverThreads by seatingChartViewModel.weaverThreads.collectAsState()
     val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
+    val neuralLinks by seatingChartViewModel.neuralLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
@@ -358,6 +360,7 @@ fun SeatingChartScreen(
     var isSyncActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
+    var isLinkActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
     var isEntropyActive by remember { mutableStateOf(false) }
     var isZenithActive by remember { mutableStateOf(false) }
@@ -565,7 +568,7 @@ fun SeatingChartScreen(
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
                                    isCortexActive || isHudActive || isArchitectActive || isShellActive ||
                                    isStreamActive || isInkActive || isLensActive || isSyncActive ||
-                                   isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
+                                   isEntanglementActive || isLinkActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
@@ -865,6 +868,8 @@ fun SeatingChartScreen(
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 isEntanglementActive = isEntanglementActive,
                 onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
+                isLinkActive = isLinkActive,
+                onToggleLink = { isLinkActive = !isLinkActive },
                 isSyncActive = isSyncActive,
                 onToggleSync = { isSyncActive = !isSyncActive },
                 isIonActive = isIonActive,
@@ -1113,6 +1118,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isWeaverActive
+            )
+            GhostLinkLayer(
+                students = students,
+                neuralLinks = neuralLinks,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isLinkActive
             )
             GhostRainLayer(
                 engine = ghostRainEngine,
@@ -2123,6 +2135,7 @@ fun SeatingChartScreen(
                                 if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
+                            "LINK" -> isLinkActive = !isLinkActive
                             "COMET" -> isCometActive = !isCometActive
                             "FLARE" -> isFlareActive = !isFlareActive
                             "HALO" -> isHaloActive = !isHaloActive
@@ -2469,6 +2482,8 @@ fun SeatingChartTopAppBar(
     onToggleOsmosis: () -> Unit,
     isEntanglementActive: Boolean,
     onToggleEntanglement: () -> Unit,
+    isLinkActive: Boolean,
+    onToggleLink: () -> Unit,
     isSyncActive: Boolean,
     onToggleSync: () -> Unit,
     isIonActive: Boolean,
@@ -2915,6 +2930,16 @@ fun SeatingChartTopAppBar(
                                 text = { Text(if (isSyncActive) "Disable Neural Sync 👻" else "Neural Sync 👻") },
                                 onClick = {
                                     onToggleSync()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Link, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.LINK_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isLinkActive) "Disable Neural Link 👻" else "Neural Link 👻") },
+                                onClick = {
+                                    onToggleLink()
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.Link, null, tint = androidx.compose.ui.graphics.Color.Cyan) }

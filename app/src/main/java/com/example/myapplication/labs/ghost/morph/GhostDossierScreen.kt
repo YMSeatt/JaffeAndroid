@@ -21,7 +21,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.labs.ghost.GhostConfig
-import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext

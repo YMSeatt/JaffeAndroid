@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Implement "Ghost Link" proximity-based pairing
+- [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-04: Ghost Link - Proximity-based neural pairing visualization in `/labs/ghost/link/`
 - [DONE] 2028-08-03: Neural Mood Board - Atmospheric mood visualization in `/labs/ghost/mood/`
 - [DONE] 2028-08-01: Ghost Mirror - Spatial perspective flipping in `/labs/ghost/mirror/`
 - [DONE] 2028-07-30: Ghost Pulse - Temporal resonance visualization in `/labs/ghost/pulse/`

@@ -65,6 +65,9 @@ fun GhostHubLayer(
             add(GhostAction("FUTURE", Icons.Default.Update, "Neural Future"))
             add(GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"))
             add(GhostAction("SYNC", Icons.Default.Link, "Neural Sync"))
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LINK_MODE_ENABLED) {
+                add(GhostAction("LINK", Icons.Default.Link, "Neural Link"))
+            }
             add(GhostAction("COMET", Icons.Default.AutoFixHigh, "Ghost Comet"))
             add(GhostAction("HALO", Icons.Default.BrightnessHigh, "Neural Halo"))
             add(GhostAction("LASSO", Icons.Default.Gesture, "Neural Lasso"))

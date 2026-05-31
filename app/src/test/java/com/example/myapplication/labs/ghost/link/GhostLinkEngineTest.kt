@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.link
 
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
@@ -63,5 +63,24 @@ class GhostLinkEngineTest {
         val content2 = dossier2.lines().filterNot { it.contains("Analysis Timestamp") }.joinToString("\n")
 
         assertThat(content1).isEqualTo(content2)
+    }
+
+    @Test
+    fun `calculateLinks identifies proximity-based pairs`() {
+        val nodes = listOf(
+            GhostLinkEngine.StudentNode(1L, 1000f, 1000f, 0.9f),
+            GhostLinkEngine.StudentNode(2L, 1100f, 1100f, 0.85f), // Close and similar
+            GhostLinkEngine.StudentNode(3L, 3000f, 3000f, 0.1f),   // Far
+            GhostLinkEngine.StudentNode(4L, 1050f, 1050f, 0.2f)    // Close but disparate balance
+        )
+
+        val links = GhostLinkEngine.calculateLinks(nodes)
+
+        assertThat(links).isNotEmpty()
+        assertThat(links.any { it.studentA == 1L && it.studentB == 2L }).isTrue()
+
+        // Strongest should be 1-2
+        assertThat(links[0].studentA).isEqualTo(1L)
+        assertThat(links[0].studentB).isEqualTo(2L)
     }
 }
