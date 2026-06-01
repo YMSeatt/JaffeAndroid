@@ -2,6 +2,7 @@ package com.example.myapplication.labs.ghost
 
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.FurnitureUiItem
+import java.util.Locale
 
 /**
  * GhostBlueprintEngine: A report generation utility ported from the Python desktop application.
@@ -54,7 +55,8 @@ object GhostBlueprintEngine {
              */
             val x = (student.xPosition.value / 4f) + 200f
             val y = (student.yPosition.value / 4f) + 100f
-            val name = escapeXml(student.fullName.value)
+            val maskedName = maskName(student.fullName.value)
+            val name = escapeXml(maskedName)
             val initials = escapeXml(student.initials.value)
 
             svg.append("  <g transform=\"translate($x,$y)\" filter=\"url(#glow)\">\n")
@@ -78,6 +80,19 @@ object GhostBlueprintEngine {
 
         svg.append("</svg>")
         return svg.toString()
+    }
+
+    /**
+     * Masks a student's name to prevent PII leakage in shared blueprints.
+     * Example: "John Doe" -> "J. DOE"
+     */
+    private fun maskName(name: String): String {
+        val parts = name.trim().split(Regex("\\s+"))
+        return if (parts.size >= 2) {
+            "${parts.first().take(1).uppercase(Locale.US)}. ${parts.last().uppercase(Locale.US)}"
+        } else {
+            name.uppercase(Locale.US)
+        }
     }
 
     /**

@@ -48,9 +48,9 @@ class GhostBlueprintEngineTest {
 
         // Verify student content
         assertTrue(svg.contains(">AW</text>"))
-        assertTrue(svg.contains(">Alice Wonderland</text>"))
+        assertTrue("Student name should be masked", svg.contains(">A. WONDERLAND</text>"))
         assertTrue(svg.contains(">BB</text>"))
-        assertTrue(svg.contains(">Bob Builder</text>"))
+        assertTrue("Student name should be masked", svg.contains(">B. BUILDER</text>"))
 
         // Verify furniture scaling: (800 / 4) + 200 = 400, (1200 / 4) + 100 = 400
         assertTrue(svg.contains("translate(400.0,400.0)"))
