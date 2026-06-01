@@ -237,4 +237,7 @@ object GhostConfig {
 
     /** Enables the "Neural Mood Board" atmospheric visualization. */
     const val MOOD_MODE_ENABLED = true
+
+    /** Enables "Ghost Link" proximity-based neural pairing visualization. */
+    const val LINK_MODE_ENABLED = true
 }

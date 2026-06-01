@@ -103,6 +103,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOOD_MODE_ENABLED) {
                 add(GhostAction("MOOD", Icons.Default.AutoAwesome, "Neural Mood"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LINK_MODE_ENABLED) {
+                add(GhostAction("LINK", Icons.Default.Link, "Neural Link"))
+            }
         }
     }
 
