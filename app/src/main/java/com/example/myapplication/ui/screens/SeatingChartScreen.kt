@@ -327,6 +327,7 @@ fun SeatingChartScreen(
     val carbonTwins by seatingChartViewModel.carbonTwins.collectAsState()
     val weaverThreads by seatingChartViewModel.weaverThreads.collectAsState()
     val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
+    val neuralLinks by seatingChartViewModel.neuralLinks.collectAsState()
     val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
     val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
     val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
@@ -356,6 +357,7 @@ fun SeatingChartScreen(
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
     var isSyncActive by remember { mutableStateOf(false) }
+    var isLinkActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
@@ -564,7 +566,7 @@ fun SeatingChartScreen(
         // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
         val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
                                    isCortexActive || isHudActive || isArchitectActive || isShellActive ||
-                                   isStreamActive || isInkActive || isLensActive || isSyncActive ||
+                                   isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
@@ -1114,6 +1116,12 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isWeaverActive
+            )
+            com.example.myapplication.labs.ghost.link.GhostLinkLayer(
+                links = neuralLinks,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isLinkActive
             )
             GhostRainLayer(
                 engine = ghostRainEngine,
@@ -2167,6 +2175,7 @@ fun SeatingChartScreen(
                                 }
                             }
                             "PULSE" -> isPulseActive = !isPulseActive
+                            "LINK" -> isLinkActive = !isLinkActive
                             "MIRROR" -> {
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)

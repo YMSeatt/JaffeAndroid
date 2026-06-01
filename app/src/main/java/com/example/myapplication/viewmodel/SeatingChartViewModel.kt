@@ -93,6 +93,7 @@ import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.labs.ghost.InsightStatus
 import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
+import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
@@ -320,6 +321,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Neural sync links pre-calculated in background. */
     val syncLinks: StateFlow<List<com.example.myapplication.labs.ghost.sync.GhostSyncEngine.SyncLink>> = _syncLinks.asStateFlow()
 
+    private val _neuralLinks = MutableStateFlow<List<GhostLinkEngine.NeuralLink>>(emptyList())
+    /** BOLT: Proximity-based neural links pre-calculated in background. */
+    val neuralLinks: StateFlow<List<GhostLinkEngine.NeuralLink>> = _neuralLinks.asStateFlow()
+
     private val _catalystReactions = MutableStateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>>(emptyList())
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
@@ -482,6 +487,9 @@ class SeatingChartViewModel @Inject constructor(
 
     private var ghostMetricsSyncStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsSyncBehaviorLogsRef: List<BehaviorEvent>? = null
+
+    private var ghostMetricsLinkStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsLinkBehaviorLogsRef: List<BehaviorEvent>? = null
 
     private var ghostMetricsCatalystStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsCatalystBehaviorLogsRef: List<BehaviorEvent>? = null
@@ -1172,6 +1180,16 @@ class SeatingChartViewModel @Inject constructor(
                     )
                     ghostMetricsSyncBehaviorLogsRef = behaviorEvents
                     ghostMetricsSyncStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate proximity-based neural links in the background pipeline (Memoized)
+                if (behaviorEvents !== ghostMetricsLinkBehaviorLogsRef || studentsForEngines !== ghostMetricsLinkStudentsRef) {
+                    _neuralLinks.value = GhostLinkEngine.identifyNeuralLinks(
+                        students = studentsForEngines,
+                        behaviorLogsByStudent = behaviorLogsByStudent
+                    )
+                    ghostMetricsLinkBehaviorLogsRef = behaviorEvents
+                    ghostMetricsLinkStudentsRef = studentsForEngines
                 }
 
                 // BOLT: Calculate behavioral chain reactions in the background pipeline (Memoized)
