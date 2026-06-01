@@ -57,49 +57,74 @@ object GhostMoodEngine {
 
         for (i in 0 until students.size) {
             val studentId = students[i]
-            val bLogs = behaviorLogs[studentId]
-            val qLogs = quizLogs[studentId]
-            val hLogs = homeworkLogs[studentId]
-
-            var negCount = 0
-            var posCount = 0
-            var recentBehaviorCount = 0
-
-            if (bLogs != null) {
-                for (j in 0 until bLogs.size) {
-                    val log = bLogs[j]
-                    if (now - log.timestamp < timeWindow) {
-                        recentBehaviorCount++
-                        if (log.type.contains("Negative", ignoreCase = true)) {
-                            negCount++
-                        } else {
-                            posCount++
-                        }
-                    }
-                }
-            }
-
-            val quizCount = qLogs?.size ?: 0
-            val hwCount = hLogs?.size ?: 0
-            val academicIntensity = (quizCount + hwCount).toFloat() / 10f
-            val behaviorIntensity = recentBehaviorCount.toFloat() / 5f
-            val intensity = (academicIntensity + behaviorIntensity).coerceIn(0.1f, 1.0f)
-
-            val valence = if (recentBehaviorCount > 0) {
-                (posCount - negCount).toFloat() / recentBehaviorCount.toFloat()
-            } else 0f
-
-            val state = when {
-                negCount > posCount -> MoodState.TURBULENT
-                academicIntensity > 0.5f && negCount == 0 -> MoodState.FOCUSED
-                posCount > 2 -> MoodState.ENERGETIC
-                else -> MoodState.CALM
-            }
-
-            moods.add(StudentMood(studentId, state, intensity, valence.coerceIn(-1f, 1f)))
+            moods.add(calculateSingleStudentMood(
+                studentId = studentId,
+                bLogs = behaviorLogs[studentId],
+                qLogs = quizLogs[studentId],
+                hLogs = homeworkLogs[studentId],
+                now = now,
+                timeWindow = timeWindow
+            ))
         }
 
         return moods
+    }
+
+    /**
+     * BOLT: Optimized single-student mood calculation.
+     *
+     * Leveraging the fact that [BehaviorEvent] lists from the database are sorted DESC by timestamp,
+     * this method implements an early-exit pattern to avoid O(L) scans of the entire behavioral history.
+     */
+    fun calculateSingleStudentMood(
+        studentId: Long,
+        bLogs: List<BehaviorEvent>?,
+        qLogs: List<QuizLog>?,
+        hLogs: List<HomeworkLog>?,
+        now: Long = System.currentTimeMillis(),
+        timeWindow: Long = 15 * 60 * 1000L
+    ): StudentMood {
+        var negCount = 0
+        var posCount = 0
+        var recentBehaviorCount = 0
+
+        if (bLogs != null) {
+            // BOLT: Early-exit loop. Behavior logs are sorted DESC (newest first).
+            for (j in 0 until bLogs.size) {
+                val log = bLogs[j]
+                if (now - log.timestamp < timeWindow) {
+                    recentBehaviorCount++
+                    if (log.type.contains("Negative", ignoreCase = true)) {
+                        negCount++
+                    } else {
+                        posCount++
+                    }
+                } else {
+                    // Logs are sorted newest first, so once we hit one outside the window,
+                    // all subsequent logs are also outside.
+                    break
+                }
+            }
+        }
+
+        val quizCount = qLogs?.size ?: 0
+        val hwCount = hLogs?.size ?: 0
+        val academicIntensity = (quizCount + hwCount).toFloat() / 10f
+        val behaviorIntensity = recentBehaviorCount.toFloat() / 5f
+        val intensity = (academicIntensity + behaviorIntensity).coerceIn(0.1f, 1.0f)
+
+        val valence = if (recentBehaviorCount > 0) {
+            (posCount - negCount).toFloat() / recentBehaviorCount.toFloat()
+        } else 0f
+
+        val state = when {
+            negCount > posCount -> MoodState.TURBULENT
+            academicIntensity > 0.5f && negCount == 0 -> MoodState.FOCUSED
+            posCount > 2 -> MoodState.ENERGETIC
+            else -> MoodState.CALM
+        }
+
+        return StudentMood(studentId, state, intensity, valence.coerceIn(-1f, 1f))
     }
 
     /**

@@ -452,6 +452,10 @@ class SeatingChartViewModel @Inject constructor(
     private val quizSumSqCache = ConcurrentHashMap<Long, Double>()
     private val quizValidCountCache = ConcurrentHashMap<Long, Int>()
     private val academicScoreCache = ConcurrentHashMap<Long, Float>()
+    private val homeworkDoneCountCache = ConcurrentHashMap<Long, Int>()
+
+    private val studentMoodCache = ConcurrentHashMap<Long, GhostMoodEngine.StudentMood>()
+    private val insightStatusCache = ConcurrentHashMap<Long, InsightStatus>()
 
     /** BOLT: Incremental caches for expensive Ghost Lab calculations. */
     private val irisParamsCache = ConcurrentHashMap<Long, com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters>()
@@ -859,11 +863,21 @@ class SeatingChartViewModel @Inject constructor(
                         } else {
                             finalGrouped[studentId] = newList
                             changedLogStudentIds.add(studentId)
+
+                            // BOLT: Incremental update for homework metrics
+                            var done = 0
+                            for (log in newList) {
+                                if (log.status.contains("Done", ignoreCase = true)) {
+                                    done++
+                                }
+                            }
+                            homeworkDoneCountCache[studentId] = done
                         }
                     }
 
                     if (finalGrouped.size < oldGrouped.size) {
                         val currentLogStudentIds = finalGrouped.keys
+                        homeworkDoneCountCache.keys.retainAll(currentLogStudentIds)
                         changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
                     }
 
@@ -1284,7 +1298,32 @@ class SeatingChartViewModel @Inject constructor(
                             quizLogs = qLogs,
                             homeworkLogs = hLogs
                         )
+
+                        // BOLT: Pre-calculate student-level mood and insight status
+                        studentMoodCache[student.id] = GhostMoodEngine.calculateSingleStudentMood(
+                            studentId = student.id,
+                            bLogs = bLogs,
+                            qLogs = qLogs,
+                            hLogs = hLogs,
+                            now = currentTime
+                        )
+
+                        insightStatusCache[student.id] = GhostInsightEngine.calculateInsightStatus(
+                            avgQuiz = qAvg.toDouble(),
+                            homeworkCompletion = if (hLogs.isNotEmpty()) (homeworkDoneCountCache[student.id] ?: 0).toDouble() / hLogs.size else 1.0,
+                            positiveBehavior = positiveCountsCache[student.id] ?: 0,
+                            negativeBehavior = negativeCountsCache[student.id] ?: 0
+                        )
                     }
+                }
+
+                // BOLT: Aggregate classroom mood after processing all metrics
+                if (students !== ghostMetricsStudentsRef || changedLogStudentIds.isNotEmpty()) {
+                    val moodsForAggregation = ArrayList<GhostMoodEngine.StudentMood>(students.size)
+                    for (i in 0 until students.size) {
+                        studentMoodCache[students[i].id]?.let { moodsForAggregation.add(it) }
+                    }
+                    _classroomMood.value = GhostMoodEngine.calculateClassroomMood(moodsForAggregation)
                 }
 
                 // BOLT: Robust cleanup of all student-associated caches when the roster changes.
@@ -1313,6 +1352,9 @@ class SeatingChartViewModel @Inject constructor(
                     quizSumSqCache.keys.retainAll(isPresent)
                     quizValidCountCache.keys.retainAll(isPresent)
                     academicScoreCache.keys.retainAll(isPresent)
+                    homeworkDoneCountCache.keys.retainAll(isPresent)
+                    studentMoodCache.keys.retainAll(isPresent)
+                    insightStatusCache.keys.retainAll(isPresent)
 
                     studentDataHashCache.keys.retainAll(isPresent)
                     studentSocialSignaturesCache.keys.retainAll(isPresent)
@@ -1523,23 +1565,9 @@ class SeatingChartViewModel @Inject constructor(
                         val mStrength = magneticStrengthCache[student.id] ?: 0f
                         val mRadius = magneticRadiusCache[student.id] ?: 100f
 
-                        // BOLT: Pre-calculate student-level mood and insight
-                        val studentInsight = GhostInsightEngine.generateInsight(
-                            studentName = studentNameMapCache[student.id] ?: "",
-                            behaviorLogs = behaviorList ?: emptyList(),
-                            quizLogs = quizList ?: emptyList(),
-                            homeworkLogs = homeworkList ?: emptyList()
-                        )
-
-                        // Mood calculation usually requires student IDs list, but GhostMoodEngine.calculateStudentMoods
-                        // is fine with single student map entries. We use 15m window.
-                        val moodList = GhostMoodEngine.calculateStudentMoods(
-                            students = listOf(student.id),
-                            behaviorLogs = mapOf(student.id to (behaviorList ?: emptyList())),
-                            quizLogs = mapOf(student.id to (quizList ?: emptyList())),
-                            homeworkLogs = mapOf(student.id to (homeworkList ?: emptyList()))
-                        )
-                        val studentMood = moodList.firstOrNull() ?: GhostMoodEngine.StudentMood(
+                        // BOLT: Retrieve pre-calculated student-level mood and insight status from caches
+                        val status = insightStatusCache[student.id] ?: InsightStatus.UNKNOWN
+                        val studentMood = studentMoodCache[student.id] ?: GhostMoodEngine.StudentMood(
                             student.id, GhostMoodEngine.MoodState.CALM, 0.2f, 0f
                         )
 
@@ -1563,7 +1591,7 @@ class SeatingChartViewModel @Inject constructor(
                             iMetrics.second,
                             mStrength,
                             mRadius,
-                            studentInsight.status,
+                            status,
                             studentMood.state,
                             studentMood.intensity,
                             studentMood.valence
@@ -1691,14 +1719,6 @@ class SeatingChartViewModel @Inject constructor(
                         studentsWithBehavior.add(newItem)
                     }
                 }
-
-                // BOLT: Aggregate classroom mood after processing all students
-                val studentMoods = ArrayList<GhostMoodEngine.StudentMood>(studentsWithBehavior.size)
-                for (i in 0 until studentsWithBehavior.size) {
-                    val s = studentsWithBehavior[i]
-                    studentMoods.add(GhostMoodEngine.StudentMood(s.id.toLong(), s.moodState.value, s.moodIntensity.value, s.moodValence.value))
-                }
-                _classroomMood.value = GhostMoodEngine.calculateClassroomMood(studentMoods)
 
                 // BOLT: Calculate spatial glitch intensity in the background pipeline.
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) {
