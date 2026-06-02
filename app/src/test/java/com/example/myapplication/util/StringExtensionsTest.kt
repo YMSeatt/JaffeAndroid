@@ -24,4 +24,26 @@ class StringExtensionsTest {
         assertEquals("deadbeef", byteArrayOf(0xde.toByte(), 0xad.toByte(), 0xbe.toByte(), 0xef.toByte()).toHex())
         assertEquals("", byteArrayOf().toHex())
     }
+
+    @Test
+    fun testMaskEmail() {
+        assertEquals("j****@gmail.com", "john.doe@gmail.com".maskEmail())
+        assertEquals("a****@company.co.uk", "alice@company.co.uk".maskEmail())
+        assertEquals("b****@protonmail.com", "bob123@protonmail.com".maskEmail())
+        assertEquals("x", "x".maskEmail()) // Too short
+        assertEquals("x@y.z", "x@y.z".maskEmail()) // Too short username
+        assertEquals("", "".maskEmail())
+    }
+
+    @Test
+    fun testMaskStudentName() {
+        assertEquals("J. DOE", maskStudentName("John Doe"))
+        assertEquals("J. DOE", maskStudentName("john doe"))
+        assertEquals("J. SMITH", maskStudentName("  Jane   Smith  "))
+        assertEquals("J. DOE", maskStudentName("John Quincey Doe")) // Takes first and last
+        assertEquals("J****", maskStudentName("John")) // Hardened single name
+        assertEquals("A****", maskStudentName("Alice"))
+        assertEquals("X", maskStudentName("X")) // Single char name
+        assertEquals("", maskStudentName("   "))
+    }
 }

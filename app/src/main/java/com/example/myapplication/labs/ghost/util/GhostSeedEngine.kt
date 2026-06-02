@@ -8,6 +8,7 @@ import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.os.Build
 import com.example.myapplication.MainActivity
+import com.example.myapplication.util.maskStudentName
 import com.example.myapplication.R
 
 /**
@@ -38,7 +39,7 @@ object GhostSeedEngine {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
 
-                val maskedName = maskName(studentName)
+                val maskedName = maskStudentName(studentName)
                 val shortcut = ShortcutInfo.Builder(context, "student_$studentId")
                     .setShortLabel(maskedName)
                     .setLongLabel("Neural Seed: $maskedName")
@@ -65,7 +66,7 @@ object GhostSeedEngine {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
                 }
 
-                val maskedName = maskName(name)
+                val maskedName = maskStudentName(name)
                 ShortcutInfo.Builder(context, "dynamic_student_$id")
                     .setShortLabel(maskedName)
                     .setLongLabel("Recent: $maskedName")
@@ -75,19 +76,6 @@ object GhostSeedEngine {
             }
 
             shortcutManager.dynamicShortcuts = dynamicShortcuts
-        }
-    }
-
-    /**
-     * Masks a student's name to prevent PII leakage on the home screen.
-     * Example: "John Doe" -> "J. DOE"
-     */
-    private fun maskName(name: String): String {
-        val parts = name.trim().split(Regex("\\s+"))
-        return if (parts.size >= 2) {
-            "${parts.first().take(1).uppercase()}. ${parts.last().uppercase()}"
-        } else {
-            name.uppercase()
         }
     }
 }

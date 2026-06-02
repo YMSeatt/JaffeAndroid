@@ -1,5 +1,6 @@
 package com.example.myapplication.labs.ghost
 
+import com.example.myapplication.util.maskStudentName
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -45,13 +46,8 @@ object GhostLinkEngine {
             "Phase 3: Predicting Academic Synergy with neighboring nodes."
         )
 
-        // PRIVACY: Mask the student name in the report content (e.g., "John Doe" -> "J. DOE")
-        val nameParts = studentName.trim().split(" ")
-        val maskedName = if (nameParts.size >= 2) {
-            "${nameParts.first().take(1)}. ${nameParts.last()}"
-        } else {
-            studentName
-        }.uppercase(Locale.US)
+        // PRIVACY: Mask the student name in the report content using the hardened standard
+        val maskedName = maskStudentName(studentName)
 
         val report = StringBuilder()
         report.append("# \uD83D\uDC7B GHOST NEURAL DOSSIER: $maskedName\n")
