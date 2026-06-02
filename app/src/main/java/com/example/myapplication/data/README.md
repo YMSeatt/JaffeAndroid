@@ -26,6 +26,9 @@ The data model is organized into three primary clusters:
     *   **CustomHomeworkType**: Used to group and filter assignments into categories like "Reading", "Project", or "Lab".
     *   **CustomHomeworkStatus**: Defines rich status labels (e.g., "Submitted Late", "Missing", "Redo Required") to provide context beyond binary completion.
 
+5.  **System-Level Metadata (Standardized Feedback)**:
+    *   **SystemBehavior**: Provides a set of "hardcoded" feedback categories (e.g., "Participating", "Disruptive") that ensure global reporting consistency across all classrooms. These are typically immutable by the teacher and are established during system initialization.
+
 ## 🧪 Normalized Assignment Model (Modern) vs. Legacy Log Model
 
 The application is currently transitioning from a flat, log-based history to a normalized, template-based assignment system.
