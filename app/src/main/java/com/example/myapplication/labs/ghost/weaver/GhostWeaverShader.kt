@@ -25,8 +25,6 @@ object GhostWeaverShader {
         }
 
         half4 main(float2 fragCoord) {
-            float2 uv = fragCoord / iResolution.xy;
-
             // Base line distance
             float d = line(fragCoord, iPointA, iPointB, 1.5);
 
