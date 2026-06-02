@@ -106,6 +106,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LINK_MODE_ENABLED) {
                 add(GhostAction("LINK", Icons.Default.Link, "Neural Link"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FROST_MODE_ENABLED) {
+                add(GhostAction("FROST", Icons.Default.AcUnit, "Ghost Frost"))
+            }
         }
     }
 

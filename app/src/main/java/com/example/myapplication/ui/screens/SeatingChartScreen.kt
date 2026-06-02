@@ -195,6 +195,7 @@ import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
+import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -359,6 +360,7 @@ fun SeatingChartScreen(
     var isSparkActive by remember { mutableStateOf(false) }
     var isSyncActive by remember { mutableStateOf(false) }
     var isLinkActive by remember { mutableStateOf(false) }
+    var isFrostActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
@@ -570,6 +572,7 @@ fun SeatingChartScreen(
                                    isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
+                                   isFrostActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog ||
@@ -1275,6 +1278,17 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FROST_MODE_ENABLED && isFrostActive) {
+                GhostFrostLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    homeworkLogs = allHomeworkLogs,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SYNC_MODE_ENABLED) {
@@ -2172,6 +2186,7 @@ fun SeatingChartScreen(
                             }
                             "PULSE" -> isPulseActive = !isPulseActive
                             "LINK" -> isLinkActive = !isLinkActive
+                            "FROST" -> isFrostActive = !isFrostActive
                             "MIRROR" -> {
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)

@@ -240,4 +240,7 @@ object GhostConfig {
 
     /** Enables "Ghost Link" proximity-based neural pairing visualization. */
     const val LINK_MODE_ENABLED = true
+
+    /** Enables "Ghost Frost" procedural crystallization and "Cold Zone" visualization. */
+    const val FROST_MODE_ENABLED = true
 }
