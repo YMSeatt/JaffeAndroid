@@ -236,7 +236,8 @@ class EmailWorker(
                                 )
                                 emailRepository.deletePendingEmail(email.id)
                             } else {
-                                Log.e("EmailWorker", "Skipping pending email ${email.id} due to invalid recipient address.")
+                                val maskedEmail = email.recipientAddress.maskEmail()
+                                Log.e("EmailWorker", "Skipping pending email ${email.id} due to invalid recipient address: $maskedEmail")
                                 emailRepository.deletePendingEmail(email.id)
                             }
                         } catch (e: Exception) {

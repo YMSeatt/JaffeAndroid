@@ -250,6 +250,7 @@ import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.captureComposable
 import com.example.myapplication.util.findActivity
+import com.example.myapplication.util.maskStudentName
 import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
@@ -2053,13 +2054,8 @@ fun SeatingChartScreen(
                                     val fullName = student.fullName.value
                                     val dossier = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), fullName)
 
-                                    // PRIVACY: Mask the student name in the intent subject (e.g., "J. DOE")
-                                    val nameParts = fullName.trim().split(" ")
-                                    val maskedName = if (nameParts.size >= 2) {
-                                        "${nameParts.first().take(1)}. ${nameParts.last()}"
-                                    } else {
-                                        fullName
-                                    }.uppercase(java.util.Locale.US)
+                                    // PRIVACY: Mask the student name in the intent subject using the hardened standard
+                                    val maskedName = maskStudentName(fullName)
 
                                     val intent = Intent(Intent.ACTION_SEND).apply {
                                         type = "text/plain"

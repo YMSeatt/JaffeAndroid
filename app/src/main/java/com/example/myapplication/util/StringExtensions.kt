@@ -69,3 +69,41 @@ fun String.hexToByteArray(): ByteArray {
     }
     return result
 }
+
+/**
+ * Masks an email address to protect PII in logs and UI components.
+ * e.g., "john.doe@gmail.com" -> "j****@gmail.com"
+ */
+fun String.maskEmail(): String {
+    val atIndex = indexOf('@')
+    if (atIndex <= 1) return this
+    val username = substring(0, atIndex)
+    val domain = substring(atIndex)
+    return username.take(1) + "****" + domain
+}
+
+/**
+ * Masks a student's name to protect PII in shared artifacts and reports.
+ *
+ * Pattern:
+ * - "John Doe" -> "J. DOE"
+ * - "John" -> "J****"
+ */
+fun maskStudentName(name: String): String {
+    val trimmed = name.trim()
+    if (trimmed.isBlank()) return ""
+
+    val parts = trimmed.split(Regex("\\s+"))
+    return if (parts.size >= 2) {
+        val firstInitial = parts.first().take(1).uppercase(Locale.US)
+        val lastName = parts.last().uppercase(Locale.US)
+        "$firstInitial. $lastName"
+    } else {
+        val firstChar = trimmed.take(1).uppercase(Locale.US)
+        if (trimmed.length > 1) {
+            "$firstChar****"
+        } else {
+            firstChar
+        }
+    }
+}

@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.content.FileProvider
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.ui.model.FurnitureUiItem
+import com.example.myapplication.util.maskStudentName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -135,7 +136,7 @@ object GhostSnapshotEngine {
                     textSize = 24f
                     textAlign = Paint.Align.CENTER
                 }
-                canvas.drawText(maskName(student.fullName.value), x + w / 2, y + h + 30, namePaint)
+                canvas.drawText(maskStudentName(student.fullName.value), x + w / 2, y + h + 30, namePaint)
             }
 
             // 5. Save to Internal Cache
@@ -145,19 +146,6 @@ object GhostSnapshotEngine {
         } catch (e: Exception) {
             Log.e(TAG, "Failed to capture full canvas", e)
             null
-        }
-    }
-
-    /**
-     * Masks a student's name to prevent PII leakage in shared snapshots.
-     * Example: "John Doe" -> "J. DOE"
-     */
-    private fun maskName(name: String): String {
-        val parts = name.trim().split(Regex("\\s+"))
-        return if (parts.size >= 2) {
-            "${parts.first().take(1).uppercase(Locale.US)}. ${parts.last().uppercase(Locale.US)}"
-        } else {
-            name.uppercase(Locale.US)
         }
     }
 
