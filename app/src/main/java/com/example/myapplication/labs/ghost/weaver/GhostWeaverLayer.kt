@@ -2,6 +2,7 @@ package com.example.myapplication.labs.ghost.weaver
 
 import android.graphics.RuntimeShader
 import android.os.Build
+import android.util.LongSparseArray
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,8 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.nativeCanvas
 import com.example.myapplication.ui.model.StudentUiItem
 
 /**
@@ -20,9 +19,10 @@ import com.example.myapplication.ui.model.StudentUiItem
  * This layer uses [GhostWeaverShader] to draw stylized connections between
  * students who share academic milestones.
  *
- * BOLT ⚡ Optimization: Instead of drawing a full-screen rectangle for each thread
- * (which causes massive overdraw), this layer draws constrained lines to limit
- * fragment shader execution to the thread area.
+ * BOLT ⚡ Optimization:
+ * 1. Implement a [RuntimeShader] pool to avoid heavy object allocations.
+ * 2. Use [LongSparseArray] to avoid [Long] boxing in lookups.
+ * 3. Replace functional iterators with manual loops in the draw path.
  */
 @Composable
 fun GhostWeaverLayer(
@@ -45,18 +45,32 @@ fun GhostWeaverLayer(
         label = "time"
     )
 
-    val shaders = remember(threads.size) {
-        threads.map { RuntimeShader(GhostWeaverShader.NEURAL_THREAD) }
+    // BOLT: Implement a persistent shader pool to avoid re-allocating RuntimeShaders.
+    val shaderPool = remember { mutableListOf<RuntimeShader>() }
+    remember(threads.size) {
+        while (shaderPool.size < threads.size) {
+            shaderPool.add(RuntimeShader(GhostWeaverShader.NEURAL_THREAD))
+        }
     }
 
-    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
+    // BOLT: Use LongSparseArray to avoid Long boxing during student lookups.
+    val studentMap = remember(students) {
+        LongSparseArray<StudentUiItem>(students.size).apply {
+            for (i in students.indices) {
+                val s = students[i]
+                put(s.id.toLong(), s)
+            }
+        }
+    }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-        threads.forEachIndexed { index, thread ->
-            val sA = studentMap[thread.studentA] ?: return@forEachIndexed
-            val sB = studentMap[thread.studentB] ?: return@forEachIndexed
+        // BOLT: Replace forEachIndexed with manual loop for 60fps drawing.
+        for (i in threads.indices) {
+            val thread = threads[i]
+            val sA = studentMap.get(thread.studentA) ?: continue
+            val sB = studentMap.get(thread.studentB) ?: continue
 
-            val shader = shaders.getOrNull(index) ?: return@forEachIndexed
+            val shader = shaderPool[i]
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
 
