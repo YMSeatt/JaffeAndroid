@@ -54,6 +54,7 @@ fun GhostStudentHubLayer(
             GhostAction("LOG_BEHAVIOR", Icons.Default.AddReaction, "Log Behavior"),
             GhostAction("NEURAL_INSIGHT", Icons.Default.Psychology, "Neural Insight"),
             GhostAction("NEURAL_SYNAPSE", Icons.Default.Hub, "Neural Synapse"),
+            GhostAction("NEURAL_SPECTRA", Icons.Default.Analytics, "Neural Spectroscopy"),
             GhostAction("LOG_ACADEMIC", Icons.Default.School, "Log Academic"),
             GhostAction("NEURAL_DOSSIER", Icons.Default.Article, "Neural Dossier"),
             GhostAction("PIN_STUDENT", Icons.Default.PushPin, "Pin Student"),

@@ -122,6 +122,8 @@ import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.GhostPortalLayer
 import com.example.myapplication.labs.ghost.GhostSpectraLayer
+import com.example.myapplication.labs.ghost.GhostSpectraDialog
+import com.example.myapplication.labs.ghost.GhostSpectraEngine
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
@@ -356,6 +358,7 @@ fun SeatingChartScreen(
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
+    var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
     var isSyncActive by remember { mutableStateOf(false) }
@@ -575,7 +578,7 @@ fun SeatingChartScreen(
                                    isFrostActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
-                                   showGhostInsightDialog || showGhostSynapseDialog ||
+                                   showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
                                    showLiveHomeworkMarkDialog || showAddEditStudentDialog ||
@@ -1638,6 +1641,20 @@ fun SeatingChartScreen(
                     canvasOffset = offset
                 )
 
+                if (showGhostSpectraDialog) {
+                    selectedStudentUiItemForAction?.let { student ->
+                        val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                        val spectra = GhostSpectraEngine.analyzeStudentSpectra(student.id.toLong(), behavior)
+                        GhostSpectraDialog(
+                            studentName = student.fullName.value,
+                            spectra = spectra,
+                            globalDensity = spectralDensity,
+                            globalAgitation = agitation,
+                            onDismiss = { showGhostSpectraDialog = false }
+                        )
+                    }
+                }
+
                 if (isHudActive) {
                     GhostHUDLayer(
                         hudViewModel = hudViewModel,
@@ -2060,6 +2077,7 @@ fun SeatingChartScreen(
                                 }
                             }
                             "NEURAL_SYNAPSE" -> showGhostSynapseDialog = true
+                            "NEURAL_SPECTRA" -> showGhostSpectraDialog = true
                             "LOG_ACADEMIC" -> {
                                 if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
                             }
