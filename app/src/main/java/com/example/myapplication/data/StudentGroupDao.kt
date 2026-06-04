@@ -49,6 +49,12 @@ interface StudentGroupDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(studentGroup: StudentGroup): Long
 
+    /**
+     * Bulk inserts or replaces multiple [StudentGroup] records.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(studentGroups: List<StudentGroup>): List<Long>
+
     @Update
     suspend fun update(studentGroup: StudentGroup)
 
