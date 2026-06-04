@@ -24,6 +24,12 @@ interface HomeworkTemplateDao {
     suspend fun insert(homeworkTemplate: HomeworkTemplate)
 
     /**
+     * Bulk inserts or replaces multiple [HomeworkTemplate] records.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(homeworkTemplates: List<HomeworkTemplate>)
+
+    /**
      * Updates an existing homework template's metadata or scoring structure.
      */
     @Update
