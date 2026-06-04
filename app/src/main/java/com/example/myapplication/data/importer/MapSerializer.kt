@@ -7,6 +7,14 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
+/**
+ * MapSerializer: A specialized KSerializer for [Map<String, Double>].
+ *
+ * This utility facilitates the serialization and deserialization of homework mark data
+ * when ingesting legacy fragmented JSON exports. It ensures that the `marks_data`
+ * maps in [HomeworkLogEntry] are correctly processed using Kotlin Serialization's
+ * built-in [MapSerializer].
+ */
 object MapSerializer : KSerializer<Map<String, Double>> {
     private val mapSerializer = MapSerializer(String.serializer(), Double.serializer())
 
