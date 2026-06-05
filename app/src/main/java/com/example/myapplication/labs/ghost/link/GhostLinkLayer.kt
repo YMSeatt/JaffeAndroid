@@ -16,8 +16,22 @@ import androidx.compose.ui.unit.dp
  * GhostLinkLayer: Renders proximity-based neural strands between students.
  *
  * This layer consumes pre-calculated [GhostLinkEngine.NeuralLink] data and renders
- * them using the [GhostLinkShader]. It is BOLT-optimized to minimize allocations
- * during high-frequency drawing and correctly accounts for canvas transformation state.
+ * them using the [GhostLinkShader]. It is BOLT-optimized to maintain 60fps even
+ * with dozens of active links.
+ *
+ * ### Performance Optimizations
+ * - **Shader Pooling**: To avoid the "Uniform Overwrite" bug where multiple draw calls
+ *   sharing the same `RuntimeShader` instance overwrite each other's uniforms before
+ *   the GPU executes, this layer maintains a `shaderPool` keyed by student IDs.
+ * - **Transformation Awareness**: Correctlies applies `canvasScale` and `canvasOffset`
+ *   to ensure strands remain anchored to student icons during pan/zoom.
+ * - **Bounds Clipping**: Draws each link within a calculated `drawRect` covering the
+ *   two connected nodes, minimizing GPU overdraw compared to a full-screen canvas.
+ *
+ * @param links The list of active neural links to render.
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ * @param isVisible Whether the layer is currently enabled.
  */
 @Composable
 fun GhostLinkLayer(

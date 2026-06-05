@@ -129,5 +129,12 @@
 - **The Finding**: A duplicate source directory `app/src/main/srcal` was identified.
 - **Tribal Knowledge**: This directory appears to be a legacy artifact or a misconfigured alternative source set. Maintainers should prioritize files in `app/src/main/java` as the primary source of truth, as `srcal` contains outdated versions of core UI components (e.g., `DataViewerScreen.kt` in `srcal` lacks modern security features like `FLAG_SECURE`).
 
+### 26. Ghost Link Dual Implementation
+- **Neural Dossier vs. Neural Pairing**: The codebase contains two distinct "Ghost Link" systems.
+    - **Dossier** (`labs/ghost/GhostLinkEngine.kt`): Generates a static Markdown report (Dossier) for a single student.
+    - **Pairing** (`labs/ghost/link/`): Performs real-time $O(N^2)$ spatial analysis to visualize connections (Strands) between multiple students.
+- **Synergy Metrics**: Pairing synergy is based on **parity of activity frequency** within a 10-minute sliding window. High activity in both students leads to a strong link, while a mismatch (e.g., 10 logs vs 0 logs) results in low synergy.
+- **Shader Clipping Strategy**: To prevent GPU overdraw while allowing for organic AGSL warping, each link is rendered in a `drawRect` with a **50f padding buffer** beyond the student icon coordinates.
+
 ---
 *Documentation love letter from Scribe 📜*

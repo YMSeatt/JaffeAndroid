@@ -7,10 +7,26 @@ import org.intellij.lang.annotations.Language
  *
  * This shader visualizes the connections between student nodes as animated,
  * data-pulsing strands. It uses domain warping and temporal oscillations to
- * simulate the flow of information.
+ * simulate the flow of information through the classroom's social network.
  */
 object GhostLinkShader {
 
+    /**
+     * The AGSL shader for drawing an organic, pulsing strand between two points.
+     *
+     * ### Uniforms:
+     * - `iResolution`: Standard resolution uniform.
+     * - `iTime`: Driving variable for the pulse and warp animations.
+     * - `iPointA/B`: The start and end coordinates of the link on the 4000x4000 canvas.
+     * - `iStrength`: Normalized intensity (0..1) driven by synergy and proximity.
+     *
+     * ### Implementation Details:
+     * - **Line Segment Calculation**: Uses a clamped projection to find the distance
+     *   from the pixel to the line segment AB.
+     * - **Neural Pulse**: A traveling `sin` wave driven by `iTime` and distance along the segment.
+     * - **Organic Warp**: Employs procedural `noise` for domain warping, making the
+     *   strand look like a living neural fiber rather than a geometric line.
+     */
     @Language("AGSL")
     const val NEURAL_STRAND = """
         uniform float2 iResolution;
