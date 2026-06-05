@@ -4,6 +4,10 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-12: Ghost Radar - Localized behavioral hotspots in `/labs/ghost/radar/`
+- [DONE] 2028-08-11: Ghost Chronos - Spatiotemporal behavioral heatmap in `/labs/ghost/`
+- [DONE] 2028-08-10: Ghost Portal - Inter-app teleportation shader in `/labs/ghost/`
+- [DONE] 2028-08-10: Ghost Phantasm - Neural presence and meta-ball visualization in `/labs/ghost/`
 - [DONE] 2028-08-09: Ghost Spectra - Neural Spectroscopy Analysis in `/labs/ghost/`
 - [DONE] 2028-08-07: Ghost Frost - Procedural frost crystallization and "Cold Zone" visualization in `/labs/ghost/frost/`
 - [DONE] 2028-08-05: Ghost Link - Proximity-based neural pairing visualization in `/labs/ghost/link/`

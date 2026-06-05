@@ -441,7 +441,8 @@ class SeatingChartViewModel @Inject constructor(
 
     private var memoizedBehaviorEvents: List<BehaviorEvent>? = null
     /** Caches behavior logs grouped by student ID to avoid O(B) filtering inside student loops. */
-    private var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
+    var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
+        private set
 
     /** BOLT: Incremental caches for behavior metrics used by AI engines. */
     private val negativeCountsCache = ConcurrentHashMap<Long, Int>()
