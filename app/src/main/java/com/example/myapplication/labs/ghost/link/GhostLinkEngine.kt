@@ -10,11 +10,21 @@ import kotlin.math.exp
  *
  * This engine identifies students who exhibit strong behavioral synergy and spatial
  * proximity. It visualizes the hidden "Neural Links" that form between students
- * during collaborative or high-activity periods.
+ * during collaborative or high-activity periods, modeling the "social fabric" of
+ * the classroom.
+ *
+ * ### Architectural Intent
+ * Unlike the static [com.example.myapplication.labs.ghost.GhostLinkEngine] which generates
+ * textual dossiers, this engine provides real-time spatial analysis driven by
+ * current classroom activity and proximity.
  */
 object GhostLinkEngine {
 
-    /** BOLT: Distance threshold for neural pairing (600f) on the 4000x4000 canvas. */
+    /**
+     * BOLT: Distance threshold for neural pairing (600f) on the 4000x4000 canvas.
+     * This value is calibrated to allow connections between students in adjacent
+     * groups while preventing the chart from becoming a "complete graph" of lines.
+     */
     private const val LINK_DISTANCE_THRESHOLD = 600f
     private const val LINK_DISTANCE_THRESHOLD_SQ = LINK_DISTANCE_THRESHOLD * LINK_DISTANCE_THRESHOLD
 
@@ -31,7 +41,20 @@ object GhostLinkEngine {
     /**
      * Identifies neural links between students based on proximity and behavioral synergy.
      *
+     * This multi-stage analysis combines spatial and behavioral data:
+     * 1. **Activity Frequency**: Calculates recent log counts for each student.
+     * 2. **Spatial Pruning**: Discards student pairs exceeding the [LINK_DISTANCE_THRESHOLD].
+     * 3. **Behavioral Synergy**: Measures how "in sync" two students are by comparing
+     *    their activity levels. High parity (similar log counts) yields higher synergy.
+     * 4. **Spatial Weighting**: Applies a Gaussian decay to favor closer students even
+     *    within the threshold.
+     *
      * BOLT: Optimized O(N^2) with spatial pruning and pre-calculated activity metrics.
+     *
+     * @param students The current list of student entities.
+     * @param behaviorLogsByStudent A pre-grouped map of behavior logs for O(1) lookup.
+     * @param timeWindowMs The sliding window for "recent" activity (default 10 mins).
+     * @return A list of identified [NeuralLink]s with calculated synergy strengths.
      */
     fun identifyNeuralLinks(
         students: List<Student>,

@@ -256,11 +256,16 @@ Visualizes **Neural Resonance** and activity clusters.
 - **Activity Ripples**: Renders synchronized, expanding AGSL ripples from resonant student nodes, color-coded by behavior type.
 - **O(Recent) Performance**: Uses DESC-sorted logs to identify resonant pulses in sub-millisecond time.
 
-### 44. Ghost Link (`GhostLinkEngine.kt`)
-Generates futuristic **Neural Dossiers**.
+### 44. Ghost Link: Neural Dossier (`GhostLinkEngine.kt`)
+Generates futuristic **Neural Dossiers** for individual students.
 - **Stochastic AI Analysis**: Transforms student metadata into a high-fidelity Markdown report featuring predictive trajectories.
 - **Neural Metrics**: Calculates "Cognitive Resonance", "Collaborative Flux", and "Academic Entropy" with deterministic seeding per student ID.
 - **Logic Parity**: Maintains strict architectural alignment with the `Python/ghost_link.py` R&D prototype.
+
+### 44b. Ghost Link: Neural Pairing (`link/GhostLinkEngine.kt`, `link/GhostLinkLayer.kt`)
+Visualizes **Neural Pairing** between students based on spatial proximity and behavioral synergy.
+- **Neural Strands**: Renders animated, pulsing AGSL strands between students who are "in sync."
+- **Social Fabric**: Models the classroom as a dynamic network driven by real-time activity parity.
 
 ### 45. Ghost Flux (`GhostFluxEngine.kt`, `GhostFluxLayer.kt`, `GhostFluxShader.kt`)
 Visualizes classroom engagement as **Neural Flow**.
