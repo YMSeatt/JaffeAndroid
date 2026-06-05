@@ -243,4 +243,7 @@ object GhostConfig {
 
     /** Enables "Ghost Frost" procedural crystallization and "Cold Zone" visualization. */
     const val FROST_MODE_ENABLED = true
+
+    /** Enables "Ghost Radar" localized behavioral resonance visualization. */
+    const val RADAR_MODE_ENABLED = true
 }

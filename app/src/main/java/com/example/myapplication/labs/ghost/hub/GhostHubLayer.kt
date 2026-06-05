@@ -109,6 +109,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FROST_MODE_ENABLED) {
                 add(GhostAction("FROST", Icons.Default.AcUnit, "Ghost Frost"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RADAR_MODE_ENABLED) {
+                add(GhostAction("RADAR", Icons.Default.TrackChanges, "Ghost Radar"))
+            }
         }
     }
 

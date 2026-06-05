@@ -198,6 +198,8 @@ import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
+import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
+import com.example.myapplication.labs.ghost.radar.GhostRadarEngine
 import com.example.myapplication.labs.ghost.GhostHaloLayer
 import com.example.myapplication.labs.ghost.GhostDeckLayer
 import com.example.myapplication.labs.ghost.GhostDeckEngine
@@ -364,6 +366,7 @@ fun SeatingChartScreen(
     var isSyncActive by remember { mutableStateOf(false) }
     var isLinkActive by remember { mutableStateOf(false) }
     var isFrostActive by remember { mutableStateOf(false) }
+    var isRadarActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
     var isIonActive by remember { mutableStateOf(false) }
@@ -575,7 +578,7 @@ fun SeatingChartScreen(
                                    isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
-                                   isFrostActive ||
+                                   isFrostActive || isRadarActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
@@ -1129,6 +1132,30 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isVisible = isLinkActive
+            )
+            val radarIntensity = remember(isRadarActive, selectedStudentUiItemForAction, students, seatingChartViewModel.behaviorLogsByStudentCache) {
+                if (isRadarActive) {
+                    val target = selectedStudentUiItemForAction
+                    if (target != null) {
+                        GhostRadarEngine.calculateLocalResonance(
+                            targetX = target.xPosition.value,
+                            targetY = target.yPosition.value,
+                            students = students,
+                            behaviorLogsByStudent = seatingChartViewModel.behaviorLogsByStudentCache
+                        )
+                    } else 0f
+                } else 0f
+            }
+
+            GhostRadarLayer(
+                targetOffset = Offset(
+                    selectedStudentUiItemForAction?.xPosition?.value ?: 0f,
+                    selectedStudentUiItemForAction?.yPosition?.value ?: 0f
+                ),
+                intensity = radarIntensity,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isRadarActive && selectedStudentUiItemForAction != null
             )
             GhostRainLayer(
                 engine = ghostRainEngine,
@@ -2205,6 +2232,7 @@ fun SeatingChartScreen(
                             "PULSE" -> isPulseActive = !isPulseActive
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
+                            "RADAR" -> isRadarActive = !isRadarActive
                             "MIRROR" -> {
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
