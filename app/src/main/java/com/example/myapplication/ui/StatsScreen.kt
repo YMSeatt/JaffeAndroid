@@ -44,7 +44,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
     val endDateState = rememberDatePickerState()
 
     var studentFilter by remember { mutableStateOf("all") }
-    var selectedStudentIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    // BOLT: Use Set for O(1) lookup during checkbox list composition.
+    var selectedStudentIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var behaviorFilter by remember { mutableStateOf("all") }
     var selectedBehaviorTypes by remember { mutableStateOf<List<String>>(emptyList()) }
     var homeworkFilter by remember { mutableStateOf("all") }
@@ -62,6 +63,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
     val totalDays = statsData.totalDaysInRange
 
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    // BOLT: Hoist Date object to avoid allocations in start/end preview text.
+    val date = remember { Date() }
 
     LaunchedEffect(
         startDateState.selectedDateMillis,
@@ -76,7 +79,7 @@ fun StatsScreen(viewModel: StatsViewModel) {
         val options = ExportOptions(
             startDate = startDateState.selectedDateMillis,
             endDate = endDateState.selectedDateMillis,
-            studentIds = if (studentFilter == "all") null else selectedStudentIds,
+            studentIds = if (studentFilter == "all") null else selectedStudentIds.toList(),
             behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
             homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
             includeBehaviorLogs = true,
@@ -97,8 +100,8 @@ fun StatsScreen(viewModel: StatsViewModel) {
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = { showEndDatePicker = true }) { Text("End Date") }
         }
-        Text("Start: ${startDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
-        Text("End: ${endDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
+        Text("Start: ${startDateState.selectedDateMillis?.let { date.time = it; dateFormatter.format(date) } ?: "Not set"}")
+        Text("End: ${endDateState.selectedDateMillis?.let { date.time = it; dateFormatter.format(date) } ?: "Not set"}")
 
         if (showStartDatePicker) {
             DatePickerDialog(
@@ -134,13 +137,12 @@ fun StatsScreen(viewModel: StatsViewModel) {
         if (studentFilter == "specific") {
             LazyColumn(modifier = Modifier.height(150.dp)) {
                 items(students) { student ->
-                    var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
+                    val isChecked = selectedStudentIds.contains(student.id)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = isChecked,
-                            onCheckedChange = {
-                                isChecked = it
-                                selectedStudentIds = if (isChecked) {
+                            onCheckedChange = { checked ->
+                                selectedStudentIds = if (checked) {
                                     selectedStudentIds + student.id
                                 } else {
                                     selectedStudentIds - student.id

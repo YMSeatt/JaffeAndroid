@@ -162,6 +162,9 @@ fun RemindersScreen(
             }
         }
     ) { paddingValues ->
+        // BOLT: Hoist Date object to avoid O(N) allocations during scrolling
+        val date = remember { Date() }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -172,6 +175,7 @@ fun RemindersScreen(
                 ReminderItem(
                     reminder = reminder,
                     sdf = sdf,
+                    date = date,
                     onEdit = {
                         editingReminder = it
                         showAddEditDialog = true
@@ -202,6 +206,7 @@ fun RemindersScreen(
 fun ReminderItem(
     reminder: Reminder,
     sdf: SimpleDateFormat,
+    date: Date,
     onEdit: (Reminder) -> Unit,
     onDelete: (Reminder) -> Unit
 ) {
@@ -218,7 +223,8 @@ fun ReminderItem(
             Column(modifier = Modifier.weight(1f)) {
                 Text(text = reminder.title)
                 Text(text = reminder.description)
-                Text(text = "Time: ${sdf.format(Date(reminder.timestamp))}")
+                date.time = reminder.timestamp
+                Text(text = "Time: ${sdf.format(date)}")
             }
             IconButton(onClick = { onEdit(reminder) }) {
                 Icon(Icons.Default.Edit, contentDescription = "Edit Reminder")
@@ -243,6 +249,7 @@ fun AddEditReminderDialog(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
+    val date = remember { Date() }
 
     if (showDatePicker) {
         DatePickerDialog(
@@ -300,7 +307,8 @@ fun AddEditReminderDialog(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(onClick = { showDatePicker = true }) {
-                    Text("Select Date and Time: ${sdf.format(Date(timestamp))}")
+                    date.time = timestamp
+                    Text("Select Date and Time: ${sdf.format(date)}")
                 }
             }
         },
