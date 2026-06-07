@@ -46,4 +46,17 @@ class StringExtensionsTest {
         assertEquals("X", maskStudentName("X")) // Single char name
         assertEquals("", maskStudentName("   "))
     }
+
+    @Test
+    fun testGenerateLogInitials() {
+        assertEquals("GP", "Great Participation".generateLogInitials())
+        assertEquals("OT", "Off Task".generateLogInitials())
+        assertEquals("T", "Talking".generateLogInitials())
+        assertEquals("MP", "Math Problems".generateLogInitials())
+        assertEquals("MWH", "Multiple Words Here".generateLogInitials())
+        assertEquals("S", "S".generateLogInitials())
+        assertEquals("", "".generateLogInitials())
+        assertEquals("", "   ".generateLogInitials())
+        assertEquals("ABC", "  a b c  ".generateLogInitials())
+    }
 }

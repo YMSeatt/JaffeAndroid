@@ -97,6 +97,7 @@ import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
+import com.example.myapplication.util.generateLogInitials
 import com.example.myapplication.labs.ghost.memento.GhostMementoStore
 import com.example.myapplication.labs.ghost.memento.GhostMementoMapper
 import com.example.myapplication.labs.ghost.memento.MementoHistory
@@ -1453,7 +1454,7 @@ class SeatingChartViewModel @Inject constructor(
                                 if (behaviorDisplayTimeout > 0 && currentTime >= event.timestamp + timeoutMs) break
 
                                 val description = if (useInitialsForBehavior) {
-                                    behaviorInitialsMap[event.type] ?: event.type.first().toString()
+                                    behaviorInitialsMap[event.type] ?: event.type.generateLogInitials()
                                 } else {
                                     event.type
                                 }
@@ -1472,7 +1473,7 @@ class SeatingChartViewModel @Inject constructor(
 
                                 val status = log.status
                                 val statusDescription = if (useInitialsForHomework) {
-                                    homeworkInitialsMap[status] ?: if (status.isNotEmpty()) status.first().toString() else "?"
+                                    homeworkInitialsMap[status] ?: status.generateLogInitials().ifEmpty { "?" }
                                 } else {
                                     status
                                 }
@@ -1491,7 +1492,7 @@ class SeatingChartViewModel @Inject constructor(
                                 if (quizDisplayTimeout > 0 && currentTime >= log.loggedAt + timeoutMs) break
 
                                 quizDescription.add(if (useInitialsForQuiz) {
-                                    quizInitialsMap[log.quizName] ?: log.quizName.first().toString()
+                                    quizInitialsMap[log.quizName] ?: log.quizName.generateLogInitials()
                                 } else {
                                     log.quizName
                                 })
@@ -1514,7 +1515,7 @@ class SeatingChartViewModel @Inject constructor(
                                     val log = hLogsSess[i]
                                     val status = log.status
                                     val statusDescription = if (useInitialsForHomework) {
-                                        homeworkInitialsMap[status] ?: if (status.isNotEmpty()) status.first().toString() else "?"
+                                        homeworkInitialsMap[status] ?: status.generateLogInitials().ifEmpty { "?" }
                                     } else {
                                         status
                                     }
