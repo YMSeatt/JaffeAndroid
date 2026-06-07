@@ -107,3 +107,29 @@ fun maskStudentName(name: String): String {
         }
     }
 }
+
+/**
+ * Generates short initials for a multi-word string.
+ * e.g., "Great Participation" -> "GP", "Off Task" -> "OT".
+ *
+ * This is a mobile-optimized port of the Python blueprint:
+ * ''.join(part[0].upper() for part in name.split() if part)
+ */
+fun String.generateLogInitials(): String {
+    if (this.isBlank()) return ""
+    val result = StringBuilder()
+    var isNewWord = true
+
+    for (i in this.indices) {
+        val c = this[i]
+        if (c.isWhitespace()) {
+            isNewWord = true
+        } else {
+            if (isNewWord) {
+                result.append(c.uppercaseChar())
+                isNewWord = false
+            }
+        }
+    }
+    return result.toString()
+}
