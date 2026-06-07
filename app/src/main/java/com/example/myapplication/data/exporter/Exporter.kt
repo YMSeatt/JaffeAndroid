@@ -758,11 +758,14 @@ class Exporter(
         val zoneId = context.zoneId
 
         // Determine date range from options or fallback to log boundaries.
-        val startMillis = options.startDate ?: listOfNotNull(
-            behaviorEvents.minOfOrNull { it.timestamp },
-            homeworkLogs.minOfOrNull { it.loggedAt },
-            quizLogs.minOfOrNull { it.loggedAt }
-        ).minOrNull() ?: System.currentTimeMillis()
+        // BOLT: Use firstOrNull() for O(1) start detection as logs are pre-sorted ASC in the export pipeline.
+        val startMillis = options.startDate ?: run {
+            val bStart = behaviorEvents.firstOrNull()?.timestamp ?: Long.MAX_VALUE
+            val hStart = homeworkLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val qStart = quizLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val min = minOf(bStart, minOf(hStart, qStart))
+            if (min == Long.MAX_VALUE) System.currentTimeMillis() else min
+        }
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
         val reportStartDay = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate().toEpochDay()
@@ -775,7 +778,9 @@ class Exporter(
         val lastReportDay = reportStartDay + totalDaysInRange - 1
 
         // Track active days per student (optimized for O(1) presence checks using epoch day)
-        val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
+        // BOLT: Replaced MutableMap<Long, MutableSet<Long>> with LongSparseArray<BitSet>
+        // to eliminate boxed Long allocations and reduce memory footprint.
+        val studentActiveDays = android.util.LongSparseArray<java.util.BitSet>()
 
         // BOLT: Temporal cache for epoch day calculations to reduce object churn
         var lastDayStartMs = Long.MIN_VALUE
@@ -791,14 +796,41 @@ class Exporter(
             return lastEpochDay
         }
 
-        behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(getEpochDay(event.timestamp))
+        for (i in behaviorEvents.indices) {
+            val event = behaviorEvents[i]
+            val day = getEpochDay(event.timestamp)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(event.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(event.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
         }
-        homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
+        for (i in homeworkLogs.indices) {
+            val log = homeworkLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
         }
-        quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(getEpochDay(log.loggedAt))
+        for (i in quizLogs.indices) {
+            val log = quizLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
         }
 
         val headers = mutableListOf("Student Name")
@@ -832,18 +864,18 @@ class Exporter(
             val row = sheet.createRow(rowIndex + 1)
             row.createCell(0).setCellValue(sanitize("${student.firstName} ${student.lastName}"))
 
-            var totalPresent = 0
-            val presentDays = studentActiveDays[student.id] ?: emptySet()
+            val bitSet = studentActiveDays.get(student.id)
+
+            // BOLT: Optimize nested loop by counting active days within the report range.
+            // Using bitSet.cardinality() provides an efficient O(1) population count.
+            val totalPresent = bitSet?.cardinality() ?: 0
 
             for (dayOffset in 0 until totalDaysInRange) {
-                val epochDay = reportStartDay + dayOffset
-                val isPresent = presentDays.contains(epochDay)
+                val isPresent = bitSet?.get(dayOffset) ?: false
 
                 val cell = row.createCell(dayOffset + 1)
                 cell.setCellValue(if (isPresent) "P" else "A")
                 cell.cellStyle = centerStyle
-
-                if (isPresent) totalPresent++
             }
 
             val totalAbsent = totalDaysInRange - totalPresent
