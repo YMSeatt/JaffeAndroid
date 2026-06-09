@@ -267,6 +267,12 @@ Visualizes **Neural Pairing** between students based on spatial proximity and be
 - **Neural Strands**: Renders animated, pulsing AGSL strands between students who are "in sync."
 - **Social Fabric**: Models the classroom as a dynamic network driven by real-time activity parity.
 
+### 44c. Ghost Weaver (`weaver/GhostWeaverEngine.kt`, `weaver/GhostWeaverLayer.kt`, `weaver/GhostWeaverShader.kt`)
+Visualizes **Academic Synergy** and **Homework Collaboration** as neural threads.
+- **Academic Synergy**: Detects shared high-performance (>= 80%) on quiz assessments.
+- **Homework Collaboration**: Identifies students who consistently complete the same homework assignments.
+- **Neural Threads**: Renders glowing, interwoven AGSL fibers between synergistic students.
+
 ### 45. Ghost Flux (`GhostFluxEngine.kt`, `GhostFluxLayer.kt`, `GhostFluxShader.kt`)
 Visualizes classroom engagement as **Neural Flow**.
 - **Classroom Tempo**: Calculates a normalized flow intensity driven by log density and a sinusoidal "Tempo" factor (Logic parity with `Python/ghost_flux_simulator.py`).

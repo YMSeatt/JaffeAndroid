@@ -19,10 +19,26 @@ import com.example.myapplication.ui.model.StudentUiItem
  * This layer uses [GhostWeaverShader] to draw stylized connections between
  * students who share academic milestones.
  *
- * BOLT ⚡ Optimization:
- * 1. Implement a [RuntimeShader] pool to avoid heavy object allocations.
- * 2. Use [LongSparseArray] to avoid [Long] boxing in lookups.
- * 3. Replace functional iterators with manual loops in the draw path.
+ * ### Architectural Intent:
+ * The Weaver layer transforms abstract academic data into a living social fabric.
+ * By visualizing connections between students with similar trajectories, it provides
+ * teachers with immediate, spatial insight into classroom synergy.
+ *
+ * ### BOLT ⚡ (Performance-Obsessed) Optimization:
+ * 1. **Shader Pooling**: Implements a [RuntimeShader] pool to avoid heavy object allocations
+ *    and JNI overhead during 60fps rendering.
+ * 2. **Primitive Containers**: Uses [LongSparseArray] to avoid [Long] boxing overhead
+ *    during high-frequency student coordinate lookups.
+ * 3. **Manual Iteration**: Replaces functional iterators with manual index-based loops
+ *    in the draw path to minimize GC pressure.
+ * 4. **GPU Pruning**: Uses `drawLine` instead of full-screen rects, limiting the fragment
+ *    shader execution to the precise bounds of the thread (plus glow padding).
+ *
+ * @param students The current list of interactive student UI items.
+ * @param threads The list of identified synergy connections from [GhostWeaverEngine].
+ * @param canvasScale The current zoom factor of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ * @param isActive Whether the Weaver experiment is currently enabled.
  */
 @Composable
 fun GhostWeaverLayer(
