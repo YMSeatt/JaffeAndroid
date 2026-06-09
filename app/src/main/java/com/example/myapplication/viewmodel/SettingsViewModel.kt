@@ -20,6 +20,8 @@ import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.CustomHomeworkTypeDao
 import com.example.myapplication.data.FurnitureDao
 import com.example.myapplication.data.HomeworkLogDao
+import com.example.myapplication.data.HomeworkMarkMetadata
+import com.example.myapplication.data.HomeworkMarkMetadataDao
 import com.example.myapplication.data.HomeworkTemplateDao
 import com.example.myapplication.data.LayoutTemplateDao
 import com.example.myapplication.data.QuizMarkType
@@ -83,6 +85,7 @@ class SettingsViewModel @Inject constructor(
     private val customHomeworkTypeDao: CustomHomeworkTypeDao,
     private val customHomeworkStatusDao: CustomHomeworkStatusDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
+    private val homeworkMarkMetadataDao: HomeworkMarkMetadataDao,
     private val quizTemplateDao: QuizTemplateDao,
     private val homeworkTemplateDao: HomeworkTemplateDao,
     private val systemBehaviorDao: com.example.myapplication.data.SystemBehaviorDao,
@@ -414,6 +417,16 @@ class SettingsViewModel @Inject constructor(
         quizMarkTypeDao.replaceAll(defaults)
     }
 
+    fun resetHomeworkMarkMetadataToDefaults() = viewModelScope.launch {
+        val defaults = listOf(
+            HomeworkMarkMetadata(name = "Complete", defaultPoints = 10.0),
+            HomeworkMarkMetadata(name = "Incomplete", defaultPoints = 5.0),
+            HomeworkMarkMetadata(name = "Not Done", defaultPoints = 0.0),
+            HomeworkMarkMetadata(name = "Effort Score (1-5)", defaultPoints = 3.0)
+        )
+        homeworkMarkMetadataDao.replaceAll(defaults)
+    }
+
     fun resetLiveHomeworkSelectOptionsToDefaults() {
         updateLiveHomeworkSelectOptions("Done,Not Done,Signed,Returned")
     }
@@ -430,6 +443,20 @@ class SettingsViewModel @Inject constructor(
     }
     fun deleteQuizMarkType(quizMarkType: QuizMarkType) = viewModelScope.launch {
         quizMarkTypeDao.delete(quizMarkType)
+    }
+
+    val homeworkMarkMetadata: LiveData<List<HomeworkMarkMetadata>> = homeworkMarkMetadataDao.getAllHomeworkMarkMetadata().asLiveData()
+
+    fun addHomeworkMarkMetadata(name: String, points: Double) = viewModelScope.launch {
+        homeworkMarkMetadataDao.insert(HomeworkMarkMetadata(name = name, defaultPoints = points))
+    }
+
+    fun updateHomeworkMarkMetadata(metadata: HomeworkMarkMetadata) = viewModelScope.launch {
+        homeworkMarkMetadataDao.update(metadata)
+    }
+
+    fun deleteHomeworkMarkMetadata(metadata: HomeworkMarkMetadata) = viewModelScope.launch {
+        homeworkMarkMetadataDao.delete(metadata)
     }
 
 

@@ -8,6 +8,7 @@ import com.example.myapplication.data.CustomBehaviorDao
 import com.example.myapplication.data.CustomHomeworkStatusDao
 import com.example.myapplication.data.CustomHomeworkTypeDao
 import com.example.myapplication.data.HomeworkLogDao
+import com.example.myapplication.data.HomeworkMarkMetadataDao
 import com.example.myapplication.data.QuizLogDao
 import com.example.myapplication.data.EmailScheduleDao
 import com.example.myapplication.data.FurnitureDao
@@ -179,5 +180,11 @@ object DatabaseModule {
     @Provides
     fun provideHomeworkDao(appDatabase: AppDatabase): HomeworkDao {
         return appDatabase.homeworkDao()
+    }
+
+    /** Provides the [HomeworkMarkMetadataDao] for mapping homework statuses to point values. */
+    @Provides
+    fun provideHomeworkMarkMetadataDao(appDatabase: AppDatabase): HomeworkMarkMetadataDao {
+        return appDatabase.homeworkMarkMetadataDao()
     }
 }

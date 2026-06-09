@@ -62,6 +62,8 @@ class SettingsViewModelTest {
     @MockK(relaxed = true)
     lateinit var quizMarkTypeDao: QuizMarkTypeDao
     @MockK(relaxed = true)
+    lateinit var homeworkMarkMetadataDao: HomeworkMarkMetadataDao
+    @MockK(relaxed = true)
     lateinit var quizTemplateDao: QuizTemplateDao
     @MockK(relaxed = true)
     lateinit var homeworkTemplateDao: HomeworkTemplateDao
@@ -71,6 +73,8 @@ class SettingsViewModelTest {
     lateinit var behaviorEventDao: BehaviorEventDao
     @MockK(relaxed = true)
     lateinit var homeworkLogDao: HomeworkLogDao
+    @MockK(relaxed = true)
+    lateinit var securityUtil: SecurityUtil
 
     private lateinit var viewModel: SettingsViewModel
 
@@ -167,11 +171,13 @@ class SettingsViewModelTest {
             customHomeworkTypeDao,
             customHomeworkStatusDao,
             quizMarkTypeDao,
+            homeworkMarkMetadataDao,
             quizTemplateDao,
             homeworkTemplateDao,
             systemBehaviorDao,
             behaviorEventDao,
-            homeworkLogDao
+            homeworkLogDao,
+            securityUtil
         )
     }
 
@@ -262,5 +268,15 @@ class SettingsViewModelTest {
 
         // Then
         coVerify { customHomeworkStatusDao.replaceAll(any()) }
+    }
+
+    @Test
+    fun `resetHomeworkMarkMetadataToDefaults should call replaceAll on DAO`() = runTest {
+        // When
+        viewModel.resetHomeworkMarkMetadataToDefaults()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Then
+        coVerify { homeworkMarkMetadataDao.replaceAll(any()) }
     }
 }
