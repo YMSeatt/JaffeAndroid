@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: (e.g., "Add Dynamic Color/Material You toggle")
+- [ ] Idea: Ghost Neural Biometrics - Native Biometric App Lock
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2026-06-09: Ghost Neural Biometrics - Native Biometric App Lock in `/labs/ghost/biometric/`
 - [DONE] 2028-08-12: Ghost Radar - Localized behavioral hotspots in `/labs/ghost/radar/`
 - [DONE] 2028-08-11: Ghost Chronos - Spatiotemporal behavioral heatmap in `/labs/ghost/`
 - [DONE] 2028-08-10: Ghost Portal - Inter-app teleportation shader in `/labs/ghost/`

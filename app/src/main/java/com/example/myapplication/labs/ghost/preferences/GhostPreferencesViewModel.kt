@@ -44,6 +44,9 @@ class GhostPreferencesViewModel @Inject constructor(
     val shakeToRecenterEnabled: StateFlow<Boolean> = store.shakeToRecenterEnabled
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
+    val biometricEnabled: StateFlow<Boolean> = store.biometricEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     val ghostPrimaryColor: StateFlow<Long> = store.ghostPrimaryColor
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0xFF00FFCC)
 
@@ -95,6 +98,12 @@ class GhostPreferencesViewModel @Inject constructor(
     fun setShakeToRecenterEnabled(enabled: Boolean) {
         viewModelScope.launch {
             store.updateShakeToRecenterEnabled(enabled)
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            store.updateBiometricEnabled(enabled)
         }
     }
 
