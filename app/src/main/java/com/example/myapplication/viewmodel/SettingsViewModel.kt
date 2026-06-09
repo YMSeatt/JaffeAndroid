@@ -88,7 +88,8 @@ class SettingsViewModel @Inject constructor(
     private val systemBehaviorDao: com.example.myapplication.data.SystemBehaviorDao,
     private val behaviorEventDao: BehaviorEventDao,
     private val homeworkLogDao: HomeworkLogDao,
-    private val securityUtil: SecurityUtil
+    private val securityUtil: SecurityUtil,
+    val biometricEngine: com.example.myapplication.labs.ghost.biometric.GhostBiometricEngine
 ) : ViewModel() {
 
     companion object {

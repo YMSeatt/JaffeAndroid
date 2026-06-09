@@ -85,6 +85,7 @@ dependencies {
     implementation(libs.androidx.startup.runtime)
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.games.activity)
+    implementation(libs.androidx.biometric)
     kapt(libs.hilt.compiler)
     // Hilt Testing
     testImplementation("com.google.dagger:hilt-android-testing:2.48")

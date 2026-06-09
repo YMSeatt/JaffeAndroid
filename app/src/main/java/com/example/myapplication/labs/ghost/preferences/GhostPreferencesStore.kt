@@ -37,6 +37,7 @@ class GhostPreferencesStore @Inject constructor(
         val DYNAMIC_COLOR_ENABLED = booleanPreferencesKey("dynamic_color_enabled")
         val GHOST_THEME_MODE = stringPreferencesKey("ghost_theme_mode")
         val SHAKE_TO_RECENTER_ENABLED = booleanPreferencesKey("shake_to_recenter_enabled")
+        val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         val GHOST_PRIMARY_COLOR = longPreferencesKey("ghost_primary_color")
         val GHOST_SECONDARY_COLOR = longPreferencesKey("ghost_secondary_color")
     }
@@ -81,6 +82,11 @@ class GhostPreferencesStore @Inject constructor(
         prefs[Keys.SHAKE_TO_RECENTER_ENABLED] ?: false
     }
 
+    /** Flow indicating if native biometric unlock is enabled. */
+    val biometricEnabled: Flow<Boolean> = context.ghostDataStore.data.map { prefs ->
+        prefs[Keys.BIOMETRIC_ENABLED] ?: false
+    }
+
     /** Flow of the custom Ghost primary color. */
     val ghostPrimaryColor: Flow<Long> = context.ghostDataStore.data.map { prefs ->
         prefs[Keys.GHOST_PRIMARY_COLOR] ?: 0xFF00FFCC // GhostCyan
@@ -121,6 +127,10 @@ class GhostPreferencesStore @Inject constructor(
 
     suspend fun updateShakeToRecenterEnabled(enabled: Boolean) {
         context.ghostDataStore.edit { it[Keys.SHAKE_TO_RECENTER_ENABLED] = enabled }
+    }
+
+    suspend fun updateBiometricEnabled(enabled: Boolean) {
+        context.ghostDataStore.edit { it[Keys.BIOMETRIC_ENABLED] = enabled }
     }
 
     suspend fun updateGhostPrimaryColor(color: Long) {

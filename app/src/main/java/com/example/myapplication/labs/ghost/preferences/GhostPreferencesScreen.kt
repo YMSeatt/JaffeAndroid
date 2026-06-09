@@ -39,6 +39,7 @@ fun GhostPreferencesScreen(
     val shakeToRecenterEnabled by viewModel.shakeToRecenterEnabled.collectAsState()
     val dynamicColorEnabled by viewModel.dynamicColorEnabled.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val biometricEnabled by viewModel.biometricEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -209,6 +210,13 @@ fun GhostPreferencesScreen(
                         description = "Rapidly shake the device to reset the canvas zoom and pan.",
                         checked = shakeToRecenterEnabled,
                         onCheckedChange = viewModel::setShakeToRecenterEnabled
+                    )
+
+                    GhostPreferenceSwitch(
+                        label = "Neural Biometrics",
+                        description = "Enable native biometric authentication for the app lock.",
+                        checked = biometricEnabled,
+                        onCheckedChange = viewModel::setBiometricEnabled
                     )
                 }
             }
