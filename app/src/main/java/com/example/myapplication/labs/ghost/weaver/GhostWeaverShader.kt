@@ -6,6 +6,16 @@ import org.intellij.lang.annotations.Language
  * GhostWeaverShader: AGSL shader for the "Neural Thread" effect.
  *
  * Visualizes academic connections as glowing, interwoven lines.
+ *
+ * ### Shader Mechanics:
+ * - **Distance Field**: Calculates a signed distance field (SDF) to a line segment
+ *   to establish the primary connection path.
+ * - **Neural Weaving**: Applies a sinusoidal offset driven by [iTime] to generate
+ *   an interwoven secondary path, simulating the "woven" nature of the synergy.
+ * - **Exponential Glow**: Uses `exp(-d * scale)` to create an organic, ethereal glow
+ *   that remains crisp near the center but falls off naturally.
+ * - **Dynamic Coloration**: Modulates the output based on [iColor] and [iStrength],
+ *   allowing for distinct visual coding of synergy types.
  */
 object GhostWeaverShader {
 

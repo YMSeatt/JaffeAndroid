@@ -12,6 +12,14 @@ import com.example.myapplication.data.HomeworkLog
  */
 object GhostWeaverEngine {
 
+    /**
+     * Represents a connection between two synergistic students.
+     *
+     * @property studentA The Database ID of the first student.
+     * @property studentB The Database ID of the second student.
+     * @property strength The normalized intensity of the connection (0.0 to 1.0).
+     * @property type The classification of synergy (Academic vs. Homework).
+     */
     data class NeuralThread(
         val studentA: Long,
         val studentB: Long,
@@ -19,16 +27,34 @@ object GhostWeaverEngine {
         val type: ThreadType
     )
 
+    /**
+     * Defines the source of the neural connection.
+     */
     enum class ThreadType {
+        /** Based on shared high-performance (>=80%) on quiz assessments. */
         ACADEMIC_SYNERGY,
+        /** Based on shared completion of homework assignments. */
         HOMEWORK_COLLABORATION
     }
 
     /**
      * Identifies neural threads based on academic performance and homework completion.
      *
-     * BOLT: Optimized with manual loops and O(1) Set lookups to eliminate
-     * O(L^2) nested comparisons within student pairs.
+     * ### Algorithm Logic:
+     * 1. **Pre-processing (Stage 1)**: Aggregates logs into student-keyed [Set]s of milestone names.
+     *    - Quizzes are included if score is >= 80%.
+     *    - Homework is included if status indicates completion (excluding "Not Done").
+     * 2. **Pairwise Comparison (Stage 2)**: Intersects the milestone sets for every student pair.
+     * 3. **Strength Mapping**: Normalizes the intersection count into a [strength] float.
+     *
+     * ### BOLT (Performance-Obsessed) Optimization:
+     * - **Complexity**: Reduces nested log scans from $O(S^2 \times L^2)$ to $O(S^2 \times L_{shared})$
+     *   by using O(1) Set lookups instead of repeated list iterations.
+     * - **Allocation**: Uses manual loop indexing to minimize iterator churn in high-frequency paths.
+     *
+     * @param quizLogsByStudent Raw quiz logs grouped by student ID.
+     * @param homeworkLogsByStudent Raw homework logs grouped by student ID.
+     * @return A list of identified [NeuralThread] objects.
      */
     fun identifyThreads(
         quizLogsByStudent: Map<Long, List<QuizLog>>,
