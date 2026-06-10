@@ -1,12 +1,25 @@
 package com.example.myapplication.labs.ghost.radar
 
+/**
+ * Repository for Ghost Radar AGSL shader programs.
+ */
 object GhostRadarShader {
     /**
      * AGSL Shader for the Ghost Radar visualization.
-     * Features:
-     * - Rotating circular sweep line.
-     * - Concentric distance rings.
-     * - Localized behavioral "glow" based on intensity.
+     *
+     * ### Visual Features:
+     * - **Rotating Sweep**: Uses `atan2` and `mod` to create a clock-wise rotating scanning line.
+     * - **Concentric Rings**: Employs `sin` on distance to generate periodic circular boundaries.
+     * - **Behavioral Resonance**: Intensity data drives a procedural `noise` flicker and
+     *   central core glow, visually signaling high-activity zones.
+     * - **Spatio-Temporal Masking**: Automatically clips rendering to a perfect circle
+     *   with edge feathering.
+     *
+     * ### Uniforms:
+     * - `iResolution`: The size of the radar in pixels.
+     * - `iTime`: Animation phase for rotation and noise pulses.
+     * - `iIntensity`: Behavioral resonance from [GhostRadarEngine].
+     * - `iColor`: The base RGB tint for the radar.
      */
     const val RADAR_SWEEP = """
         uniform float2 iResolution;
