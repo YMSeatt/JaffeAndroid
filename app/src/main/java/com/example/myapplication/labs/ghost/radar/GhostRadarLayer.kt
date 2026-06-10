@@ -18,6 +18,22 @@ import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostRadarLayer: Renders a localized behavioral radar.
+ *
+ * This layer uses an AGSL shader to visualize recent behavioral activity around
+ * a specific target coordinate. It is rendered as a circular overlay that
+ * tracks with the seating chart's pan and zoom states.
+ *
+ * ### BOLT Optimization:
+ * - **Shader State Hoisting**: Uses `remember` to pre-allocate the [RuntimeShader]
+ *   and [ShaderBrush], avoiding per-frame object churn during the radar rotation.
+ * - **GraphicsLayer Isolation**: Deploys the radar within a `graphicsLayer` block
+ *   to minimize recomposition overhead during panning and zooming.
+ *
+ * @param targetOffset The logical (4000x4000) center of the radar.
+ * @param intensity The calculated resonance from [GhostRadarEngine] (0.0 to 1.0).
+ * @param canvasScale The current zoom level of the seating chart.
+ * @param canvasOffset The current pan offset of the seating chart.
+ * @param isVisible Controls whether the radar overlay is rendered.
  */
 @Composable
 fun GhostRadarLayer(
