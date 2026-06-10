@@ -640,6 +640,31 @@ class SeatingChartViewModel @Inject constructor(
         selectedItemIds.value = emptySet()
     }
 
+    /**
+     * Selects all students currently displayed on the seating chart.
+     */
+    fun selectAllStudents() {
+        val studentIds = studentsForDisplay.value?.map { ChartItemId(it.id, ItemType.STUDENT) }?.toSet() ?: emptySet()
+        selectedItemIds.value = studentIds
+    }
+
+    /**
+     * Selects all furniture currently displayed on the seating chart.
+     */
+    fun selectAllFurniture() {
+        val furnitureIds = furnitureForDisplay.value?.map { ChartItemId(it.id, ItemType.FURNITURE) }?.toSet() ?: emptySet()
+        selectedItemIds.value = furnitureIds
+    }
+
+    /**
+     * Selects all students and furniture currently displayed on the seating chart.
+     */
+    fun selectAllItems() {
+        val studentIds = studentsForDisplay.value?.map { ChartItemId(it.id, ItemType.STUDENT) } ?: emptyList()
+        val furnitureIds = furnitureForDisplay.value?.map { ChartItemId(it.id, ItemType.FURNITURE) } ?: emptyList()
+        selectedItemIds.value = (studentIds + furnitureIds).toSet()
+    }
+
     private val allGroups: StateFlow<List<com.example.myapplication.data.StudentGroup>> = studentGroupDao.getAllStudentGroups()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

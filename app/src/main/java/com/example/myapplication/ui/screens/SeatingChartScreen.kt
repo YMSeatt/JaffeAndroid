@@ -47,6 +47,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
@@ -3358,6 +3359,10 @@ fun SeatingChartTopAppBar(
                         },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, null) }
                     )
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Select All Students") }, onClick = { seatingChartViewModel.selectAllStudents(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.Group, null) })
+                    DropdownMenuItem(text = { Text("Select All Furniture") }, onClick = { seatingChartViewModel.selectAllFurniture(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.Chair, null) })
+                    DropdownMenuItem(text = { Text("Select All Items") }, onClick = { seatingChartViewModel.selectAllItems(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.SelectAll, null) })
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(if (editModeEnabled) "Disable Edit Mode" else "Enable Edit Mode") },
