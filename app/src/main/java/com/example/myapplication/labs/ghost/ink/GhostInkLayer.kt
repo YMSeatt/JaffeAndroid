@@ -35,7 +35,7 @@ fun GhostInkLayer(
     if (!isActive) return
 
     val strokes by engine.strokes.collectAsState()
-    var currentStrokePoints by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    val currentStrokePoints = remember { mutableStateListOf<Offset>() }
 
     val infiniteTransition = rememberInfiniteTransition(label = "ink_pulse")
     val time by infiniteTransition.animateFloat(
@@ -48,11 +48,14 @@ fun GhostInkLayer(
         label = "time"
     )
 
-    // BOLT: Shader Pooling (limit to 16 concurrent shaders for performance)
-    val shaderPool = remember {
+    // BOLT: Shader & Brush Pooling (limit to 16 concurrent strokes for performance)
+    // Pre-allocate FloatArray buffer to eliminate per-frame/per-stroke allocations.
+    val (shaderPool, brushPool, pointsBuffer) = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            List(16) { RuntimeShader(GhostInkShader.NEURAL_INK_SHADER) }
-        } else emptyList()
+            val shaders = List(16) { RuntimeShader(GhostInkShader.NEURAL_INK_SHADER) }
+            val brushes = shaders.map { ShaderBrush(it) }
+            Triple(shaders, brushes, FloatArray(128))
+        } else Triple(emptyList(), emptyList(), FloatArray(0))
     }
 
     Canvas(
@@ -64,7 +67,8 @@ fun GhostInkLayer(
                         val logicalX = (pos.x - canvasOffset.x) / canvasScale
                         val logicalY = (pos.y - canvasOffset.y) / canvasScale
                         val logicalPoint = Offset(logicalX, logicalY)
-                        currentStrokePoints = listOf(logicalPoint)
+                        currentStrokePoints.clear()
+                        currentStrokePoints.add(logicalPoint)
                         engine.startStroke(logicalPoint)
                     },
                     onDrag = { change, _ ->
@@ -73,12 +77,24 @@ fun GhostInkLayer(
                         val logicalX = (pos.x - canvasOffset.x) / canvasScale
                         val logicalY = (pos.y - canvasOffset.y) / canvasScale
                         val logicalPoint = Offset(logicalX, logicalY)
-                        currentStrokePoints = currentStrokePoints + logicalPoint
+
+                        // BOLT: Manual thinning here as well to match engine and reduce UI state churn
+                        if (currentStrokePoints.isNotEmpty()) {
+                            val last = currentStrokePoints.last()
+                            val distSq = (logicalPoint.x - last.x) * (logicalPoint.x - last.x) +
+                                         (logicalPoint.y - last.y) * (logicalPoint.y - last.y)
+                            if (distSq > 25f) {
+                                currentStrokePoints.add(logicalPoint)
+                            }
+                        } else {
+                            currentStrokePoints.add(logicalPoint)
+                        }
+
                         engine.continueStroke(logicalPoint)
                     },
                     onDragEnd = {
                         engine.finishStroke()
-                        currentStrokePoints = emptyList()
+                        currentStrokePoints.clear()
                     }
                 )
             }
@@ -88,29 +104,55 @@ fun GhostInkLayer(
                 translate(canvasOffset.x, canvasOffset.y)
                 scale(canvasScale, canvasScale, Offset.Zero)
             }) {
-                // Render persistent strokes
-                val allStrokes = if (currentStrokePoints.size > 1) {
-                    strokes + GhostInkEngine.Stroke(currentStrokePoints)
-                } else strokes
+                // Render persistent strokes (up to 15) plus the 1 active stroke
+                val persistentStrokes = strokes
+                val hasActive = currentStrokePoints.size > 1
+                val totalAvailable = if (hasActive) persistentStrokes.size + 1 else persistentStrokes.size
+                val drawCount = minOf(totalAvailable, 16)
 
-                allStrokes.takeLast(16).forEachIndexed { index, stroke ->
-                    val shader = shaderPool[index]
-                    val points = stroke.points.take(64)
-                    val pointsArray = FloatArray(128)
-                    points.forEachIndexed { pIdx, point ->
-                        pointsArray[pIdx * 2] = point.x
-                        pointsArray[pIdx * 2 + 1] = point.y
+                for (i in 0 until drawCount) {
+                    val shader = shaderPool[i]
+                    val brush = brushPool[i]
+
+                    // Determine which stroke to draw (favoring most recent persistent strokes + active)
+                    val points: List<Offset>
+                    val colorLong: Long
+
+                    if (hasActive && i == drawCount - 1) {
+                        points = currentStrokePoints
+                        colorLong = 0xFF00E5FF // Default Neon Cyan
+                    } else {
+                        val strokeIdx = persistentStrokes.size - (drawCount - (if (hasActive) 1 else 0)) + i
+                        if (strokeIdx >= 0 && strokeIdx < persistentStrokes.size) {
+                            val stroke = persistentStrokes[strokeIdx]
+                            points = stroke.points
+                            colorLong = stroke.color
+                        } else continue
+                    }
+
+                    val pCount = minOf(points.size, 64)
+
+                    // BOLT: Zero-allocation point population using pre-allocated buffer
+                    for (pIdx in 0 until pCount) {
+                        val p = points[pIdx]
+                        pointsBuffer[pIdx * 2] = p.x
+                        pointsBuffer[pIdx * 2 + 1] = p.y
                     }
 
                     shader.setFloatUniform("iResolution", size.width, size.height)
                     shader.setFloatUniform("iTime", time)
-                    shader.setFloatUniform("iPoints", pointsArray)
-                    shader.setIntUniform("iPointCount", points.size)
-                    val c = Color(stroke.color)
-                    shader.setColorUniform("iColor", android.graphics.Color.valueOf(c.red, c.green, c.blue, c.alpha))
+                    shader.setFloatUniform("iPoints", pointsBuffer)
+                    shader.setIntUniform("iPointCount", pCount)
+
+                    // BOLT: Direct bitwise color extraction to avoid Color object churn and JNI overhead
+                    val a = ((colorLong shr 24) and 0xFF) / 255.0f
+                    val r = ((colorLong shr 16) and 0xFF) / 255.0f
+                    val g = ((colorLong shr 8) and 0xFF) / 255.0f
+                    val b = (colorLong and 0xFF) / 255.0f
+                    shader.setFloatUniform("iColor", r, g, b, a)
                     shader.setFloatUniform("iIntensity", 8.0f)
 
-                    drawRect(brush = ShaderBrush(shader))
+                    drawRect(brush = brush)
                 }
             }
         } else {
@@ -119,20 +161,36 @@ fun GhostInkLayer(
                 translate(canvasOffset.x, canvasOffset.y)
                 scale(canvasScale, canvasScale, Offset.Zero)
             }) {
-                val allStrokes = if (currentStrokePoints.size > 1) {
-                    strokes + GhostInkEngine.Stroke(currentStrokePoints)
-                } else strokes
-
-                allStrokes.forEach { stroke ->
-                    if (stroke.points.size > 1) {
-                        for (i in 0 until stroke.points.size - 1) {
+                val persistentStrokes = strokes
+                // Draw persistent strokes
+                for (sIdx in persistentStrokes.indices) {
+                    val stroke = persistentStrokes[sIdx]
+                    val points = stroke.points
+                    if (points.size > 1) {
+                        val color = Color(stroke.color).copy(alpha = 0.6f)
+                        val strokeWidth = 4f / canvasScale
+                        for (i in 0 until points.size - 1) {
                             drawLine(
-                                color = Color(stroke.color).copy(alpha = 0.6f),
-                                start = stroke.points[i],
-                                end = stroke.points[i + 1],
-                                strokeWidth = 4f / canvasScale
+                                color = color,
+                                start = points[i],
+                                end = points[i + 1],
+                                strokeWidth = strokeWidth
                             )
                         }
+                    }
+                }
+
+                // Draw active stroke
+                if (currentStrokePoints.size > 1) {
+                    val color = Color(0xFF00E5FF).copy(alpha = 0.6f)
+                    val strokeWidth = 4f / canvasScale
+                    for (i in 0 until currentStrokePoints.size - 1) {
+                        drawLine(
+                            color = color,
+                            start = currentStrokePoints[i],
+                            end = currentStrokePoints[i + 1],
+                            strokeWidth = strokeWidth
+                        )
                     }
                 }
             }
