@@ -1,7 +1,11 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Neural Biometrics - Native Biometric App Lock
 
 ## 🚧 Active Construction
+- [ACTIVE] Ghost Neural Origami: Foldable UI transition for the seating chart.
+  - [ ] Implement GhostOrigamiEngine for folding state
+  - [ ] Implement GhostOrigamiShader for crease and texture
+  - [ ] Implement GhostOrigamiLayer for 3D transformations
+  - [ ] Verify performance & Document
 
 ## ✅ Completed Enhancements
 - [DONE] 2026-06-09: Ghost Neural Biometrics - Native Biometric App Lock in `/labs/ghost/biometric/`

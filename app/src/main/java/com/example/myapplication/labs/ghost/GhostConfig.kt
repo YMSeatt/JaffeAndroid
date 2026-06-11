@@ -246,4 +246,7 @@ object GhostConfig {
 
     /** Enables "Ghost Radar" localized behavioral resonance visualization. */
     const val RADAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Neural Origami" foldable UI transitions. */
+    const val ORIGAMI_MODE_ENABLED = true
 }

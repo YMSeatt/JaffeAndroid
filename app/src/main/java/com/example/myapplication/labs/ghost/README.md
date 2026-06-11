@@ -292,6 +292,12 @@ To ensure consistency between platforms, maintainers should refer to the followi
 - [**Ghost Lab Guide**](../../../../../../../../../Python/GHOST_LAB_GUIDE.md): Explains the "Logic Parity Bridge" and the mathematical constants (like the 2x coordinate scaling factor) shared between Python and Android.
 - [**Python Ghost Suite**](../../../../../../../../../Python/README.md#ghost-lab-experimental-analysis): Catalogs the 30+ R&D scripts that serve as the "Gold Standard" for Android implementations.
 
+### 70. Ghost Neural Origami (origami/GhostOrigamiLayer.kt, GhostOrigamiEngine.kt, GhostOrigamiShader.kt)
+A high-fidelity spatial transition for the Seating Chart.
+- **3D Folding**: Allows the UI to "fold" like a piece of paper using hardware-accelerated 3D rotations.
+- **Neural Backstage**: Reveals a procedural "Backside Material" data-grid when folded.
+- **Paper Crease**: Renders a dynamic AGSL crease shadow along the folding axis.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
