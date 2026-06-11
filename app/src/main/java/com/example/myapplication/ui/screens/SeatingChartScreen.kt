@@ -198,6 +198,8 @@ import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
+import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
+import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarEngine
@@ -413,6 +415,7 @@ fun SeatingChartScreen(
     var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
+    var isOrigamiActive by remember { mutableStateOf(false) }
     var isSilhouetteActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
@@ -535,6 +538,7 @@ fun SeatingChartScreen(
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostOrigamiEngine = remember { GhostOrigamiEngine() }
     val ghostRainEngine = remember { GhostRainEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
@@ -579,7 +583,7 @@ fun SeatingChartScreen(
                                    isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
-                                   isFrostActive || isRadarActive ||
+                                   isFrostActive || isRadarActive || isOrigamiActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
@@ -1640,7 +1644,9 @@ fun SeatingChartScreen(
                 }
             }
 
-            seatingChartWithLens()
+            GhostOrigamiLayer(engine = ghostOrigamiEngine) {
+                seatingChartWithLens()
+            }
 
             // Ghost Overlays
             if (GhostConfig.GHOST_MODE_ENABLED) {
@@ -2234,6 +2240,10 @@ fun SeatingChartScreen(
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
                             "RADAR" -> isRadarActive = !isRadarActive
+                            "ORIGAMI" -> {
+                                isOrigamiActive = !isOrigamiActive
+                                ghostOrigamiEngine.toggleFold()
+                            }
                             "MIRROR" -> {
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)

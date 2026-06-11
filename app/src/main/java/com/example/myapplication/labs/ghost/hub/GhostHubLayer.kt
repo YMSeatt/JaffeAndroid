@@ -112,6 +112,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RADAR_MODE_ENABLED) {
                 add(GhostAction("RADAR", Icons.Default.TrackChanges, "Ghost Radar"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ORIGAMI_MODE_ENABLED) {
+                add(GhostAction("ORIGAMI", Icons.Default.Layers, "Neural Origami"))
+            }
         }
     }
 
