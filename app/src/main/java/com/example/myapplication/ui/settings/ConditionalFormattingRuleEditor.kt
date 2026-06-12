@@ -116,6 +116,8 @@ fun ConditionalFormattingRuleEditor(
     // Helper state for Active Time (Single range support for UI)
     var activeTimeStart by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.startTime ?: "") }
     var activeTimeEnd by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.endTime ?: "") }
+    var applicationStyle by remember(format) { mutableStateOf(format.applicationStyle ?: "stripe") }
+    var applicationStyleExpanded by remember { mutableStateOf(false) }
     var activeTimeDays by remember(condition) {
         mutableStateOf(
             condition.activeTimes?.firstOrNull()?.daysOfWeek?.map { dayInt ->
@@ -397,13 +399,42 @@ fun ConditionalFormattingRuleEditor(
                             showColorPicker.value = true
                         }
                     )
-                    /**
-                     * Architectural Note:
-                     * While the Python reference implementation supports an "Application Style"
-                     * field, the current Android [com.example.myapplication.util.Format] schema is
-                     * restricted to `color` and `outline`. This UI remains aligned with the
-                     * Android data layer to ensure serialization integrity.
-                     */
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text("Application Style", style = MaterialTheme.typography.titleSmall)
+                    ExposedDropdownMenuBox(
+                        expanded = applicationStyleExpanded,
+                        onExpandedChange = { applicationStyleExpanded = !applicationStyleExpanded },
+                    ) {
+                        OutlinedTextField(
+                            value = applicationStyle.replaceFirstChar { it.uppercase() },
+                            onValueChange = { },
+                            label = { Text("Style") },
+                            readOnly = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = applicationStyleExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = applicationStyleExpanded,
+                            onDismissRequest = { applicationStyleExpanded = false },
+                        ) {
+                            listOf("stripe", "override").forEach { style ->
+                                DropdownMenuItem(
+                                    text = { Text(style.replaceFirstChar { it.uppercase() }) },
+                                    onClick = {
+                                        applicationStyle = style
+                                        format = format.copy(applicationStyle = style)
+                                        applicationStyleExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(

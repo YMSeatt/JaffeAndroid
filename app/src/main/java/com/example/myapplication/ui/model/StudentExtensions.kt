@@ -269,29 +269,44 @@ fun Student.calculateStyles(
     val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: defaultBackgroundColor).copy(alpha = 1f)
     val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor ?: defaultOutlineColor
 
-    val formattedColors = if (matchingRules.isNotEmpty()) {
-        matchingRules.mapNotNull {
-            it.format.color?.let { colorStr -> safeParseColor(colorStr) }
-                ?.takeIf { color -> color.alpha > 0f }
-                ?.copy(alpha = 1f)
-        }
-    } else {
-        emptyList()
-    }
+    // BOLT: Priority-based style resolution. "Override" rules take absolute precedence,
+    // setting the base colors and suppressing all subsequent "stripe" rules.
+    val overrideRule = matchingRules.find { it.format.applicationStyle == "override" }
 
-    // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
-    val backgroundColors = if (formattedColors.isNotEmpty()) {
-        formattedColors
-    } else {
-        getSingletonColorList(baseBackgroundColor)
-    }
+    val backgroundColors: List<Color>
+    val outlineColors: List<Color>
 
-    val outlineColors = if (matchingRules.isNotEmpty()) {
-        matchingRules.map { rule ->
-            rule.format.outline?.let { colorString -> safeParseColor(colorString) } ?: baseOutlineColor
-        }
+    if (overrideRule != null) {
+        val overrideBackground = overrideRule.format.color?.let { safeParseColor(it) }?.copy(alpha = 1f)
+        backgroundColors = getSingletonColorList(overrideBackground ?: baseBackgroundColor)
+
+        val overrideOutline = overrideRule.format.outline?.let { safeParseColor(it) }
+        outlineColors = getSingletonColorList(overrideOutline ?: baseOutlineColor)
     } else {
-        getSingletonColorList(baseOutlineColor)
+        val formattedColors = if (matchingRules.isNotEmpty()) {
+            matchingRules.mapNotNull {
+                it.format.color?.let { colorStr -> safeParseColor(colorStr) }
+                    ?.takeIf { color -> color.alpha > 0f }
+                    ?.copy(alpha = 1f)
+            }
+        } else {
+            emptyList()
+        }
+
+        // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
+        backgroundColors = if (formattedColors.isNotEmpty()) {
+            formattedColors
+        } else {
+            getSingletonColorList(baseBackgroundColor)
+        }
+
+        outlineColors = if (matchingRules.isNotEmpty()) {
+            matchingRules.map { rule ->
+                rule.format.outline?.let { colorString -> safeParseColor(colorString) } ?: baseOutlineColor
+            }
+        } else {
+            getSingletonColorList(baseOutlineColor)
+        }
     }
 
     val textColor = customTextColor ?: defaultTextColor
