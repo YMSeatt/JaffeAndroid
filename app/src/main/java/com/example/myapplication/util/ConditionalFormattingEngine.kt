@@ -131,7 +131,8 @@ data class Condition(
 @Serializable
 data class Format(
     val color: String? = null,
-    val outline: String? = null
+    val outline: String? = null,
+    @SerialName("application_style") val applicationStyle: String? = "stripe"
 )
 
 /**
