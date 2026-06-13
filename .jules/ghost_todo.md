@@ -1,13 +1,9 @@
 # 👻 Ghost Android Backlog
 
 ## 🚧 Active Construction
-- [ACTIVE] Ghost Neural Origami: Foldable UI transition for the seating chart.
-  - [ ] Implement GhostOrigamiEngine for folding state
-  - [ ] Implement GhostOrigamiShader for crease and texture
-  - [ ] Implement GhostOrigamiLayer for 3D transformations
-  - [ ] Verify performance & Document
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-14: Ghost Neural Origami - Foldable UI transition for the seating chart.
 - [DONE] 2026-06-09: Ghost Neural Biometrics - Native Biometric App Lock in `/labs/ghost/biometric/`
 - [DONE] 2028-08-12: Ghost Radar - Localized behavioral hotspots in `/labs/ghost/radar/`
 - [DONE] 2028-08-11: Ghost Chronos - Spatiotemporal behavioral heatmap in `/labs/ghost/`
