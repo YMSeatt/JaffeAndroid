@@ -1138,7 +1138,14 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isVisible = isLinkActive
             )
-            val radarIntensity = remember(isRadarActive, selectedStudentUiItemForAction, students, seatingChartViewModel.behaviorLogsByStudentCache) {
+            val radarIntensity = remember(
+                isRadarActive,
+                selectedStudentUiItemForAction,
+                selectedStudentUiItemForAction?.xPosition?.value,
+                selectedStudentUiItemForAction?.yPosition?.value,
+                students,
+                seatingChartViewModel.behaviorLogsByStudentCache
+            ) {
                 if (isRadarActive) {
                     val target = selectedStudentUiItemForAction
                     if (target != null) {
