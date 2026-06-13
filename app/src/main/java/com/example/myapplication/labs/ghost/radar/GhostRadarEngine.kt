@@ -22,6 +22,8 @@ object GhostRadarEngine {
      * Calibrated for the 4000x4000 logical canvas.
      */
     private const val RADAR_RADIUS = 500f
+    private const val RADAR_RADIUS_SQ = RADAR_RADIUS * RADAR_RADIUS
+    private const val INV_RADAR_RADIUS = 1f / RADAR_RADIUS
 
     /**
      * Calculates the local resonance at a given coordinate.
@@ -50,22 +52,32 @@ object GhostRadarEngine {
     ): Float {
         val now = System.currentTimeMillis()
         val cutoff = now - timeWindowMs
+        val invTimeWindow = 1f / timeWindowMs.toFloat()
         var totalIntensity = 0f
         var nodeCount = 0
 
-        for (student in students) {
-            val dx = student.xPosition.value - targetX
-            val dy = student.yPosition.value - targetY
-            val distance = sqrt(dx * dx + dy * dy)
+        // BOLT: Allocation-free manual index loop
+        for (i in 0 until students.size) {
+            val student = students[i]
+            // BOLT: Hoist MutableState reads
+            val sx = student.xPosition.value
+            val sy = student.yPosition.value
 
-            if (distance <= RADAR_RADIUS) {
+            val dx = sx - targetX
+            val dy = sy - targetY
+            val distSq = dx * dx + dy * dy
+
+            // BOLT: Fast proximity pruning using squared distance
+            if (distSq <= RADAR_RADIUS_SQ) {
                 nodeCount++
                 val logs = behaviorLogsByStudent[student.id.toLong()] ?: continue
 
                 // Distance weight (linear decay)
-                val distanceFactor = 1.0f - (distance / RADAR_RADIUS)
+                val distance = sqrt(distSq)
+                val distanceFactor = 1.0f - (distance * INV_RADAR_RADIUS)
 
-                for (event in logs) {
+                for (j in 0 until logs.size) {
+                    val event = logs[j]
                     if (event.timestamp < cutoff) break // BOLT: DESC sorted logs
 
                     val eventWeight = when {
@@ -75,7 +87,7 @@ object GhostRadarEngine {
                     }
 
                     // Time decay
-                    val timeFactor = (event.timestamp - cutoff).toFloat() / timeWindowMs.toFloat()
+                    val timeFactor = (event.timestamp - cutoff).toFloat() * invTimeWindow
                     totalIntensity += eventWeight * distanceFactor * timeFactor
                 }
             }
@@ -84,6 +96,6 @@ object GhostRadarEngine {
         if (nodeCount == 0) return 0f
 
         // Normalize intensity (clamped at 1.0)
-        return (totalIntensity / 2.0f).coerceIn(0f, 1f)
+        return (totalIntensity * 0.5f).coerceIn(0f, 1f)
     }
 }
