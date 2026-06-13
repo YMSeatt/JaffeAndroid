@@ -60,7 +60,8 @@ class GhostZenithEngine(context: Context) : SensorEventListener {
 
             // orientation[1] is pitch (tilt front/back)
             // orientation[2] is roll (tilt left/right)
-            // We apply low-pass filtering to smooth the parallax movement
+            // We apply an 80% low-pass filtering (0.8f) to smooth the parallax movement
+            // and eliminate high-frequency jitter from hand tremors.
             _tiltX.value = _tiltX.value * 0.8f + orientation[1] * 0.2f
             _tiltY.value = _tiltY.value * 0.8f + orientation[2] * 0.2f
         }

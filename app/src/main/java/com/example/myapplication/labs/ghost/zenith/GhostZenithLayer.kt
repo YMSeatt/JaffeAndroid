@@ -71,14 +71,18 @@ fun GhostZenithLayer(
         content(object : ZenithScope {
             override fun Modifier.studentElevation(altitude: Float): Modifier = this.then(
                 Modifier.graphicsLayer {
-                    // Map altitude to Z-depth (Elevation)
+                    // Map altitude to Z-depth (Elevation).
+                    // Students at altitude 1.0 (highest) have a zOffset of 200dp.
                     val zOffset = altitude * 200f
 
-                    // Apply parallax rotation based on tilt
+                    // Apply parallax rotation based on tilt (max 20 degrees).
                     rotationX = -tiltX * 20f
                     rotationY = tiltY * 20f
 
-                    // Apply translation based on tilt and altitude (deeper = more parallax)
+                    // Apply translation based on tilt and altitude.
+                    // (1f - altitude) ensures that deeper nodes (lower altitude)
+                    // have a larger translation, creating the parallax volume effect.
+                    // Max translation is 100 pixels.
                     translationX = tiltY * 100f * (1f - altitude)
                     translationY = tiltX * 100f * (1f - altitude)
 

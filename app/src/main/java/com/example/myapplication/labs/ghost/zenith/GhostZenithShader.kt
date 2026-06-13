@@ -49,14 +49,17 @@ object GhostZenithShader {
             float2 uv = fragCoord / iResolution.xy;
 
             // Layer 1: Deep currents (Slow, low parallax)
+            // Uses a large scale (2.0) and low tilt influence (0.1) to simulate depth.
             float2 uv1 = uv * 2.0 + iTilt * 0.1;
             float n1 = fbm(uv1 + iTime * 0.05);
 
             // Layer 2: Mid-level luminescence (Medium speed, medium parallax)
+            // Uses a medium scale (4.0) and moderate tilt influence (0.3).
             float2 uv2 = uv * 4.0 + iTilt * 0.3;
             float n2 = fbm(uv2 - iTime * 0.1);
 
             // Layer 3: Surface ripples (Fast, high parallax)
+            // Uses a fine scale (8.0) and high tilt influence (0.6) to react to surface movement.
             float2 uv3 = uv * 8.0 + iTilt * 0.6;
             float n3 = fbm(uv3 + iTime * 0.2);
 
