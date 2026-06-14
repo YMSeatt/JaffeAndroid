@@ -2397,11 +2397,15 @@ fun SeatingChartContent(
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
             // BOLT: Pre-calculate selection sets to transform O(N*S) lookup into O(1).
-            val selectedStudentIds = remember(selectedItemIds) {
-                selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id }.toSet()
-            }
-            val selectedFurnitureIds = remember(selectedItemIds) {
-                selectedItemIds.filter { it.type == ItemType.FURNITURE }.map { it.id }.toSet()
+            // Optimized to single-pass iteration to reduce intermediate list allocations.
+            val (selectedStudentIds, selectedFurnitureIds) = remember(selectedItemIds) {
+                val students = HashSet<Int>()
+                val furniture = HashSet<Int>()
+                for (item in selectedItemIds) {
+                    if (item.type == ItemType.STUDENT) students.add(item.id)
+                    else if (item.type == ItemType.FURNITURE) furniture.add(item.id)
+                }
+                students to furniture
             }
 
             // BOLT: Replace forEach with manual index loops to eliminate iterator churn in the high-frequency rendering path.
@@ -2624,7 +2628,18 @@ fun SeatingChartTopAppBar(
             IconButton(onClick = onRedo) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
 
             // Behaviors Dropdown
-            val behaviorTargetCount = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.size else if (selectedStudentUiItemForAction != null) 1 else 0
+            // BOLT: Wrap target count calculation in remember to avoid O(S) set filtering
+            // on every recomposition of the TopAppBar.
+            val behaviorTargetCount = remember(selectMode, selectedItemIds, selectedStudentUiItemForAction) {
+                if (selectMode) {
+                    var count = 0
+                    for (item in selectedItemIds) {
+                        if (item.type == ItemType.STUDENT) count++
+                    }
+                    count
+                } else if (selectedStudentUiItemForAction != null) 1 else 0
+            }
+
             if (behaviorTargetCount > 0) {
                 if (behaviorTypeNames.isNotEmpty()) {
                     var showQuickBehaviorMenu by remember { mutableStateOf(false) }
