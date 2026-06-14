@@ -95,7 +95,8 @@ class EmailWorker(
             // BOLT: Instantiate repository once for reuse across request types
             val repository = com.example.myapplication.data.StudentRepository(
                 studentDao, behaviorEventDao, homeworkLogDao, quizLogDao,
-                db.furnitureDao(), db.layoutTemplateDao(), quizMarkTypeDao, applicationContext
+                db.furnitureDao(), db.layoutTemplateDao(), quizMarkTypeDao, applicationContext,
+                securityUtil
             )
 
             when (requestType) {
