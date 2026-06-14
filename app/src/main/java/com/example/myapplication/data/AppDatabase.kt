@@ -8,6 +8,18 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+/**
+ * AppDatabase: The primary Room database for the Seating Chart application.
+ *
+ * This database manages 20+ entities and handles the complex relational mapping
+ * between students, their physical layout, and their longitudinal behavior and
+ * academic history.
+ *
+ * ### Schema Evolution:
+ * The database utilizes a versioned migration strategy. For a comprehensive roadmap
+ * of architectural eras (including the transition to JSON-backed storage and
+ * relational hardening), refer to [MIGRATIONS.md](MIGRATIONS.md).
+ */
 @Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class, HomeworkMarkMetadata::class], version = 35, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {

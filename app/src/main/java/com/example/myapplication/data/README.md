@@ -2,6 +2,9 @@
 
 This package defines the application's "Source of Truth," utilizing **Room** for high-performance SQLite persistence. It manages the complex web of relationships between students, their physical layout, and their longitudinal behavioral and academic history.
 
+## 🗺️ Schema Evolution
+The database schema has undergone significant evolution to support the application's growth. For a detailed breakdown of architectural eras and specific changes, see the [**Migration Roadmap**](MIGRATIONS.md).
+
 ## 🏛️ Core Entity Hierarchy
 
 The data model is organized into three primary clusters:
