@@ -2251,6 +2251,10 @@ fun SeatingChartScreen(
                                 isOrigamiActive = !isOrigamiActive
                                 ghostOrigamiEngine.toggleFold()
                             }
+                            "TECTONICS" -> {
+                                isTectonicsActive = !isTectonicsActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                             "MIRROR" -> {
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
