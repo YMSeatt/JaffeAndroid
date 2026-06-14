@@ -298,6 +298,12 @@ A high-fidelity spatial transition for the Seating Chart.
 - **Neural Backstage**: Reveals a procedural "Backside Material" data-grid when folded.
 - **Paper Crease**: Renders a dynamic AGSL crease shadow along the folding axis.
 
+### 71. Ghost Radar (radar/GhostRadarLayer.kt, radar/GhostRadarEngine.kt, radar/GhostRadarShader.kt)
+Localized behavioral resonance visualization.
+- **Social Resonance**: Identifies spatiotemporal hotspots of behavioral activity.
+- **Linear Decay**: Uses a linear distance and time decay model for resonance intensity.
+- **BOLT Optimization**: Optimized log traversal with DESC-sorting and early-exits.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

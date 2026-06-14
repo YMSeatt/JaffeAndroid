@@ -115,6 +115,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ORIGAMI_MODE_ENABLED) {
                 add(GhostAction("ORIGAMI", Icons.Default.Layers, "Neural Origami"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TECTONICS_MODE_ENABLED) {
+                add(GhostAction("TECTONICS", Icons.Default.Terrain, "Ghost Tectonics"))
+            }
         }
     }
 
