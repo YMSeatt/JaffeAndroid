@@ -23,6 +23,29 @@ import kotlinx.coroutines.flow.map
  * 3. **Reactive state**: Provides LiveData and Flow streams for UI components to observe
  *    real-time database changes.
  */
+import com.example.myapplication.util.SecurityUtil
+import androidx.lifecycle.map
+
+/**
+ * StudentRepository: The primary data interface for the application.
+ *
+ * This repository coordinates multiple Data Access Objects (DAOs) to provide a unified
+ * API for managing classroom data. It serves as the single source of truth for the ViewModels,
+ * abstracting away the complexity of whether data is retrieved via reactive streams (LiveData/Flow)
+ * or one-shot asynchronous operations (suspend functions).
+ *
+ * ### Responsibilities:
+ * 1. **Data Coordination**: Orchestrates operations across [StudentDao], [BehaviorEventDao],
+ *    [HomeworkLogDao], [QuizLogDao], [FurnitureDao], and [LayoutTemplateDao].
+ * 2. **Performance Optimization**: Implements "BOLT" optimizations by pushing filtering logic
+ *    (e.g., date ranges and student ID subsets) directly to the SQLite layer, significantly
+ *    reducing in-memory processing and GC pressure.
+ * 3. **Reactive state**: Provides LiveData and Flow streams for UI components to observe
+ *    real-time database changes.
+ * 4. **Transparent Encryption**: Implements a "Secure-at-Rest" model by ensuring that
+ *    sensitive Personally Identifiable Information (PII) and academic scores are
+ *    transparently encrypted before being stored in the database.
+ */
 class StudentRepository(
     private val studentDao: StudentDao,
     private val behaviorEventDao: BehaviorEventDao,
@@ -31,10 +54,13 @@ class StudentRepository(
     private val furnitureDao: FurnitureDao,
     private val layoutTemplateDao: LayoutTemplateDao,
     private val quizMarkTypeDao: QuizMarkTypeDao,
-    private val context: Context
+    private val context: Context,
+    private val securityUtil: SecurityUtil
 ) {
     /** Reactive stream of all students currently in the database. */
-    val allStudents: LiveData<List<Student>> = studentDao.getAllStudents()
+    val allStudents: LiveData<List<Student>> = studentDao.getAllStudents().map { list ->
+        list.map { decryptStudent(it) }
+    }
 
     /**
      * Retrieves all homework logs for a specific student as a reactive [LiveData] stream.
@@ -43,7 +69,9 @@ class StudentRepository(
      * @return A LiveData list of [HomeworkLog] entities, ordered by time.
      */
     fun getHomeworkLogsForStudent(studentId: Long): LiveData<List<HomeworkLog>> {
-        return homeworkLogDao.getHomeworkLogsForStudent(studentId)
+        return homeworkLogDao.getHomeworkLogsForStudent(studentId).map { list ->
+            list.map { decryptHomeworkLog(it) }
+        }
     }
 
     /**
@@ -53,7 +81,7 @@ class StudentRepository(
      * @return The row ID of the newly inserted log.
      */
     suspend fun insertHomeworkLog(homeworkLog: HomeworkLog): Long {
-        return homeworkLogDao.insert(homeworkLog)
+        return homeworkLogDao.insert(encryptHomeworkLog(homeworkLog))
     }
 
     /**
@@ -97,7 +125,7 @@ class StudentRepository(
      * @return The row ID of the new student.
      */
     suspend fun insertStudent(student: Student): Long {
-        return studentDao.insert(student)
+        return studentDao.insert(encryptStudent(student))
     }
 
     /**
@@ -107,7 +135,7 @@ class StudentRepository(
      * @return A list of the new row IDs.
      */
     suspend fun insertStudents(students: List<Student>): List<Long> {
-        return studentDao.insertAll(students)
+        return studentDao.insertAll(students.map { encryptStudent(it) })
     }
 
     /**
@@ -116,7 +144,7 @@ class StudentRepository(
      * @param student The student entity with updated fields.
      */
     suspend fun updateStudent(student: Student) {
-        studentDao.updateStudent(student)
+        studentDao.updateStudent(encryptStudent(student))
     }
 
     /**
@@ -144,7 +172,7 @@ class StudentRepository(
      * @return The student object, or null if not found.
      */
     suspend fun getStudentById(studentId: Long): Student? {
-        return studentDao.getStudentByIdNonLiveData(studentId)
+        return studentDao.getStudentByIdNonLiveData(studentId)?.let { decryptStudent(it) }
     }
 
     /**
@@ -221,7 +249,7 @@ class StudentRepository(
      * @return The row ID of the new log.
      */
     suspend fun insertBehaviorEvent(event: BehaviorEvent): Long {
-        return behaviorEventDao.insert(event)
+        return behaviorEventDao.insert(encryptBehaviorEvent(event))
     }
 
     /**
@@ -235,11 +263,12 @@ class StudentRepository(
      * @return List of matching students.
      */
     suspend fun getFilteredStudents(studentIds: List<Long>?): List<Student> {
-        return when {
+        val students = when {
             studentIds == null -> studentDao.getAllStudentsNonLiveData()
             studentIds.isEmpty() -> emptyList()
             else -> studentDao.getStudentsByIdsList(studentIds)
         }
+        return students.map { decryptStudent(it) }
     }
 
     /**
@@ -251,11 +280,12 @@ class StudentRepository(
      * @return Sorted list of matching behavior events.
      */
     suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<BehaviorEvent> {
-        return when {
+        val events = when {
             studentIds == null -> behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
             studentIds.isEmpty() -> emptyList()
             else -> behaviorEventDao.getFilteredBehaviorEventsWithStudents(startDate, endDate, studentIds)
         }
+        return events.map { decryptBehaviorEvent(it) }
     }
 
     /**
@@ -267,11 +297,12 @@ class StudentRepository(
      * @return List of matching homework logs.
      */
     suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<HomeworkLog> {
-        return when {
+        val logs = when {
             studentIds == null -> homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
             studentIds.isEmpty() -> emptyList()
             else -> homeworkLogDao.getFilteredHomeworkLogsWithStudents(startDate, endDate, studentIds)
         }
+        return logs.map { decryptHomeworkLog(it) }
     }
 
     /**
@@ -283,11 +314,12 @@ class StudentRepository(
      * @return List of matching quiz logs.
      */
     suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<QuizLog> {
-        return when {
+        val logs = when {
             studentIds == null -> quizLogDao.getFilteredQuizLogs(startDate, endDate)
             studentIds.isEmpty() -> emptyList()
             else -> quizLogDao.getFilteredQuizLogsWithStudents(startDate, endDate, studentIds)
         }
+        return logs.map { decryptQuizLog(it) }
     }
 
     /**
@@ -297,7 +329,7 @@ class StudentRepository(
      * @return The row ID of the new log entry.
      */
     suspend fun insertQuizLog(log: QuizLog): Long {
-        return quizLogDao.insert(log)
+        return quizLogDao.insert(encryptQuizLog(log))
     }
 
     /**
@@ -316,7 +348,7 @@ class StudentRepository(
      * @return A list of matching student entities.
      */
     suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student> {
-        return studentDao.getStudentsByIdsList(studentIds)
+        return studentDao.getStudentsByIdsList(studentIds).map { decryptStudent(it) }
     }
 
     /**
@@ -325,7 +357,7 @@ class StudentRepository(
      * Use this when reactive [LiveData] or [Flow] streams are not required.
      */
     suspend fun getAllStudentsNonLiveData(): List<Student> {
-        return studentDao.getAllStudentsNonLiveData()
+        return studentDao.getAllStudentsNonLiveData().map { decryptStudent(it) }
     }
 
     /**
@@ -351,6 +383,58 @@ class StudentRepository(
      * BOLT: Returns a reactive stream of a single student by their ID.
      */
     fun getStudentByIdFlow(studentId: Long): Flow<Student?> {
-        return studentDao.getStudentByIdFlow(studentId)
+        return studentDao.getStudentByIdFlow(studentId).map { it?.let { decryptStudent(it) } }
+    }
+
+    private fun encryptStudent(student: Student): Student {
+        return student.copy(
+            temporaryTask = student.temporaryTask?.let { securityUtil.encrypt(it) }
+        )
+    }
+
+    private fun decryptStudent(student: Student): Student {
+        return student.copy(
+            temporaryTask = student.temporaryTask?.let { securityUtil.decryptSafe(it) }
+        )
+    }
+
+    private fun encryptBehaviorEvent(event: BehaviorEvent): BehaviorEvent {
+        return event.copy(
+            comment = event.comment?.let { securityUtil.encrypt(it) }
+        )
+    }
+
+    private fun decryptBehaviorEvent(event: BehaviorEvent): BehaviorEvent {
+        return event.copy(
+            comment = event.comment?.let { securityUtil.decryptSafe(it) }
+        )
+    }
+
+    private fun encryptHomeworkLog(log: HomeworkLog): HomeworkLog {
+        return log.copy(
+            comment = log.comment?.let { securityUtil.encrypt(it) },
+            marksData = log.marksData?.let { securityUtil.encrypt(it) }
+        )
+    }
+
+    private fun decryptHomeworkLog(log: HomeworkLog): HomeworkLog {
+        return log.copy(
+            comment = log.comment?.let { securityUtil.decryptSafe(it) },
+            marksData = log.marksData?.let { securityUtil.decryptSafe(it) }
+        )
+    }
+
+    private fun encryptQuizLog(log: QuizLog): QuizLog {
+        return log.copy(
+            comment = log.comment?.let { securityUtil.encrypt(it) },
+            marksData = securityUtil.encrypt(log.marksData)
+        )
+    }
+
+    private fun decryptQuizLog(log: QuizLog): QuizLog {
+        return log.copy(
+            comment = log.comment?.let { securityUtil.decryptSafe(it) },
+            marksData = securityUtil.decryptSafe(log.marksData)
+        )
     }
 }

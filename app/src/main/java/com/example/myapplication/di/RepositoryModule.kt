@@ -62,7 +62,8 @@ object RepositoryModule {
         furnitureDao: com.example.myapplication.data.FurnitureDao,
         layoutTemplateDao: com.example.myapplication.data.LayoutTemplateDao,
         quizMarkTypeDao: com.example.myapplication.data.QuizMarkTypeDao,
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        securityUtil: SecurityUtil
     ): StudentRepository {
         return StudentRepository(
             studentDao,
@@ -72,7 +73,8 @@ object RepositoryModule {
             furnitureDao,
             layoutTemplateDao,
             quizMarkTypeDao,
-            context
+            context,
+            securityUtil
         )
     }
 }

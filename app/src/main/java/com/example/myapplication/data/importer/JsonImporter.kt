@@ -61,6 +61,7 @@ import javax.inject.Singleton
 @Singleton
 class JsonImporter @Inject constructor(
     @ApplicationContext private val context: Context,
+    private val securityUtil: com.example.myapplication.util.SecurityUtil,
     private val db: AppDatabase,
     private val studentDao: StudentDao,
     private val furnitureDao: FurnitureDao,
@@ -182,7 +183,8 @@ class JsonImporter @Inject constructor(
                     customBackgroundColor = pythonStudent.styleOverrides.fillColor,
                     customOutlineColor = pythonStudent.styleOverrides.outlineColor,
                     customTextColor = pythonStudent.styleOverrides.textColor,
-                    groupId = studentGroups[pythonStudent.groupId]?.id
+                    groupId = studentGroups[pythonStudent.groupId]?.id,
+                    temporaryTask = pythonStudent.temporaryTask?.let { securityUtil.encrypt(it) }
                 )
             }
             val insertedStudentIds = studentDao.insertAll(studentsToInsert)
@@ -213,7 +215,7 @@ class JsonImporter @Inject constructor(
                         type = pythonBehaviorLog.behavior,
                         timestamp = LocalDateTime.parse(pythonBehaviorLog.timestamp)
                             .toEpochSecond(ZoneOffset.UTC),
-                        comment = pythonBehaviorLog.comment
+                        comment = pythonBehaviorLog.comment?.let { securityUtil.encrypt(it) }
                     )
                 }
             }
@@ -228,8 +230,8 @@ class JsonImporter @Inject constructor(
                         status = pythonHomeworkLog.behavior,
                         loggedAt = LocalDateTime.parse(pythonHomeworkLog.timestamp)
                             .toEpochSecond(ZoneOffset.UTC),
-                        comment = pythonHomeworkLog.comment,
-                        marksData = pythonHomeworkLog.homeworkDetails?.let { json.encodeToString(it) }
+                        comment = pythonHomeworkLog.comment?.let { securityUtil.encrypt(it) },
+                        marksData = pythonHomeworkLog.homeworkDetails?.let { securityUtil.encrypt(json.encodeToString(it)) }
                     )
                 }
             }

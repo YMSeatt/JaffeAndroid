@@ -240,7 +240,7 @@ class Importer(
                             studentId = studentId,
                             timestamp = parseTimestamp(logEntry.timestamp),
                             type = logEntry.behavior,
-                            comment = logEntry.comment
+                            comment = logEntry.comment?.let { securityUtil.encrypt(it) }
                         ))
                     }
                     "quiz" -> {
@@ -248,11 +248,11 @@ class Importer(
                             studentId = studentId,
                             loggedAt = parseTimestamp(logEntry.timestamp),
                             quizName = logEntry.behavior,
-                            comment = logEntry.comment,
+                            comment = logEntry.comment?.let { securityUtil.encrypt(it) },
                             markValue = logEntry.scoreDetails?.correct?.toDouble(),
                             maxMarkValue = logEntry.scoreDetails?.totalAsked?.toDouble(),
                             markType = null,
-                            marksData = "{}",
+                            marksData = securityUtil.encrypt("{}"),
                             numQuestions = logEntry.scoreDetails?.totalAsked ?: 0
                         ))
                     }
@@ -272,7 +272,7 @@ class Importer(
                     loggedAt = parseTimestamp(hwLogEntry.timestamp),
                     assignmentName = hwLogEntry.homeworkType ?: "",
                     status = hwLogEntry.homeworkStatus ?: hwLogEntry.behavior,
-                    comment = hwLogEntry.comment
+                    comment = hwLogEntry.comment?.let { securityUtil.encrypt(it) }
                 )
             }
             db.homeworkLogDao().insertAll(homeworkLogsToInsert)
