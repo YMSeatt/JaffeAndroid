@@ -103,7 +103,8 @@ object GhostStreamEngine {
         if (finalCount == 0) return emptyList()
 
         // BOLT: Perform expensive formatting and lookups ONLY for the items we're keeping.
-        val studentMap = students.associateBy { it.id.toLong() }
+        // Optimized to look up only the students actually present in the final list
+        // to avoid O(N) building of a full student map.
         val result = ArrayList<StreamEntry>(finalCount)
 
         for (i in 0 until finalCount) {
@@ -116,7 +117,16 @@ object GhostStreamEngine {
                 else -> 0L
             }
 
-            val student = studentMap[studentId] ?: continue
+            // O(S) manual search but only called maxEntries (20) times.
+            // BOLT: Replaced functional find with manual index loop to avoid iterator allocation.
+            var student: StudentUiItem? = null
+            for (j in 0 until students.size) {
+                if (students[j].id.toLong() == studentId) {
+                    student = students[j]
+                    break
+                }
+            }
+            if (student == null) continue
             val studentName = student.fullName.value
             val formattedTime = try {
                 TIME_FORMATTER.format(Instant.ofEpochMilli(p.timestamp))

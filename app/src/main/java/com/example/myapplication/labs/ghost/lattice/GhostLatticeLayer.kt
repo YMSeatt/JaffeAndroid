@@ -58,19 +58,29 @@ fun GhostLatticeLayer(
     val shaderPool = remember { mutableListOf<RuntimeShader>() }
     val brushPool = remember { mutableListOf<ShaderBrush>() }
 
-    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
+    // BOLT: Use LongSparseArray to avoid Long boxing during student lookup.
+    val studentMap = remember(students) {
+        val map = android.util.LongSparseArray<StudentUiItem>(students.size)
+        for (i in 0 until students.size) {
+            val s = students[i]
+            map.put(s.id.toLong(), s)
+        }
+        map
+    }
 
     Canvas(modifier = modifier.fillMaxSize()) {
         // BOLT: Hoist invariant uniforms that don't change per-edge.
-        val activeEdgesCount = minOf(edges.size, shaderPool.size)
-        for (i in 0 until activeEdgesCount) {
+        val poolSize = shaderPool.size
+        for (i in 0 until poolSize) {
             shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
             shaderPool[i].setFloatUniform("iTime", time)
         }
 
-        edges.forEachIndexed { index, edge ->
-            val fromStudent = studentMap[edge.fromId]
-            val toStudent = studentMap[edge.toId]
+        // BOLT: Manual index loop to avoid iterator allocation.
+        for (index in 0 until edges.size) {
+            val edge = edges[index]
+            val fromStudent = studentMap.get(edge.fromId)
+            val toStudent = studentMap.get(edge.toId)
             if (fromStudent != null && toStudent != null) {
                 // Calculate pixel-perfect centers for connection endpoints, accounting for scale and offset.
                 val startX = (fromStudent.xPosition.value * canvasScale) + canvasOffset.x + (fromStudent.displayWidth.value.toPx() * canvasScale / 2f)
