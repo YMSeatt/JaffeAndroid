@@ -284,6 +284,30 @@ A stochastic engine for **Neural Classroom Simulation**.
 - **Simulated Trajectories**: Uses heuristics and predictions from [GhostOracle] to generate a series of "Simulated Events" representing a likely future trajectory of the classroom.
 - **Probabilistic Modeling**: Influences event probability based on historical negative counts and identified social friction.
 
+### 47. Ghost Beacon (`beacon/GhostBeaconEngine.kt`, `beacon/GhostBeaconLayer.kt`, `beacon/GhostBeaconShader.kt`)
+A data-driven **Neural Student Selection** engine.
+- **Need for Interaction (NFI)**: Calculates a weighted probability score for each student based on behavioral and academic metrics.
+- **Volumetric Beacon**: Renders a glowing "tractor beam" over the selected student using a volumetric AGSL shader.
+- **Haptic Confirmation**: Integrates with device actuators to provide tactile feedback upon student selection.
+
+### 48. Ghost Frost (`frost/GhostFrostEngine.kt`, `frost/GhostFrostLayer.kt`, `frost/GhostFrostShader.kt`)
+Visualizes **Cold Zones** and areas of high classroom entropy.
+- **Crystallization Logic**: Identifies students in "Concerning" states or near negative events to drive procedural frost growth.
+- **Procedural Frost**: Renders organic ice crystal structures using a Voronoi-based AGSL shader.
+- **Cold Zone Clustering**: Frost intensity increases in areas where multiple at-risk students are seated together.
+
+### 49. Ghost Ink (`ink/GhostInkEngine.kt`, `ink/GhostInkLayer.kt`, `ink/GhostInkShader.kt`)
+Implements **Persistent Spatial Annotations** for the seating chart.
+- **Logical Space Storage**: Strokes are stored in the 4000x4000 logical canvas, ensuring they remain correctly positioned across zoom and pan states.
+- **BOLT Thinning**: Implements distance-based point thinning to prevent memory explosion during long drawing sessions.
+- **Neon Ink**: Renders glowing, high-fidelity lines using a specialized ink shader.
+
+### 50. Ghost Mood Board (`mood/GhostMoodEngine.kt`, `mood/GhostMoodLayer.kt`, `mood/GhostMoodShader.kt`)
+Visualizes the **Collective Classroom Atmosphere**.
+- **Mood Synthesis**: Analyzes behavioral valence and academic intensity to determine states like Calm, Focused, or Turbulent.
+- **Atmospheric Field**: Renders a shifting color field that reflects the classroom's aggregate mood and stability.
+- **BOLT O(Recent) Analysis**: Utilizes DESC-sorted logs and early-exit loops for real-time climate tracking.
+
 ## 🔄 Logic Parity & The R&D Bridge
 
 Most features in the Ghost Lab are mobile-optimized ports of pedagogical and spatial theories first modeled in the **Python Analysis Suite**.
@@ -292,13 +316,13 @@ To ensure consistency between platforms, maintainers should refer to the followi
 - [**Ghost Lab Guide**](../../../../../../../../../Python/GHOST_LAB_GUIDE.md): Explains the "Logic Parity Bridge" and the mathematical constants (like the 2x coordinate scaling factor) shared between Python and Android.
 - [**Python Ghost Suite**](../../../../../../../../../Python/README.md#ghost-lab-experimental-analysis): Catalogs the 30+ R&D scripts that serve as the "Gold Standard" for Android implementations.
 
-### 70. Ghost Neural Origami (origami/GhostOrigamiLayer.kt, GhostOrigamiEngine.kt, GhostOrigamiShader.kt)
+### 74. Ghost Neural Origami (origami/GhostOrigamiLayer.kt, GhostOrigamiEngine.kt, GhostOrigamiShader.kt)
 A high-fidelity spatial transition for the Seating Chart.
 - **3D Folding**: Allows the UI to "fold" like a piece of paper using hardware-accelerated 3D rotations.
 - **Neural Backstage**: Reveals a procedural "Backside Material" data-grid when folded.
 - **Paper Crease**: Renders a dynamic AGSL crease shadow along the folding axis.
 
-### 71. Ghost Radar (radar/GhostRadarLayer.kt, radar/GhostRadarEngine.kt, radar/GhostRadarShader.kt)
+### 75. Ghost Radar (radar/GhostRadarLayer.kt, radar/GhostRadarEngine.kt, radar/GhostRadarShader.kt)
 Localized behavioral resonance visualization.
 - **Social Resonance**: Identifies spatiotemporal hotspots of behavioral activity.
 - **Linear Decay**: Uses a linear distance and time decay model for resonance intensity.
@@ -310,111 +334,111 @@ These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 
 ---
 *Documentation love letter from Scribe 📜*
 
-### 47. Ghost Shell (shell/GhostShellLayer.kt, GhostShellEngine.kt, GhostShellShader.kt)
+### 51. Ghost Shell (shell/GhostShellLayer.kt, GhostShellEngine.kt, GhostShellShader.kt)
 An immersive bottom dock for classroom management and health monitoring.
 - **Neural Pulse**: Visualizes classroom "Health" and "Activity" as a reactive, glowing wave using an AGSL shader.
 - **Health Metrics**: Calculates a real-time Health Index based on the balance of behavioral logs in a 5-minute sliding window.
 - **Immersive Control**: Provides a glassmorphic interface for toggling high-frequency Ghost modes (HUD, Vision, Strategist, Aurora).
 - **BOLT Optimization**: Uses a single-pass O(N) calculation loop for metrics and hoisted shaders for zero-allocation rendering.
 
-### 48. Ghost Deck (GhostDeckLayer.kt, GhostDeckEngine.kt, GhostDeckShader.kt)
+### 52. Ghost Deck (GhostDeckLayer.kt, GhostDeckEngine.kt, GhostDeckShader.kt)
 A high-fidelity **Neural Student Card Stack** for rapid classroom review.
 - **Swipe-to-Log**: Allows teachers to rapidly review student cards and log behavior with intuitive swipe gestures (Right = Positive, Left = Negative).
 - **Neural Affinity**: Calculates a priority-based "Affinity" score (Student Turbulence) to drive card order and visual intensity.
 - **AGSL Neural Flux**: Features a reactive domain-warping background shader that reflects student affinity and real-time swipe progress.
 - **BOLT Optimization**: Uses manual index-based loops for deck synthesis and hoisted AGSL shaders for zero-allocation 60fps rendering.
 
-### 49. Ghost Halo (GhostHaloLayer.kt, GhostHaloShader.kt)
+### 53. Ghost Halo (GhostHaloLayer.kt, GhostHaloShader.kt)
 A **Neural Halo** visualization for peak performing students.
 - **Peak Performance Identification**: Queries [GhostInsightEngine] to identify students in the "OPTIMAL" state based on high grades and zero negative behaviors.
 - **AGSL Neural Halo**: Renders a thin, rotating, and pulsing golden/cyan ring with an ethereal light scatter around student icons.
 - **BOLT Optimization**: Uses `derivedStateOf` and identity-based caching to minimize recompositions and zero-allocation shader drawing.
 
-### 50. Ghost Flare (flare/GhostFlareLayer.kt, flare/GhostFlareEngine.kt, flare/GhostFlareShader.kt)
+### 54. Ghost Flare (flare/GhostFlareLayer.kt, flare/GhostFlareEngine.kt, flare/GhostFlareShader.kt)
 High-intensity behavioral milestone visualization.
 - **Milestone Detection**: Scans for students with 3+ recent logs and a high positive balance.
 - **AGSL Flare**: Renders an anamorphic lens flare and starburst effect using a high-performance shader.
 - **BOLT Optimization**: Offloads detection logic to a background pipeline to maintain 60fps.
 
-### 51. Ghost Comet (comet/GhostCometLayer.kt, comet/GhostCometEngine.kt, comet/GhostCometShader.kt)
+### 55. Ghost Comet (comet/GhostCometLayer.kt, comet/GhostCometEngine.kt, comet/GhostCometShader.kt)
 High-momentum activity trails for student interactions.
 - **Social Gravity**: Activity trails are attracted to neighboring students, simulating "social contagion."
 - **Physics Engine**: BOLT-optimized zero-allocation physics with 0.97 drag.
 - **AGSL Trails**: Renders tapering, glowing streaks using API 33+ `RuntimeShader`.
 
-### 52. Ghost Glyph (glyph/GhostGlyphLayer.kt, glyph/GhostGlyphEngine.kt, glyph/GhostGlyphShader.kt)
+### 56. Ghost Glyph (glyph/GhostGlyphLayer.kt, glyph/GhostGlyphEngine.kt, glyph/GhostGlyphShader.kt)
 Neural gesture-based logging system.
 - **Gesture Recognition**: Translates custom touch patterns (glyphs) directly into behavior logs.
 - **AGSL Feedback**: Provides real-time visual feedback as the user draws the glyph.
 
-### 53. Ghost Strategist (strategist/GhostStrategistLayer.kt, strategist/GhostStrategistEngine.kt)
+### 57. Ghost Strategist (strategist/GhostStrategistLayer.kt, strategist/GhostStrategistEngine.kt)
 A generative AI tactical engine for pedagogical planning.
 - **Strategic Advice**: Analyzes classroom entropy and tension to suggest seating changes or intervention strategies.
 
-### 54. Ghost Vision (vision/GhostVisionLayer.kt, vision/GhostVisionEngine.kt, vision/GhostVisionActivity.kt)
+### 58. Ghost Vision (vision/GhostVisionLayer.kt, vision/GhostVisionEngine.kt, vision/GhostVisionActivity.kt)
 A sensor-driven AR viewport for the classroom.
 - **AR Overlay**: Uses device orientation to project data-rich overlays onto a camera-mediated view of the classroom.
 
-### 55. Ghost Architect (architect/GhostArchitectLayer.kt, architect/GhostArchitectEngine.kt, architect/GhostArchitectShader.kt)
+### 59. Ghost Architect (architect/GhostArchitectLayer.kt, architect/GhostArchitectEngine.kt, architect/GhostArchitectShader.kt)
 A strategic layout generative engine.
 - **Generative Design**: Proposes optimal seating arrangements based on predicted academic synergy and minimized social friction.
 
-### 56. Ghost Navigator (navigator/GhostNavigatorLayer.kt, navigator/GhostNavigatorEngine.kt)
+### 60. Ghost Navigator (navigator/GhostNavigatorLayer.kt, navigator/GhostNavigatorEngine.kt)
 A high-performance mini-map for spatial navigation.
 - **Global Overview**: Provides a persistent, interactive thumbnail of the 4000x4000 canvas.
 - **Fast-Travel**: Allows users to rapidly pan the main canvas by interacting with the navigator.
 
-### 57. Ghost Spotlight (spotlight/GhostSpotlightLayer.kt, spotlight/GhostSpotlightShader.kt)
+### 61. Ghost Spotlight (spotlight/GhostSpotlightLayer.kt, spotlight/GhostSpotlightShader.kt)
 A focused pedagogical assessment mode.
 - **Attention Isolation**: Dims the rest of the chart to highlight a single student or group during assessment.
 
-### 58. Ghost Glance (glance/GhostGlanceSurface.kt, glance/GhostGlanceEngine.kt)
+### 62. Ghost Glance (glance/GhostGlanceSurface.kt, glance/GhostGlanceEngine.kt)
 Double-tap preview for student dossiers.
 - **Rapid Insight**: Provides a non-interruptive popup showing recent logs and insights when a student icon is double-tapped.
 
-### 59. Ghost Filter (filtering/GhostFilterScreen.kt, filtering/GhostFilterViewModel.kt)
+### 63. Ghost Filter (filtering/GhostFilterScreen.kt, filtering/GhostFilterViewModel.kt)
 An optimized student list and filtering system.
 - **High-Speed Search**: Leverages BOLT patterns to filter large student lists with sub-millisecond latency.
 
-### 60. Ghost LOD (lod/GhostLODEngine.kt)
+### 64. Ghost LOD (lod/GhostLODEngine.kt)
 Adaptive Level of Detail rendering.
 - **Dynamic Detail**: Automatically simplifies student icons and disables complex shaders when zooming out or when high student counts are detected.
 
-### 61. Ghost Adaptive (adaptive/GhostAdaptiveLayer.kt, adaptive/GhostAdaptiveEngine.kt)
+### 65. Ghost Adaptive (adaptive/GhostAdaptiveLayer.kt, adaptive/GhostAdaptiveEngine.kt)
 Density-aware layout optimization.
 - **UI Scaling**: Adjusts icon sizes and spacing dynamically based on classroom density to prevent overlap.
 
-### 62. Ghost Memento (memento/GhostMementoMapper.kt, memento/GhostMementoStore.kt)
+### 66. Ghost Memento (memento/GhostMementoMapper.kt, memento/GhostMementoStore.kt)
 Persistent command history and "Long-Term Memory."
 - **Atomic Recovery**: Re-hydrates undo/redo stacks across app restarts using encrypted DataStore storage.
 - **Encryption**: History is hardened using `SecurityUtil` to ensure privacy.
 
-### 63. Ghost Silhouette (silhouette/GhostSilhouetteLayer.kt, silhouette/GhostSilhouetteShader.kt)
+### 67. Ghost Silhouette (silhouette/GhostSilhouetteLayer.kt, silhouette/GhostSilhouetteShader.kt)
 Neural drag placeholders.
 - **Spatial Memory**: Renders a glowing "ghost" icon at the student's original position during drag operations.
 
-### 64. Ghost Morph (morph/GhostDossierScreen.kt)
+### 68. Ghost Morph (morph/GhostDossierScreen.kt)
 Shared-element neural transitions.
 - **Fluid Continuity**: Implements seamless transitions between the seating chart and detailed student views.
 
-### 65. Ghost Lasso (lasso/GhostLassoLayer.kt, lasso/GhostLassoEngine.kt)
+### 69. Ghost Lasso (lasso/GhostLassoLayer.kt, lasso/GhostLassoEngine.kt)
 Gesture-based multi-selection.
 - **Neural Lasso**: Allows users to select multiple students by drawing a freeform path around them.
 
-### 66. Ghost Glitch (glitch/GhostGlitchLayer.kt, glitch/GhostGlitchEngine.kt, glitch/GhostGlitchShader.kt)
+### 70. Ghost Glitch (glitch/GhostGlitchLayer.kt, glitch/GhostGlitchEngine.kt, glitch/GhostGlitchShader.kt)
 Neural feedback during spatial conflicts.
 - **Collision Feedback**: Renders a "digital glitch" effect when student icons are moved into invalid or conflicting positions.
 
-### 67. Ghost Kinetic (kinetic/GhostKineticEngine.kt)
+### 71. Ghost Kinetic (kinetic/GhostKineticEngine.kt)
 Physics-based momentum for student icons.
 - **Inertial Drag**: Icons exhibit momentum and friction when released after a drag gesture.
 
-### 68. Ghost Seeds (util/GhostSeedEngine.kt)
+### 72. Ghost Seeds (util/GhostSeedEngine.kt)
 Native Android Home Screen shortcuts.
 - **Neural Seeds**: Allows teachers to "seed" specific students to the home screen for instant access to their dossiers.
 - **PII Masking**: Labels are hardened (e.g., "J. DOE") to prevent data leakage on the OS level.
 
-### 69. Ghost Stream (stream/GhostStreamLayer.kt, GhostStreamEngine.kt, GhostStreamShader.kt)
+### 73. Ghost Stream (stream/GhostStreamLayer.kt, GhostStreamEngine.kt, GhostStreamShader.kt)
 A real-time neural activity ticker for classroom events.
 - **Event Synthesis**: Aggregates behavior, quiz, and homework logs into a unified data stream using O(N) single-pass analysis.
 - **Glassmorphic Ticker**: Renders a translucent, scrolling overlay with high-fidelity typography and entry/exit animations.
