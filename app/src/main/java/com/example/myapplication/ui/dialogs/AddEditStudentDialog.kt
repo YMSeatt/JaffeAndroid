@@ -2,21 +2,32 @@ package com.example.myapplication.ui.dialogs
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Student
@@ -38,6 +49,12 @@ fun AddEditStudentDialog(
     var firstName by remember { mutableStateOf(studentToEdit?.firstName ?: "") }
     var lastName by remember { mutableStateOf(studentToEdit?.lastName ?: "") }
     var nickname by remember { mutableStateOf(studentToEdit?.nickname ?: "") }
+    var gender by remember { mutableStateOf(studentToEdit?.gender ?: "Boy") }
+    var groupId by remember { mutableStateOf(studentToEdit?.groupId) }
+
+    val studentGroups by studentGroupsViewModel.allStudentGroups.collectAsState()
+    var groupDropdownExpanded by remember { mutableStateOf(false) }
+
     var showError by remember { mutableStateOf(false) }
     var showDeleteConfirmation by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -76,7 +93,12 @@ fun AddEditStudentDialog(
         onDismissRequest = onDismiss,
         title = { Text(if (studentToEdit == null) "Add Student" else "Edit Student") },
         text = {
-            Column(modifier = Modifier.padding(16.dp)) {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .verticalScroll(scrollState)
+            ) {
                 OutlinedTextField(
                     value = firstName,
                     onValueChange = { firstName = it },
@@ -95,6 +117,61 @@ fun AddEditStudentDialog(
                     label = { Text("Nickname (Optional)") },
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Gender", style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = gender == "Boy", onClick = { gender = "Boy" })
+                    Text("Boy")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    RadioButton(selected = gender == "Girl", onClick = { gender = "Girl" })
+                    Text("Girl")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    RadioButton(selected = gender == "Other", onClick = { gender = "Other" })
+                    Text("Other")
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Group", style = MaterialTheme.typography.labelLarge)
+                ExposedDropdownMenuBox(
+                    expanded = groupDropdownExpanded,
+                    onExpandedChange = { groupDropdownExpanded = !groupDropdownExpanded },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val selectedGroupName = studentGroups.find { it.id == groupId }?.name ?: "No Group"
+                    OutlinedTextField(
+                        value = selectedGroupName,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Assign to Group") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupDropdownExpanded) },
+                        modifier = Modifier
+                            .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = groupDropdownExpanded,
+                        onDismissRequest = { groupDropdownExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("No Group") },
+                            onClick = {
+                                groupId = null
+                                groupDropdownExpanded = false
+                            }
+                        )
+                        studentGroups.forEach { group ->
+                            DropdownMenuItem(
+                                text = { Text(group.name) },
+                                onClick = {
+                                    groupId = group.id
+                                    groupDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 if (showError) {
                     Text("A student with this name already exists.", color = MaterialTheme.colorScheme.error)
                 }
@@ -121,14 +198,18 @@ fun AddEditStudentDialog(
                                     val updatedStudent = studentToEdit.copy(
                                         firstName = firstName,
                                         lastName = lastName,
-                                        nickname = nickname
+                                        nickname = nickname,
+                                        gender = gender,
+                                        groupId = groupId
                                     )
                                     viewModel.updateStudent(studentToEdit, updatedStudent)
                                 } else {
                                     val newStudent = Student(
                                         firstName = firstName,
                                         lastName = lastName,
-                                        nickname = nickname
+                                        nickname = nickname,
+                                        gender = gender,
+                                        groupId = groupId
                                     )
                                     viewModel.addStudent(newStudent)
                                 }
