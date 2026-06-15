@@ -384,7 +384,7 @@ class SeatingChartViewModel @Inject constructor(
     private fun updateUndoStackState() {
         val size = commandUndoStack.size
         val list = ArrayList<Command>(size)
-        val iterator = commandUndoStack.descendingIterator()
+        val iterator = commandUndoStack.iterator()
         while (iterator.hasNext()) {
             list.add(iterator.next())
         }

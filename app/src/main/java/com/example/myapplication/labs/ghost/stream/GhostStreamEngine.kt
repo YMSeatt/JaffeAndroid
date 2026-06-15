@@ -103,8 +103,14 @@ object GhostStreamEngine {
         if (finalCount == 0) return emptyList()
 
         // BOLT: Perform expensive formatting and lookups ONLY for the items we're keeping.
-        // Optimized to look up only the students actually present in the final list
-        // to avoid O(N) building of a full student map.
+        // BOLT: Pre-index the students into a LongSparseArray for O(1) lookup,
+        // transforming O(maxEntries * S) into O(S + maxEntries).
+        val studentMap = android.util.LongSparseArray<StudentUiItem>(students.size)
+        for (i in students.indices) {
+            val s = students[i]
+            studentMap.put(s.id.toLong(), s)
+        }
+
         val result = ArrayList<StreamEntry>(finalCount)
 
         for (i in 0 until finalCount) {
@@ -117,15 +123,7 @@ object GhostStreamEngine {
                 else -> 0L
             }
 
-            // O(S) manual search but only called maxEntries (20) times.
-            // BOLT: Replaced functional find with manual index loop to avoid iterator allocation.
-            var student: StudentUiItem? = null
-            for (j in 0 until students.size) {
-                if (students[j].id.toLong() == studentId) {
-                    student = students[j]
-                    break
-                }
-            }
+            val student = studentMap.get(studentId)
             if (student == null) continue
             val studentName = student.fullName.value
             val formattedTime = try {

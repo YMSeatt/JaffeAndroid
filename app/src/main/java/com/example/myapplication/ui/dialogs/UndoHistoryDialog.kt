@@ -34,9 +34,12 @@ fun UndoHistoryDialog(
                     Text("No actions in history.", modifier = Modifier.padding(vertical = 16.dp))
                 } else {
                     LazyColumn {
-                        // Show in reverse order (newest first)
-                        itemsIndexed(undoStack.reversed()) { reversedIndex, command ->
-                            val originalIndex = undoStack.size - 1 - reversedIndex
+                        // BOLT: The undoStack list is pre-sorted newest-to-oldest in the ViewModel.
+                        // Iterating directly eliminates the O(N) list reversal allocation on every recomposition.
+                        itemsIndexed(undoStack) { index, command ->
+                            // The original selectiveUndo logic expects index 0 to be the oldest command.
+                            // Since our list is [Newest ... Oldest], the oldest command is at index (size - 1).
+                            val originalIndex = undoStack.size - 1 - index
                             ListItem(
                                 headlineContent = {
                                     Text("${originalIndex + 1}: ${command.getDescription()}")
