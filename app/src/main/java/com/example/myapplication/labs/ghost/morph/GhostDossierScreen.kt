@@ -2,6 +2,7 @@ package com.example.myapplication.labs.ghost.morph
 
 import android.graphics.RuntimeShader
 import android.os.Build
+import android.view.WindowManager
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -25,6 +26,7 @@ import com.example.myapplication.labs.ghost.GhostLinkEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import com.example.myapplication.util.findActivity
 
 /**
  * GhostDossierScreen: A high-fidelity, full-screen student dossier.
@@ -44,6 +46,16 @@ fun GhostDossierScreen(
 ) {
     val dossierMarkdown = remember(studentId, studentName) {
         GhostLinkEngine.generateNeuralDossier(studentId, studentName)
+    }
+
+    val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val activity = context.findActivity()
+        activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        onDispose {
+            activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "dossier_pulse")
