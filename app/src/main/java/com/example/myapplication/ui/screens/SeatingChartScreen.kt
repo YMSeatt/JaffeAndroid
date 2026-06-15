@@ -201,6 +201,7 @@ import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
+import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarEngine
 import com.example.myapplication.labs.ghost.GhostHaloLayer
@@ -345,6 +346,7 @@ fun SeatingChartScreen(
     val strategistInterventions by seatingChartViewModel.strategistInterventions.collectAsState()
     val isStrategistThinking by seatingChartViewModel.isStrategistThinking.collectAsState()
     val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
+    val resilienceScores by seatingChartViewModel.resilienceScores.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -363,6 +365,7 @@ fun SeatingChartScreen(
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
+    var isPhoenixActive by remember { mutableStateOf(false) }
     var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
@@ -1183,6 +1186,13 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isActive = isBeaconActive,
                 onAnimationComplete = { isBeaconActive = false }
+            )
+            GhostPhoenixLayer(
+                students = students,
+                resilienceScores = resilienceScores,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isPhoenixActive
             )
             Box(
                 modifier = Modifier
@@ -2253,6 +2263,10 @@ fun SeatingChartScreen(
                             }
                             "TECTONICS" -> {
                                 isTectonicsActive = !isTectonicsActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "PHOENIX" -> {
+                                isPhoenixActive = !isPhoenixActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
                             "MIRROR" -> {
