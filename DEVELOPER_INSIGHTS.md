@@ -104,5 +104,16 @@ The `GhostOrbitEngine` implements a celestial metaphor for classroom social stru
 - **Engagement Scaling**: Angular velocity is calculated as `recentLogs / 5f`, capped at **2.0 radians/frame**. This ensures that even hyper-active students don't rotate so fast that they become a visual distraction.
 - **Stability and Radius**: The orbital radius is calculated as `150f + (1.0 - stability) * 300f`. This means a perfectly stable student (stability=1.0) stays at a tight **150-unit** radius, while an unstable student can drift up to **450 units** away.
 
+## 🚨 Ghost Beacon Selection Heuristics
+
+The `GhostBeaconEngine` utilizes a weighted random selection model to identify students in need of interaction (NFI).
+
+- **NFI Weight Factors**:
+    - **Base Probability**: Every student starts with a weight of **1.0**.
+    - **Behavioral Penalty**: Each negative behavior log adds **+2.0** to the student's weight.
+    - **The "Silence" Penalty**: Interaction starvation is modeled as a time-decay weight. For every hour since the last positive log, **+0.5** is added to the weight (capped at **+5.0**).
+    - **Academic Struggle**: Students with lower quiz/homework averages receive a weight boost of up to **+3.0** (calculated as `(1.0 - average) * 3.0`).
+- **BOLT Execution**: To maintain 60fps responsiveness, the engine performs a **single-pass aggregation** of all historical logs to build the probability map, ensuring the selection process is instantaneous regardless of classroom history size.
+
 ---
 *Documentation love letter from Scribe 📜*
