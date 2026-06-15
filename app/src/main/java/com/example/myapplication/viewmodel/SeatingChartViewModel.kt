@@ -92,6 +92,7 @@ import com.example.myapplication.labs.ghost.GhostCognitiveEngine
 import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.labs.ghost.InsightStatus
 import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
+import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
@@ -506,6 +507,10 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsWeaverHomeworkLogsRef: List<HomeworkLog>? = null
 
     private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
+
+    private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
+    /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
+    val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -1275,6 +1280,16 @@ class SeatingChartViewModel @Inject constructor(
                 if (studentsForEngines !== ghostMetricsAdaptiveStudentsRef) {
                     _adaptiveZones.value = com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine.calculateDensityMetrics(studentsForEngines)
                     ghostMetricsAdaptiveStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate student resilience scores in the background pipeline (Memoized)
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHOENIX_MODE_ENABLED) {
+                    if (behaviorEvents !== ghostMetricsPosAwareBehaviorLogsRef || students !== ghostMetricsStudentsRef) {
+                        _resilienceScores.value = GhostPhoenixEngine.calculateResilienceScores(
+                            students = students,
+                            behaviorLogsByStudent = behaviorLogsByStudent
+                        )
+                    }
                 }
 
                 // BOLT: Calculate historical traces in the background pipeline (Memoized)

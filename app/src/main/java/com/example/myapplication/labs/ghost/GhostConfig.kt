@@ -249,4 +249,7 @@ object GhostConfig {
 
     /** Enables "Ghost Neural Origami" foldable UI transitions. */
     const val ORIGAMI_MODE_ENABLED = true
+
+    /** Enables "Ghost Phoenix" neural resilience and recovery visualization. */
+    const val PHOENIX_MODE_ENABLED = true
 }
