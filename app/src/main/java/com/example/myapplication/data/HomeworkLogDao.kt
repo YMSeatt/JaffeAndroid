@@ -52,6 +52,9 @@ interface HomeworkLogDao {
     @Query("SELECT * FROM homework_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentHomeworkLogsForStudentList(studentId: Long, limit: Int): List<HomeworkLog>
 
+    @Query("SELECT * FROM homework_logs WHERE studentId = :studentId")
+    suspend fun getHomeworkLogsForStudentNonLiveData(studentId: Long): List<HomeworkLog>
+
     /**
      * Retrieves recent homework logs for UI display on student icons, applying
      * visibility filters:
