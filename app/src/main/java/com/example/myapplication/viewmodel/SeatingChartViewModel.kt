@@ -2183,10 +2183,21 @@ class SeatingChartViewModel @Inject constructor(
 
     /**
      * Triggers the deletion of a student via the Command pattern.
+     * Captures student history to support high-integrity undo.
      */
     fun deleteStudent(student: Student) {
         viewModelScope.launch {
-            val command = DeleteStudentCommand(this@SeatingChartViewModel, student)
+            val behaviorLogs = repository.getBehaviorEventsForStudentList(student.id)
+            val quizLogs = repository.getQuizLogsForStudentList(student.id)
+            val homeworkLogs = repository.getHomeworkLogsForStudentList(student.id)
+
+            val command = DeleteStudentCommand(
+                viewModel = this@SeatingChartViewModel,
+                student = student,
+                behaviorLogs = behaviorLogs,
+                quizLogs = quizLogs,
+                homeworkLogs = homeworkLogs
+            )
             executeCommand(command)
         }
     }
@@ -2215,7 +2226,17 @@ class SeatingChartViewModel @Inject constructor(
             // BOLT: Single-pass iteration over students with O(1) set lookups
             allStudents.value?.forEach { student ->
                 if (itemIds.contains(ChartItemId(student.id.toInt(), ItemType.STUDENT))) {
-                    commands.add(DeleteStudentCommand(this@SeatingChartViewModel, student))
+                    val behaviorLogs = repository.getBehaviorEventsForStudentList(student.id)
+                    val quizLogs = repository.getQuizLogsForStudentList(student.id)
+                    val homeworkLogs = repository.getHomeworkLogsForStudentList(student.id)
+
+                    commands.add(DeleteStudentCommand(
+                        viewModel = this@SeatingChartViewModel,
+                        student = student,
+                        behaviorLogs = behaviorLogs,
+                        quizLogs = quizLogs,
+                        homeworkLogs = homeworkLogs
+                    ))
                 }
             }
 
@@ -2927,6 +2948,12 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    suspend fun internalAddBehaviorEvents(events: List<BehaviorEvent>) {
+        withContext(Dispatchers.IO) {
+            repository.insertBehaviorEvents(events)
+        }
+    }
+
     fun deleteBehaviorEvent(event: BehaviorEvent) = viewModelScope.launch(Dispatchers.IO) {
         behaviorEventDao.delete(event)
         withContext(Dispatchers.Main) {
@@ -2957,6 +2984,12 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
+    suspend fun internalAddQuizLogs(logs: List<QuizLog>) {
+        withContext(Dispatchers.IO) {
+            repository.insertQuizLogs(logs)
+        }
+    }
+
     fun deleteQuizLog(log: QuizLog) = viewModelScope.launch(Dispatchers.IO) {
         repository.deleteQuizLog(log)
     }
@@ -2972,6 +3005,12 @@ class SeatingChartViewModel @Inject constructor(
     suspend fun internalAddHomeworkLog(log: HomeworkLog): Long {
         return withContext(Dispatchers.IO) {
             repository.insertHomeworkLog(log)
+        }
+    }
+
+    suspend fun internalAddHomeworkLogs(logs: List<HomeworkLog>) {
+        withContext(Dispatchers.IO) {
+            repository.insertHomeworkLogs(logs)
         }
     }
 

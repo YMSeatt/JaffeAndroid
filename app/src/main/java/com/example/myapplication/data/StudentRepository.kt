@@ -252,6 +252,10 @@ class StudentRepository(
         return behaviorEventDao.insert(encryptBehaviorEvent(event))
     }
 
+    suspend fun insertBehaviorEvents(events: List<BehaviorEvent>): List<Long> {
+        return behaviorEventDao.insertAll(events.map { encryptBehaviorEvent(it) })
+    }
+
     /**
      * BOLT: Centralized filtered fetch logic to handle the distinction between
      * null studentIds (all students) and empty studentIds (no students).
@@ -279,6 +283,10 @@ class StudentRepository(
      * @param studentIds Optional filter for specific students. If null, returns events for all students.
      * @return Sorted list of matching behavior events.
      */
+    suspend fun getBehaviorEventsForStudentList(studentId: Long): List<BehaviorEvent> {
+        return behaviorEventDao.getBehaviorEventsForStudentNonLiveData(studentId).map { decryptBehaviorEvent(it) }
+    }
+
     suspend fun getFilteredBehaviorEvents(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<BehaviorEvent> {
         val events = when {
             studentIds == null -> behaviorEventDao.getFilteredBehaviorEvents(startDate, endDate)
@@ -296,6 +304,14 @@ class StudentRepository(
      * @param studentIds Optional filter for specific students.
      * @return List of matching homework logs.
      */
+    suspend fun getHomeworkLogsForStudentList(studentId: Long): List<HomeworkLog> {
+        return homeworkLogDao.getHomeworkLogsForStudentNonLiveData(studentId).map { decryptHomeworkLog(it) }
+    }
+
+    suspend fun insertHomeworkLogs(logs: List<HomeworkLog>): List<Long> {
+        return homeworkLogDao.insertAll(logs.map { encryptHomeworkLog(it) })
+    }
+
     suspend fun getFilteredHomeworkLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<HomeworkLog> {
         val logs = when {
             studentIds == null -> homeworkLogDao.getFilteredHomeworkLogs(startDate, endDate)
@@ -313,6 +329,14 @@ class StudentRepository(
      * @param studentIds Optional filter for specific students.
      * @return List of matching quiz logs.
      */
+    suspend fun getQuizLogsForStudentList(studentId: Long): List<QuizLog> {
+        return quizLogDao.getQuizLogsForStudentNonLiveData(studentId).map { decryptQuizLog(it) }
+    }
+
+    suspend fun insertQuizLogs(logs: List<QuizLog>): List<Long> {
+        return quizLogDao.insertAll(logs.map { encryptQuizLog(it) })
+    }
+
     suspend fun getFilteredQuizLogs(startDate: Long, endDate: Long, studentIds: List<Long>? = null): List<QuizLog> {
         val logs = when {
             studentIds == null -> quizLogDao.getFilteredQuizLogs(startDate, endDate)
