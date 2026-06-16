@@ -60,6 +60,20 @@ class GhostRainEngine {
         // Base spawn rate + activity bonus
         val spawnProbability = (0.05f + (activityCount.toFloat() / 50f)).coerceAtMost(0.8f)
 
+        // BOLT: Hoist student positions and dimensions to avoid O(D * S) MutableState reads
+        val sCount = students.size
+        val sX = FloatArray(sCount)
+        val sY = FloatArray(sCount)
+        val sW = FloatArray(sCount)
+        val sH = FloatArray(sCount)
+        for (j in 0 until sCount) {
+            val s = students[j]
+            sX[j] = s.xPosition.value
+            sY[j] = s.yPosition.value
+            sW[j] = s.displayWidth.value.value * 20f // Rough Dp to logical conversion
+            sH[j] = s.displayHeight.value.value * 20f
+        }
+
         // 2. Physics & Intersection Loop
         for (i in 0 until MAX_DROPLETS) {
             if (dropActive[i]) {
@@ -75,15 +89,11 @@ class GhostRainEngine {
                     dropVel[i] += GRAVITY * dt
 
                     // Intersection Check (Student Icons)
-                    for (j in students.indices) {
-                        val s = students[j]
-                        val sx = s.xPosition.value
-                        val sy = s.yPosition.value
-                        val sw = s.displayWidth.value.value * 20f // Rough Dp to logical conversion
-                        val sh = s.displayHeight.value.value * 20f
-
-                        if (dropX[i] >= sx && dropX[i] <= sx + sw &&
-                            dropY[i] >= sy && dropY[i] <= sy + sh) {
+                    val dx = dropX[i]
+                    val dy = dropY[i]
+                    for (j in 0 until sCount) {
+                        if (dx >= sX[j] && dx <= sX[j] + sW[j] &&
+                            dy >= sY[j] && dy <= sY[j] + sH[j]) {
                             splashTime[i] = 0.01f
                             break
                         }
