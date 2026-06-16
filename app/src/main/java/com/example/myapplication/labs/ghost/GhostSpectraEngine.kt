@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost
 
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.util.maskStudentName
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -163,7 +164,9 @@ object GhostSpectraEngine {
 
         report.append("## [NODE SPECTROSCOPY]\n")
         studentSpectra.forEach { spectra ->
-            val name = studentNames[spectra.studentId] ?: "Student ${spectra.studentId}"
+            val rawName = studentNames[spectra.studentId] ?: "Student ${spectra.studentId}"
+            // PRIVACY: Mask the student name in the report content using the hardened standard
+            val name = maskStudentName(rawName)
             val status = when (spectra.state) {
                 SpectralState.INFRARED -> "INFRARED (At Risk)"
                 SpectralState.ULTRAVIOLET -> "ULTRAVIOLET (High Engagement)"

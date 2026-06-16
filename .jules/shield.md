@@ -135,3 +135,8 @@
     - Hardened `EmailWorker.kt` by adding mandatory `isValidEmail` checks for both sender and recipient in all background reporting paths (`daily_report`, `send_email`, `process_pending_emails`, `on_stop_export`).
     - Standardized exception messages in the email pipeline to be generic ("Invalid email address configuration") to prevent PII leakage to system logs or UI toasts.
 - **Location:** `app/src/main/java/com/example/myapplication/preferences/AppPreferencesRepository.kt`, `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`, `app/src/main/java/com/example/myapplication/util/EmailUtil.kt`, `app/src/main/java/com/example/myapplication/util/EmailWorker.kt`
+
+## 🛡️ Privacy Hardening: Neural Spectroscopy Report Masking
+- **Vulnerability:** The experimental "Neural Spectroscopy" report contained raw student names in the Markdown output and intent subjects, potentially leaking PII to external applications and unencrypted system logs.
+- **Fix:** Implemented PII masking using the `maskStudentName` utility for all student entries in `GhostSpectraEngine.kt` and for intent subjects in `GhostSpectraDialog.kt`.
+- **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraEngine.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraDialog.kt`
