@@ -37,17 +37,33 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
-// Add a CompositionLocal for animations
+/**
+ * A [CompositionLocal] that provides a global [AnimationSpec] for the application.
+ *
+ * This allows UI components to respect user preferences regarding animation speed
+ * and presence, enabling a BOLT-optimized "instant" UI mode when animations are disabled.
+ */
 val LocalAnimationSpec = staticCompositionLocalOf<AnimationSpec<Float>> {
     tween() // Default animation spec
 }
 
+/**
+ * MyApplicationTheme: The central Design System coordinator for the application.
+ *
+ * This theme implements Material 3 and provides a unified visual framework for the
+ * seating chart and Ghost Lab visualizations.
+ *
+ * @param darkTheme Whether to use the dark color scheme. Defaults to system settings.
+ * @param dynamicColor Whether to use Android 12+ Dynamic Color (wallpaper-based).
+ * @param disableAnimations When true, provides a zero-duration [AnimationSpec] via [LocalAnimationSpec].
+ * @param useBoldFont When true, globally overrides typography weights to [FontWeight.Bold].
+ */
 @Composable
 fun MyApplicationTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
-    disableAnimations: Boolean = false, // Add this parameter
+    disableAnimations: Boolean = false,
     useBoldFont: Boolean = false,
     content: @Composable () -> Unit
 ) {
