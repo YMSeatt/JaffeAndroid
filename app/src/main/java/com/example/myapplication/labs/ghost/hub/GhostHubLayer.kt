@@ -121,6 +121,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHOENIX_MODE_ENABLED) {
                 add(GhostAction("PHOENIX", Icons.Default.Whatshot, "Ghost Phoenix"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEATHER_MODE_ENABLED) {
+                add(GhostAction("WEATHER", Icons.Default.Cloud, "Ghost Weather"))
+            }
         }
     }
 

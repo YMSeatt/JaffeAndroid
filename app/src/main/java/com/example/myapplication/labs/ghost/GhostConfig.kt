@@ -252,4 +252,7 @@ object GhostConfig {
 
     /** Enables "Ghost Phoenix" neural resilience and recovery visualization. */
     const val PHOENIX_MODE_ENABLED = true
+
+    /** Enables "Ghost Weather" dynamic particle weather systems. */
+    const val WEATHER_MODE_ENABLED = true
 }

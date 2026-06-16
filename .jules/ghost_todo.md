@@ -1,9 +1,10 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Dynamic Particle Weather Systems (Ghost Weather)
 
+## 🚧 Active Construction
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-19: Ghost Weather - Dynamic Particle Weather Systems in `/labs/ghost/weather/`
 - [DONE] 2028-08-18: Ghost Phoenix - Neural Resilience & Recovery in `/labs/ghost/phoenix/`
 - [DONE] 2028-08-16: Ghost Tectonics - Social stability modeling in `/labs/ghost/tectonics/`
 - [DONE] 2028-08-14: Ghost Neural Origami - Foldable UI transition for the seating chart.
