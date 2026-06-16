@@ -193,6 +193,8 @@ import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
 import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
 import com.example.myapplication.labs.ghost.rain.GhostRainEngine
 import com.example.myapplication.labs.ghost.rain.GhostRainLayer
+import com.example.myapplication.labs.ghost.weather.GhostWeatherEngine
+import com.example.myapplication.labs.ghost.weather.GhostWeatherLayer
 import com.example.myapplication.labs.ghost.beacon.GhostBeaconEngine
 import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
@@ -395,6 +397,7 @@ fun SeatingChartScreen(
     var isCarbonActive by remember { mutableStateOf(false) }
     var isWeaverActive by remember { mutableStateOf(false) }
     var isRainActive by remember { mutableStateOf(false) }
+    var isWeatherActive by remember { mutableStateOf(false) }
     var isBeaconActive by remember { mutableStateOf(false) }
     var beaconTargetPosition by remember { mutableStateOf(Offset.Zero) }
     var isInkActive by remember { mutableStateOf(false) }
@@ -543,6 +546,7 @@ fun SeatingChartScreen(
     val ghostEchoEngine = remember { GhostEchoEngine() }
     val ghostOrigamiEngine = remember { GhostOrigamiEngine() }
     val ghostRainEngine = remember { GhostRainEngine() }
+    val ghostWeatherEngine = remember { GhostWeatherEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
     val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
@@ -1179,6 +1183,16 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isRainActive
+            )
+            GhostWeatherLayer(
+                engine = ghostWeatherEngine,
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                quizLogs = allQuizLogs,
+                homeworkLogs = allHomeworkLogs,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isWeatherActive
             )
             GhostBeaconLayer(
                 targetPosition = beaconTargetPosition,
@@ -2256,6 +2270,7 @@ fun SeatingChartScreen(
                             "PULSE" -> isPulseActive = !isPulseActive
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
+                            "WEATHER" -> isWeatherActive = !isWeatherActive
                             "RADAR" -> isRadarActive = !isRadarActive
                             "ORIGAMI" -> {
                                 isOrigamiActive = !isOrigamiActive
