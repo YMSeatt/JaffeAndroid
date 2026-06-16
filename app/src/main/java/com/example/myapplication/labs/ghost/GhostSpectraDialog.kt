@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.GhostSpectraEngine.SpectralState
 import com.example.myapplication.labs.ghost.GhostSpectraEngine.StudentSpectra
+import com.example.myapplication.util.maskStudentName
 import java.util.*
 
 /**
@@ -128,9 +129,11 @@ fun GhostSpectraDialog(
                         globalDensity,
                         globalAgitation
                     )
+                    // PRIVACY: Mask the student name in the intent subject using the hardened standard
+                    val maskedName = maskStudentName(studentName)
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_SUBJECT, "Neural Spectroscopy Report")
+                        putExtra(Intent.EXTRA_SUBJECT, "Neural Spectroscopy Report: $maskedName")
                         putExtra(Intent.EXTRA_TEXT, report)
                     }
                     context.startActivity(Intent.createChooser(intent, "Share Spectral Report"))
