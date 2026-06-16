@@ -43,9 +43,12 @@ fun GhostRainLayer(
 
     // Physics Update Loop (60fps)
     LaunchedEffect(isActive, students, behaviorLogs) {
-        while (isActive) {
-            engine.update(students, behaviorLogs)
-            delay(16)
+        // BOLT: Offload physics update to Default dispatcher
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            while (isActive) {
+                engine.update(students, behaviorLogs)
+                delay(16)
+            }
         }
     }
 
