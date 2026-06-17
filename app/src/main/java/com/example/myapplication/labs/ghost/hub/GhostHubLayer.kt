@@ -124,6 +124,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEATHER_MODE_ENABLED) {
                 add(GhostAction("WEATHER", Icons.Default.Cloud, "Ghost Weather"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SONAR_MODE_ENABLED) {
+                add(GhostAction("SONAR", Icons.Default.TrackChanges, "Ghost Sonar"))
+            }
         }
     }
 
