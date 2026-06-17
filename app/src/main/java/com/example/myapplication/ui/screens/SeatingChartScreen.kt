@@ -195,6 +195,8 @@ import com.example.myapplication.labs.ghost.rain.GhostRainEngine
 import com.example.myapplication.labs.ghost.rain.GhostRainLayer
 import com.example.myapplication.labs.ghost.weather.GhostWeatherEngine
 import com.example.myapplication.labs.ghost.weather.GhostWeatherLayer
+import com.example.myapplication.labs.ghost.sonar.GhostSonarEngine
+import com.example.myapplication.labs.ghost.sonar.GhostSonarLayer
 import com.example.myapplication.labs.ghost.beacon.GhostBeaconEngine
 import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
@@ -398,6 +400,9 @@ fun SeatingChartScreen(
     var isWeaverActive by remember { mutableStateOf(false) }
     var isRainActive by remember { mutableStateOf(false) }
     var isWeatherActive by remember { mutableStateOf(false) }
+    var isSonarActive by remember { mutableStateOf(false) }
+    var sonarOrigin by remember { mutableStateOf(Offset.Zero) }
+    var quietStudentIds by remember { mutableStateOf(emptySet<Long>()) }
     var isBeaconActive by remember { mutableStateOf(false) }
     var beaconTargetPosition by remember { mutableStateOf(Offset.Zero) }
     var isInkActive by remember { mutableStateOf(false) }
@@ -590,7 +595,7 @@ fun SeatingChartScreen(
                                    isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
-                                   isFrostActive || isRadarActive || isOrigamiActive ||
+                                   isFrostActive || isRadarActive || isOrigamiActive || isSonarActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
@@ -1200,6 +1205,15 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isActive = isBeaconActive,
                 onAnimationComplete = { isBeaconActive = false }
+            )
+            GhostSonarLayer(
+                origin = sonarOrigin,
+                quietStudentIds = quietStudentIds,
+                students = students,
+                isActive = isSonarActive,
+                canvasScale = scale,
+                canvasOffset = offset,
+                onFinished = { isSonarActive = false }
             )
             GhostPhoenixLayer(
                 students = students,
@@ -2288,6 +2302,16 @@ fun SeatingChartScreen(
                                 ghostMirrorEngine.togglePerspective()
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                                 Toast.makeText(context, "Perspective: ${mirrorPerspective.name}", Toast.LENGTH_SHORT).show()
+                            }
+                            "SONAR" -> {
+                                sonarOrigin = ghostHubPosition
+                                quietStudentIds = GhostSonarEngine.identifyQuietStudents(
+                                    students = students,
+                                    behaviorLogs = allBehaviorEvents,
+                                    quizLogs = allQuizLogs,
+                                    homeworkLogs = allHomeworkLogs
+                                )
+                                isSonarActive = true
                             }
                         }
                     },

@@ -255,4 +255,7 @@ object GhostConfig {
 
     /** Enables "Ghost Weather" dynamic particle weather systems. */
     const val WEATHER_MODE_ENABLED = true
+
+    /** Enables "Ghost Sonar" spatial engagement discovery. */
+    const val SONAR_MODE_ENABLED = true
 }
