@@ -514,11 +514,14 @@ class SeatingChartViewModel @Inject constructor(
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
-    private var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
+    /** Caches homework logs grouped by student ID. */
+    var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
+        private set
 
     private var memoizedQuizLogs: List<QuizLog>? = null
     /** Caches quiz logs grouped by student ID. */
-    private var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
+    var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
+        private set
 
     private var memoizedSessionQuizLogs: List<QuizLog>? = null
     /** Caches session quiz logs grouped by student ID. */

@@ -27,26 +27,59 @@ object GhostGlanceEngine {
 
     /**
      * Generates a [GlanceState] based on a sliding window of recent logs.
+     *
+     * BOLT ⚡ Optimization: Single-pass analysis with zero allocations.
+     * Replaced filter/count chains with manual index loops and pre-calculated totals.
      */
     fun synthesize(
         behaviorLogs: List<BehaviorEvent>,
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): GlanceState {
-        val recentBehavior = behaviorLogs.filter { it.timestamp > System.currentTimeMillis() - 86400000 * 7 }
-        val recentQuiz = quizLogs.filter { it.timestamp > System.currentTimeMillis() - 86400000 * 7 }
-        val recentHomework = homeworkLogs.filter { it.loggedAt > System.currentTimeMillis() - 86400000 * 7 }
+        val now = System.currentTimeMillis()
+        val window = 86400000L * 7
+        val cutoff = now - window
 
-        val totalLogs = recentBehavior.size + recentQuiz.size + recentHomework.size
+        var recentBehaviorCount = 0
+        var recentQuizCount = 0
+        var recentHomeworkCount = 0
+        var negativeCount = 0
+        var positiveCount = 0
+
+        // Single pass over behavior logs
+        for (i in 0 until behaviorLogs.size) {
+            val log = behaviorLogs[i]
+            if (log.timestamp > cutoff) {
+                recentBehaviorCount++
+                if (log.type.contains("Negative", ignoreCase = true)) {
+                    negativeCount++
+                } else if (log.type.contains("Positive", ignoreCase = true)) {
+                    positiveCount++
+                }
+            }
+        }
+
+        // Single pass over quiz logs
+        for (i in 0 until quizLogs.size) {
+            if (quizLogs[i].loggedAt > cutoff) {
+                recentQuizCount++
+            }
+        }
+
+        // Single pass over homework logs
+        for (i in 0 until homeworkLogs.size) {
+            if (homeworkLogs[i].loggedAt > cutoff) {
+                recentHomeworkCount++
+            }
+        }
+
+        val totalLogs = recentBehaviorCount + recentQuizCount + recentHomeworkCount
         if (totalLogs == 0) {
             return GlanceState(NeuralSignature.QUIET, 0f, 1f, 0f)
         }
 
-        val negativeCount = recentBehavior.count { it.type.contains("Negative", ignoreCase = true) }
-        val positiveCount = recentBehavior.count { it.type.contains("Positive", ignoreCase = true) }
-        val academicCount = recentQuiz.size + recentHomework.size
-
-        val stability = if (recentBehavior.isEmpty()) 1f else positiveCount.toFloat() / recentBehavior.size
+        val academicCount = recentQuizCount + recentHomeworkCount
+        val stability = if (recentBehaviorCount == 0) 1f else positiveCount.toFloat() / recentBehaviorCount
         val momentum = (totalLogs.toFloat() / 15f).coerceAtMost(1f)
         val engagement = (academicCount.toFloat() / 5f).coerceAtMost(1f)
 

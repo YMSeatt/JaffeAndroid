@@ -2324,16 +2324,26 @@ fun SeatingChartScreen(
             // Ghost Glance Overlay
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
                 activeGlanceStudentId?.let { id ->
-                    val student = students.find { it.id.toLong() == id }
-                    if (student != null) {
-                        val bLogs = allBehaviorEvents.filter { it.studentId == id }
-                        val qLogs = allQuizLogs.filter { it.studentId == id }
-                        val hLogs = allHomeworkLogs.filter { it.studentId == id }
+                    // BOLT: Optimize Glance overlay by using pre-grouped log caches from ViewModel
+                    // and memoizing the student lookup to avoid O(S + L) on every recomposition.
+                    val glanceData = remember(
+                        id,
+                        students,
+                        seatingChartViewModel.behaviorLogsByStudentCache,
+                        seatingChartViewModel.quizLogsByStudentCache,
+                        seatingChartViewModel.homeworkLogsByStudentCache
+                    ) {
+                        val student = students.find { it.id.toLong() == id }
+                        if (student != null) {
+                            val bLogs = seatingChartViewModel.behaviorLogsByStudentCache[id] ?: emptyList()
+                            val qLogs = seatingChartViewModel.quizLogsByStudentCache[id] ?: emptyList()
+                            val hLogs = seatingChartViewModel.homeworkLogsByStudentCache[id] ?: emptyList()
+                            val state = GhostGlanceEngine.synthesize(bLogs, qLogs, hLogs)
+                            student to state
+                        } else null
+                    }
 
-                        val glanceState = remember(id, bLogs, qLogs, hLogs) {
-                            GhostGlanceEngine.synthesize(bLogs, qLogs, hLogs)
-                        }
-
+                    glanceData?.let { (student, glanceState) ->
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
