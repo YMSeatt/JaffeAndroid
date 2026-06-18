@@ -258,4 +258,7 @@ object GhostConfig {
 
     /** Enables "Ghost Sonar" spatial engagement discovery. */
     const val SONAR_MODE_ENABLED = true
+
+    /** Enables "Ghost BioSync" biological state visualization. */
+    const val BIOSYNC_MODE_ENABLED = true
 }

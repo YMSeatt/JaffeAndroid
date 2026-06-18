@@ -201,6 +201,7 @@ import com.example.myapplication.labs.ghost.beacon.GhostBeaconEngine
 import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
+import com.example.myapplication.labs.ghost.GhostBioSyncLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
@@ -351,6 +352,8 @@ fun SeatingChartScreen(
     val isStrategistThinking by seatingChartViewModel.isStrategistThinking.collectAsState()
     val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
     val resilienceScores by seatingChartViewModel.resilienceScores.collectAsState()
+    val bioSyncPoints by seatingChartViewModel.bioSyncPoints.collectAsState()
+    val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -370,6 +373,7 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
+    var isBioSyncActive by remember { mutableStateOf(false) }
     var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
@@ -1221,6 +1225,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isVisible = isPhoenixActive
+            )
+            GhostBioSyncLayer(
+                vitalityPoints = bioSyncPoints,
+                harmony = classroomHarmony,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isBioSyncActive
             )
             Box(
                 modifier = Modifier
@@ -2312,6 +2323,10 @@ fun SeatingChartScreen(
                                     homeworkLogs = allHomeworkLogs
                                 )
                                 isSonarActive = true
+                            }
+                            "BIOSYNC" -> {
+                                isBioSyncActive = !isBioSyncActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
                         }
                     },

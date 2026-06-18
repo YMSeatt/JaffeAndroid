@@ -93,6 +93,8 @@ import com.example.myapplication.labs.ghost.GhostInsightEngine
 import com.example.myapplication.labs.ghost.InsightStatus
 import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
+import com.example.myapplication.labs.ghost.GhostBioSyncEngine
+import com.example.myapplication.labs.ghost.BioSyncPoint
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
@@ -511,6 +513,14 @@ class SeatingChartViewModel @Inject constructor(
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
+
+    private val _bioSyncPoints = MutableStateFlow<List<BioSyncPoint>>(emptyList())
+    /** BOLT: Student biological vitality points for shader. */
+    val bioSyncPoints: StateFlow<List<BioSyncPoint>> = _bioSyncPoints.asStateFlow()
+
+    private val _classroomHarmony = MutableStateFlow(0.8f)
+    /** BOLT: Global classroom harmony score. */
+    val classroomHarmony: StateFlow<Float> = _classroomHarmony.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /** Caches homework logs grouped by student ID. */
@@ -1152,6 +1162,29 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Calculate position-aware Ghost metrics in the background pipeline (Memoized)
                 // These metrics depend on both behavioral history and physical student coordinates.
                 if (behaviorEvents !== ghostMetricsPosAwareBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
+                    // BOLT: Calculate BioSync metrics in the background pipeline
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BIOSYNC_MODE_ENABLED) {
+                        val bioStates = GhostBioSyncEngine.calculateBioStates(
+                            students = studentsForEngines,
+                            behaviorLogsByStudent = behaviorLogsByStudent,
+                            now = currentTime
+                        )
+                        _classroomHarmony.value = GhostBioSyncEngine.calculateHarmony(bioStates)
+
+                        val points = ArrayList<BioSyncPoint>(studentsForEngines.size)
+                        for (i in studentsForEngines.indices) {
+                            val s = studentsForEngines[i]
+                            val status = bioStates[s.id] ?: continue
+                            points.add(BioSyncPoint(
+                                x = s.xPosition,
+                                y = s.yPosition,
+                                vitality = status.vitality,
+                                stress = status.stress
+                            ))
+                        }
+                        _bioSyncPoints.value = points
+                    }
+
                     _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
