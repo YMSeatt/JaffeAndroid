@@ -127,6 +127,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SONAR_MODE_ENABLED) {
                 add(GhostAction("SONAR", Icons.Default.TrackChanges, "Ghost Sonar"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BIOSYNC_MODE_ENABLED) {
+                add(GhostAction("BIOSYNC", Icons.Default.Favorite, "Ghost BioSync"))
+            }
         }
     }
 
