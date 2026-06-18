@@ -37,13 +37,18 @@ object GhostMoodEngine {
     )
 
     /**
-     * Calculates the mood for each student based on recent events.
+     * Calculates the mood for each student based on recent events and academic performance.
      *
-     * @param students List of student IDs.
-     * @param behaviorLogs Map of student IDs to their behavior events.
-     * @param quizLogs Map of student IDs to their quiz results.
-     * @param homeworkLogs Map of student IDs to their homework logs.
-     * @param timeWindow The window (in ms) to consider for "recent" behavior activity.
+     * This method iterates through the provided students and synthesizes their individual
+     * [StudentMood] by analyzing their respective behavior, quiz, and homework logs.
+     *
+     * @param students List of student IDs to evaluate.
+     * @param behaviorLogs Map of student IDs to their historical behavior events.
+     * @param quizLogs Map of student IDs to their historical quiz results.
+     * @param homeworkLogs Map of student IDs to their historical homework logs.
+     * @param timeWindow The sliding window (in ms) to consider for "recent" behavior activity.
+     *                   Defaults to 15 minutes (900,000ms).
+     * @return A list of [StudentMood] objects, one for each student.
      */
     fun calculateStudentMoods(
         students: List<Long>,
@@ -73,8 +78,28 @@ object GhostMoodEngine {
     /**
      * BOLT: Optimized single-student mood calculation.
      *
-     * Leveraging the fact that [BehaviorEvent] lists from the database are sorted DESC by timestamp,
-     * this method implements an early-exit pattern to avoid O(L) scans of the entire behavioral history.
+     * This method determines a student's [MoodState], intensity, and valence using a
+     * combination of behavioral heuristics and academic momentum.
+     *
+     * ### Algorithm:
+     * 1. **Temporal Filtering**: Scans [BehaviorEvent]s (sorted DESC) and breaks early
+     *    once a log exceeds the [timeWindow].
+     * 2. **Intensity Synthesis**: Combines behavioral frequency (normalized to 5 logs)
+     *    with academic activity (normalized to 10 logs).
+     * 3. **Valence Calculation**: Linear ratio of positive to negative logs within the window.
+     * 4. **State Transition**:
+     *    - **TURBULENT**: More negative logs than positive logs.
+     *    - **FOCUSED**: High academic intensity (>0.5) with zero negative logs.
+     *    - **ENERGETIC**: High positive log count (>2).
+     *    - **CALM**: Baseline state.
+     *
+     * @param studentId The unique ID of the student.
+     * @param bLogs Student's behavior events (assumed DESC sorted).
+     * @param qLogs Student's quiz logs.
+     * @param hLogs Student's homework logs.
+     * @param now Current system time for window comparison.
+     * @param timeWindow The active window for behavioral analysis.
+     * @return The student's synthesized [StudentMood].
      */
     fun calculateSingleStudentMood(
         studentId: Long,
@@ -128,7 +153,20 @@ object GhostMoodEngine {
     }
 
     /**
-     * Calculates the overall classroom mood based on student moods.
+     * Calculates the aggregate mood for the entire classroom.
+     *
+     * This method synthesizes the collective intensity, valence, and stability
+     * of the classroom by averaging individual student states.
+     *
+     * ### Aggregation Logic:
+     * - **TURBULENT**: Triggered if > 20% of students are in a TURBULENT state.
+     * - **FOCUSED**: Triggered if > 40% of students are in a FOCUSED state.
+     * - **ENERGETIC**: Triggered if > 30% of students are in an ENERGETIC state.
+     * - **CALM**: The default collective state.
+     * - **Stability**: Calculated as 1.0 minus the ratio of turbulent students.
+     *
+     * @param studentMoods List of individual student mood objects.
+     * @return A [ClassroomMood] representing the collective atmosphere.
      */
     fun calculateClassroomMood(studentMoods: List<StudentMood>): ClassroomMood {
         if (studentMoods.isEmpty()) {

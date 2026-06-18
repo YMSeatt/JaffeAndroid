@@ -15,10 +15,24 @@ import com.example.myapplication.labs.ghost.GhostConfig
  * GhostMoodLayer: A high-performance visualization layer for the Neural Mood Board.
  *
  * This layer renders the collective mood of the classroom as an organic, atmospheric
- * background on the seating chart.
+ * background on the seating chart. It utilizes **AGSL Shaders** to create fluid,
+ * data-driven visuals that react to classroom activity.
  *
- * BOLT ⚡ Optimization: Uses zero-allocation rendering by hoisting the [RuntimeShader]
- * and [ShaderBrush] and updating uniforms directly in the [Canvas] block.
+ * ### BOLT ⚡ Optimization:
+ * - **Zero-Allocation Rendering**: Hoists the [RuntimeShader] and [ShaderBrush]
+ *   objects via `remember`. Uniforms are updated directly in the [Canvas] block
+ *   to avoid per-frame allocations.
+ * - **Temporal Smoothing**: Uses `animateFloatAsState` for intensity, valence, and
+ *   stability to ensure smooth visual transitions even during rapid log entry.
+ *
+ * ### Color Palette:
+ * - **TURBULENT**: Red & Purple.
+ * - **FOCUSED**: Cyan & Blue.
+ * - **ENERGETIC**: Yellow & Magenta.
+ * - **CALM**: Green & Dark Teal.
+ *
+ * @param classroomMood The synthesized aggregate mood of the classroom.
+ * @param isVisible Controls whether the mood board overlay is rendered.
  */
 @Composable
 fun GhostMoodLayer(

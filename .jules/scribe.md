@@ -136,5 +136,16 @@
 - **Synergy Metrics**: Pairing synergy is based on **parity of activity frequency** within a 10-minute sliding window. High activity in both students leads to a strong link, while a mismatch (e.g., 10 logs vs 0 logs) results in low synergy.
 - **Shader Clipping Strategy**: To prevent GPU overdraw while allowing for organic AGSL warping, each link is rendered in a `drawRect` with a **50f padding buffer** beyond the student icon coordinates.
 
+### 27. Ghost Mood Board Synthesis & Thresholds
+- **The 15-Minute Window**: The engine analyzes behavioral frequency using a sliding 15-minute window (`15 * 60 * 1000L`).
+- **Student State Triggers**:
+    - **FOCUSED**: Requires an academic intensity > 0.5 and exactly zero negative logs.
+    - **ENERGETIC**: Requires more than 2 positive behavioral logs within the active window.
+- **Aggregate Classroom States**:
+    - **TURBULENT**: Triggered if > 20% of the students are in a turbulent state.
+    - **FOCUSED**: Triggered if > 40% of the students are in a focused state.
+    - **ENERGETIC**: Triggered if > 30% of the students are in an energetic state.
+- **Stability Logic**: The collective stability is derived as `1.0 - (turbulentCount / studentCount)`, which directly modulates the "neural turbulence" (visual flicker) in the AGSL shader.
+
 ---
 *Documentation love letter from Scribe 📜*
