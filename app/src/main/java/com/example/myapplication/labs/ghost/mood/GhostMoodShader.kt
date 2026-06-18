@@ -36,19 +36,26 @@ object GhostMoodShader {
             float2 uv = fragCoord / iResolution.xy;
             float2 p = uv * 3.0;
 
-            // Animating noise for organic movement
+            // 1. Organic Noise Synthesis:
+            // Combines two layers of gradient noise at different scales and speeds.
+            // iStability modulates the flow velocity.
             float n1 = noise(p + iTime * 0.2 * iStability);
             float n2 = noise(p * 2.0 - iTime * 0.1 * iStability);
             float combinedNoise = (n1 + n2 * 0.5) / 1.5;
 
-            // Base color blending based on valence
+            // 2. Valence-Based Color Mixing:
+            // Interpolates between the primary and secondary colors based on the
+            // synthesized classroom valence (-1.0 to 1.0).
             half4 moodColor = mix(iColorSecondary, iColorPrimary, iValence * 0.5 + 0.5);
 
-            // Adding subtle turbulence for low stability
+            // 3. Neural Turbulence:
+            // Injects high-frequency noise ("flicker") when stability is low.
             float turbulence = (1.0 - iStability) * noise(p * 10.0 + iTime);
             moodColor.rgb += turbulence * 0.1;
 
-            // Final alpha based on intensity and noise to create organic edges
+            // 4. Alpha Refraction:
+            // The final transparency is a product of synthesized intensity and noise,
+            // creating an ethereal, data-driven atmosphere.
             float alpha = iIntensity * combinedNoise * 0.6;
 
             return half4(moodColor.rgb, alpha);
