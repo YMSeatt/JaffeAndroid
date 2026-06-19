@@ -159,6 +159,7 @@ import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
 import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
 import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
+import com.example.myapplication.labs.ghost.catalyst.GhostCatalystDialog
 import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
 import com.example.myapplication.labs.ghost.tectonics.GhostTectonicLayer
 import com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveLayer
@@ -327,6 +328,7 @@ fun SeatingChartScreen(
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedItemIds by seatingChartViewModel.selectedItemIds.observeAsState(initial = emptySet())
     val allProphecies by seatingChartViewModel.prophecies.collectAsState()
+    val globalKinetics by seatingChartViewModel.globalKinetics.collectAsState()
     val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
     val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
@@ -388,6 +390,7 @@ fun SeatingChartScreen(
     var isZenithActive by remember { mutableStateOf(false) }
     var isEmergenceActive by remember { mutableStateOf(false) }
     var isCatalystActive by remember { mutableStateOf(false) }
+    var showCatalystReport by remember { mutableStateOf(false) }
     var isFloraActive by remember { mutableStateOf(false) }
     var isTectonicsActive by remember { mutableStateOf(false) }
     var isPulsarActive by remember { mutableStateOf(false) }
@@ -919,6 +922,7 @@ fun SeatingChartScreen(
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
                 onToggleCatalyst = { isCatalystActive = !isCatalystActive },
+                onShowCatalystReport = { showCatalystReport = true },
                 isFloraActive = isFloraActive,
                 onToggleFlora = { isFloraActive = !isFloraActive },
                 isTectonicsActive = isTectonicsActive,
@@ -1473,6 +1477,16 @@ fun SeatingChartScreen(
                         canvasScale = scale,
                         canvasOffset = offset,
                         isActive = isCatalystActive
+                    )
+                }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED && isCatalystActive) {
+                IconButton(onClick = onShowCatalystReport) {
+                    Icon(
+                        Icons.Default.Science,
+                        contentDescription = "Catalyst Kinetics",
+                        tint = androidx.compose.ui.graphics.Color.Cyan
                     )
                 }
             }
@@ -2139,6 +2153,15 @@ fun SeatingChartScreen(
                 )
             }
 
+            if (showCatalystReport) {
+                globalKinetics?.let { kinetics ->
+                    GhostCatalystDialog(
+                        kinetics = kinetics,
+                        onDismiss = { showCatalystReport = false }
+                    )
+                }
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VOICE_ASSISTANT_ENABLED) {
                 GhostVoiceVisualizer(
                     amplitude = ghostAmplitude,
@@ -2230,6 +2253,7 @@ fun SeatingChartScreen(
                             "SPECTRA" -> isSpectraActive = !isSpectraActive
                             "AURORA" -> isAuroraActive = !isAuroraActive
                             "FUTURE" -> isFutureActive = !isFutureActive
+                            "CATALYST" -> isCatalystActive = !isCatalystActive
                             "STRATEGIST" -> {
                                 isStrategistActive = !isStrategistActive
                                 if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
@@ -2643,6 +2667,7 @@ fun SeatingChartTopAppBar(
     onToggleEmergence: () -> Unit,
     isCatalystActive: Boolean,
     onToggleCatalyst: () -> Unit,
+    onShowCatalystReport: () -> Unit,
     isFloraActive: Boolean,
     onToggleFlora: () -> Unit,
     isTectonicsActive: Boolean,
@@ -3076,6 +3101,16 @@ fun SeatingChartTopAppBar(
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
+                            if (isCatalystActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Catalyst Kinetics 👻") },
+                                    onClick = {
+                                        onShowCatalystReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Science, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
                         }
                         if (GhostConfig.SYNC_MODE_ENABLED) {
                             DropdownMenuItem(

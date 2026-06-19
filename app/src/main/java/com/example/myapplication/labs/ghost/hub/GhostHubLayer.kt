@@ -63,6 +63,9 @@ fun GhostHubLayer(
             add(GhostAction("SPECTRA", Icons.Default.Palette, "Data Refraction"))
             add(GhostAction("AURORA", Icons.Default.Waves, "Climate Visualization"))
             add(GhostAction("FUTURE", Icons.Default.Update, "Neural Future"))
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED) {
+                add(GhostAction("CATALYST", Icons.Default.Science, "Ghost Catalyst"))
+            }
             add(GhostAction("STRATEGIST", Icons.Default.Psychology, "Neural Strategist"))
             add(GhostAction("SYNC", Icons.Default.Link, "Neural Sync"))
             add(GhostAction("COMET", Icons.Default.AutoFixHigh, "Ghost Comet"))

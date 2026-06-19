@@ -333,6 +333,10 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
 
+    private val _globalKinetics = MutableStateFlow<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.GlobalKinetics?>(null)
+    /** BOLT: Macroscopic kinetics report pre-calculated in background. */
+    val globalKinetics: StateFlow<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.GlobalKinetics?> = _globalKinetics.asStateFlow()
+
     private val _futureEvents = MutableStateFlow<List<BehaviorEvent>>(emptyList())
     /** BOLT: Simulated future events pre-calculated in background. */
     val futureEvents: StateFlow<List<BehaviorEvent>> = _futureEvents.asStateFlow()
@@ -1267,9 +1271,14 @@ class SeatingChartViewModel @Inject constructor(
                         val s = studentsForEngines[i]
                         catalystStudents.add(com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.StudentPos(s.id, s.xPosition, s.yPosition))
                     }
-                    _catalystReactions.value = com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.calculateReactions(
+                    val reactions = com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.calculateReactions(
                         students = catalystStudents,
                         events = behaviorEvents
+                    )
+                    _catalystReactions.value = reactions
+                    _globalKinetics.value = com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.analyzeCatalystKinetics(
+                        events = behaviorEvents,
+                        reactions = reactions
                     )
                     ghostMetricsCatalystBehaviorLogsRef = behaviorEvents
                     ghostMetricsCatalystStudentsRef = studentsForEngines
