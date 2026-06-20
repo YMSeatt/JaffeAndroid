@@ -448,7 +448,12 @@ class SeatingChartViewModel @Inject constructor(
     // source data (LiveData/Flow) actually changes.
 
     private var memoizedBehaviorEvents: List<BehaviorEvent>? = null
-    /** Caches behavior logs grouped by student ID to avoid O(B) filtering inside student loops. */
+    /**
+     * Caches behavior logs grouped by student ID to avoid $O(L)$ filtering inside the student loop.
+     *
+     * This is a critical Stage 1 BOLT optimization. By grouping logs once per update cycle,
+     * we ensure that Stage 2 transformation can retrieve a student's history in $O(1)$ time.
+     */
     var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
         private set
 
@@ -527,13 +532,16 @@ class SeatingChartViewModel @Inject constructor(
     val classroomHarmony: StateFlow<Float> = _classroomHarmony.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
-    /** Caches homework logs grouped by student ID. */
-    /** Caches homework logs grouped by student ID. */
+    /**
+     * Caches homework logs grouped by student ID to avoid $O(L)$ filtering inside the student loop.
+     */
     var homeworkLogsByStudentCache: Map<Long, List<HomeworkLog>> = emptyMap()
         private set
 
     private var memoizedQuizLogs: List<QuizLog>? = null
-    /** Caches quiz logs grouped by student ID. */
+    /**
+     * Caches quiz logs grouped by student ID to avoid $O(L)$ filtering inside the student loop.
+     */
     var quizLogsByStudentCache: Map<Long, List<QuizLog>> = emptyMap()
         private set
 
@@ -771,41 +779,38 @@ class SeatingChartViewModel @Inject constructor(
     }
 
     /**
-     * The core transformation engine for student UI data, optimized for 60fps performance.
+     * Transforms raw [Student] entities from the database into UI-optimized [StudentUiItem]s.
      *
-     * This method performs a multi-stage process to convert raw [Student] database entities
-     * into enriched [StudentUiItem]s. It runs on [Dispatchers.Default] to avoid blocking
-     * the main thread during complex calculations.
+     * This method implements a high-performance **3-Stage Transformation Pipeline** designed
+     * to maintain a fluid 60fps interaction model while processing complex data (thousands of logs,
+     * dozens of formatting rules, and futuristic Ghost Lab visualizations).
      *
-     * ### Pipeline Stages:
+     * ### Pipeline Architecture:
      *
      * #### Stage 1: Data Pre-processing (Memoized)
-     * Groups flat log lists by student ID and decodes conditional formatting rules.
-     * These operations are O(N) or O(N log N) but are performed only once per update cycle
-     * and are bypassed if the underlying data identities haven't changed.
+     * Groups flat database logs (Behavior, Quiz, Homework) by student ID and calculates macroscopic
+     * metrics (averages, counts, trends).
+     * - **Optimization**: Uses identity-based memoization (`===`) to detect when a data stream
+     *   hasn't changed. If a stream is stable, Stage 1 is bypassed entirely.
+     * - **Complexity**: Reduces per-student lookup time from $O(L)$ to $O(1)$.
      *
      * #### Stage 2: Per-Student Transformation (Memoized)
-     * For each student, this stage:
-     * - Filters logs based on "last cleared" timestamps and configurable display timeouts.
-     * - Generates human-readable descriptions (Behavior/Homework/Quiz), optionally using initials.
-     * - Evaluates the prioritized set of Conditional Formatting rules.
-     * - **Optimistic Reconciliation**: Reconciles positions with [pendingStudentPositions] to
-     *   ensure drag operations remain smooth.
-     *
-     * This entire stage is memoized using [studentDerivedDataCache] and a [StudentCacheKey].
-     * The cache key tracks student data hashes (excluding volatile positions) and log
-     * identities, ensuring that we only re-calculate descriptions or formatting when
-     * something "meaningful" has changed.
+     * Resolves student-specific UI properties by evaluating conditional formatting rules,
+     * generating localized log descriptions, and synthesizing "Ghost Lab" R&D metrics.
+     * - **Identity Preservation**: Uses [studentDerivedDataCache] to preserve the result of
+     *   expensive calculations (Regex, score thresholds). If a student's data and relevant
+     *   global state haven't changed, the cached result is reused.
+     * - **Result**: Avoids $O(S \times R)$ evaluation (where S=students, R=rules) on every frame.
      *
      * #### Stage 3: State Sync & Identity Preservation
-     * Instead of creating new UI objects, the pipeline retrieves existing [StudentUiItem]s
-     * from [studentUiItemCache] and updates their internal [androidx.compose.runtime.MutableState]
-     * fields via [com.example.myapplication.ui.model.updateStudentUiItem].
+     * Synchronizes the prepared data with the persistent [studentUiItemCache].
+     * - **Optimization**: Instead of creating new UI objects, the pipeline retrieves existing [StudentUiItem]s
+     *   from [studentUiItemCache] and updates their internal [androidx.compose.runtime.MutableState]
+     *   fields via [com.example.myapplication.ui.model.updateStudentUiItem].
+     * - **Benefit**: By preserving object identity, we allow Jetpack Compose to perform highly efficient
+     *   "diff-and-patch" updates at the property level, minimizing recomposition overhead.
      *
-     * By preserving object identity, we allow Jetpack Compose to perform highly efficient
-     * "diff-and-patch" updates at the property level, minimizing recomposition scope.
-     *
-     * @param students The list of raw Student entities to transform.
+     * @param students The list of student entities to prepare for display.
      */
     private fun updateStudentsForDisplay(students: List<Student>) {
         val prefs = _userPreferences.value ?: return
@@ -1986,23 +1991,19 @@ class SeatingChartViewModel @Inject constructor(
      *     the application state to exactly how it was immediately after the target
      *     command was first executed.
      * 2.  **Isolate**: The target command itself is popped and its `undo()` method is called.
-     * 3.  **Re-execution (Re-branching)**: The target command is then re-executed. In the current
-     *     UI flow, this often acts as a "refresh" or is part of an edit cycle.
-     * 4.  **History Invalidation**: To avoid "temporal paradoxes"—where future commands
-     *     depend on a state that has been mutated—all commands that were rolled back in
-     *     Step 1 are **permanently discarded**. The [commandRedoStack] is also cleared.
+     * 3.  **Re-branch**: To maintain data integrity and avoid "temporal paradoxes"—where
+     *     future commands might depend on a past state that no longer exists—all commands
+     *     that were rolled back are **permanently discarded**. The [commandRedoStack] is also cleared.
      *
-     * **Note:** Because this "re-branches" the application's timeline, any work performed
-     * *after* the selected action will be lost.
+     * History effectively "re-branches" from the point of the modification.
      *
-     * @param targetIndex The index of the command in [commandUndoStack] to manipulate.
+     * @param targetIndex The index of the command in [commandUndoStack] to undo.
      */
     fun selectiveUndo(targetIndex: Int) {
         if (targetIndex < 0 || targetIndex >= commandUndoStack.size) return
 
         viewModelScope.launch {
             // 1. Undo all actions that occurred AFTER the target command.
-            // This brings the system back to the state immediately following the target action.
             val commandsToUndoCount = commandUndoStack.size - 1 - targetIndex
             for (i in 0 until commandsToUndoCount) {
                 if (commandUndoStack.isEmpty()) break
