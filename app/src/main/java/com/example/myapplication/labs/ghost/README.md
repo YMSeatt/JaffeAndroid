@@ -328,6 +328,13 @@ Localized behavioral resonance visualization.
 - **Linear Decay**: Uses a linear distance and time decay model for resonance intensity.
 - **BOLT Optimization**: Optimized log traversal with DESC-sorting and early-exits.
 
+### 76. Ghost Mirage (mirage/GhostMirageLayer.kt, GhostMirageEngine.kt, GhostMirageShader.kt)
+Neural Focus Tracking Heatmap.
+- **Focus Mapping**: Captures teacher spatial attention by mapping touch interactions into a persistent neural heatmap.
+- **Temporal Decay**: Features a linear time-decay model where focus "fades" naturally over time, encouraging broader classroom interaction.
+- **AGSL Mirage**: Renders an ethereal shimmering heatmap using domain-warped FBM noise and a specialized Amber/Cyan palette.
+- **BOLT Optimization**: Uses a fixed 20x20 primitive grid for zero-allocation 60fps rendering.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
