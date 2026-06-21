@@ -172,7 +172,6 @@ import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
 import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
 import com.example.myapplication.labs.ghost.ray.GhostRayEngine
 import com.example.myapplication.labs.ghost.ray.GhostRayLayer
-import com.example.myapplication.labs.ghost.cortex.GhostCortexActivity
 import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
@@ -376,6 +375,7 @@ fun SeatingChartScreen(
     var isWarpActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
+    var isMirageActive by remember { mutableStateOf(false) }
     var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
@@ -759,6 +759,7 @@ fun SeatingChartScreen(
     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
     val classroomMood by seatingChartViewModel.classroomMood.collectAsState()
     val globalIonBalance by seatingChartViewModel.globalIonBalance.collectAsState()
+    val focusHeatmap by seatingChartViewModel.focusHeatmap.collectAsState()
     val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
 
     Scaffold(
@@ -906,6 +907,8 @@ fun SeatingChartScreen(
                 onToggleSync = { isSyncActive = !isSyncActive },
                 isIonActive = isIonActive,
                 onToggleIon = { isIonActive = !isIonActive },
+                isMirageActive = isMirageActive,
+                onToggleMirage = { isMirageActive = !isMirageActive },
                 isEntropyActive = isEntropyActive,
                 onToggleEntropy = { isEntropyActive = !isEntropyActive },
                 isZenithActive = isZenithActive,
@@ -1237,6 +1240,10 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isActive = isBioSyncActive
             )
+            GhostMirageLayer(
+                heatmap = focusHeatmap,
+                isActive = isMirageActive
+            )
             Box(
                 modifier = Modifier
                 .fillMaxSize()
@@ -1245,6 +1252,14 @@ fun SeatingChartScreen(
                         onLongPress = { pos ->
                             ghostHubPosition = pos
                             isGhostHubVisible = true
+                        },
+                        onTap = { pos ->
+                            if (isMirageActive) {
+                                // Map screen-space touch to logical 4000x4000 canvas
+                                val logicalX = ((pos.x - offset.x) / scale)
+                                val logicalY = ((pos.y - offset.y) / scale)
+                                seatingChartViewModel.recordFocus(logicalX, logicalY)
+                            }
                         }
                     )
                 }
@@ -2352,6 +2367,10 @@ fun SeatingChartScreen(
                                 isBioSyncActive = !isBioSyncActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
+                            "MIRAGE" -> {
+                                isMirageActive = !isMirageActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2697,6 +2716,8 @@ fun SeatingChartTopAppBar(
     onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
     isVisionActive: Boolean,
     onToggleVision: () -> Unit,
+    isMirageActive: Boolean,
+    onToggleMirage: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
     isCarbonActive: Boolean,
@@ -2949,6 +2970,16 @@ fun SeatingChartTopAppBar(
                 }
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRAGE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isMirageActive) "Collapse Focus Mirage 👻" else "Ghost Mirage 👻") },
+                            onClick = {
+                                isMirageActive = !isMirageActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Visibility, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) {
                         DropdownMenuItem(
                             text = { Text(if (isSilhouetteActive) "Disable Neural Silhouette 👻" else "Ghost Silhouette 👻") },

@@ -95,6 +95,7 @@ import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
 import com.example.myapplication.labs.ghost.GhostBioSyncEngine
 import com.example.myapplication.labs.ghost.BioSyncPoint
+import com.example.myapplication.labs.ghost.mirage.GhostMirageEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
@@ -288,6 +289,7 @@ class SeatingChartViewModel @Inject constructor(
     val strategistGoal: StateFlow<GhostStrategistEngine.StrategistGoal> = _strategistGoal.asStateFlow()
 
     val ghostInkEngine = GhostInkEngine()
+    val ghostMirageEngine = GhostMirageEngine()
 
     private val _chronosHeatmap = MutableStateFlow(FloatArray(100))
     /** BOLT: Global behavioral heatmap pre-calculated in background. */
@@ -526,6 +528,9 @@ class SeatingChartViewModel @Inject constructor(
     private val _bioSyncPoints = MutableStateFlow<List<BioSyncPoint>>(emptyList())
     /** BOLT: Student biological vitality points for shader. */
     val bioSyncPoints: StateFlow<List<BioSyncPoint>> = _bioSyncPoints.asStateFlow()
+
+    /** BOLT: Focus heatmap for Ghost Mirage. */
+    val focusHeatmap: StateFlow<FloatArray> = ghostMirageEngine.heatmap
 
     private val _classroomHarmony = MutableStateFlow(0.8f)
     /** BOLT: Global classroom harmony score. */
@@ -774,6 +779,16 @@ class SeatingChartViewModel @Inject constructor(
             while (true) {
                 delay(60000) // 1 minute
                 updateTrigger.emit(Unit)
+            }
+        }
+
+        // Ghost Mirage Decay Loop
+        viewModelScope.launch {
+            while (true) {
+                delay(2000) // Update every 2 seconds
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRAGE_MODE_ENABLED) {
+                    ghostMirageEngine.update(decayRate = 0.02f)
+                }
             }
         }
     }
@@ -3071,6 +3086,15 @@ class SeatingChartViewModel @Inject constructor(
         Log.d("SeatingChartViewModel", "Session started.")
     }
 
+
+    /**
+     * Records a teacher focus event at the given coordinates for Ghost Mirage.
+     */
+    fun recordFocus(x: Float, y: Float) {
+        if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRAGE_MODE_ENABLED) {
+            ghostMirageEngine.recordFocus(x, y)
+        }
+    }
 
     fun endSession() {
         if (isSessionActive.value == true) {

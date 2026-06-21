@@ -133,6 +133,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BIOSYNC_MODE_ENABLED) {
                 add(GhostAction("BIOSYNC", Icons.Default.Favorite, "Ghost BioSync"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRAGE_MODE_ENABLED) {
+                add(GhostAction("MIRAGE", Icons.Default.Visibility, "Ghost Mirage"))
+            }
         }
     }
 
