@@ -75,7 +75,9 @@ fun NeuralMapLayer(
 
         // Draw Cognitive Auras for students with many negative logs
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
-            students.forEach { student ->
+            // BOLT: Manual index-based loop to eliminate Iterator churn
+            for (i in 0 until students.size) {
+                val student = students[i]
                 val negativeCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
                 if (negativeCount > 2) {
                     val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
@@ -101,24 +103,25 @@ fun NeuralMapLayer(
             }
         }
 
-        groupedStudents.forEach { (_, groupMembers) ->
-            if (groupMembers.size < 2) return@forEach
+        // BOLT: Optimized group connection rendering to avoid per-frame list/Offset allocations.
+        for (entry in groupedStudents) {
+            val groupMembers = entry.value
+            if (groupMembers.size < 2) continue
 
-            val groupColor = groupMembers.first().groupColor.value ?: Color.Cyan
+            val groupColor = groupMembers[0].groupColor.value ?: Color.Cyan
 
-            // Calculate centers in the canvas coordinate system
-            val centers = groupMembers.map { student ->
-                val x = (student.xPosition.value * canvasScale) + canvasOffset.x
-                val y = (student.yPosition.value * canvasScale) + canvasOffset.y
-                val w = student.displayWidth.value.toPx() * canvasScale
-                val h = student.displayHeight.value.toPx() * canvasScale
-                Offset(x + w / 2f, y + h / 2f)
-            }
+            // BOLT: Avoid map/list allocation. Calculate center of first member and draw lines to others.
+            val s1 = groupMembers[0]
+            val x1 = (s1.xPosition.value * canvasScale) + canvasOffset.x + (s1.displayWidth.value.toPx() * canvasScale / 2f)
+            val y1 = (s1.yPosition.value * canvasScale) + canvasOffset.y + (s1.displayHeight.value.toPx() * canvasScale / 2f)
+            val center1 = Offset(x1, y1)
 
             // Draw connections (star pattern: everyone connects to the first member)
-            val center1 = centers.first()
-            for (i in 1 until centers.size) {
-                val center2 = centers[i]
+            for (i in 1 until groupMembers.size) {
+                val s2 = groupMembers[i]
+                val x2 = (s2.xPosition.value * canvasScale) + canvasOffset.x + (s2.displayWidth.value.toPx() * canvasScale / 2f)
+                val y2 = (s2.yPosition.value * canvasScale) + canvasOffset.y + (s2.displayHeight.value.toPx() * canvasScale / 2f)
+                val center2 = Offset(x2, y2)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     if (lineIdx >= lineShaderPool.size) {
