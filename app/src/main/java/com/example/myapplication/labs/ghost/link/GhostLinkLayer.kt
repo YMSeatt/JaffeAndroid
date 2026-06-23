@@ -54,25 +54,34 @@ fun GhostLinkLayer(
     )
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val shaderPool = remember { mutableMapOf<String, RuntimeShader>() }
+        // BOLT: Pre-allocate a pool of shaders and brushes to avoid O(N) allocations per frame
+        // and prevent the "Uniform Overwrite" bug.
+        val maxLinks = 20
+        val shaderPool = remember {
+            List(maxLinks) { RuntimeShader(GhostLinkShader.NEURAL_STRAND) }
+        }
+        val brushPool = remember(shaderPool) {
+            shaderPool.map { ShaderBrush(it) }
+        }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
             withTransform({
                 translate(canvasOffset.x, canvasOffset.y)
                 scale(canvasScale, canvasScale, pivot = Offset.Zero)
             }) {
-                links.forEach { link ->
-                    // Stable key for shader pooling based on student IDs
-                    val key = "${link.studentA}_${link.studentB}"
-                    val shader = shaderPool.getOrPut(key) { RuntimeShader(GhostLinkShader.NEURAL_STRAND) }
+                val numToDraw = links.size.coerceAtMost(maxLinks)
+
+                // BOLT: Manual index-based loop to eliminate Iterator churn
+                for (i in 0 until numToDraw) {
+                    val link = links[i]
+                    val shader = shaderPool[i]
+                    val brush = brushPool[i]
 
                     shader.setFloatUniform("iResolution", size.width, size.height)
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iPointA", link.ax, link.ay)
                     shader.setFloatUniform("iPointB", link.bx, link.by)
                     shader.setFloatUniform("iStrength", link.synergy)
-
-                    val brush = ShaderBrush(shader)
 
                     // Draw the link. Use a rectangle covering the bounds of the two points
                     // plus padding (scaled) to allow for the shader's glow/warp.
