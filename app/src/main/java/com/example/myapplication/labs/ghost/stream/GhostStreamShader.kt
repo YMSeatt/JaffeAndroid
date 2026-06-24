@@ -4,9 +4,21 @@ import org.intellij.lang.annotations.Language
 
 /**
  * GhostStreamShader: AGSL shader for the futuristic data stream background.
+ *
+ * This shader provides the atmospheric background for the [GhostStreamLayer],
+ * simulating a "Neural Flow" of classroom data using procedural noise and
+ * scrolling line patterns.
  */
 object GhostStreamShader {
 
+    /**
+     * Procedural AGSL shader program.
+     *
+     * Uniforms:
+     * - `iResolution`: Dimensions of the drawing area.
+     * - `iTime`: Continuous clock for animation.
+     * - `iIntensity`: Overall brightness and opacity multiplier.
+     */
     @Language("AGSL")
     val DATA_STREAM_SHADER = """
         uniform float2 iResolution;
