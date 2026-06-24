@@ -36,7 +36,7 @@ fun GhostAuroraLayer(
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "auroraTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -50,6 +50,7 @@ fun GhostAuroraLayer(
     val brush = remember(shader) { ShaderBrush(shader) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        val time = timeState.value
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iIntensity", params.intensity)

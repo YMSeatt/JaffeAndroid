@@ -41,7 +41,7 @@ fun GhostQuasarLayer(
     // BOLT: Use rememberInfiniteTransition for frame-rate stability and to avoid
     // triggering recomposition of the entire layer on every frame.
     val infiniteTransition = rememberInfiniteTransition(label = "quasarTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -57,6 +57,7 @@ fun GhostQuasarLayer(
     val brushPool = remember { mutableListOf<ShaderBrush>() }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val time = timeState.value
         var quasarIdx = 0
 
         // BOLT: Hoist invariant uniforms.

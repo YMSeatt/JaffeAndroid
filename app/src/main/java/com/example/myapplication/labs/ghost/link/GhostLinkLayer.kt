@@ -43,7 +43,7 @@ fun GhostLinkLayer(
     if (!isVisible || links.isEmpty()) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "ghost_link_time")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -65,6 +65,7 @@ fun GhostLinkLayer(
         }
 
         Canvas(modifier = Modifier.fillMaxSize()) {
+            val time = timeState.value
             withTransform({
                 translate(canvasOffset.x, canvasOffset.y)
                 scale(canvasScale, canvasScale, pivot = Offset.Zero)
