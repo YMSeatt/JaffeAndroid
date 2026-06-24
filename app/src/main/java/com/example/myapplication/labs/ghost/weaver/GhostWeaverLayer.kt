@@ -51,7 +51,7 @@ fun GhostWeaverLayer(
     if (!isActive || threads.isEmpty() || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "weaver_flow")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
@@ -80,6 +80,7 @@ fun GhostWeaverLayer(
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val time = timeState.value
         // BOLT: Replace forEachIndexed with manual loop for 60fps drawing.
         for (i in threads.indices) {
             val thread = threads[i]

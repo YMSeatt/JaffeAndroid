@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.geometry.Offset
 import com.example.myapplication.ui.model.StudentUiItem
+import androidx.compose.runtime.snapshotFlow
 
 /**
  * GhostRayLayer: A real-time volumetric visualization of the teacher's directional pointer.
@@ -29,12 +30,12 @@ fun GhostRayLayer(
 ) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || !isActive) return
 
-    val target by engine.rayTarget.collectAsState()
-    val intersectedId by engine.intersectedStudentId.collectAsState()
+    val targetState = engine.rayTarget.collectAsState()
+    val intersectedIdState = engine.intersectedStudentId.collectAsState()
 
-    // Smoothly animate time uniform for procedural effects
+    // BOLT: Smoothly animate time uniform for procedural effects
     val infiniteTransition = rememberInfiniteTransition(label = "rayPulse")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -53,14 +54,23 @@ fun GhostRayLayer(
     }
     val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
 
-    // Update intersection logic in the background when the target changes
-    LaunchedEffect(target, students, canvasScale, canvasOffset) {
+    // BOLT: Update intersection logic in the background when the target changes.
+    // Using snapshotFlow allows us to track the target state without triggering
+    // recomposition of the whole layer.
+    LaunchedEffect(engine, students, canvasScale, canvasOffset, isActive) {
         if (isActive) {
-            engine.updateIntersection(students, canvasScale, canvasOffset)
+            snapshotFlow { targetState.value }
+                .collect {
+                    engine.updateIntersection(students, canvasScale, canvasOffset)
+                }
         }
     }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        val target = targetState.value
+        val intersectedId = intersectedIdState.value
+        val time = timeState.value
+
         if (shader != null && brush != null && target != null) {
             try {
                 shader.setFloatUniform("iResolution", size.width, size.height)
@@ -73,7 +83,7 @@ fun GhostRayLayer(
 
                 // TARGET MAPPING:
                 // The target is provided in pixel coordinates already mapped by the engine.
-                shader.setFloatUniform("iTarget", target!!.x, target!!.y)
+                shader.setFloatUniform("iTarget", target.x, target.y)
                 shader.setFloatUniform("iIntensity", 1.0f)
 
                 // STATE-DRIVEN COLOR:

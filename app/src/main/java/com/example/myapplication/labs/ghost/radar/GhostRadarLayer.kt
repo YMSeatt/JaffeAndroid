@@ -47,7 +47,7 @@ fun GhostRadarLayer(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || !isVisible) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "radarRotation")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 6.28f,
         animationSpec = infiniteRepeatable(
@@ -73,6 +73,7 @@ fun GhostRadarLayer(
             }
             .size((1000.dp / 1.0f)) // Placeholder size, actual rendering controlled by graphicsLayer & drawRect
     ) {
+        val time = timeState.value
         shader.setFloatUniform("iResolution", radarSizePx, radarSizePx)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iIntensity", intensity)

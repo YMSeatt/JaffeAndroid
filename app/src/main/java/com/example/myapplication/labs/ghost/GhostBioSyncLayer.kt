@@ -27,7 +27,7 @@ fun GhostBioSyncLayer(
     if (!isActive || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "biosync_time")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
@@ -44,6 +44,7 @@ fun GhostBioSyncLayer(
     val pointBuffer = remember { FloatArray(160) } // 40 points * 4 components
 
     Canvas(modifier = Modifier.fillMaxSize()) {
+        val time = timeState.value
         // Clear buffer
         for (i in pointBuffer.indices) pointBuffer[i] = 0f
 
