@@ -13,6 +13,11 @@ import java.time.format.DateTimeFormatter
  *
  * This engine collects and formats the most recent activities (Behavior, Quizzes, Homework)
  * into a unified list of stream entries for display in the ticker.
+ *
+ * ### Architectural Role:
+ * The StreamEngine acts as the central aggregator for the Ghost Stream feature. It transforms
+ * disparate database entities into a common [StreamEntry] format, enabling a consistent
+ * chronological view of classroom activity.
  */
 object GhostStreamEngine {
 
@@ -21,6 +26,13 @@ object GhostStreamEngine {
 
     /**
      * Represents a single entry in the activity stream.
+     *
+     * @property id Unique identifier for the entry (e.g., "b_timestamp_studentId").
+     * @property timestamp Absolute epoch timestamp of the event.
+     * @property formattedTime Human-readable time string (HH:mm:ss).
+     * @property studentName The display name of the student associated with the event.
+     * @property content Detailed description of the event (e.g., behavior type or quiz score).
+     * @property type Categorization used for visual styling in the UI.
      */
     data class StreamEntry(
         val id: String,
@@ -31,10 +43,17 @@ object GhostStreamEngine {
         val type: EntryType
     )
 
+    /**
+     * Defines the visual and logical categories for stream entries.
+     */
     enum class EntryType {
+        /** Positive behavioral reinforcement. */
         POSITIVE,
+        /** Negative behavioral friction. */
         NEGATIVE,
+        /** Academic assessments and homework updates. */
         ACADEMIC,
+        /** Administrative or system-level milestones. */
         SYSTEM
     }
 
@@ -48,17 +67,22 @@ object GhostStreamEngine {
     /**
      * Synthesizes a unified stream of recent classroom events.
      *
-     * BOLT ⚡ Optimization: Dramatically reduced complexity from O(L) to O(maxEntries).
-     * 1. Leverages pre-sorted DAO inputs to only process the first [maxEntries] of each list.
-     * 2. Defers expensive string formatting, ID generation, and student lookups until
-     *    AFTER the final top-N items are identified.
-     * 3. Uses manual index loops to eliminate iterator allocations.
+     * ### BOLT ⚡ Performance Optimization:
+     * This method is designed to maintain 60fps UI performance by achieving $O(\text{maxEntries})$
+     * complexity regardless of the total number of logs in the database.
+     *
+     * 1. **Early Truncation**: Leverages pre-sorted DAO inputs to only process the first [maxEntries]
+     *    of each log list.
+     * 2. **Deferred Work**: Defers expensive string formatting, ID generation, and student lookups
+     *    until *after* the final combined top-N items are identified.
+     * 3. **Memory Efficiency**: Uses manual index loops to eliminate [Iterator] allocations
+     *    and [android.util.LongSparseArray] for $O(1)$ student resolution.
      *
      * @param students The current list of students for name resolution.
-     * @param behaviorLogs Recent behavior events (Pre-sorted DESC).
-     * @param quizLogs Recent quiz scores (Pre-sorted DESC).
-     * @param homeworkLogs Recent homework status updates (Pre-sorted DESC).
-     * @param maxEntries Maximum number of entries to return.
+     * @param behaviorLogs Recent behavior events (Must be pre-sorted DESC).
+     * @param quizLogs Recent quiz scores (Must be pre-sorted DESC).
+     * @param homeworkLogs Recent homework status updates (Must be pre-sorted DESC).
+     * @param maxEntries Maximum number of entries to return in the final stream.
      * @return A list of [StreamEntry] objects, sorted by timestamp (newest first).
      */
     fun synthesizeStream(

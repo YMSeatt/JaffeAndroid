@@ -27,10 +27,23 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.util.GhostGlassmorphicSurface
 
 /**
- * GhostStreamLayer: A futuristic activity ticker overlay.
+ * GhostStreamLayer: A high-fidelity, glassmorphic activity ticker overlay.
  *
- * Displays a real-time stream of classroom events (Behavior, Quizzes, Homework)
- * in a glassmorphic vertical ticker.
+ * This component renders the "Neural Stream" of classroom interactions using a
+ * vertical scrolling ticker. It is designed to provide immediate spatial and
+ * temporal awareness of classroom dynamics.
+ *
+ * ### Architectural Features:
+ * - **Glassmorphic Surface**: Utilizes [GhostGlassmorphicSurface] for a futuristic,
+ *   translucent aesthetic.
+ * - **AGSL Background**: Renders a procedural [GhostStreamShader.DATA_STREAM_SHADER]
+ *   to visualize the "velocity" of classroom data.
+ * - **Fluid Transitions**: Leverages [AnimatedVisibility] and [LazyColumn] with
+ *   stable keys to ensure smooth entry/exit animations for stream entries.
+ *
+ * @param entries The synthesized list of classroom activities from [GhostStreamEngine].
+ * @param isActive Visibility toggle for the ticker layer.
+ * @param modifier Custom layout modifiers.
  */
 @Composable
 fun GhostStreamLayer(
@@ -114,6 +127,12 @@ fun GhostStreamLayer(
     }
 }
 
+/**
+ * Individual entry item within the [GhostStreamLayer].
+ *
+ * Maps the [GhostStreamEngine.EntryType] to specific thematic colors (Cyan, Magenta, Purple)
+ * and applies glassmorphic styling to match the Ghost Lab aesthetic.
+ */
 @Composable
 fun StreamEntryItem(entry: GhostStreamEngine.StreamEntry) {
     val color = when (entry.type) {
