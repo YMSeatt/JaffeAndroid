@@ -335,6 +335,32 @@ Neural Focus Tracking Heatmap.
 - **AGSL Mirage**: Renders an ethereal shimmering heatmap using domain-warped FBM noise and a specialized Amber/Cyan palette.
 - **BOLT Optimization**: Uses a fixed 20x20 primitive grid for zero-allocation 60fps rendering.
 
+### 77. Ghost Sonar (sonar/GhostSonarLayer.kt, sonar/GhostSonarEngine.kt, sonar/GhostSonarShader.kt)
+Spatial Engagement Discovery.
+- **Quiet Zone Detection**: Identifies students with zero recent behavioral or academic interactions.
+- **Expanding Ripple**: Renders an expanding AGSL sonar wave that sweeps the 4000x4000 canvas.
+- **Haptic Pings**: Triggers tactile feedback (UI_CLICK) upon intersection with quiet students.
+
+### 78. Ghost Carbon (carbon/GhostCarbonLayer.kt, carbon/GhostCarbonEngine.kt, carbon/GhostCarbonShader.kt)
+Identifies "Behavioral Twins" in the classroom.
+- **Signature Matching**: Uses cosine similarity between behavioral frequency vectors.
+- **Resonance Bridges**: Visualizes connections between students with matching behavioral archetypes using pulsing AGSL bridges.
+
+### 79. Ghost Rain (rain/GhostRainLayer.kt, rain/GhostRainEngine.kt, rain/GhostRainShader.kt)
+A "Neural Rain" atmospheric simulation.
+- **Atmospheric Physics**: Rain/Snow intensity scales with recent behavioral frequency.
+- **Collision Detection**: BOLT-optimized droplet intersection with student icons for 60fps particle simulation.
+
+### 80. Ghost Phoenix (phoenix/GhostPhoenixLayer.kt, phoenix/GhostPhoenixEngine.kt, phoenix/GhostPhoenixShader.kt)
+Visualizes student resilience as a procedural fire aura.
+- **Resilience Scoring**: Compares 24h struggle windows with 2h recovery windows.
+- **Fire Aura**: Renders a "Phoenix Rising" effect around resilient students using specialized AGSL fire/ember shaders.
+
+### 81. Ghost Weather (weather/GhostWeatherLayer.kt, weather/GhostWeatherEngine.kt, weather/GhostWeatherShader.kt)
+Translates classroom state into a dynamic meteorological system.
+- **Social Wind**: Social polarity balance drives wind direction and atmospheric turbulence.
+- **Academic Lightning**: High-frequency quiz events trigger procedural AGSL lightning discharges.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

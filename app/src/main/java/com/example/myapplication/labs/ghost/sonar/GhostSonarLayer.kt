@@ -64,6 +64,8 @@ fun GhostSonarLayer(
 
     // Haptic Intersection Logic
     // BOLT: Manual index loop to avoid iterator churn during animation.
+    // We use a local hitIds set to ensure each "quiet" student only triggers one haptic ping
+    // per sonar sweep as the wavefront passes their logical center.
     val hitIds = remember { mutableSetOf<Long>() }
     LaunchedEffect(currentRadius) {
         if (currentRadius <= 0f) hitIds.clear()

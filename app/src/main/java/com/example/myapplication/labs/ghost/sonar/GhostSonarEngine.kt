@@ -18,10 +18,14 @@ import com.example.myapplication.ui.model.StudentUiItem
 object GhostSonarEngine {
 
     /**
-     * Identifies "Quiet" students who require engagement.
+     * Identifies "Quiet" students who require engagement by scanning academic and behavioral history.
+     *
+     * A student is considered "quiet" if they have zero recorded events within the specified
+     * [timeWindowMs]. This helps teachers identify students who may be slipping through the
+     * cracks or who haven't received attention in the current session.
      *
      * @param students The list of students to evaluate.
-     * @param behaviorLogs Historical behavior logs (DESC sorted).
+     * @param behaviorLogs Historical behavior logs. Must be DESC sorted for O(Recent) performance.
      * @param quizLogs Historical quiz logs.
      * @param homeworkLogs Historical homework logs.
      * @param timeWindowMs The window to consider for "recent" activity (default 10 mins).
