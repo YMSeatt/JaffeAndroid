@@ -14,7 +14,16 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import com.example.myapplication.labs.ghost.GhostConfig
 
 /**
- * GhostFlareLayer: Renders high-intensity behavioral flares over the seating chart.
+ * GhostFlareLayer: The high-fidelity rendering surface for "Neural Flares".
+ *
+ * This component overlays the seating chart and utilizes advanced AGSL Shaders (API 33+)
+ * to render high-intensity visual starbursts over students who have reached
+ * behavioral milestones.
+ *
+ * @param engine The [GhostFlareEngine] providing the state of active flares.
+ * @param canvasScale The current zoom level of the seating chart canvas.
+ * @param canvasOffset The current pan offset (in screen pixels) of the seating chart.
+ * @param isActive Master feature flag for this layer, defaults to [GhostConfig.FLARE_MODE_ENABLED].
  */
 @Composable
 fun GhostFlareLayer(
