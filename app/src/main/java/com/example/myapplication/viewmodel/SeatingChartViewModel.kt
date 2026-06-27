@@ -96,6 +96,7 @@ import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
 import com.example.myapplication.labs.ghost.GhostBioSyncEngine
 import com.example.myapplication.labs.ghost.BioSyncPoint
 import com.example.myapplication.labs.ghost.mirage.GhostMirageEngine
+import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
@@ -521,6 +522,9 @@ class SeatingChartViewModel @Inject constructor(
 
     private var ghostMetricsAdaptiveStudentsRef: List<com.example.myapplication.data.Student>? = null
 
+    private var ghostMetricsKaleidoscopeStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsKaleidoscopeBehaviorLogsRef: List<BehaviorEvent>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -535,6 +539,14 @@ class SeatingChartViewModel @Inject constructor(
     private val _classroomHarmony = MutableStateFlow(0.8f)
     /** BOLT: Global classroom harmony score. */
     val classroomHarmony: StateFlow<Float> = _classroomHarmony.asStateFlow()
+
+    private val _kaleidoscopeFragments = MutableStateFlow<List<GhostKaleidoscopeEngine.NeuralFragment>>(emptyList())
+    /** BOLT: Neural fragments for Ghost Kaleidoscope pre-calculated in background. */
+    val kaleidoscopeFragments: StateFlow<List<GhostKaleidoscopeEngine.NeuralFragment>> = _kaleidoscopeFragments.asStateFlow()
+
+    private val _harmonyIndex = MutableStateFlow(0.5f)
+    /** BOLT: Symmetry factor for Ghost Kaleidoscope. */
+    val harmonyIndex: StateFlow<Float> = _harmonyIndex.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1230,6 +1242,23 @@ class SeatingChartViewModel @Inject constructor(
                         students = studentsForEngines,
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
+
+                    // BOLT: Calculate Ghost Kaleidoscope fragments in the background pipeline (Memoized)
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.KALEIDOSCOPE_MODE_ENABLED) {
+                        if (behaviorEvents !== ghostMetricsKaleidoscopeBehaviorLogsRef || studentsForEngines !== ghostMetricsKaleidoscopeStudentsRef) {
+                            // Synthesize fragments based on student positions and behaviors.
+                            // BOLT: Use studentsForEngines to ensure fluid tracking during drag.
+                            val fragments = GhostKaleidoscopeEngine.synthesizeFragments(
+                                students = studentsForEngines,
+                                behaviorLogsByStudent = behaviorLogsByStudent,
+                                now = currentTime
+                            )
+                            _kaleidoscopeFragments.value = fragments
+                            _harmonyIndex.value = GhostKaleidoscopeEngine.calculateHarmony(fragments)
+                            ghostMetricsKaleidoscopeBehaviorLogsRef = behaviorEvents
+                            ghostMetricsKaleidoscopeStudentsRef = studentsForEngines
+                        }
+                    }
 
                     // BOLT: Calculate tectonic stress nodes in the background pipeline
                     val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
