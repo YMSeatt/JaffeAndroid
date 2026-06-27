@@ -264,4 +264,7 @@ object GhostConfig {
 
     /** Enables "Ghost Mirage" neural focus tracking heatmap. */
     const val MIRAGE_MODE_ENABLED = true
+
+    /** Enables "Ghost Kaleidoscope" neural symmetry visualization. */
+    const val KALEIDOSCOPE_MODE_ENABLED = true
 }

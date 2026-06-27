@@ -130,6 +130,7 @@ import com.example.myapplication.labs.ghost.GhostSingularityLayer
 import com.example.myapplication.labs.ghost.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.mood.GhostMoodLayer
+import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeLayer
 import com.example.myapplication.labs.ghost.silhouette.GhostSilhouetteLayer
 import com.example.myapplication.labs.ghost.ion.GhostIonLayer
 import com.example.myapplication.labs.ghost.sync.GhostSyncLayer
@@ -355,6 +356,8 @@ fun SeatingChartScreen(
     val resilienceScores by seatingChartViewModel.resilienceScores.collectAsState()
     val bioSyncPoints by seatingChartViewModel.bioSyncPoints.collectAsState()
     val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
+    val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
+    val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -374,6 +377,7 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
+    var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
     var isMirageActive by remember { mutableStateOf(false) }
     var showGhostSpectraDialog by remember { mutableStateOf(false) }
@@ -1243,6 +1247,13 @@ fun SeatingChartScreen(
             GhostMirageLayer(
                 heatmap = focusHeatmap,
                 isActive = isMirageActive
+            )
+            GhostKaleidoscopeLayer(
+                fragments = kaleidoscopeFragments,
+                harmony = harmonyIndex,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isKaleidoscopeActive
             )
             Box(
                 modifier = Modifier
@@ -2369,6 +2380,10 @@ fun SeatingChartScreen(
                             }
                             "MIRAGE" -> {
                                 isMirageActive = !isMirageActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "KALEIDOSCOPE" -> {
+                                isKaleidoscopeActive = !isKaleidoscopeActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
                         }

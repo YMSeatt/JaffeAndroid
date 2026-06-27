@@ -361,6 +361,12 @@ Translates classroom state into a dynamic meteorological system.
 - **Social Wind**: Social polarity balance drives wind direction and atmospheric turbulence.
 - **Academic Lightning**: High-frequency quiz events trigger procedural AGSL lightning discharges.
 
+### 82. Ghost Kaleidoscope (kaleidoscope/GhostKaleidoscopeLayer.kt, GhostKaleidoscopeEngine.kt, GhostKaleidoscopeShader.kt)
+Visualizes classroom harmony and synchronization as a symmetric radial pattern.
+- **Neural Symmetry**: Maps UV space into 3-12 mirrored slices based on a global Harmony Index.
+- **Neural Fragments**: Renders glowing geometric shards representing recent behavioral and academic events.
+- **BOLT Optimization**: O(Recent) fragment synthesis and zero-allocation 60fps rendering.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 
