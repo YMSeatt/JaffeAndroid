@@ -97,7 +97,12 @@
 - **Vitality Color Shift**: The color interpolation in the AGSL shader uses a linear `mix()` between Cyan (Positive) and Magenta (Negative). Magenta was chosen specifically for its visual "friction" against the standard app palette.
 - **Stable Seeding**: The procedural seed is derived via `studentId % 1000`. This ensures that while every student has a unique flower, it remains consistent across sessions unless their database ID changes.
 
-### 19. Ghost Phasing "Neural Backstage" Synchronization
+### 19. Ghost Mirage Focus Logic
+- **The 20x20 Grid Choice**: The grid size was selected as 20x20 (400 cells) to stay within the safe bounds of AGSL uniform array limits (typically 1024 or 2048 floats depending on hardware). This allows passing the entire focus state in a single uniform.
+- **Mapping Constant**: The logical 4000x4000 coordinate space is mapped to the 20x20 grid using a `4000 / 20 = 200` unit cell size.
+- **Intensity Decay**: The default decay rate of 0.05 units/sec means a full-intensity (1.0) focus zone will completely evaporate in 20 seconds of inactivity.
+
+### 20. Ghost Phasing "Neural Backstage" Synchronization
 - **The Metaphor**: The physical classroom UI is treated as a "veil" over a deep-space data void.
 - **Haptic Synchronization**: The `GhostPhasingEngine` triggers specific haptic markers at the 10% and 90% phase thresholds. This provides a tactile "pop" when the transition starts and when the physical UI is nearly extinguished.
 - **RenderEffect Pipeline**: Unlike standard overlays, Phasing uses `RenderEffect.createRuntimeShaderEffect` on the `graphicsLayer`. This allows the shader to sample the *entire* rendered content of the child Composable, enabling global effects like chromatic aberration and jitter that wouldn't be possible with simple brushes.
