@@ -19,11 +19,22 @@ import com.example.myapplication.data.Student
  *
  * This layer renders procedural frost crystallization over students who are
  * identified by [GhostFrostEngine] as being in a high-entropy "Cold Zone".
+ * It utilizes AGSL Shaders to create a dynamic, biological frost effect
+ * that reacts to the classroom's behavioral and academic state.
  *
- * Optimization Techniques:
- * 1. **Shader Pooling**: Reuses RuntimeShader instances to avoid allocations.
- * 2. **State Hoisting**: Defers coordinate transformations to the draw phase.
- * 3. **Identity Preservation**: Uses student IDs to track nodes across frames.
+ * ### Performance Architecture:
+ * - **Background Synthesis**: Frost nodes are calculated in a [derivedStateOf] block,
+ *   ensuring complex $O(N^2)$ spatial analysis only occurs when data actually changes.
+ * - **AGSL Pipeline**: Leverages API 33+ [RuntimeShader] for hardware-accelerated
+ *   procedural noise and Voronoi crystallization.
+ *
+ * BOLT ⚡ Optimizations:
+ * 1. **Shader Pooling**: Reuses [RuntimeShader] instances in a [remember]-ed map
+ *    to avoid allocation and JNI overhead during high-frequency draw calls.
+ * 2. **State Hoisting**: Defers coordinate transformations (Logical -> Screen) to
+ *    the shader uniforms, minimizing CPU-side calculation.
+ * 3. **Manual Index-Based Loops**: Replaces functional iterators in the [Canvas]
+ *    draw loop to ensure zero-allocation 60fps rendering.
  */
 @Composable
 fun GhostFrostLayer(

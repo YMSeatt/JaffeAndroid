@@ -13,14 +13,33 @@ import kotlin.math.sqrt
  *
  * This engine identifies areas of the classroom where behavioral entropy and
  * academic struggle are concentrated, visualizing them as procedural frost.
+ * It synthesizes multiple data streams (behavior, quizzes, homework) to derive
+ * a frost intensity value for each student.
+ *
+ * ### The "Cold Zone" Metaphor:
+ * Much like a loss of thermal energy in a physical system, a "Cold Zone" represents
+ * a decrease in positive classroom data energy. Areas with high academic friction
+ * or behavioral turbulence "freeze" over, signaling a need for intervention.
+ *
+ * ### Intensity Factors:
+ * 1. **Concerning Status**: High weight (0.4) if the student is flagged by [GhostInsightEngine].
+ * 2. **Negative Proximity**: Medium weight (0.25 max) based on distance to recent negative logs.
+ * 3. **Clustering**: Social weight (0.15 max) based on proximity to other concerning students.
  *
  * BOLT ⚡ Optimizations:
- * 1. **Identity-based grouping**: Pre-groups logs by student ID to avoid O(N*L) scans.
- * 2. **Manual Indexing**: Replaces functional iterators with manual for-loops.
- * 3. **Spatial Pruning**: Uses a proximity threshold to limit calculation complexity.
+ * 1. **Identity-based grouping**: Pre-groups logs by student ID using [HashMap] to avoid O(N*L) scans.
+ * 2. **Manual Indexing**: Replaces functional iterators with manual for-loops to eliminate [Iterator] churn.
+ * 3. **Spatial Pruning**: Uses a proximity [radius] threshold to limit O(N^2) complexity.
  */
 object GhostFrostEngine {
 
+    /**
+     * Represents a calculated frost node in the classroom.
+     * @property studentId The ID of the student at the center of the frost.
+     * @property x Logical X coordinate on the 4000x4000 canvas.
+     * @property y Logical Y coordinate on the 4000x4000 canvas.
+     * @property intensity The calculated frost intensity (0.0 to 1.0).
+     */
     data class FrostNode(
         val studentId: Long,
         val x: Float,
