@@ -4,9 +4,31 @@ import org.intellij.lang.annotations.Language
 
 /**
  * GhostFrostShader: AGSL code for procedural frost crystallization.
+ *
+ * This shader implements a multi-stage procedural effect:
+ * 1. **Voronoi Noise**: Creates the base geometric structure for ice crystals.
+ * 2. **Fractional Brownian Motion (fBm)**: Layers multiple octaves of Voronoi noise
+ *    to create an organic, branching "frost" pattern.
+ * 3. **Spatiotemporal Distortion**: Animates crystal positions over time using [iTime].
+ * 4. **Coordinate Transformation**: Maps logical coordinates to physical screen space
+ *    using [iCanvasScale] and [iCanvasOffset].
+ *
+ * The shader utilizes `discard` to optimize overdraw, only rendering pixels within
+ * the influence radius of a frost node.
  */
 object GhostFrostShader {
 
+    /**
+     * The AGSL program for the frost effect.
+     *
+     * Uniforms:
+     * - `iResolution`: The viewport dimensions.
+     * - `iTime`: Absolute system time for animation.
+     * - `iTarget`: The logical (4000x4000) center of the frost.
+     * - `iIntensity`: Scalar (0..1) controlling the opacity/thickness of the frost.
+     * - `iCanvasOffset`: The current pan position of the seating chart.
+     * - `iCanvasScale`: The current zoom factor of the seating chart.
+     */
     @Language("AGSL")
     const val FROST_EFFECT = """
         uniform float2 iResolution;      // Canvas size
