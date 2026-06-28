@@ -57,7 +57,7 @@ class GhostArchitectEngineTest {
             GhostLatticeEngine.Edge(1L, 2L, 1.0f, GhostLatticeEngine.ConnectionType.COLLABORATION, Color.Green)
         )
 
-        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, GhostArchitectEngine.StrategicGoal.COLLABORATION)
+        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, emptyList(), GhostArchitectEngine.StrategicGoal.COLLABORATION)
         assertEquals(1.0f, synergy, 0.001f)
     }
 
@@ -70,7 +70,7 @@ class GhostArchitectEngineTest {
             GhostLatticeEngine.Edge(1L, 2L, 0.5f, GhostLatticeEngine.ConnectionType.COLLABORATION, Color.Green)
         )
 
-        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, GhostArchitectEngine.StrategicGoal.COLLABORATION)
+        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, emptyList(), GhostArchitectEngine.StrategicGoal.COLLABORATION)
         assertEquals(0.5f, synergy, 0.001f)
     }
 
@@ -85,7 +85,7 @@ class GhostArchitectEngineTest {
             GhostLatticeEngine.Edge(1L, 2L, 0.1f, GhostLatticeEngine.ConnectionType.FRICTION, Color.Red)
         )
 
-        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, GhostArchitectEngine.StrategicGoal.FOCUS)
+        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1, s2), edges, emptyList(), GhostArchitectEngine.StrategicGoal.FOCUS)
         assertEquals(1.0f, synergy, 0.001f)
     }
 
@@ -93,7 +93,20 @@ class GhostArchitectEngineTest {
     fun testCalculateSynergy_NoEdges() {
         // Should return 1.0 as per Python blueprint
         val s1 = createMockStudent(1, 500f, 500f)
-        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1), emptyList(), GhostArchitectEngine.StrategicGoal.COLLABORATION)
+        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1), emptyList(), emptyList(), GhostArchitectEngine.StrategicGoal.COLLABORATION)
+        assertEquals(1.0f, synergy, 0.001f)
+    }
+
+    @Test
+    fun testCalculateSynergy_Stability_Perfect() {
+        // Students with high negative logs at center (2000, 2000)
+        val s1 = createMockStudent(1, 2000f, 2000f)
+        val logs = listOf(
+            com.example.myapplication.data.BehaviorEvent(1L, "Negative 1", 0L),
+            com.example.myapplication.data.BehaviorEvent(1L, "Negative 2", 0L),
+            com.example.myapplication.data.BehaviorEvent(1L, "Negative 3", 0L)
+        )
+        val synergy = GhostArchitectEngine.calculateSynergy(listOf(s1), emptyList(), logs, GhostArchitectEngine.StrategicGoal.STABILITY)
         assertEquals(1.0f, synergy, 0.001f)
     }
 }

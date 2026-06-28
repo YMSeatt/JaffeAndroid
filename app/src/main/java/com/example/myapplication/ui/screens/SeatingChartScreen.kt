@@ -182,6 +182,7 @@ import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.architect.GhostArchitectDialog
 import com.example.myapplication.labs.ghost.comet.GhostCometEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometLayer
 import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
@@ -405,6 +406,7 @@ fun SeatingChartScreen(
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
+    var showArchitectReport by remember { mutableStateOf(false) }
     var isSnapshotTriggered by remember { mutableStateOf(false) }
     var isStreamActive by remember { mutableStateOf(false) }
     var isCarbonActive by remember { mutableStateOf(false) }
@@ -955,6 +957,7 @@ fun SeatingChartScreen(
                 isArchitectActive = isArchitectActive,
                 onToggleArchitect = { isArchitectActive = !isArchitectActive },
                 onArchitectGoalChange = { architectGoal = it },
+                onShowArchitectReport = { showArchitectReport = true },
                 isVisionActive = isVisionActive,
                 onToggleVision = { isVisionActive = !isVisionActive },
                 isMagnetarActive = isMagnetarActive,
@@ -1505,6 +1508,16 @@ fun SeatingChartScreen(
                         isActive = isCatalystActive
                     )
                 }
+            }
+
+            if (showArchitectReport) {
+                val report = remember(students, latticeEdges, allBehaviorEvents) {
+                    GhostArchitectEngine.generateReport(students, latticeEdges, allBehaviorEvents)
+                }
+                GhostArchitectDialog(
+                    report = report,
+                    onDismiss = { showArchitectReport = false }
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED && isCatalystActive) {
@@ -2364,6 +2377,10 @@ fun SeatingChartScreen(
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                                 Toast.makeText(context, "Perspective: ${mirrorPerspective.name}", Toast.LENGTH_SHORT).show()
                             }
+                            "ARCHITECT" -> {
+                                isArchitectActive = !isArchitectActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                             "SONAR" -> {
                                 sonarOrigin = ghostHubPosition
                                 quietStudentIds = GhostSonarEngine.identifyQuietStudents(
@@ -2729,6 +2746,7 @@ fun SeatingChartTopAppBar(
     isArchitectActive: Boolean,
     onToggleArchitect: () -> Unit,
     onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
+    onShowArchitectReport: () -> Unit,
     isVisionActive: Boolean,
     onToggleVision: () -> Unit,
     isMirageActive: Boolean,
@@ -2921,9 +2939,29 @@ fun SeatingChartTopAppBar(
                                 onClick = {
                                     onArchitectGoalChange(goal)
                                     showArchitectGoals = false
+                                },
+                                trailingIcon = {
+                                    if (architectGoal == goal) Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
                                 }
                             )
                         }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Apply Strategic Alignment") },
+                            onClick = {
+                                seatingChartViewModel.applyArchitectLayout(architectGoal)
+                                showArchitectGoals = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("View Strategic Report") },
+                            onClick = {
+                                onShowArchitectReport()
+                                showArchitectGoals = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Analytics, null) }
+                        )
                     }
                 }
             }
