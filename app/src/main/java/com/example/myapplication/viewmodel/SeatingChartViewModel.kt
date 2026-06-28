@@ -100,6 +100,7 @@ import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.GhostOracle
+import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
 import com.example.myapplication.util.SecurityUtil
 import com.example.myapplication.util.generateLogInitials
@@ -3264,6 +3265,51 @@ class SeatingChartViewModel @Inject constructor(
     companion object {
         /** BOLT: Cached formatter to avoid per-update allocations. */
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm")
+    }
+
+    /**
+     * Executes the strategic layout alignment proposed by the [GhostArchitectEngine].
+     *
+     * Unlike the physics-based Cognitive Optimization, this method applies
+     * pedagogical heuristics (Collaboration, Focus, or Stability) to propose
+     * specific, intentional moves. These moves are bundled into a [MoveItemsCommand]
+     * for atomic undo/redo support.
+     *
+     * @param goal The strategic pedagogical goal to optimize for.
+     */
+    fun applyArchitectLayout(goal: GhostArchitectEngine.StrategicGoal) {
+        viewModelScope.launch {
+            val students = studentsForDisplay.value ?: return@launch
+            val edges = latticeEdges.value
+            val behaviorLogs = allBehaviorEvents.value ?: emptyList()
+
+            val proposals = withContext(Dispatchers.Default) {
+                GhostArchitectEngine.proposeLayout(students, edges, behaviorLogs, goal)
+            }
+
+            if (proposals.isEmpty()) return@launch
+
+            // Fetch raw student entities for the MoveItemsCommand
+            val rawStudents = allStudents.value ?: return@launch
+            val studentsById = rawStudents.associateBy { it.id }
+
+            val moves = proposals.mapNotNull { proposal ->
+                val student = studentsById[proposal.studentId] ?: return@mapNotNull null
+                ItemMove(
+                    id = proposal.studentId,
+                    itemType = ItemType.STUDENT,
+                    oldX = student.xPosition,
+                    oldY = student.yPosition,
+                    newX = proposal.proposedX,
+                    newY = proposal.proposedY,
+                    student = student
+                )
+            }
+
+            if (moves.isNotEmpty()) {
+                executeCommand(MoveItemsCommand(this@SeatingChartViewModel, moves))
+            }
+        }
     }
 
     /**

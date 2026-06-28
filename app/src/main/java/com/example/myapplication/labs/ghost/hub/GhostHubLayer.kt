@@ -139,6 +139,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.KALEIDOSCOPE_MODE_ENABLED) {
                 add(GhostAction("KALEIDOSCOPE", Icons.Default.BlurOn, "Neural Symmetry"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ARCHITECT_MODE_ENABLED) {
+                add(GhostAction("ARCHITECT", Icons.Default.Chair, "Neural Architect"))
+            }
         }
     }
 
