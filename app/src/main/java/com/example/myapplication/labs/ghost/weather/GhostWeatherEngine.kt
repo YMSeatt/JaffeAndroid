@@ -51,19 +51,16 @@ class GhostWeatherEngine {
     private var lastUpdate = System.currentTimeMillis()
 
     /**
-     * Updates weather physics driven by classroom data.
+     * Synthesizes climate state from classroom data.
+     * BOLT: Separated from physics loop to allow background processing and lazy evaluation.
      */
-    fun update(
-        students: List<StudentUiItem>,
+    fun updateClimate(
         behaviorLogs: List<BehaviorEvent>,
-        quizLogs: List<QuizLog>,
-        homeworkLogs: List<HomeworkLog>
+        quizLogs: List<QuizLog>
     ) {
         val now = System.currentTimeMillis()
-        val dt = (now - lastUpdate) / 1000f
-        lastUpdate = now
 
-        // 1. Analyze Classroom Climate (Single-pass traversal for zero-allocation)
+        // 1. Analyze Behavior Climate (Single-pass traversal)
         var recentCount = 0
         var positiveCount = 0
         var negativeCount = 0
@@ -78,7 +75,7 @@ class GhostWeatherEngine {
                     positiveCount++
                 }
             } else if (log.timestamp < now - SPAWN_WINDOW_MS) {
-                // Assuming logs are descending-sorted by timestamp
+                // BOLT: Break early as logs are sorted DESC by timestamp
                 break
             }
         }
@@ -92,19 +89,17 @@ class GhostWeatherEngine {
         // Mode driven by "Social Temperature"
         currentMode = when {
             negativeCount > positiveCount * 2 && recentCount > 5 -> WeatherMode.NEURAL_STORM
-            positiveCount > recentCount * 0.8 && recentCount > 5 -> WeatherMode.SNOW // Calm/Peaceful
+            positiveCount > recentCount * 0.8 && recentCount > 5 -> WeatherMode.SNOW
             else -> WeatherMode.RAIN
         }
 
-        // 2. Lightning Logic (Triggered by high-impact academic events)
-        if (lightningAlpha > 0f) {
-            lightningAlpha -= dt * 3f
-        }
-
+        // 2. Lightning Trigger (Triggered by high-impact academic events)
         var hasRecentQuiz = false
         for (i in quizLogs.indices) {
             if (now - quizLogs[i].timestamp < 60_000L) {
                 hasRecentQuiz = true
+                break
+            } else if (quizLogs[i].timestamp < now - 60_000L) {
                 break
             }
         }
@@ -114,8 +109,19 @@ class GhostWeatherEngine {
             lightningX = random.nextFloat() * CANVAS_SIZE
             lastLightningTime = now
         }
+    }
 
-        // 3. Particle Physics
+    /**
+     * Updates weather physics independent of data analysis.
+     * BOLT: Optimized for 60fps execution on Dispatchers.Default.
+     */
+    fun updatePhysics(dt: Float) {
+        // 1. Lightning Decay
+        if (lightningAlpha > 0f) {
+            lightningAlpha -= dt * 3f
+        }
+
+        // 2. Particle Physics
         val gravity = if (currentMode == WeatherMode.SNOW) GRAVITY_SNOW else GRAVITY_RAIN
         val spawnProbability = intensity * 2f
 
@@ -127,7 +133,7 @@ class GhostWeatherEngine {
 
                 if (currentMode == WeatherMode.SNOW) {
                     partVelY[i] = gravity + (random.nextFloat() * 2f)
-                    partX[i] += kotlin.math.sin(now.toFloat() / 500f + i) * 2f // Sinuous snow motion
+                    partX[i] += kotlin.math.sin(System.currentTimeMillis().toFloat() / 500f + i) * 2f
                 } else {
                     partVelY[i] += gravity * dt * 50f
                 }

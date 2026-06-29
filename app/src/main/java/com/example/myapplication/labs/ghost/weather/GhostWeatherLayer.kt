@@ -26,10 +26,8 @@ import kotlinx.coroutines.delay
 @Composable
 fun GhostWeatherLayer(
     engine: GhostWeatherEngine,
-    students: List<StudentUiItem>,
     behaviorLogs: List<BehaviorEvent>,
     quizLogs: List<QuizLog>,
-    homeworkLogs: List<HomeworkLog>,
     canvasScale: Float,
     canvasOffset: Offset,
     isActive: Boolean,
@@ -46,11 +44,26 @@ fun GhostWeatherLayer(
         label = "time"
     )
 
+    // BOLT: Update climate state only when logs change, outside the 60fps physics loop.
+    LaunchedEffect(behaviorLogs, quizLogs) {
+        engine.updateClimate(behaviorLogs, quizLogs)
+    }
+
     // Physics Update Loop (60fps)
-    LaunchedEffect(isActive, students, behaviorLogs, quizLogs, homeworkLogs) {
-        while (isActive) {
-            engine.update(students, behaviorLogs, quizLogs, homeworkLogs)
-            delay(16)
+    // BOLT: Stable keys (engine, isActive) ensure the loop isn't restarted during student drags.
+    LaunchedEffect(engine, isActive) {
+        if (isActive) {
+            // BOLT: Offload physics to background thread
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                var lastTime = System.currentTimeMillis()
+                while (isActive) {
+                    val now = System.currentTimeMillis()
+                    val dt = (now - lastTime) / 1000f
+                    lastTime = now
+                    engine.updatePhysics(dt)
+                    delay(16)
+                }
+            }
         }
     }
 
