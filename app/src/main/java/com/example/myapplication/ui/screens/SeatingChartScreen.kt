@@ -1209,10 +1209,8 @@ fun SeatingChartScreen(
             )
             GhostWeatherLayer(
                 engine = ghostWeatherEngine,
-                students = students,
                 behaviorLogs = allBehaviorEvents,
                 quizLogs = allQuizLogs,
-                homeworkLogs = allHomeworkLogs,
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isWeatherActive
