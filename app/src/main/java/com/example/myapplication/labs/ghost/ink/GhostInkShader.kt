@@ -6,8 +6,16 @@ import org.intellij.lang.annotations.Language
  * GhostInkShader: Neural Ink AGSL Shader.
  *
  * This shader provides a glowing, procedurally animated effect for persistent
- * classroom annotations. It simulates "Energy Ink" that pulses and exhibits
- * minor data-inspired artifacts.
+ * classroom annotations. It simulates "Energy Ink" using a distance-to-segment
+ * math model (`sdSegment`).
+ *
+ * ### Shader Architecture:
+ * 1. **Distance Modeling**: Iterates through the `iPoints` array to find the minimum
+ *    distance from the current pixel to any segment in the stroke.
+ * 2. **Glowing Field**: Uses an inverse power function `intensity / (d + 2.0)^0.9`
+ *    to create a soft, neon-like glow around the logical line.
+ * 3. **Neural Flicker**: Injects high-frequency procedural artifacts using a
+ *    pseudorandom `hash` function to reinforce the "Experimental Data" aesthetic.
  */
 object GhostInkShader {
 

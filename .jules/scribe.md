@@ -152,5 +152,10 @@
     - **ENERGETIC**: Triggered if > 30% of the students are in an energetic state.
 - **Stability Logic**: The collective stability is derived as `1.0 - (turbulentCount / studentCount)`, which directly modulates the "neural turbulence" (visual flicker) in the AGSL shader.
 
+### 28. Ghost Ink Spatial Hardening
+- **Thinning Threshold**: The engine uses a **25f squared-distance threshold** for point ingestion. This ensures that only meaningful spatial changes are recorded, preventing coordinate bloat in the 4000x4000 logical space.
+- **Shader Pooling**: `GhostInkLayer` implements a strict **16-instance limit** for concurrent stroke rendering using a pre-allocated pool of `RuntimeShader` and `ShaderBrush` objects. This is a critical BOLT optimization to maintain 60fps during complex annotation sessions.
+- **Logical Anchoring**: Unlike UI overlays, Ink strokes are stored in **chart-logical coordinates**. This allows annotations to persist correctly across zoom and pan states, effectively "sticking" to the classroom floor.
+
 ---
 *Documentation love letter from Scribe 📜*

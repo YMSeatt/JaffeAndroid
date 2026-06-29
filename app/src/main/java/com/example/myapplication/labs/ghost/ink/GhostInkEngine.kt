@@ -41,9 +41,16 @@ class GhostInkEngine {
 
     /**
      * Appends a new point to the current active stroke.
+     *
+     * ### BOLT ⚡ Optimization: Distance-Based Thinning
+     * To prevent "Point Explosion"—where a slow gesture generates thousands of redundant
+     * coordinates—this method implements a **25f squared-distance threshold**.
+     *
+     * By only recording points that have moved at least 5 logical units, we significantly
+     * reduce memory usage and improve AGSL rendering performance without sacrificing
+     * visual fidelity.
      */
     fun continueStroke(point: Offset) {
-        // BOLT: Basic distance-based thinning to prevent point explosion
         if (currentStrokePoints.isEmpty()) {
             currentStrokePoints.add(point)
             return
