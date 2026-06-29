@@ -17,12 +17,17 @@ import androidx.compose.ui.input.pointer.pointerInput
 /**
  * GhostInkLayer: The interactive surface for neural annotations.
  *
- * This layer intercepts touch events to record [Stroke]s when active. It correctly
- * transforms screen coordinates into the 4000x4000 logical coordinate space of
- * the seating chart.
+ * This layer acts as a transparent viewport that intercepts touch events to record
+ * [Stroke]s when active. It performs the critical transformation between physical
+ * screen coordinates and the seating chart's **4000x4000 logical coordinate space**.
  *
- * BOLT ⚡ Optimization: Uses a pool of [RuntimeShader] instances on API 33+ to
- * efficiently render multiple strokes in a single pass without redundant JNI calls.
+ * ### BOLT ⚡ Optimization: Shader & Brush Pooling
+ * On API 33+, this layer utilizes a pre-allocated pool of **16 RuntimeShaders**.
+ *
+ * **Why?** Re-allocating `RuntimeShader` and `ShaderBrush` objects on every frame
+ * (or even every stroke update) is extremely expensive and triggers frequent GC pauses.
+ * By maintaining a pool, we can render multiple glowing strokes in a single pass
+ * with zero-allocation efficiency.
  */
 @Composable
 fun GhostInkLayer(
