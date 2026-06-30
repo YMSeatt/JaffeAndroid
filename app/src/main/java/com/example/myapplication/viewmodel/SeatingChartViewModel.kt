@@ -333,6 +333,14 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Proximity-based neural links pre-calculated in background. */
     val neuralLinks: StateFlow<List<GhostLinkEngine.NeuralLink>> = _neuralLinks.asStateFlow()
 
+    /** BOLT: Pre-calculated negative log counts exposed for UI layers (e.g. NeuralMap). */
+    private val _negativeCounts = MutableStateFlow(android.util.LongSparseArray<Int>())
+    val negativeCounts: StateFlow<android.util.LongSparseArray<Int>> = _negativeCounts.asStateFlow()
+
+    /** BOLT: Pre-grouped students by groupId exposed for UI layers. */
+    private val _groupedStudentsByGroup = MutableStateFlow(android.util.LongSparseArray<List<StudentUiItem>>())
+    val groupedStudentsByGroup: StateFlow<android.util.LongSparseArray<List<StudentUiItem>>> = _groupedStudentsByGroup.asStateFlow()
+
     private val _catalystReactions = MutableStateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>>(emptyList())
     /** BOLT: Behavioral chain reactions pre-calculated in background. */
     val catalystReactions: StateFlow<List<com.example.myapplication.labs.ghost.catalyst.GhostCatalystEngine.Reaction>> = _catalystReactions.asStateFlow()
@@ -458,36 +466,36 @@ class SeatingChartViewModel @Inject constructor(
      * This is a critical Stage 1 BOLT optimization. By grouping logs once per update cycle,
      * we ensure that Stage 2 transformation can retrieve a student's history in $O(1)$ time.
      */
-    var behaviorLogsByStudentCache: Map<Long, List<BehaviorEvent>> = emptyMap()
+    var behaviorLogsByStudentCache = android.util.LongSparseArray<List<BehaviorEvent>>()
         private set
 
     /** BOLT: Incremental caches for behavior metrics used by AI engines. */
-    private val negativeCountsCache = ConcurrentHashMap<Long, Int>()
-    private val positiveCountsCache = ConcurrentHashMap<Long, Int>()
-    private val lastPositiveTimestampsCache = ConcurrentHashMap<Long, Long>()
+    private val negativeCountsCache = android.util.LongSparseArray<Int>()
+    private val positiveCountsCache = android.util.LongSparseArray<Int>()
+    private val lastPositiveTimestampsCache = android.util.LongSparseArray<Long>()
 
     /** BOLT: Incremental caches for behavior type distributions used by Entropy. */
-    private val behaviorTypeCountsCache = ConcurrentHashMap<Long, Map<String, Int>>()
-    private val behaviorScoreCache = ConcurrentHashMap<Long, Float>()
+    private val behaviorTypeCountsCache = android.util.LongSparseArray<Map<String, Int>>()
+    private val behaviorScoreCache = android.util.LongSparseArray<Float>()
 
     /** BOLT: Incremental caches for academic metrics. */
-    private val quizSumCache = ConcurrentHashMap<Long, Double>()
-    private val quizSumSqCache = ConcurrentHashMap<Long, Double>()
-    private val quizValidCountCache = ConcurrentHashMap<Long, Int>()
-    private val academicScoreCache = ConcurrentHashMap<Long, Float>()
-    private val homeworkDoneCountCache = ConcurrentHashMap<Long, Int>()
+    private val quizSumCache = android.util.LongSparseArray<Double>()
+    private val quizSumSqCache = android.util.LongSparseArray<Double>()
+    private val quizValidCountCache = android.util.LongSparseArray<Int>()
+    private val academicScoreCache = android.util.LongSparseArray<Float>()
+    private val homeworkDoneCountCache = android.util.LongSparseArray<Int>()
 
-    private val studentMoodCache = ConcurrentHashMap<Long, GhostMoodEngine.StudentMood>()
-    private val insightStatusCache = ConcurrentHashMap<Long, InsightStatus>()
+    private val studentMoodCache = android.util.LongSparseArray<GhostMoodEngine.StudentMood>()
+    private val insightStatusCache = android.util.LongSparseArray<InsightStatus>()
 
     /** BOLT: Incremental caches for expensive Ghost Lab calculations. */
-    private val irisParamsCache = ConcurrentHashMap<Long, com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters>()
-    private val studentPotentialsCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
-    private val altitudeCache = ConcurrentHashMap<Long, Float>()
-    private val entropyScoreCache = ConcurrentHashMap<Long, Float>()
-    private val magneticStrengthCache = ConcurrentHashMap<Long, Float>()
-    private val magneticRadiusCache = ConcurrentHashMap<Long, Float>()
-    private val studentSocialSignaturesCache = ConcurrentHashMap<Long, Pair<Float, Float>>()
+    private val irisParamsCache = android.util.LongSparseArray<com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters>()
+    private val studentPotentialsCache = android.util.LongSparseArray<Pair<Float, Float>>()
+    private val altitudeCache = android.util.LongSparseArray<Float>()
+    private val entropyScoreCache = android.util.LongSparseArray<Float>()
+    private val magneticStrengthCache = android.util.LongSparseArray<Float>()
+    private val magneticRadiusCache = android.util.LongSparseArray<Float>()
+    private val studentSocialSignaturesCache = android.util.LongSparseArray<Pair<Float, Float>>()
 
     /** BOLT: Memoization for AI prophecies and global Ghost metrics to avoid redundant work. */
     private var memoizedProphecies: List<GhostOracle.Prophecy> = emptyList()
@@ -599,7 +607,7 @@ class SeatingChartViewModel @Inject constructor(
     private var memoizedStudents: List<Student>? = null
 
     /** BOLT: Identity-based cache for student data hashes to avoid O(N) calculations. Keyed by student ID. */
-    private val studentDataHashCache = ConcurrentHashMap<Long, Pair<Student, Int>>()
+    private val studentDataHashCache = android.util.LongSparseArray<Pair<Student, Int>>()
 
     private data class StudentCacheKey(
         val studentDataHash: Int,
@@ -644,7 +652,7 @@ class SeatingChartViewModel @Inject constructor(
         val moodValence: Float
     )
 
-    private val studentDerivedDataCache = ConcurrentHashMap<Long, Pair<StudentCacheKey, StudentDerivedData>>()
+    private val studentDerivedDataCache = android.util.LongSparseArray<Pair<StudentCacheKey, StudentDerivedData>>()
 
     /**
      * A persistent cache of [StudentUiItem] instances.
@@ -652,14 +660,14 @@ class SeatingChartViewModel @Inject constructor(
      * fine-grained updates to internal MutableState fields without triggering
      * full-box recompositions or object allocations during scroll/drag.
      */
-    private val studentUiItemCache = ConcurrentHashMap<Int, StudentUiItem>()
+    private val studentUiItemCache = android.util.SparseArray<StudentUiItem>()
 
     /**
      * Cache for pre-calculated student full names.
      * BOLT: Pre-calculating these during the background Stage 1 pass eliminates thousands
      * of string concatenations in the high-frequency Stage 3 sync loop.
      */
-    private var studentNameMapCache = emptyMap<Long, String>()
+    private var studentNameMapCache = android.util.LongSparseArray<String>()
 
     /** BOLT: Track the last list sent to studentsForDisplay to implement List Identity Preservation. */
     private var lastSentStudentsList: List<StudentUiItem>? = null
@@ -855,23 +863,28 @@ class SeatingChartViewModel @Inject constructor(
                 // the cache for all other students.
                 val behaviorEvents = allBehaviorEvents.value ?: emptyList()
                 if (behaviorEvents !== memoizedBehaviorEvents) {
-                    val newGrouped = mutableMapOf<Long, MutableList<BehaviorEvent>>()
+                    val newGrouped = android.util.LongSparseArray<MutableList<BehaviorEvent>>()
                     for (i in behaviorEvents.indices) {
                         val event = behaviorEvents[i]
-                        newGrouped.getOrPut(event.studentId) { mutableListOf() }.add(event)
+                        var list = newGrouped.get(event.studentId)
+                        if (list == null) {
+                            list = mutableListOf()
+                            newGrouped.put(event.studentId, list)
+                        }
+                        list.add(event)
                     }
 
                     val oldGrouped = behaviorLogsByStudentCache
-                    val finalGrouped = mutableMapOf<Long, List<BehaviorEvent>>()
+                    val finalGrouped = android.util.LongSparseArray<List<BehaviorEvent>>(newGrouped.size())
 
-                    for (entry in newGrouped) {
-                        val studentId = entry.key
-                        val newList = entry.value
-                        val oldList = oldGrouped[studentId]
+                    for (i in 0 until newGrouped.size()) {
+                        val studentId = newGrouped.keyAt(i)
+                        val newList = newGrouped.valueAt(i)
+                        val oldList = oldGrouped.get(studentId)
                         if (oldList == newList) {
-                            finalGrouped[studentId] = oldList
+                            finalGrouped.put(studentId, oldList)
                         } else {
-                            finalGrouped[studentId] = newList
+                            finalGrouped.put(studentId, newList)
                             changedLogStudentIds.add(studentId)
 
                             // BOLT: Incremental update of behavior metrics only for changed students
@@ -879,7 +892,8 @@ class SeatingChartViewModel @Inject constructor(
                             var nPos = 0
                             var lastPosTs = -1L
                             val typeCounts = mutableMapOf<String, Int>()
-                            for (log in newList) {
+                            for (j in newList.indices) {
+                                val log = newList[j]
                                 typeCounts[log.type] = (typeCounts[log.type] ?: 0) + 1
                                 if (log.type.contains("Negative", ignoreCase = true)) {
                                     nNeg++
@@ -890,23 +904,27 @@ class SeatingChartViewModel @Inject constructor(
                                     }
                                 }
                             }
-                            negativeCountsCache[studentId] = nNeg
-                            positiveCountsCache[studentId] = nPos
-                            lastPositiveTimestampsCache[studentId] = lastPosTs
-                            behaviorTypeCountsCache[studentId] = typeCounts
-                            behaviorScoreCache[studentId] = if (newList.isEmpty()) 0.5f else nPos.toFloat() / newList.size
+                            negativeCountsCache.put(studentId, nNeg)
+                            positiveCountsCache.put(studentId, nPos)
+                            lastPositiveTimestampsCache.put(studentId, lastPosTs)
+                            behaviorTypeCountsCache.put(studentId, typeCounts)
+                            behaviorScoreCache.put(studentId, if (newList.isEmpty()) 0.5f else nPos.toFloat() / newList.size)
                         }
                     }
 
                     // BOLT: Prune stale metric caches for students whose logs were cleared/deleted
-                    if (finalGrouped.size < oldGrouped.size) {
-                        val currentLogStudentIds = finalGrouped.keys
-                        negativeCountsCache.keys.retainAll(currentLogStudentIds)
-                        positiveCountsCache.keys.retainAll(currentLogStudentIds)
-                        lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
-                        behaviorTypeCountsCache.keys.retainAll(currentLogStudentIds)
-                        behaviorScoreCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    if (finalGrouped.size() < oldGrouped.size()) {
+                        for (i in 0 until oldGrouped.size()) {
+                            val id = oldGrouped.keyAt(i)
+                            if (finalGrouped.get(id) == null) {
+                                negativeCountsCache.remove(id)
+                                positiveCountsCache.remove(id)
+                                lastPositiveTimestampsCache.remove(id)
+                                behaviorTypeCountsCache.remove(id)
+                                behaviorScoreCache.remove(id)
+                                changedLogStudentIds.add(id)
+                            }
+                        }
                     }
 
                     behaviorLogsByStudentCache = finalGrouped
@@ -916,12 +934,24 @@ class SeatingChartViewModel @Inject constructor(
 
                 // BOLT: Memoized AI prophecies to avoid redundant O(N^2) analysis.
                 if (students !== prophecyStudentsRef || behaviorEvents !== prophecyLogsRef) {
+                    // BOLT: Convert SparseArrays to Maps for GhostOracle if needed, or update Oracle to accept SparseArrays.
+                    // For now, we'll do a lightweight conversion as Oracle is called infrequently compared to the main loop.
+                    val logsMap = mutableMapOf<Long, List<BehaviorEvent>>()
+                    val negMap = mutableMapOf<Long, Int>()
+                    val lastPosMap = mutableMapOf<Long, Long>()
+                    for (i in 0 until behaviorLogsByStudent.size()) {
+                        val key = behaviorLogsByStudent.keyAt(i)
+                        logsMap[key] = behaviorLogsByStudent.valueAt(i)
+                        negMap[key] = negativeCountsCache.get(key) ?: 0
+                        lastPosMap[key] = lastPositiveTimestampsCache.get(key) ?: -1L
+                    }
+
                     memoizedProphecies = GhostOracle.consult(
                         students = students,
                         behaviorLogs = behaviorEvents,
-                        behaviorLogsByStudent = behaviorLogsByStudent,
-                        negativeCounts = negativeCountsCache,
-                        lastPositiveTimestamps = lastPositiveTimestampsCache
+                        behaviorLogsByStudent = logsMap,
+                        negativeCounts = negMap,
+                        lastPositiveTimestamps = lastPosMap
                     )
                     prophecyStudentsRef = students
                     prophecyLogsRef = behaviorEvents
@@ -935,40 +965,49 @@ class SeatingChartViewModel @Inject constructor(
 
                 val homeworkLogs = allHomeworkLogs.value ?: emptyList()
                 if (homeworkLogs !== memoizedHomeworkLogs) {
-                    val newGrouped = mutableMapOf<Long, MutableList<HomeworkLog>>()
+                    val newGrouped = android.util.LongSparseArray<MutableList<HomeworkLog>>()
                     for (i in homeworkLogs.indices) {
                         val log = homeworkLogs[i]
-                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                        var list = newGrouped.get(log.studentId)
+                        if (list == null) {
+                            list = mutableListOf()
+                            newGrouped.put(log.studentId, list)
+                        }
+                        list.add(log)
                     }
 
                     val oldGrouped = homeworkLogsByStudentCache
-                    val finalGrouped = mutableMapOf<Long, List<HomeworkLog>>()
+                    val finalGrouped = android.util.LongSparseArray<List<HomeworkLog>>(newGrouped.size())
 
-                    for (entry in newGrouped) {
-                        val studentId = entry.key
-                        val newList = entry.value
-                        val oldList = oldGrouped[studentId]
+                    for (i in 0 until newGrouped.size()) {
+                        val studentId = newGrouped.keyAt(i)
+                        val newList = newGrouped.valueAt(i)
+                        val oldList = oldGrouped.get(studentId)
                         if (oldList == newList) {
-                            finalGrouped[studentId] = oldList
+                            finalGrouped.put(studentId, oldList)
                         } else {
-                            finalGrouped[studentId] = newList
+                            finalGrouped.put(studentId, newList)
                             changedLogStudentIds.add(studentId)
 
                             // BOLT: Incremental update for homework metrics
                             var done = 0
-                            for (log in newList) {
-                                if (log.status.contains("Done", ignoreCase = true)) {
+                            for (j in newList.indices) {
+                                if (newList[j].status.contains("Done", ignoreCase = true)) {
                                     done++
                                 }
                             }
-                            homeworkDoneCountCache[studentId] = done
+                            homeworkDoneCountCache.put(studentId, done)
                         }
                     }
 
-                    if (finalGrouped.size < oldGrouped.size) {
-                        val currentLogStudentIds = finalGrouped.keys
-                        homeworkDoneCountCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    if (finalGrouped.size() < oldGrouped.size()) {
+                        for (i in 0 until oldGrouped.size()) {
+                            val id = oldGrouped.keyAt(i)
+                            if (finalGrouped.get(id) == null) {
+                                homeworkDoneCountCache.remove(id)
+                                changedLogStudentIds.add(id)
+                            }
+                        }
                     }
 
                     homeworkLogsByStudentCache = finalGrouped
@@ -978,30 +1017,36 @@ class SeatingChartViewModel @Inject constructor(
 
                 val quizLogs = allQuizLogs.value ?: emptyList()
                 if (quizLogs !== memoizedQuizLogs) {
-                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
+                    val newGrouped = android.util.LongSparseArray<MutableList<QuizLog>>()
                     for (i in quizLogs.indices) {
                         val log = quizLogs[i]
-                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                        var list = newGrouped.get(log.studentId)
+                        if (list == null) {
+                            list = mutableListOf()
+                            newGrouped.put(log.studentId, list)
+                        }
+                        list.add(log)
                     }
 
                     val oldGrouped = quizLogsByStudentCache
-                    val finalGrouped = mutableMapOf<Long, List<QuizLog>>()
+                    val finalGrouped = android.util.LongSparseArray<List<QuizLog>>(newGrouped.size())
 
-                    for (entry in newGrouped) {
-                        val studentId = entry.key
-                        val newList = entry.value
-                        val oldList = oldGrouped[studentId]
+                    for (i in 0 until newGrouped.size()) {
+                        val studentId = newGrouped.keyAt(i)
+                        val newList = newGrouped.valueAt(i)
+                        val oldList = oldGrouped.get(studentId)
                         if (oldList == newList) {
-                            finalGrouped[studentId] = oldList
+                            finalGrouped.put(studentId, oldList)
                         } else {
-                            finalGrouped[studentId] = newList
+                            finalGrouped.put(studentId, newList)
                             changedLogStudentIds.add(studentId)
 
                             // BOLT: Incremental update for academic metrics
                             var sum = 0.0
                             var sumSq = 0.0
                             var count = 0
-                            for (log in newList) {
+                            for (j in newList.indices) {
+                                val log = newList[j]
                                 val v = log.markValue
                                 val m = log.maxMarkValue
                                 if (v != null && m != null && m > 0.0) {
@@ -1011,20 +1056,24 @@ class SeatingChartViewModel @Inject constructor(
                                     count++
                                 }
                             }
-                            quizSumCache[studentId] = sum
-                            quizSumSqCache[studentId] = sumSq
-                            quizValidCountCache[studentId] = count
-                            academicScoreCache[studentId] = if (count > 0) (sum / count).toFloat() else 0.75f
+                            quizSumCache.put(studentId, sum)
+                            quizSumSqCache.put(studentId, sumSq)
+                            quizValidCountCache.put(studentId, count)
+                            academicScoreCache.put(studentId, if (count > 0) (sum / count).toFloat() else 0.75f)
                         }
                     }
 
-                    if (finalGrouped.size < oldGrouped.size) {
-                        val currentLogStudentIds = finalGrouped.keys
-                        quizSumCache.keys.retainAll(currentLogStudentIds)
-                        quizSumSqCache.keys.retainAll(currentLogStudentIds)
-                        quizValidCountCache.keys.retainAll(currentLogStudentIds)
-                        academicScoreCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                    if (finalGrouped.size() < oldGrouped.size()) {
+                        for (i in 0 until oldGrouped.size()) {
+                            val id = oldGrouped.keyAt(i)
+                            if (finalGrouped.get(id) == null) {
+                                quizSumCache.remove(id)
+                                quizSumSqCache.remove(id)
+                                quizValidCountCache.remove(id)
+                                academicScoreCache.remove(id)
+                                changedLogStudentIds.add(id)
+                            }
+                        }
                     }
 
                     quizLogsByStudentCache = finalGrouped
@@ -1035,28 +1084,32 @@ class SeatingChartViewModel @Inject constructor(
                 val sessionActive = isSessionActive.value == true
                 val currentSessionQuizLogs = if (sessionActive) sessionQuizLogs.value ?: emptyList() else emptyList()
                 if (currentSessionQuizLogs !== memoizedSessionQuizLogs) {
-                    val newGrouped = mutableMapOf<Long, MutableList<QuizLog>>()
+                    val newGrouped = android.util.LongSparseArray<List<QuizLog>>()
+                    val tempMap = mutableMapOf<Long, MutableList<QuizLog>>()
                     for (log in currentSessionQuizLogs) {
-                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                        tempMap.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
-                    val oldGrouped = sessionQuizLogsByStudentCache
-                    sessionQuizLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
-                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    tempMap.forEach { (sid, list) ->
+                        val oldList = sessionQuizLogsByStudentCache.get(sid)
+                        newGrouped.put(sid, if (oldList == list) oldList else list)
                     }
+                    sessionQuizLogsByStudentCache = newGrouped
                     memoizedSessionQuizLogs = currentSessionQuizLogs
                 }
                 val sessionQuizLogsGrouped = sessionQuizLogsByStudentCache
 
                 val currentSessionHomeworkLogs = if (sessionActive) sessionHomeworkLogs.value ?: emptyList() else emptyList()
                 if (currentSessionHomeworkLogs !== memoizedSessionHomeworkLogs) {
-                    val newGrouped = mutableMapOf<Long, MutableList<HomeworkLog>>()
+                    val newGrouped = android.util.LongSparseArray<List<HomeworkLog>>()
+                    val tempMap = mutableMapOf<Long, MutableList<HomeworkLog>>()
                     for (log in currentSessionHomeworkLogs) {
-                        newGrouped.getOrPut(log.studentId) { mutableListOf() }.add(log)
+                        tempMap.getOrPut(log.studentId) { mutableListOf() }.add(log)
                     }
-                    val oldGrouped = sessionHomeworkLogsByStudentCache
-                    sessionHomeworkLogsByStudentCache = newGrouped.mapValues { (sid, newList) ->
-                        if (oldGrouped[sid] == newList) oldGrouped[sid]!! else newList
+                    tempMap.forEach { (sid, list) ->
+                        val oldList = sessionHomeworkLogsByStudentCache.get(sid)
+                        newGrouped.put(sid, if (oldList == list) oldList else list)
                     }
+                    sessionHomeworkLogsByStudentCache = newGrouped
                     memoizedSessionHomeworkLogs = currentSessionHomeworkLogs
                 }
                 val sessionHomeworkLogsGrouped = sessionHomeworkLogsByStudentCache
@@ -1187,9 +1240,13 @@ class SeatingChartViewModel @Inject constructor(
                     for (i in 0 until students.size) {
                         studentIds.add(students[i].id)
                     }
+                    val behaviorLogsMap = mutableMapOf<Long, List<BehaviorEvent>>()
+                    for (i in 0 until behaviorLogsByStudent.size()) {
+                        behaviorLogsMap[behaviorLogsByStudent.keyAt(i)] = behaviorLogsByStudent.valueAt(i)
+                    }
                     ghostMetricsIonMapCache = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateIonMetrics(
                         studentIds = studentIds,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = behaviorLogsMap
                     )
                     _globalIonBalance.value = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateGlobalBalanceFromMetrics(ghostMetricsIonMapCache)
 
@@ -1199,11 +1256,19 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Calculate position-aware Ghost metrics in the background pipeline (Memoized)
                 // These metrics depend on both behavioral history and physical student coordinates.
                 if (behaviorEvents !== ghostMetricsPosAwareBehaviorLogsRef || studentsForEngines !== ghostMetricsStudentsRef) {
+                    val logsMap = mutableMapOf<Long, List<BehaviorEvent>>()
+                    val negMap = mutableMapOf<Long, Int>()
+                    for (i in 0 until behaviorLogsByStudent.size()) {
+                        val key = behaviorLogsByStudent.keyAt(i)
+                        logsMap[key] = behaviorLogsByStudent.valueAt(i)
+                        negMap[key] = negativeCountsCache.get(key) ?: 0
+                    }
+
                     // BOLT: Calculate BioSync metrics in the background pipeline
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.BIOSYNC_MODE_ENABLED) {
                         val bioStates = GhostBioSyncEngine.calculateBioStates(
                             students = studentsForEngines,
-                            behaviorLogsByStudent = behaviorLogsByStudent,
+                            behaviorLogsByStudent = logsMap,
                             now = currentTime
                         )
                         _classroomHarmony.value = GhostBioSyncEngine.calculateHarmony(bioStates)
@@ -1224,11 +1289,11 @@ class SeatingChartViewModel @Inject constructor(
 
                     _chronosHeatmap.value = com.example.myapplication.labs.ghost.GhostChronosEngine.calculateHeatmap(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = logsMap
                     )
                     val newEdges = com.example.myapplication.labs.ghost.lattice.GhostLatticeEngine.computeLatticeForStudents(
                         students = studentsForEngines,
-                        negativeCounts = negativeCountsCache
+                        negativeCounts = negMap
                     )
                     _latticeEdges.value = newEdges
 
@@ -1241,7 +1306,7 @@ class SeatingChartViewModel @Inject constructor(
                     // BOLT: Calculate behavioral vortices in the background pipeline
                     _vortices.value = com.example.myapplication.labs.ghost.vortex.GhostVortexEngine.identifyVortices(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = logsMap
                     )
 
                     // BOLT: Calculate Ghost Kaleidoscope fragments in the background pipeline (Memoized)
@@ -1251,7 +1316,7 @@ class SeatingChartViewModel @Inject constructor(
                             // BOLT: Use studentsForEngines to ensure fluid tracking during drag.
                             val fragments = GhostKaleidoscopeEngine.synthesizeFragments(
                                 students = studentsForEngines,
-                                behaviorLogsByStudent = behaviorLogsByStudent,
+                                behaviorLogsByStudent = logsMap,
                                 now = currentTime
                             )
                             _kaleidoscopeFragments.value = fragments
@@ -1264,7 +1329,7 @@ class SeatingChartViewModel @Inject constructor(
                     // BOLT: Calculate tectonic stress nodes in the background pipeline
                     val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
                         students = studentsForEngines,
-                        negativeCounts = negativeCountsCache
+                        negativeCounts = negMap
                     )
                     ghostMetricsTectonicStressMapCache = tectonicNodes.associate { it.id to it.stress }
 
@@ -1272,12 +1337,17 @@ class SeatingChartViewModel @Inject constructor(
                     ghostMetricsStudentsRef = studentsForEngines
                 }
 
+                val behaviorLogsMap = mutableMapOf<Long, List<BehaviorEvent>>()
+                for (i in 0 until behaviorLogsByStudent.size()) {
+                    behaviorLogsMap[behaviorLogsByStudent.keyAt(i)] = behaviorLogsByStudent.valueAt(i)
+                }
+
                 // BOLT: Calculate quantum entanglement links in the background pipeline (Memoized)
                 if (behaviorEvents !== ghostMetricsEntanglementBehaviorLogsRef || studentsForEngines !== ghostMetricsEntanglementStudentsRef) {
                     val entangledNodes = ArrayList<com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode>(studentsForEngines.size)
                     for (i in 0 until studentsForEngines.size) {
                         val s = studentsForEngines[i]
-                        val sig = studentSocialSignaturesCache[s.id] ?: (0.5f to 0.5f)
+                        val sig = studentSocialSignaturesCache.get(s.id) ?: (0.5f to 0.5f)
                         entangledNodes.add(com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.EntangledNode(
                             id = s.id,
                             x = s.xPosition,
@@ -1298,7 +1368,7 @@ class SeatingChartViewModel @Inject constructor(
                 if (behaviorEvents !== ghostMetricsSyncBehaviorLogsRef || studentsForEngines !== ghostMetricsSyncStudentsRef) {
                     _syncLinks.value = com.example.myapplication.labs.ghost.sync.GhostSyncEngine.calculateSyncLinksForStudents(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = behaviorLogsMap
                     )
                     ghostMetricsSyncBehaviorLogsRef = behaviorEvents
                     ghostMetricsSyncStudentsRef = studentsForEngines
@@ -1308,7 +1378,7 @@ class SeatingChartViewModel @Inject constructor(
                 if (behaviorEvents !== ghostMetricsLinkBehaviorLogsRef || studentsForEngines !== ghostMetricsLinkStudentsRef) {
                     _neuralLinks.value = GhostLinkEngine.identifyNeuralLinks(
                         students = studentsForEngines,
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = behaviorLogsMap
                     )
                     ghostMetricsLinkBehaviorLogsRef = behaviorEvents
                     ghostMetricsLinkStudentsRef = studentsForEngines
@@ -1337,16 +1407,24 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Calculate behavioral twins in the background pipeline (Memoized)
                 if (behaviorEvents !== ghostMetricsCarbonBehaviorLogsRef) {
                     _carbonTwins.value = com.example.myapplication.labs.ghost.carbon.GhostCarbonEngine.identifyTwins(
-                        behaviorLogsByStudent = behaviorLogsByStudent
+                        behaviorLogsByStudent = behaviorLogsMap
                     )
                     ghostMetricsCarbonBehaviorLogsRef = behaviorEvents
                 }
 
                 // BOLT: Calculate neural threads in the background pipeline (Memoized)
                 if (quizLogs !== ghostMetricsWeaverQuizLogsRef || homeworkLogs !== ghostMetricsWeaverHomeworkLogsRef) {
+                    val qMap = mutableMapOf<Long, List<QuizLog>>()
+                    for (i in 0 until quizLogsByStudent.size()) {
+                        qMap[quizLogsByStudent.keyAt(i)] = quizLogsByStudent.valueAt(i)
+                    }
+                    val hMap = mutableMapOf<Long, List<HomeworkLog>>()
+                    for (i in 0 until homeworkLogsByStudent.size()) {
+                        hMap[homeworkLogsByStudent.keyAt(i)] = homeworkLogsByStudent.valueAt(i)
+                    }
                     _weaverThreads.value = com.example.myapplication.labs.ghost.weaver.GhostWeaverEngine.identifyThreads(
-                        quizLogsByStudent = quizLogsByStudent,
-                        homeworkLogsByStudent = homeworkLogsByStudent
+                        quizLogsByStudent = qMap,
+                        homeworkLogsByStudent = hMap
                     )
                     ghostMetricsWeaverQuizLogsRef = quizLogs
                     ghostMetricsWeaverHomeworkLogsRef = homeworkLogs
@@ -1358,7 +1436,7 @@ class SeatingChartViewModel @Inject constructor(
                     val propheciesByStudent = memoizedProphecies.groupBy { it.studentId }
                     _futureEvents.value = com.example.myapplication.labs.ghost.GhostFutureEngine.generateFutureEvents(
                         students = students,
-                        logsByStudent = behaviorLogsByStudent,
+                        logsByStudent = behaviorLogsMap,
                         propheciesByStudent = propheciesByStudent,
                         hoursIntoFuture = 2
                     )
@@ -1382,7 +1460,7 @@ class SeatingChartViewModel @Inject constructor(
                     if (behaviorEvents !== ghostMetricsPosAwareBehaviorLogsRef || students !== ghostMetricsStudentsRef) {
                         _resilienceScores.value = GhostPhoenixEngine.calculateResilienceScores(
                             students = students,
-                            behaviorLogsByStudent = behaviorLogsByStudent
+                            behaviorLogsByStudent = behaviorLogsMap
                         )
                     }
                 }
@@ -1406,69 +1484,69 @@ class SeatingChartViewModel @Inject constructor(
                 // BOLT: Incremental update for Ghost metrics based on changed log identities.
                 for (i in students.indices) {
                     val student = students[i]
-                    if (changedLogStudentIds.contains(student.id) || !irisParamsCache.containsKey(student.id)) {
-                        val bLogs = behaviorLogsByStudent[student.id] ?: emptyList()
-                        val qLogs = quizLogsByStudent[student.id] ?: emptyList()
-                        val hLogs = homeworkLogsByStudent[student.id] ?: emptyList()
+                    if (changedLogStudentIds.contains(student.id) || irisParamsCache.get(student.id) == null) {
+                        val bLogs = behaviorLogsByStudent.get(student.id) ?: emptyList()
+                        val qLogs = quizLogsByStudent.get(student.id) ?: emptyList()
+                        val hLogs = homeworkLogsByStudent.get(student.id) ?: emptyList()
 
-                        val bBalance = behaviorScoreCache[student.id] ?: 0.5f
-                        val qAvg = academicScoreCache[student.id] ?: 0.75f
+                        val bBalance = behaviorScoreCache.get(student.id) ?: 0.5f
+                        val qAvg = academicScoreCache.get(student.id) ?: 0.75f
                         val totalLogs = bLogs.size + qLogs.size + hLogs.size
 
-                        irisParamsCache[student.id] = com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
+                        irisParamsCache.put(student.id, com.example.myapplication.labs.ghost.GhostIrisEngine.calculateIris(
                             studentId = student.id,
                             behaviorBalance = bBalance,
                             avgQuiz = qAvg,
                             totalLogs = totalLogs
-                        )
-                        studentPotentialsCache[student.id] = com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
+                        ))
+                        studentPotentialsCache.put(student.id, com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.calculateStudentPotentials(
                             bLogs, qLogs, hLogs
-                        )
-                        altitudeCache[student.id] = com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
+                        ))
+                        altitudeCache.put(student.id, com.example.myapplication.labs.ghost.zenith.GhostZenithEngine.calculateStudentAltitude(
                             academicScore = qAvg,
                             behaviorScore = bBalance
-                        )
+                        ))
 
                         val bEntropy = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateBehaviorEntropy(
-                            typeCounts = behaviorTypeCountsCache[student.id] ?: emptyMap(),
+                            typeCounts = behaviorTypeCountsCache.get(student.id) ?: emptyMap(),
                             totalLogs = bLogs.size
                         )
                         val aVariance = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateAcademicVariance(
-                            sum = quizSumCache[student.id] ?: 0.0,
-                            sumSq = quizSumSqCache[student.id] ?: 0.0,
-                            count = quizValidCountCache[student.id] ?: 0
+                            sum = quizSumCache.get(student.id) ?: 0.0,
+                            sumSq = quizSumSqCache.get(student.id) ?: 0.0,
+                            count = quizValidCountCache.get(student.id) ?: 0
                         )
-                        entropyScoreCache[student.id] = com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance)
+                        entropyScoreCache.put(student.id, com.example.myapplication.labs.ghost.entropy.GhostEntropyEngine.calculateEntropyScore(bEntropy, aVariance))
 
                         // BOLT: Update student social signature for Magnetar
-                        val nPos = positiveCountsCache[student.id] ?: 0
-                        val nNeg = negativeCountsCache[student.id] ?: 0
+                        val nPos = positiveCountsCache.get(student.id) ?: 0
+                        val nNeg = negativeCountsCache.get(student.id) ?: 0
                         val mStrength = (nPos.toFloat() - nNeg.toFloat() * 1.5f).coerceIn(-10f, 10f)
-                        magneticStrengthCache[student.id] = mStrength
-                        magneticRadiusCache[student.id] = (abs(mStrength) * 50f + 100f).coerceIn(100f, 600f)
+                        magneticStrengthCache.put(student.id, mStrength)
+                        magneticRadiusCache.put(student.id, (abs(mStrength) * 50f + 100f).coerceIn(100f, 600f))
 
                         // BOLT: Update student social signature for entanglement
-                        studentSocialSignaturesCache[student.id] = com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.calculateNodeMetrics(
+                        studentSocialSignaturesCache.put(student.id, com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine.calculateNodeMetrics(
                             behaviorLogs = bLogs,
                             quizLogs = qLogs,
                             homeworkLogs = hLogs
-                        )
+                        ))
 
                         // BOLT: Pre-calculate student-level mood and insight status
-                        studentMoodCache[student.id] = GhostMoodEngine.calculateSingleStudentMood(
+                        studentMoodCache.put(student.id, GhostMoodEngine.calculateSingleStudentMood(
                             studentId = student.id,
                             bLogs = bLogs,
                             qLogs = qLogs,
                             hLogs = hLogs,
                             now = currentTime
-                        )
+                        ))
 
-                        insightStatusCache[student.id] = GhostInsightEngine.calculateInsightStatus(
+                        insightStatusCache.put(student.id, GhostInsightEngine.calculateInsightStatus(
                             avgQuiz = qAvg.toDouble(),
-                            homeworkCompletion = if (hLogs.isNotEmpty()) (homeworkDoneCountCache[student.id] ?: 0).toDouble() / hLogs.size else 1.0,
-                            positiveBehavior = positiveCountsCache[student.id] ?: 0,
-                            negativeBehavior = negativeCountsCache[student.id] ?: 0
-                        )
+                            homeworkCompletion = if (hLogs.isNotEmpty()) (homeworkDoneCountCache.get(student.id) ?: 0).toDouble() / hLogs.size else 1.0,
+                            positiveBehavior = positiveCountsCache.get(student.id) ?: 0,
+                            negativeBehavior = negativeCountsCache.get(student.id) ?: 0
+                        ))
                     }
                 }
 
@@ -1476,7 +1554,7 @@ class SeatingChartViewModel @Inject constructor(
                 if (students !== ghostMetricsStudentsRef || changedLogStudentIds.isNotEmpty()) {
                     val moodsForAggregation = ArrayList<GhostMoodEngine.StudentMood>(students.size)
                     for (i in 0 until students.size) {
-                        studentMoodCache[students[i].id]?.let { moodsForAggregation.add(it) }
+                        studentMoodCache.get(students[i].id)?.let { moodsForAggregation.add(it) }
                     }
                     _classroomMood.value = GhostMoodEngine.calculateClassroomMood(moodsForAggregation)
                 }
@@ -1485,34 +1563,49 @@ class SeatingChartViewModel @Inject constructor(
                 // Detects additions/removals even if the total count remains the same.
                 if (students !== memoizedStudents) {
                     // BOLT: Pre-calculate student names once per roster change to avoid redundant allocations in loops.
-                    studentNameMapCache = students.associate { it.id to "${it.firstName} ${it.lastName}" }
-
+                    val nameMap = android.util.LongSparseArray<String>(students.size)
                     val currentStudentIds = HashSet<Long>(students.size * 2)
-                    for (s in students) currentStudentIds.add(s.id)
+                    for (s in students) {
+                        nameMap.put(s.id, "${s.firstName} ${s.lastName}")
+                        currentStudentIds.add(s.id)
+                    }
+                    studentNameMapCache = nameMap
 
-                    val isPresent: (Long) -> Boolean = { it in currentStudentIds }
+                    val isNotPresent: (Long) -> Boolean = { it !in currentStudentIds }
 
-                    studentUiItemCache.keys.retainAll { it.toLong() in currentStudentIds }
-                    studentDerivedDataCache.keys.retainAll(isPresent)
-                    irisParamsCache.keys.retainAll(isPresent)
-                    studentPotentialsCache.keys.retainAll(isPresent)
-                    altitudeCache.keys.retainAll(isPresent)
-                    entropyScoreCache.keys.retainAll(isPresent)
-                    magneticStrengthCache.keys.retainAll(isPresent)
-                    magneticRadiusCache.keys.retainAll(isPresent)
+                    fun <T> android.util.LongSparseArray<T>.prune() {
+                        var i = 0
+                        while (i < size()) {
+                            if (isNotPresent(keyAt(i))) removeAt(i) else i++
+                        }
+                    }
 
-                    behaviorTypeCountsCache.keys.retainAll(isPresent)
-                    behaviorScoreCache.keys.retainAll(isPresent)
-                    quizSumCache.keys.retainAll(isPresent)
-                    quizSumSqCache.keys.retainAll(isPresent)
-                    quizValidCountCache.keys.retainAll(isPresent)
-                    academicScoreCache.keys.retainAll(isPresent)
-                    homeworkDoneCountCache.keys.retainAll(isPresent)
-                    studentMoodCache.keys.retainAll(isPresent)
-                    insightStatusCache.keys.retainAll(isPresent)
+                    // SparseArray doesn't have retainAll, so we manual prune
+                    var i = 0
+                    while (i < studentUiItemCache.size()) {
+                        if (studentUiItemCache.keyAt(i).toLong() !in currentStudentIds) studentUiItemCache.removeAt(i) else i++
+                    }
 
-                    studentDataHashCache.keys.retainAll(isPresent)
-                    studentSocialSignaturesCache.keys.retainAll(isPresent)
+                    studentDerivedDataCache.prune()
+                    irisParamsCache.prune()
+                    studentPotentialsCache.prune()
+                    altitudeCache.prune()
+                    entropyScoreCache.prune()
+                    magneticStrengthCache.prune()
+                    magneticRadiusCache.prune()
+
+                    behaviorTypeCountsCache.prune()
+                    behaviorScoreCache.prune()
+                    quizSumCache.prune()
+                    quizSumSqCache.prune()
+                    quizValidCountCache.prune()
+                    academicScoreCache.prune()
+                    homeworkDoneCountCache.prune()
+                    studentMoodCache.prune()
+                    insightStatusCache.prune()
+
+                    studentDataHashCache.prune()
+                    studentSocialSignaturesCache.prune()
                     memoizedStudents = students
                 }
 
@@ -1528,27 +1621,27 @@ class SeatingChartViewModel @Inject constructor(
                     val student = students[idx]
                     val lastCleared = lastClearedTimestamps[student.id] ?: 0L
                     // BOLT: Use identity-based cache for student data hash to avoid O(N) calculations.
-                    val cachedHashEntry = studentDataHashCache[student.id]
+                    val cachedHashEntry = studentDataHashCache.get(student.id)
                     val studentDataHash = if (cachedHashEntry != null && cachedHashEntry.first === student) {
                         cachedHashEntry.second
                     } else {
-                        getStudentDataHash(student).also { studentDataHashCache[student.id] = student to it }
+                        getStudentDataHash(student).also { studentDataHashCache.put(student.id, student to it) }
                     }
 
-                    val behaviorList = behaviorLogsByStudent[student.id]
-                    val homeworkList = homeworkLogsByStudent[student.id]
-                    val quizList = quizLogsByStudent[student.id]
+                    val behaviorList = behaviorLogsByStudent.get(student.id)
+                    val homeworkList = homeworkLogsByStudent.get(student.id)
+                    val quizList = quizLogsByStudent.get(student.id)
                     val currentModeValue = currentMode.value ?: "behavior"
 
-                    val cached = studentDerivedDataCache[student.id]
+                    val cached = studentDerivedDataCache.get(student.id)
                     val cachedKey = cached?.first
                     val isCacheHit = cachedKey != null &&
                             cachedKey.studentDataHash == studentDataHash &&
                             cachedKey.behaviorLogsIdentity == System.identityHashCode(behaviorList) &&
                             cachedKey.homeworkLogsIdentity == System.identityHashCode(homeworkList) &&
                             cachedKey.quizLogsIdentity == System.identityHashCode(quizList) &&
-                            cachedKey.sessionQuizLogsIdentity == System.identityHashCode(sessionQuizLogsGrouped[student.id]) &&
-                            cachedKey.sessionHomeworkLogsIdentity == System.identityHashCode(sessionHomeworkLogsGrouped[student.id]) &&
+                            cachedKey.sessionQuizLogsIdentity == System.identityHashCode(sessionQuizLogsGrouped.get(student.id)) &&
+                            cachedKey.sessionHomeworkLogsIdentity == System.identityHashCode(sessionHomeworkLogsGrouped.get(student.id)) &&
                             cachedKey.rulesIdentity == System.identityHashCode(decodedRules) &&
                             cachedKey.groupsIdentity == groupsIdentity &&
                             cachedKey.relevantPrefsHash == relevantPrefsHash &&
@@ -1565,8 +1658,8 @@ class SeatingChartViewModel @Inject constructor(
                             behaviorLogsIdentity = System.identityHashCode(behaviorList),
                             homeworkLogsIdentity = System.identityHashCode(homeworkList),
                             quizLogsIdentity = System.identityHashCode(quizList),
-                            sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped[student.id]),
-                            sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped[student.id]),
+                            sessionQuizLogsIdentity = System.identityHashCode(sessionQuizLogsGrouped.get(student.id)),
+                            sessionHomeworkLogsIdentity = System.identityHashCode(sessionHomeworkLogsGrouped.get(student.id)),
                             rulesIdentity = System.identityHashCode(decodedRules),
                             groupsIdentity = groupsIdentity,
                             relevantPrefsHash = relevantPrefsHash,
@@ -1636,14 +1729,14 @@ class SeatingChartViewModel @Inject constructor(
 
                         val sessionLogs = if (sessionActive) {
                             val sLogs = ArrayList<String>(maxLogsToDisplay)
-                            val qLogsSess = sessionQuizLogsGrouped[student.id]
+                            val qLogsSess = sessionQuizLogsGrouped.get(student.id)
                             if (qLogsSess != null) {
                                 for (i in 0 until qLogsSess.size) {
                                     if (sLogs.size >= maxLogsToDisplay) break
                                     sLogs.add("Quiz: ${qLogsSess[i].comment}")
                                 }
                             }
-                            val hLogsSess = sessionHomeworkLogsGrouped[student.id]
+                            val hLogsSess = sessionHomeworkLogsGrouped.get(student.id)
                             if (hLogsSess != null) {
                                 for (i in 0 until hLogsSess.size) {
                                     if (sLogs.size >= maxLogsToDisplay) break
@@ -1707,22 +1800,22 @@ class SeatingChartViewModel @Inject constructor(
                         )
 
                         // 2f. BOLT: Retrieve Ghost Lab metrics from Stage 1 caches.
-                        val irisParams = irisParamsCache[student.id] ?: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters(
+                        val irisParams = irisParamsCache.get(student.id) ?: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters(
                             (student.id * 12345.678f) % 1000f, Color.White, Color.Blue, 0.5f
                         )
-                        val potentials = studentPotentialsCache[student.id] ?: (0.5f to 0f)
-                        val altitude = altitudeCache[student.id] ?: 0.5f
-                        val entropyScore = entropyScoreCache[student.id] ?: 0f
+                        val potentials = studentPotentialsCache.get(student.id) ?: (0.5f to 0f)
+                        val altitude = altitudeCache.get(student.id) ?: 0.5f
+                        val entropyScore = entropyScoreCache.get(student.id) ?: 0f
 
                         val tStress = tectonicStressMap[student.id] ?: 0f
                         val qMetrics = quasarMetricsMap[student.id] ?: (0f to 0f)
                         val iMetrics = ionMetricsMap[student.id] ?: (0f to 0f)
-                        val mStrength = magneticStrengthCache[student.id] ?: 0f
-                        val mRadius = magneticRadiusCache[student.id] ?: 100f
+                        val mStrength = magneticStrengthCache.get(student.id) ?: 0f
+                        val mRadius = magneticRadiusCache.get(student.id) ?: 100f
 
                         // BOLT: Retrieve pre-calculated student-level mood and insight status from caches
-                        val status = insightStatusCache[student.id] ?: InsightStatus.UNKNOWN
-                        val studentMood = studentMoodCache[student.id] ?: GhostMoodEngine.StudentMood(
+                        val status = insightStatusCache.get(student.id) ?: InsightStatus.UNKNOWN
+                        val studentMood = studentMoodCache.get(student.id) ?: GhostMoodEngine.StudentMood(
                             student.id, GhostMoodEngine.MoodState.CALM, 0.2f, 0f
                         )
 
@@ -1751,7 +1844,7 @@ class SeatingChartViewModel @Inject constructor(
                             studentMood.intensity,
                             studentMood.valence
                         ).also {
-                            studentDerivedDataCache[student.id] = cacheKey to it
+                            studentDerivedDataCache.put(student.id, cacheKey to it)
                         }
                     }
 
@@ -1789,7 +1882,7 @@ class SeatingChartViewModel @Inject constructor(
                     // Reuse or create UI item instances.
                     // Reusing instances allows Compose to perform optimized "diff-and-patch"
                     // updates to individual fields.
-                    val existingItem = studentUiItemCache[student.id.toInt()]
+                    val existingItem = studentUiItemCache.get(student.id.toInt())
                     if (existingItem != null) {
                         // BOLT: Skip Stage 3 Sync if Stage 2 was a cache hit and volatile fields haven't changed.
                         // This eliminates ~15 property checks and several list/string allocations per student.
@@ -1800,7 +1893,7 @@ class SeatingChartViewModel @Inject constructor(
                         if (needsSync) {
                             studentForUi.updateStudentUiItem(
                                 item = existingItem,
-                                fullName = studentNameMapCache[student.id] ?: "",
+                                fullName = studentNameMapCache.get(student.id) ?: "",
                                 recentBehaviorDescription = behaviorDescription,
                                 recentHomeworkDescription = homeworkDescription,
                                 recentQuizDescription = quizDescription,
@@ -1837,7 +1930,7 @@ class SeatingChartViewModel @Inject constructor(
                         studentsWithBehavior.add(existingItem)
                     } else {
                         val newItem = studentForUi.toStudentUiItem(
-                            fullName = studentNameMapCache[student.id] ?: "",
+                            fullName = studentNameMapCache.get(student.id) ?: "",
                             recentBehaviorDescription = behaviorDescription,
                             recentHomeworkDescription = homeworkDescription,
                             recentQuizDescription = quizDescription,
@@ -1903,6 +1996,27 @@ class SeatingChartViewModel @Inject constructor(
                 if (listChanged) {
                     lastSentStudentsList = studentsWithBehavior
                     studentsForDisplay.postValue(studentsWithBehavior)
+
+                    // BOLT: Publish optimized groupings for UI layers
+                    val groupMap = android.util.LongSparseArray<MutableList<StudentUiItem>>()
+                    for (i in studentsWithBehavior.indices) {
+                        val s = studentsWithBehavior[i]
+                        val gId = s.groupId.value
+                        if (gId != null) {
+                            var list = groupMap.get(gId)
+                            if (list == null) {
+                                list = mutableListOf()
+                                groupMap.put(gId, list)
+                            }
+                            list.add(s)
+                        }
+                    }
+                    val finalGroupMap = android.util.LongSparseArray<List<StudentUiItem>>(groupMap.size())
+                    for (i in 0 until groupMap.size()) {
+                        finalGroupMap.put(groupMap.keyAt(i), groupMap.valueAt(i))
+                    }
+                    _groupedStudentsByGroup.value = finalGroupMap
+                    _negativeCounts.value = negativeCountsCache.clone()
                 }
             }
         }
@@ -2769,7 +2883,10 @@ class SeatingChartViewModel @Inject constructor(
             for (i in 0 until furnitureList.size) {
                 currentFurnitureIds.add(furnitureList[i].id)
             }
-            furnitureUiItemCache.keys.retainAll { it in currentFurnitureIds }
+            var i = 0
+            while (i < furnitureUiItemCache.size()) {
+                if (furnitureUiItemCache.keyAt(i) !in currentFurnitureIds) furnitureUiItemCache.removeAt(i) else i++
+            }
             memoizedFurniture = furnitureList
         }
 
@@ -2789,13 +2906,13 @@ class SeatingChartViewModel @Inject constructor(
                 furniture
             }
 
-            val existingItem = furnitureUiItemCache[furniture.id]
+            val existingItem = furnitureUiItemCache.get(furniture.id)
             if (existingItem != null) {
                 furnitureToSync.updateFurnitureUiItem(existingItem)
                 mappedList.add(existingItem)
             } else {
                 val newItem = furnitureToSync.toFurnitureUiItem()
-                furnitureUiItemCache[furniture.id] = newItem
+                furnitureUiItemCache.put(furniture.id, newItem)
                 mappedList.add(newItem)
             }
         }

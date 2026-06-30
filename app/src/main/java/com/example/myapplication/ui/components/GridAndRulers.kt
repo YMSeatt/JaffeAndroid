@@ -88,6 +88,9 @@ fun GridAndRulers(
             style = android.graphics.Paint.Style.STROKE
         }
     }
+
+    // BOLT: Label cache to avoid thousands of toString() allocations during pan/zoom.
+    val labelCache = remember { android.util.LongSparseArray<String>(100) }
     val guidePaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.RED
@@ -223,8 +226,10 @@ fun GridAndRulers(
                         canvas.nativeCanvas.translate(screenX, rulerThickness)
                         canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
                         canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
+                        val labelKey = worldX.toLong()
+                        val label = labelCache.get(labelKey) ?: labelKey.toString().also { labelCache.put(labelKey, it) }
                         canvas.nativeCanvas.drawText(
-                            (worldX).toLong().toString(),
+                            label,
                             0f, 0f, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
@@ -252,8 +257,10 @@ fun GridAndRulers(
                         canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
                         canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.rotate(-90f)
+                        val labelKey = worldY.toLong()
+                        val label = labelCache.get(labelKey) ?: labelKey.toString().also { labelCache.put(labelKey, it) }
                         canvas.nativeCanvas.drawText(
-                            (worldY).toLong().toString(),
+                            label,
                             0f, 0f, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
