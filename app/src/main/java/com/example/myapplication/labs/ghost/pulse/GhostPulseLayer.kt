@@ -46,7 +46,12 @@ fun GhostPulseLayer(
         label = "time"
     )
 
-    // Update resonances every 500ms instead of every frame to save CPU
+    /**
+     * BOLT: Decoupled State Updates.
+     * To conserve battery and CPU, we avoid recalculating resonance on every 60fps frame.
+     * Updating every 500ms provides the "feel" of real-time responsiveness without the
+     * overhead of O(N) list processing in the draw loop.
+     */
     var currentTime by remember { mutableStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -85,7 +90,14 @@ fun GhostPulseLayer(
     val radii = remember { FloatArray(20) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        // BOLT: Move current timestamp outside of the loop to avoid repeated system calls.
+        /**
+         * BOLT: Zero-Allocation Draw Loop.
+         * 1. **Hoisted Buffers**: Pre-allocated FloatArrays (centers, colors, intensities, radii)
+         *    prevent millions of object allocations per session.
+         * 2. **Index-Based Loops**: Avoids Iterator object churn.
+         * 3. **Manual Projection**: Manually calculates screen coordinates to avoid the
+         *    overhead of per-student Composable lookups.
+         */
         val timestamp = System.currentTimeMillis()
         val pulseCount = minOf(resonances.size, 20)
 
