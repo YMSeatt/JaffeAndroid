@@ -359,6 +359,8 @@ fun SeatingChartScreen(
     val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
     val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
+    val negativeCounts by seatingChartViewModel.negativeCounts.collectAsState()
+    val groupedStudentsByGroup by seatingChartViewModel.groupedStudentsByGroup.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -1777,7 +1779,8 @@ fun SeatingChartScreen(
 
                 NeuralMapLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    negativeCounts = negativeCounts,
+                    groupedStudents = groupedStudentsByGroup,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
