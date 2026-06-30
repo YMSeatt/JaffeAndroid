@@ -143,6 +143,7 @@ import com.example.myapplication.labs.ghost.pulse.GhostPulseLayer
 import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarDialog
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
@@ -359,6 +360,7 @@ fun SeatingChartScreen(
     val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
     val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
+    val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -400,6 +402,7 @@ fun SeatingChartScreen(
     var isTectonicsActive by remember { mutableStateOf(false) }
     var isPulsarActive by remember { mutableStateOf(false) }
     var isMagnetarActive by remember { mutableStateOf(false) }
+    var showMagnetarReport by remember { mutableStateOf(false) }
     var isHorizonActive by remember { mutableStateOf(false) }
     var isHelixActive by remember { mutableStateOf(false) }
     var isSupernovaActive by remember { mutableStateOf(false) }
@@ -927,6 +930,7 @@ fun SeatingChartScreen(
                 onToggleHelix = { isHelixActive = !isHelixActive },
                 isMagnetarActive = isMagnetarActive,
                 onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
+                onShowMagnetarReport = { showMagnetarReport = true },
                 isEmergenceActive = isEmergenceActive,
                 onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
                 isCatalystActive = isCatalystActive,
@@ -1569,6 +1573,19 @@ fun SeatingChartScreen(
                     canvasOffset = offset,
                     isActive = isMagnetarActive
                 )
+
+                if (showMagnetarReport) {
+                    val report = remember(magnetarAnalysis, students) {
+                        if (magnetarAnalysis != null) {
+                            val names = students.associate { it.id.toLong() to it.fullName.value }
+                            ghostMagnetarEngine.generateMagnetarReport(magnetarAnalysis!!, names)
+                        } else "Analyzing classroom social magnetic field..."
+                    }
+                    GhostMagnetarDialog(
+                        report = report,
+                        onDismiss = { showMagnetarReport = false }
+                    )
+                }
             }
 
 
@@ -2751,6 +2768,7 @@ fun SeatingChartTopAppBar(
     onToggleMirage: () -> Unit,
     isMagnetarActive: Boolean,
     onToggleMagnetar: () -> Unit,
+    onShowMagnetarReport: () -> Unit,
     isCarbonActive: Boolean,
     onToggleCarbon: () -> Unit,
     isInkActive: Boolean,
@@ -3243,6 +3261,16 @@ fun SeatingChartTopAppBar(
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
+                            if (isMagnetarActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Magnetar Analysis 👻") },
+                                    onClick = {
+                                        onShowMagnetarReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
                         }
                         if (GhostConfig.HELIX_MODE_ENABLED) {
                             DropdownMenuItem(

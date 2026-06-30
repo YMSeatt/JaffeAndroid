@@ -95,6 +95,7 @@ import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
 import com.example.myapplication.labs.ghost.GhostBioSyncEngine
 import com.example.myapplication.labs.ghost.BioSyncPoint
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
 import com.example.myapplication.labs.ghost.mirage.GhostMirageEngine
 import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
@@ -292,6 +293,7 @@ class SeatingChartViewModel @Inject constructor(
 
     val ghostInkEngine = GhostInkEngine()
     val ghostMirageEngine = GhostMirageEngine()
+    private val ghostMagnetarEngine = GhostMagnetarEngine(application)
 
     private val _chronosHeatmap = MutableStateFlow(FloatArray(100))
     /** BOLT: Global behavioral heatmap pre-calculated in background. */
@@ -526,6 +528,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsKaleidoscopeStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsKaleidoscopeBehaviorLogsRef: List<BehaviorEvent>? = null
 
+    private var ghostMetricsMagnetarStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsMagnetarBehaviorLogsRef: List<BehaviorEvent>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -548,6 +553,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _harmonyIndex = MutableStateFlow(0.5f)
     /** BOLT: Symmetry factor for Ghost Kaleidoscope. */
     val harmonyIndex: StateFlow<Float> = _harmonyIndex.asStateFlow()
+
+    private val _magnetarAnalysis = MutableStateFlow<GhostMagnetarEngine.MagnetarAnalysis?>(null)
+    /** BOLT: Macroscopic magnetic field analysis pre-calculated in background. */
+    val magnetarAnalysis: StateFlow<GhostMagnetarEngine.MagnetarAnalysis?> = _magnetarAnalysis.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1258,6 +1267,29 @@ class SeatingChartViewModel @Inject constructor(
                             _harmonyIndex.value = GhostKaleidoscopeEngine.calculateHarmony(fragments)
                             ghostMetricsKaleidoscopeBehaviorLogsRef = behaviorEvents
                             ghostMetricsKaleidoscopeStudentsRef = studentsForEngines
+                        }
+                    }
+
+                    // BOLT: Calculate social magnetic field analysis in the background pipeline (Memoized)
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MAGNETAR_MODE_ENABLED) {
+                        if (behaviorEvents !== ghostMetricsMagnetarBehaviorLogsRef || studentsForEngines !== ghostMetricsMagnetarStudentsRef) {
+                            val count = studentsForEngines.size
+                            val magnetarStudents = if (count > 15) studentsForEngines.take(15) else studentsForEngines
+                            val dipoles = ArrayList<GhostMagnetarEngine.MagneticDipole>(magnetarStudents.size)
+                            for (i in 0 until magnetarStudents.size) {
+                                val s = magnetarStudents[i]
+                                dipoles.add(GhostMagnetarEngine.MagneticDipole(
+                                    studentId = s.id,
+                                    x = s.xPosition,
+                                    y = s.yPosition,
+                                    strength = magneticStrengthCache[s.id] ?: 0f,
+                                    radius = magneticRadiusCache[s.id] ?: 100f
+                                ))
+                            }
+
+                            _magnetarAnalysis.value = ghostMagnetarEngine.analyzeMagneticField(dipoles)
+                            ghostMetricsMagnetarBehaviorLogsRef = behaviorEvents
+                            ghostMetricsMagnetarStudentsRef = studentsForEngines
                         }
                     }
 
