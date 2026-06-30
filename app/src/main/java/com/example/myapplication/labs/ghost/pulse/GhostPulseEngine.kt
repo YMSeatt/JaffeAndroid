@@ -38,10 +38,21 @@ object GhostPulseEngine {
      * Identifies students who should pulse based on recent activity and calculates
      * their resonance intensity.
      *
+     * ### Mathematical Strategy:
+     * This method implements an O(Recent) analysis. Instead of scanning thousands of
+     * historical logs, it leverages the fact that the input list is sorted in descending
+     * chronological order. It scans only the head of the list until it hits the
+     * [windowMillis] boundary.
+     *
+     * ### The 5000ms Window:
+     * A 5-second window was chosen to balance "Simultaneity" with "Legibility." It is
+     * wide enough to capture multi-student interactions while short enough to ensure
+     * that the ripples remain relevant to current classroom events.
+     *
      * @param events All behavior events (expected to be sorted DESC by timestamp).
      * @param currentTime The current system time.
      * @param windowMillis The time window (ms) to consider for "simultaneous" events.
-     * @return A list of active pulses.
+     * @return A list of active pulses, capped at 20 to prevent GPU uniform overflow.
      */
     fun calculateResonance(
         events: List<BehaviorEvent>,
@@ -59,7 +70,7 @@ object GhostPulseEngine {
             val age = currentTime - event.timestamp
 
             if (age in 0 until windowMillis) {
-                if (pulses.size < 40) {
+                if (pulses.size < 20) {
                     // Determine color based on behavior type
                     val (r, g, b) = when {
                         event.type.contains("Positive", ignoreCase = true) -> {

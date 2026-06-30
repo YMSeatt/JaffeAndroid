@@ -62,7 +62,9 @@ object GhostPulseShader {
                 float2 d = p - center;
                 float dist = length(d);
 
-                // The Wave: A ring that expands over time
+                // ### The Wave Equation:
+                // A Gaussian-based ring expansion. We divide the distance squared by 400.0
+                // to control the "sharpness" of the ripple's edge.
                 float wave = exp(-pow(dist - radius, 2.0) / 400.0);
                 wave *= noiseFactor;
 
