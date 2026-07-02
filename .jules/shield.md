@@ -140,3 +140,11 @@
 - **Vulnerability:** The experimental "Neural Spectroscopy" report contained raw student names in the Markdown output and intent subjects, potentially leaking PII to external applications and unencrypted system logs.
 - **Fix:** Implemented PII masking using the `maskStudentName` utility for all student entries in `GhostSpectraEngine.kt` and for intent subjects in `GhostSpectraDialog.kt`.
 - **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraEngine.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraDialog.kt`
+
+## 🛡️ Privacy Hardening: Unified Privacy Shield for Voice Assistant
+- **Vulnerability:** Voice transcriptions (containing student names/PII) persisted on the screen indefinitely after speech ended. Furthermore, the `FLAG_SECURE` protection (Privacy Shield) was tied only to the active microphone state, leaving PII exposed to screen capture during the result-display window.
+- **Fix:**
+    - Implemented a **Unified Privacy Shield** in `SeatingChartScreen.kt` that monitors both the listening state and the presence of transcribed text.
+    - Added an automatic **State Purge** mechanism via `LaunchedEffect` that clears transcribed PII from memory after a 5-second timeout.
+    - Updated `GhostVoiceVisualizer.kt` to allow persistent feedback during the timeout period while suppressing expensive shader animations when the microphone is inactive.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostVisualizer.kt`

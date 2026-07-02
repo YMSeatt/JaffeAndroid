@@ -548,6 +548,14 @@ fun SeatingChartScreen(
     var ghostAmplitude by remember { mutableFloatStateOf(0f) }
     var ghostCurrentText by remember { mutableStateOf("") }
 
+    // HARDEN: Automatically clear transcribed PII after a short timeout
+    LaunchedEffect(isGhostListening, ghostCurrentText) {
+        if (!isGhostListening && ghostCurrentText.isNotEmpty()) {
+            delay(5000)
+            ghostCurrentText = ""
+        }
+    }
+
     val ghostVoiceAssistant = remember(behaviorTypeNames) {
         GhostVoiceAssistant(
             context = context,
@@ -613,7 +621,7 @@ fun SeatingChartScreen(
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
                                    isFrostActive || isRadarActive || isOrigamiActive || isSonarActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
-                                   isGhostListening || isStudentHubVisible || (activeGlanceStudentId != null) ||
+                                   isGhostListening || ghostCurrentText.isNotEmpty() || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
                                    showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
