@@ -262,6 +262,9 @@ object GhostConfig {
     /** Enables "Ghost BioSync" biological state visualization. */
     const val BIOSYNC_MODE_ENABLED = true
 
+    /** Enables "Ghost EKG" real-time biological signal visualization. */
+    const val EKG_MODE_ENABLED = true
+
     /** Enables "Ghost Mirage" neural focus tracking heatmap. */
     const val MIRAGE_MODE_ENABLED = true
 

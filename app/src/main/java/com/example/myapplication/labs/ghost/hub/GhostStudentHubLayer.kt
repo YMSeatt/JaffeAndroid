@@ -57,6 +57,7 @@ fun GhostStudentHubLayer(
             GhostAction("NEURAL_SPECTRA", Icons.Default.Analytics, "Neural Spectroscopy"),
             GhostAction("LOG_ACADEMIC", Icons.Default.School, "Log Academic"),
             GhostAction("NEURAL_DOSSIER", Icons.Default.Article, "Neural Dossier"),
+            GhostAction("NEURAL_EKG", Icons.Default.MonitorHeart, "Neural EKG"),
             GhostAction("PIN_STUDENT", Icons.Default.PushPin, "Pin Student"),
             GhostAction("NEURAL_MORPH", Icons.Default.AutoFixHigh, "Neural Morph"),
             GhostAction("EDIT_STUDENT", Icons.Default.Person, "Edit Student")

@@ -95,6 +95,7 @@ import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixEngine
 import com.example.myapplication.labs.ghost.GhostBioSyncEngine
 import com.example.myapplication.labs.ghost.BioSyncPoint
+import com.example.myapplication.labs.ghost.ekg.GhostEKGEngine
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
 import com.example.myapplication.labs.ghost.mirage.GhostMirageEngine
 import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
@@ -538,6 +539,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _bioSyncPoints = MutableStateFlow<List<BioSyncPoint>>(emptyList())
     /** BOLT: Student biological vitality points for shader. */
     val bioSyncPoints: StateFlow<List<BioSyncPoint>> = _bioSyncPoints.asStateFlow()
+
+    private val _ekgSpike = MutableStateFlow<Float>(0f)
+    /** BOLT: Global EKG interaction spike. */
+    val ekgSpike: StateFlow<Float> = _ekgSpike.asStateFlow()
 
     /** BOLT: Focus heatmap for Ghost Mirage. */
     val focusHeatmap: StateFlow<FloatArray> = ghostMirageEngine.heatmap
@@ -1201,6 +1206,11 @@ class SeatingChartViewModel @Inject constructor(
                         behaviorLogsByStudent = behaviorLogsByStudent
                     )
                     _globalIonBalance.value = com.example.myapplication.labs.ghost.ion.GhostIonEngine.calculateGlobalBalanceFromMetrics(ghostMetricsIonMapCache)
+
+                    // BOLT: Calculate EKG interaction spike in the background pipeline
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.EKG_MODE_ENABLED) {
+                        _ekgSpike.value = GhostEKGEngine.calculateRecentSpike(behaviorEvents, currentTime)
+                    }
 
                     ghostMetricsLogOnlyBehaviorLogsRef = behaviorEvents
                 }
