@@ -11,23 +11,33 @@ import com.example.myapplication.data.Student
  * positive engagement.
  *
  * ### The "Phoenix" Metric:
- * Resilience is calculated by comparing a "Struggle Period" (older logs) with a
- * "Recovery Period" (recent logs). A high Phoenix score indicates a student who
- * has overcome recent behavioral challenges.
+ * Resilience is calculated by comparing a **Struggle Period** (historical logs) with a
+ * **Recovery Period** (recent logs). A student is considered a "Phoenix" only if they
+ * have a baseline of negative behavior that they have subsequently overcome with
+ * positive actions.
+ *
+ * ### Resilience Formula:
+ * `Score = (RecentPositiveCount * 0.2) + (HistoricalNegativeCount * 0.1)`
+ * *Requires `HistoricalNegativeCount > 0`.*
  */
 object GhostPhoenixEngine {
 
-    /** The window for the "Recovery Period" (recent logs). */
-    private const val RECOVERY_WINDOW_MS = 2 * 60 * 60 * 1000L // 2 hours
+    /** The window for the "Recovery Period" (recent logs). 2 hours. */
+    private const val RECOVERY_WINDOW_MS = 2 * 60 * 60 * 1000L
 
-    /** The window for the "Struggle Period" (historical logs to check for negative baseline). */
-    private const val STRUGGLE_WINDOW_MS = 24 * 60 * 60 * 1000L // 24 hours
+    /** The window for the "Struggle Period" (historical logs). 24 hours. */
+    private const val STRUGGLE_WINDOW_MS = 24 * 60 * 60 * 1000L
 
-    /** Threshold for the resilience score to trigger the Phoenix effect. */
+    /** Threshold for the resilience score to trigger the visual Phoenix effect. */
     const val PHOENIX_THRESHOLD = 0.6f
 
     /**
-     * Calculates the resilience score for each student.
+     * Calculates the resilience score for each student based on their behavioral trajectory.
+     *
+     * ### BOLT ⚡ Optimization:
+     * Utilizes a single-pass traversal of DESC sorted logs, terminating early once the
+     * timestamp exits the 24-hour [STRUGGLE_WINDOW_MS]. This achieves $O(Recent)$
+     * performance rather than $O(TotalLogs)$.
      *
      * @param students The current list of student entities.
      * @param behaviorLogsByStudent Map of student IDs to their behavioral history (DESC sorted).

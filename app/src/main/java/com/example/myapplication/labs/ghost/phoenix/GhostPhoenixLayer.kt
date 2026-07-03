@@ -18,11 +18,14 @@ import com.example.myapplication.ui.model.StudentUiItem
  * This layer identifies students with high resilience scores (via [GhostPhoenixEngine])
  * and renders an AGSL-powered fire aura and ember effect around their icons.
  *
- * ### BOLT Optimization:
- * - **Shader Pooling**: Uses a pool of [RuntimeShader] instances to handle multiple
- *   simultaneous Phoenix effects without uniform overwrite bugs.
- * - **Single-Pass Rendering**: Iterates through students once per frame, drawing
- *   only those meeting the threshold.
+ * ### BOLT ⚡ Optimization:
+ * - **Shader Pooling**: To avoid the "Uniform Overwrite" bug (where multiple draw calls sharing the
+ *   same native shader object overwrite each other's uniforms before the GPU executes), this layer
+ *   maintains a `shaderPool`. Each active Phoenix is assigned its own [RuntimeShader] instance.
+ * - **Single-Pass Rendering**: Iterates through students once per frame in the [Canvas] block,
+ *   drawing only those who exceed the [GhostPhoenixEngine.PHOENIX_THRESHOLD].
+ * - **Zero-Allocation Coordinates**: Student positions are mapped from the logical 4000x4000
+ *   canvas to screen pixels just-in-time, avoiding per-frame [Offset] object churn.
  */
 @Composable
 fun GhostPhoenixLayer(

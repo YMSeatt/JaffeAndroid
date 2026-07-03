@@ -8,15 +8,18 @@ object GhostPhoenixShader {
      * AGSL Shader for the Ghost Phoenix visualization.
      *
      * ### Visual Features:
-     * - **Rising Embers**: Procedural particles that ascend from the base of the student icon.
-     * - **Fire Core**: A central, flickering flame-like aura driven by fbm noise.
-     * - **Resilience Pulse**: The intensity and color shift based on the resilience score.
+     * - **Rising Embers**: A hash-based particle system that simulates embers ascending from
+     *   the base of the student icon. Frequency and intensity are scaled by `iResilience`.
+     * - **Fire Core**: A central, flickering flame-like aura driven by multi-layered fbm noise
+     *   and domain-warped UVs.
+     * - **Resilience Scaling**: Both the visual radius and the color intensity of the fire
+     *   are modulated by the resilience score, providing a stronger visual for greater recovery.
      *
      * ### Uniforms:
-     * - `iResolution`: The size of the effect in pixels.
-     * - `iTime`: Animation phase for movement and flickering.
+     * - `iResolution`: The size of the circular effect in pixels.
+     * - `iTime`: Animation phase for noise flickering and particle movement.
      * - `iResilience`: The normalized resilience score [0.0 - 1.0].
-     * - `iColor`: The primary "Fire" color (typically Orange/Red).
+     * - `iColor`: The primary "Phoenix Fire" color (typically GhostOrange/Red).
      */
     const val PHOENIX_RISING = """
         uniform float2 iResolution;
