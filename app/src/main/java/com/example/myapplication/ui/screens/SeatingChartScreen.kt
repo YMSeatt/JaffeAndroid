@@ -205,6 +205,7 @@ import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
 import com.example.myapplication.labs.ghost.GhostTraceEngine
 import com.example.myapplication.labs.ghost.GhostTraceLayer
 import com.example.myapplication.labs.ghost.GhostBioSyncLayer
+import com.example.myapplication.labs.ghost.ekg.GhostEKGLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
@@ -357,6 +358,7 @@ fun SeatingChartScreen(
     val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
     val resilienceScores by seatingChartViewModel.resilienceScores.collectAsState()
     val bioSyncPoints by seatingChartViewModel.bioSyncPoints.collectAsState()
+    val ekgSpike by seatingChartViewModel.ekgSpike.collectAsState()
     val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
     val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
@@ -382,6 +384,7 @@ fun SeatingChartScreen(
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
+    var isEkgActive by remember { mutableStateOf(false) }
     var isMirageActive by remember { mutableStateOf(false) }
     var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
@@ -1257,6 +1260,19 @@ fun SeatingChartScreen(
                 canvasOffset = offset,
                 isActive = isBioSyncActive
             )
+            selectedStudentUiItemForAction?.let { student ->
+                val vitality = bioSyncPoints.find { it.x == student.xPosition.value && it.y == student.yPosition.value }?.vitality ?: 0.5f
+                val stress = bioSyncPoints.find { it.x == student.xPosition.value && it.y == student.yPosition.value }?.stress ?: 0f
+
+                GhostEKGLayer(
+                    studentName = student.fullName.value,
+                    vitality = vitality,
+                    stress = stress,
+                    recentSpike = ekgSpike,
+                    isActive = isEkgActive && selectedStudentUiItemForAction != null,
+                    onDismiss = { isEkgActive = false }
+                )
+            }
             GhostMirageLayer(
                 heatmap = focusHeatmap,
                 isActive = isMirageActive
@@ -2271,6 +2287,10 @@ fun SeatingChartScreen(
                                     }
                                     context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
                                 }
+                            }
+                            "NEURAL_EKG" -> {
+                                isEkgActive = !isEkgActive
+                                if (isEkgActive) hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
                             "PIN_STUDENT" -> {
                                 selectedStudentUiItemForAction?.let { student ->

@@ -367,6 +367,13 @@ Visualizes classroom harmony and synchronization as a symmetric radial pattern.
 - **Neural Fragments**: Renders glowing geometric shards representing recent behavioral and academic events.
 - **BOLT Optimization**: O(Recent) fragment synthesis and zero-allocation 60fps rendering.
 
+### 83. Ghost EKG (ekg/GhostEKGLayer.kt, GhostEKGEngine.kt, GhostEKGShader.kt)
+Real-time biometric visualization of student biological rhythms.
+- **Neural Heartbeat**: Translates student vitality and stress into a scrolling waveform.
+- **Frequency Modulation**: Signal frequency scales with student stress (Tachycardia for negative logs).
+- **AGSL Waveform**: Renders a glowing, high-fidelity signal line with a CRT grid background.
+- **BOLT Optimization**: Zero-allocation synthesis loop and pre-calculated interaction spikes.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

@@ -1,8 +1,10 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Ghost EKG - Real-time scrolling waveform visualization of student biological rhythm.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-08-27: Ghost EKG - Neural Vitality Monitor in `/labs/ghost/ekg/`
 - [DONE] 2028-08-26: Ghost Magnetar - Social Magnetic Field Analysis and glassmorphic reporting in `/labs/ghost/magnetar/`
 - [DONE] 2028-08-25: Ghost Architect - Strategic Commitment, Reporting, and Stability Logic in `/labs/ghost/architect/`
 - [DONE] 2028-08-24: Ghost Kaleidoscope - Neural Symmetry Visualization in `/labs/ghost/kaleidoscope/`
