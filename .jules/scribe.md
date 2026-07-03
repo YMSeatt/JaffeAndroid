@@ -157,5 +157,14 @@
 - **Shader Pooling**: `GhostInkLayer` implements a strict **16-instance limit** for concurrent stroke rendering using a pre-allocated pool of `RuntimeShader` and `ShaderBrush` objects. This is a critical BOLT optimization to maintain 60fps during complex annotation sessions.
 - **Logical Anchoring**: Unlike UI overlays, Ink strokes are stored in **chart-logical coordinates**. This allows annotations to persist correctly across zoom and pan states, effectively "sticking" to the classroom floor.
 
+### 29. Ghost Phoenix "Neural Resilience" Calibration
+- **The Metaphor**: Classroom resilience is modeled as a "Phoenix" rising from a historical struggle (ashes).
+- **The Windows**:
+    - **Struggle Window**: 24 hours. Analyzes historical logs to establish a baseline of behavioral friction.
+    - **Recovery Window**: 2 hours. Analyzes recent logs to identify a streak of positive engagement.
+- **The Formula**: `Score = (RecentPositiveCount * 0.2) + (HistoricalNegativeCount * 0.1)`.
+- **Constraint**: Resilience is only calculated if `HistoricalNegativeCount > 0`. A student who has never struggled is not a Phoenix in this model; they are simply "Stable".
+- **Visual Trigger**: The "Phoenix Rising" fire aura triggers when the score exceeds the **0.6f threshold**.
+
 ---
 *Documentation love letter from Scribe 📜*
