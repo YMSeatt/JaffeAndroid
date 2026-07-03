@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import android.util.LongSparseArray
 import androidx.compose.ui.graphics.graphicsLayer
 import com.example.myapplication.data.Guide
 import com.example.myapplication.data.GuideType
@@ -80,10 +81,20 @@ fun GridAndRulers(
             this.textSize = textSize
         }
     }
+    // BOLT: Label cache to avoid per-frame toString() allocations.
+    val labelCache = remember { LongSparseArray<String>() }
+
     // BOLT: Pre-allocate paints to avoid per-frame allocations during Canvas draw.
     val gridPaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.LTGRAY
+            strokeWidth = 1f
+            style = android.graphics.Paint.Style.STROKE
+        }
+    }
+    val tickPaint = remember {
+        android.graphics.Paint().apply {
+            color = android.graphics.Color.BLACK
             strokeWidth = 1f
             style = android.graphics.Paint.Style.STROKE
         }
@@ -213,18 +224,20 @@ fun GridAndRulers(
                     val worldX = i * gridSizePx
                     val screenX = (worldX * scale) + offset.x
                     if (screenX >= 0 && screenX <= size.width) {
-                        drawLine(
-                            start = Offset(screenX, 0f),
-                            end = Offset(screenX, rulerThickness / 2),
-                            color = Color.Black, strokeWidth = 1f
-                        )
+                        // BOLT: Use native canvas to avoid Offset object churn.
+                        canvas.nativeCanvas.drawLine(screenX, 0f, screenX, rulerThickness / 2, tickPaint)
+
+                        // BOLT: Retrieve label from cache to avoid toString() allocations.
+                        val worldLong = worldX.toLong()
+                        val label = labelCache.get(worldLong) ?: worldLong.toString().also { labelCache.put(worldLong, it) }
+
                         // BOLT: Counter-transform ruler text for legibility.
                         canvas.nativeCanvas.save()
                         canvas.nativeCanvas.translate(screenX, rulerThickness)
                         canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
                         canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.drawText(
-                            (worldX).toLong().toString(),
+                            label,
                             0f, 0f, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
@@ -241,11 +254,13 @@ fun GridAndRulers(
                     val worldY = i * gridSizePx
                     val screenY = (worldY * scale) + offset.y
                     if (screenY >= 0 && screenY <= size.height) {
-                        drawLine(
-                            start = Offset(0f, screenY),
-                            end = Offset(rulerThickness / 2, screenY),
-                            color = Color.Black, strokeWidth = 1f
-                        )
+                        // BOLT: Use native canvas to avoid Offset object churn.
+                        canvas.nativeCanvas.drawLine(0f, screenY, rulerThickness / 2, screenY, tickPaint)
+
+                        // BOLT: Retrieve label from cache to avoid toString() allocations.
+                        val worldLong = worldY.toLong()
+                        val label = labelCache.get(worldLong) ?: worldLong.toString().also { labelCache.put(worldLong, it) }
+
                         // BOLT: Counter-transform ruler text for legibility.
                         canvas.nativeCanvas.save()
                         canvas.nativeCanvas.translate(rulerThickness, screenY)
@@ -253,7 +268,7 @@ fun GridAndRulers(
                         canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.rotate(-90f)
                         canvas.nativeCanvas.drawText(
-                            (worldY).toLong().toString(),
+                            label,
                             0f, 0f, rulerPaint
                         )
                         canvas.nativeCanvas.restore()
