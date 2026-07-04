@@ -100,6 +100,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PULSE_MODE_ENABLED) {
                 add(GhostAction("PULSE", Icons.Default.Waves, "Neural Pulse"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WARP_MODE_ENABLED) {
+                add(GhostAction("WARP", Icons.Default.Explore, "Neural Warp"))
+            }
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRROR_MODE_ENABLED) {
                 add(GhostAction("MIRROR", Icons.Default.Flip, "Ghost Mirror"))
             }
