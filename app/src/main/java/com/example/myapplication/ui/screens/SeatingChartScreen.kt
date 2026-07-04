@@ -145,6 +145,7 @@ import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarDialog
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
+import com.example.myapplication.labs.ghost.warp.GhostWarpDialog
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
@@ -363,6 +364,7 @@ fun SeatingChartScreen(
     val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
     val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
+    val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -381,6 +383,7 @@ fun SeatingChartScreen(
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
+    var showWarpReport by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
@@ -915,6 +918,7 @@ fun SeatingChartScreen(
                 onToggleIris = { isIrisActive = !isIrisActive },
                 isWarpActive = isWarpActive,
                 onToggleWarp = { isWarpActive = !isWarpActive },
+                onShowWarpReport = { showWarpReport = true },
                 isFutureActive = isFutureActive,
                 onToggleFuture = { isFutureActive = !isFutureActive },
                 isSparkActive = isSparkActive,
@@ -1428,6 +1432,18 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+
+                if (showWarpReport) {
+                    val report = remember(warpAnalysis) {
+                        if (warpAnalysis != null) {
+                            com.example.myapplication.labs.ghost.warp.GhostWarpEngine.generateWarpReport(warpAnalysis!!)
+                        } else "Analyzing classroom curvature..."
+                    }
+                    GhostWarpDialog(
+                        report = report,
+                        onDismiss = { showWarpReport = false }
+                    )
+                }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FROST_MODE_ENABLED && isFrostActive) {
                 GhostFrostLayer(
@@ -2399,6 +2415,7 @@ fun SeatingChartScreen(
                                 }
                             }
                             "PULSE" -> isPulseActive = !isPulseActive
+                            "WARP" -> isWarpActive = !isWarpActive
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
                             "WEATHER" -> isWeatherActive = !isWeatherActive
@@ -2735,6 +2752,7 @@ fun SeatingChartTopAppBar(
     onToggleIris: () -> Unit,
     isWarpActive: Boolean,
     onToggleWarp: () -> Unit,
+    onShowWarpReport: () -> Unit,
     isFutureActive: Boolean,
     onToggleFuture: () -> Unit,
     isSparkActive: Boolean,
@@ -3229,6 +3247,16 @@ fun SeatingChartTopAppBar(
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
+                            if (isWarpActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Spacetime Analysis 👻") },
+                                    onClick = {
+                                        onShowWarpReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
                             if (isCatalystActive) {
                                 DropdownMenuItem(
                                     text = { Text("Catalyst Kinetics 👻") },

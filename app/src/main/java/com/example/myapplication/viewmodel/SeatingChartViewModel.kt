@@ -532,6 +532,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsMagnetarStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsMagnetarBehaviorLogsRef: List<BehaviorEvent>? = null
 
+    private var ghostMetricsWarpStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsWarpBehaviorLogsRef: List<BehaviorEvent>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -562,6 +565,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _magnetarAnalysis = MutableStateFlow<GhostMagnetarEngine.MagnetarAnalysis?>(null)
     /** BOLT: Macroscopic magnetic field analysis pre-calculated in background. */
     val magnetarAnalysis: StateFlow<GhostMagnetarEngine.MagnetarAnalysis?> = _magnetarAnalysis.asStateFlow()
+
+    private val _warpAnalysis = MutableStateFlow<com.example.myapplication.labs.ghost.warp.GhostWarpEngine.ClassroomWarpAnalysis?>(null)
+    /** BOLT: Macroscopic classroom curvature analysis pre-calculated in background. */
+    val warpAnalysis: StateFlow<com.example.myapplication.labs.ghost.warp.GhostWarpEngine.ClassroomWarpAnalysis?> = _warpAnalysis.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1303,6 +1310,7 @@ class SeatingChartViewModel @Inject constructor(
                         }
                     }
 
+
                     // BOLT: Calculate tectonic stress nodes in the background pipeline
                     val tectonicNodes = com.example.myapplication.labs.ghost.tectonics.GhostTectonicEngine.calculateTectonicState(
                         students = studentsForEngines,
@@ -1945,6 +1953,19 @@ class SeatingChartViewModel @Inject constructor(
                 if (listChanged) {
                     lastSentStudentsList = studentsWithBehavior
                     studentsForDisplay.postValue(studentsWithBehavior)
+                }
+
+                // BOLT: Calculate classroom curvature analysis in the background pipeline (Memoized)
+                // This depends on the fully synchronized student UI items.
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WARP_MODE_ENABLED) {
+                    if (behaviorEvents !== ghostMetricsWarpBehaviorLogsRef || studentsForEngines !== ghostMetricsWarpStudentsRef) {
+                        _warpAnalysis.value = com.example.myapplication.labs.ghost.warp.GhostWarpEngine.analyzeClassroomCurvature(
+                            students = studentsWithBehavior,
+                            behaviorLogs = behaviorEvents
+                        )
+                        ghostMetricsWarpBehaviorLogsRef = behaviorEvents
+                        ghostMetricsWarpStudentsRef = studentsForEngines
+                    }
                 }
             }
         }
