@@ -210,6 +210,7 @@ import com.example.myapplication.labs.ghost.ekg.GhostEKGLayer
 import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
+import com.example.myapplication.labs.ghost.moss.GhostMossLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
@@ -365,6 +366,7 @@ fun SeatingChartScreen(
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
     val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
     val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
+    val mossScores by seatingChartViewModel.mossScores.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -384,6 +386,7 @@ fun SeatingChartScreen(
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
     var showWarpReport by remember { mutableStateOf(false) }
+    var isMossActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
@@ -1160,6 +1163,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isInkActive
+            )
+            GhostMossLayer(
+                students = students,
+                mossScores = mossScores,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isMossActive
             )
             GhostTraceLayer(
                 traces = studentTraces,
@@ -2416,6 +2426,7 @@ fun SeatingChartScreen(
                             }
                             "PULSE" -> isPulseActive = !isPulseActive
                             "WARP" -> isWarpActive = !isWarpActive
+                            "MOSS" -> isMossActive = !isMossActive
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
                             "WEATHER" -> isWeatherActive = !isWeatherActive
