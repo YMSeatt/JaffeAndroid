@@ -101,6 +101,7 @@ import com.example.myapplication.labs.ghost.mirage.GhostMirageEngine
 import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
+import com.example.myapplication.labs.ghost.moss.GhostMossEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
@@ -535,6 +536,11 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsWarpStudentsRef: List<com.example.myapplication.data.Student>? = null
     private var ghostMetricsWarpBehaviorLogsRef: List<BehaviorEvent>? = null
 
+    private var ghostMetricsMossStudentsRef: List<com.example.myapplication.data.Student>? = null
+    private var ghostMetricsMossBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsMossQuizLogsRef: List<QuizLog>? = null
+    private var ghostMetricsMossHomeworkLogsRef: List<HomeworkLog>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -569,6 +575,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _warpAnalysis = MutableStateFlow<com.example.myapplication.labs.ghost.warp.GhostWarpEngine.ClassroomWarpAnalysis?>(null)
     /** BOLT: Macroscopic classroom curvature analysis pre-calculated in background. */
     val warpAnalysis: StateFlow<com.example.myapplication.labs.ghost.warp.GhostWarpEngine.ClassroomWarpAnalysis?> = _warpAnalysis.asStateFlow()
+
+    private val _mossScores = MutableStateFlow<android.util.LongSparseArray<Float>>(android.util.LongSparseArray())
+    /** BOLT: Student dormancy/moss scores pre-calculated in background. */
+    val mossScores: StateFlow<android.util.LongSparseArray<Float>> = _mossScores.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1320,6 +1330,27 @@ class SeatingChartViewModel @Inject constructor(
 
                     ghostMetricsPosAwareBehaviorLogsRef = behaviorEvents
                     ghostMetricsStudentsRef = studentsForEngines
+                }
+
+                // BOLT: Calculate Ghost Moss dormancy scores in the background pipeline (Memoized)
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOSS_MODE_ENABLED) {
+                    if (behaviorEvents !== ghostMetricsMossBehaviorLogsRef ||
+                        students !== ghostMetricsMossStudentsRef ||
+                        quizLogs !== ghostMetricsMossQuizLogsRef ||
+                        homeworkLogs !== ghostMetricsMossHomeworkLogsRef
+                    ) {
+                        _mossScores.value = GhostMossEngine.calculateDormancyScores(
+                            students = students,
+                            behaviorLogsByStudent = behaviorLogsByStudent,
+                            quizLogsByStudent = quizLogsByStudent,
+                            homeworkLogsByStudent = homeworkLogsByStudent,
+                            now = currentTime
+                        )
+                        ghostMetricsMossBehaviorLogsRef = behaviorEvents
+                        ghostMetricsMossStudentsRef = students
+                        ghostMetricsMossQuizLogsRef = quizLogs
+                        ghostMetricsMossHomeworkLogsRef = homeworkLogs
+                    }
                 }
 
                 // BOLT: Calculate quantum entanglement links in the background pipeline (Memoized)

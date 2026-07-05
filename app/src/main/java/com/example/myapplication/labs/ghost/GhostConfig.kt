@@ -270,4 +270,7 @@ object GhostConfig {
 
     /** Enables "Ghost Kaleidoscope" neural symmetry visualization. */
     const val KALEIDOSCOPE_MODE_ENABLED = true
+
+    /** Enables "Ghost Moss" social stagnation and dormancy visualization. */
+    const val MOSS_MODE_ENABLED = true
 }
