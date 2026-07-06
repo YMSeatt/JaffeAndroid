@@ -273,4 +273,7 @@ object GhostConfig {
 
     /** Enables "Ghost Moss" social stagnation and dormancy visualization. */
     const val MOSS_MODE_ENABLED = true
+
+    /** Enables "Ghost Coral" social reef and collaborative growth visualization. */
+    const val CORAL_MODE_ENABLED = true
 }

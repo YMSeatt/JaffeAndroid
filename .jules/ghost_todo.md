@@ -1,9 +1,11 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost EKG - Real-time scrolling waveform visualization of student biological rhythm.
+- [ ] Idea: Ghost Prism - Dynamic individual student themes based on behavioral "vibes".
+- [ ] Idea: Ghost Scape - Neural Spatial Audio pings for eyes-free classroom monitoring.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-09-01: Ghost Coral - Social Reef & Collaborative Growth Visualization in `/labs/ghost/coral/`
 - [DONE] 2028-08-29: Ghost Moss - Social Stagnation & Dormancy Visualization in `/labs/ghost/moss/`
 - [DONE] 2028-08-28: Ghost Warp - Glassmorphic reporting and Hub integration in `/labs/ghost/warp/`
 - [DONE] 2028-08-27: Ghost EKG - Neural Vitality Monitor in `/labs/ghost/ekg/`

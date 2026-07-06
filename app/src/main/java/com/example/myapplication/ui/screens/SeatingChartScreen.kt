@@ -211,6 +211,7 @@ import com.example.myapplication.labs.ghost.ink.GhostInkLayer
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
 import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
 import com.example.myapplication.labs.ghost.moss.GhostMossLayer
+import com.example.myapplication.labs.ghost.coral.GhostCoralLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
@@ -367,6 +368,7 @@ fun SeatingChartScreen(
     val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
     val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
     val mossScores by seatingChartViewModel.mossScores.collectAsState()
+    val coralReef by seatingChartViewModel.coralReef.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
@@ -387,6 +389,7 @@ fun SeatingChartScreen(
     var isWarpActive by remember { mutableStateOf(false) }
     var showWarpReport by remember { mutableStateOf(false) }
     var isMossActive by remember { mutableStateOf(false) }
+    var isCoralActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
@@ -1170,6 +1173,12 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isMossActive
+            )
+            GhostCoralLayer(
+                branches = coralReef,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCoralActive
             )
             GhostTraceLayer(
                 traces = studentTraces,
@@ -2427,6 +2436,7 @@ fun SeatingChartScreen(
                             "PULSE" -> isPulseActive = !isPulseActive
                             "WARP" -> isWarpActive = !isWarpActive
                             "MOSS" -> isMossActive = !isMossActive
+                            "CORAL" -> isCoralActive = !isCoralActive
                             "LINK" -> isLinkActive = !isLinkActive
                             "FROST" -> isFrostActive = !isFrostActive
                             "WEATHER" -> isWeatherActive = !isWeatherActive
