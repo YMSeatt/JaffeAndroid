@@ -102,6 +102,7 @@ import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeEngine
 import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.moss.GhostMossEngine
+import com.example.myapplication.labs.ghost.coral.GhostCoralEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
@@ -541,6 +542,9 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsMossQuizLogsRef: List<QuizLog>? = null
     private var ghostMetricsMossHomeworkLogsRef: List<HomeworkLog>? = null
 
+    private var ghostMetricsCoralBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsCoralStudentsRef: List<com.example.myapplication.data.Student>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -579,6 +583,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _mossScores = MutableStateFlow<android.util.LongSparseArray<Float>>(android.util.LongSparseArray())
     /** BOLT: Student dormancy/moss scores pre-calculated in background. */
     val mossScores: StateFlow<android.util.LongSparseArray<Float>> = _mossScores.asStateFlow()
+
+    private val _coralReef = MutableStateFlow<List<GhostCoralEngine.CoralBranch>>(emptyList())
+    /** BOLT: Social reef structure pre-calculated in background. */
+    val coralReef: StateFlow<List<GhostCoralEngine.CoralBranch>> = _coralReef.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1350,6 +1358,18 @@ class SeatingChartViewModel @Inject constructor(
                         ghostMetricsMossStudentsRef = students
                         ghostMetricsMossQuizLogsRef = quizLogs
                         ghostMetricsMossHomeworkLogsRef = homeworkLogs
+                    }
+                }
+
+                // BOLT: Calculate Social Reef (Coral) in the background pipeline (Memoized)
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CORAL_MODE_ENABLED) {
+                    if (behaviorEvents !== ghostMetricsCoralBehaviorLogsRef || students !== ghostMetricsCoralStudentsRef) {
+                        _coralReef.value = GhostCoralEngine.calculateSocialReef(
+                            students = students,
+                            behaviorLogsByStudent = behaviorLogsByStudent
+                        )
+                        ghostMetricsCoralBehaviorLogsRef = behaviorEvents
+                        ghostMetricsCoralStudentsRef = students
                     }
                 }
 

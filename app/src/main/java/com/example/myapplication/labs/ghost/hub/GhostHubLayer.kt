@@ -148,6 +148,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ARCHITECT_MODE_ENABLED) {
                 add(GhostAction("ARCHITECT", Icons.Default.Chair, "Neural Architect"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CORAL_MODE_ENABLED) {
+                add(GhostAction("CORAL", Icons.Default.WaterDrop, "Social Reef"))
+            }
         }
     }
 
