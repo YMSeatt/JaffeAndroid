@@ -151,6 +151,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CORAL_MODE_ENABLED) {
                 add(GhostAction("CORAL", Icons.Default.WaterDrop, "Social Reef"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PRISM_MODE_ENABLED) {
+                add(GhostAction("PRISM", Icons.Default.InvertColors, "Ghost Prism"))
+            }
         }
     }
 

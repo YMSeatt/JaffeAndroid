@@ -368,6 +368,7 @@ fun SeatingChartScreen(
     val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
     val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
     val mossScores by seatingChartViewModel.mossScores.collectAsState()
+    val prismStates by seatingChartViewModel.prismStates.collectAsState()
     val coralReef by seatingChartViewModel.coralReef.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
@@ -389,6 +390,7 @@ fun SeatingChartScreen(
     var isWarpActive by remember { mutableStateOf(false) }
     var showWarpReport by remember { mutableStateOf(false) }
     var isMossActive by remember { mutableStateOf(false) }
+    var isPrismActive by remember { mutableStateOf(false) }
     var isCoralActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
@@ -630,7 +632,7 @@ fun SeatingChartScreen(
                                    isCortexActive || isHudActive || isArchitectActive || isShellActive ||
                                    isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
-                                   isHaloActive || isTraceActive || isCarbonActive || isWeaverActive ||
+                                   isHaloActive || isTraceActive || isCarbonActive || isWeaverActive || isPrismActive ||
                                    isFrostActive || isRadarActive || isOrigamiActive || isSonarActive ||
                                    isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
                                    isGhostListening || ghostCurrentText.isNotEmpty() || isStudentHubVisible || (activeGlanceStudentId != null) ||
@@ -1769,6 +1771,7 @@ fun SeatingChartScreen(
                     quizLogFontBold = quizLogFontBold,
                     homeworkLogFontBold = homeworkLogFontBold,
                     isIrisActive = isIrisActive,
+                isPrismActive = isPrismActive,
                     allBehaviorEvents = allBehaviorEvents,
                     allQuizLogs = allQuizLogs,
                     allHomeworkLogs = allHomeworkLogs,
@@ -2484,6 +2487,10 @@ fun SeatingChartScreen(
                                 isKaleidoscopeActive = !isKaleidoscopeActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
+                            "PRISM" -> {
+                                isPrismActive = !isPrismActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2666,6 +2673,8 @@ fun SeatingChartContent(
                     canvasOffset = offset,
                     isIrisActive = isIrisActive,
                     irisParams = irisParams,
+                    isPrismActive = isPrismActive,
+                    vibe = prismStates[studentItem.id.toLong()],
                     isHelixActive = isHelixActive,
                     onGlance = { activeGlanceStudentId = it },
                     isZenithActive = isZenithActive,
