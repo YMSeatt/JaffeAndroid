@@ -276,4 +276,7 @@ object GhostConfig {
 
     /** Enables "Ghost Coral" social reef and collaborative growth visualization. */
     const val CORAL_MODE_ENABLED = true
+
+    /** Enables "Ghost Prism" dynamic individual student themes based on vibes. */
+    const val PRISM_MODE_ENABLED = true
 }

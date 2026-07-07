@@ -67,6 +67,8 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostIrisEngine
 import com.example.myapplication.labs.ghost.GhostIrisLayer
+import com.example.myapplication.labs.ghost.prism.GhostPrismEngine
+import com.example.myapplication.labs.ghost.prism.GhostPrismLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
 import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -126,6 +128,8 @@ fun StudentDraggableIcon(
     canvasOffset: Offset,
     isIrisActive: Boolean = false,
     irisParams: GhostIrisEngine.IrisParameters? = null,
+    isPrismActive: Boolean = false,
+    vibe: GhostPrismEngine.Vibe? = null,
     onGlance: (Long) -> Unit = {},
     isZenithActive: Boolean = false,
     altitude: Float = 0f,
@@ -336,7 +340,8 @@ fun StudentDraggableIcon(
                     ),
                 shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isIrisActive && irisParams != null) Color.Transparent else studentUiItem.displayBackgroundColor.value.first()
+                    containerColor = if ((isIrisActive && irisParams != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ||
+                                         (isPrismActive && vibe != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)) Color.Transparent else studentUiItem.displayBackgroundColor.value.first()
                 ),
                 border = BorderStroke(
                     if (isSelected) 6.dp else studentUiItem.displayOutlineThickness.value,
@@ -352,6 +357,13 @@ fun StudentDraggableIcon(
                         .fillMaxSize()
                         .padding(studentUiItem.displayPadding.value)
                 ) {
+                    if (isPrismActive && vibe != null) {
+                        GhostPrismLayer(
+                            vibe = vibe,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
+
                     if (isIrisActive && irisParams != null) {
                         GhostIrisLayer(
                             params = irisParams,

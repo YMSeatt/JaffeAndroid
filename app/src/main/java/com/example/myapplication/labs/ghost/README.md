@@ -316,6 +316,12 @@ To ensure consistency between platforms, maintainers should refer to the followi
 - [**Ghost Lab Guide**](../../../../../../../../../Python/GHOST_LAB_GUIDE.md): Explains the "Logic Parity Bridge" and the mathematical constants (like the 2x coordinate scaling factor) shared between Python and Android.
 - [**Python Ghost Suite**](../../../../../../../../../Python/README.md#ghost-lab-experimental-analysis): Catalogs the 30+ R&D scripts that serve as the "Gold Standard" for Android implementations.
 
+### 86. Ghost Prism (prism/GhostPrismLayer.kt, GhostPrismEngine.kt, GhostPrismShader.kt)
+A dynamic theme engine that assigns individual student aesthetics based on "vibes".
+- **Vibe Synthesis**: Analyzes behavior and academic logs to categorize students into vibes like NEON_DREAM, CYBER_PUNK, or ZEN_GARDEN.
+- **AGSL Backgrounds**: Renders immersive, animated student icon backgrounds using procedural noise and gradients.
+- **BOLT Optimization**: O(Recent) background synthesis and RuntimeShader pooling for zero-allocation 60fps interaction.
+
 ### 74. Ghost Neural Origami (origami/GhostOrigamiLayer.kt, GhostOrigamiEngine.kt, GhostOrigamiShader.kt)
 A high-fidelity spatial transition for the Seating Chart.
 - **3D Folding**: Allows the UI to "fold" like a piece of paper using hardware-accelerated 3D rotations.

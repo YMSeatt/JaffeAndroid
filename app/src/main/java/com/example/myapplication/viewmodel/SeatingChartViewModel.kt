@@ -103,6 +103,7 @@ import com.example.myapplication.labs.ghost.ink.GhostInkEngine
 import com.example.myapplication.labs.ghost.link.GhostLinkEngine
 import com.example.myapplication.labs.ghost.moss.GhostMossEngine
 import com.example.myapplication.labs.ghost.coral.GhostCoralEngine
+import com.example.myapplication.labs.ghost.prism.GhostPrismEngine
 import com.example.myapplication.labs.ghost.GhostOracle
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.util.GhostSeedEngine
@@ -545,6 +546,11 @@ class SeatingChartViewModel @Inject constructor(
     private var ghostMetricsCoralBehaviorLogsRef: List<BehaviorEvent>? = null
     private var ghostMetricsCoralStudentsRef: List<com.example.myapplication.data.Student>? = null
 
+    private var ghostMetricsPrismBehaviorLogsRef: List<BehaviorEvent>? = null
+    private var ghostMetricsPrismQuizLogsRef: List<QuizLog>? = null
+    private var ghostMetricsPrismHomeworkLogsRef: List<HomeworkLog>? = null
+    private var ghostMetricsPrismStudentsRef: List<com.example.myapplication.data.Student>? = null
+
     private val _resilienceScores = MutableStateFlow<Map<Long, Float>>(emptyMap())
     /** BOLT: Student resilience scores pre-calculated in background update pipeline. */
     val resilienceScores: StateFlow<Map<Long, Float>> = _resilienceScores.asStateFlow()
@@ -587,6 +593,10 @@ class SeatingChartViewModel @Inject constructor(
     private val _coralReef = MutableStateFlow<List<GhostCoralEngine.CoralBranch>>(emptyList())
     /** BOLT: Social reef structure pre-calculated in background. */
     val coralReef: StateFlow<List<GhostCoralEngine.CoralBranch>> = _coralReef.asStateFlow()
+
+    private val _prismStates = MutableStateFlow<android.util.LongSparseArray<GhostPrismEngine.Vibe>>(android.util.LongSparseArray())
+    /** BOLT: Student vibes for Ghost Prism pre-calculated in background. */
+    val prismStates: StateFlow<android.util.LongSparseArray<GhostPrismEngine.Vibe>> = _prismStates.asStateFlow()
 
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
@@ -1370,6 +1380,32 @@ class SeatingChartViewModel @Inject constructor(
                         )
                         ghostMetricsCoralBehaviorLogsRef = behaviorEvents
                         ghostMetricsCoralStudentsRef = students
+                    }
+                }
+
+                // BOLT: Calculate Ghost Prism vibes in the background pipeline (Memoized)
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PRISM_MODE_ENABLED) {
+                    if (behaviorEvents !== ghostMetricsPrismBehaviorLogsRef ||
+                        quizLogs !== ghostMetricsPrismQuizLogsRef ||
+                        homeworkLogs !== ghostMetricsPrismHomeworkLogsRef ||
+                        students !== ghostMetricsPrismStudentsRef
+                    ) {
+                        val newPrismStates = android.util.LongSparseArray<GhostPrismEngine.Vibe>(students.size)
+                        for (i in 0 until students.size) {
+                            val s = students[i]
+                            newPrismStates.put(s.id, GhostPrismEngine.calculateVibe(
+                                studentId = s.id,
+                                bLogs = behaviorLogsByStudent[s.id],
+                                qLogs = quizLogsByStudent[s.id],
+                                hLogs = homeworkLogsByStudent[s.id],
+                                now = currentTime
+                            ))
+                        }
+                        _prismStates.value = newPrismStates
+                        ghostMetricsPrismBehaviorLogsRef = behaviorEvents
+                        ghostMetricsPrismQuizLogsRef = quizLogs
+                        ghostMetricsPrismHomeworkLogsRef = homeworkLogs
+                        ghostMetricsPrismStudentsRef = students
                     }
                 }
 
