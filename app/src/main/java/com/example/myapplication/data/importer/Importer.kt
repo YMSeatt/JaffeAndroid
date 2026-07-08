@@ -98,22 +98,11 @@ class Importer(
 
     /**
      * Utility to read asset files, handling decryption automatically if required.
-     * Falls back to plaintext if decryption fails, allowing for a mix of secure and insecure sources.
      */
     private suspend fun readAssetFile(fileName: String): String? {
         return try {
             val bytes = context.assets.open(fileName).use { it.readBytes() }
-
-            if (encryptDataFilesFlow.first()) {
-                try {
-                    securityUtil.decrypt(String(bytes, Charsets.UTF_8))
-                } catch (e: Exception) {
-                    // If decryption fails, assume it's plaintext
-                    String(bytes, Charsets.UTF_8)
-                }
-            } else {
-                String(bytes, Charsets.UTF_8)
-            }
+            decryptInboundData(String(bytes, Charsets.UTF_8))
         } catch (e: IOException) {
             Log.e("Importer", "Error reading asset file: $fileName", e)
             null
@@ -152,21 +141,36 @@ class Importer(
                 }
 
                 if (bytes != null) {
-                    val jsonString = if (encryptDataFilesFlow.first()) {
-                        try {
-                            securityUtil.decrypt(String(bytes, Charsets.UTF_8))
-                        } catch (e: Exception) {
-                            // If decryption fails, assume it's plaintext
-                            String(bytes, Charsets.UTF_8)
-                        }
-                    } else {
-                        String(bytes, Charsets.UTF_8)
-                    }
+                    val jsonString = decryptInboundData(String(bytes, Charsets.UTF_8))
                     importClassroomDataFromJson(jsonString)
                 }
             } catch (e: Exception) {
                 Log.e("Importer", "Error during import from URI", e)
             }
+        }
+    }
+
+    /**
+     * Tiered decryption for inbound data (imports/assets).
+     * Attempts modern decryption first, then legacy decryption for Python compatibility,
+     * and finally defaults to plaintext if all decryption attempts fail.
+     */
+    private suspend fun decryptInboundData(rawContent: String): String {
+        return if (encryptDataFilesFlow.first()) {
+            try {
+                // Try modern decryption first (hardware-backed key)
+                securityUtil.decrypt(rawContent)
+            } catch (e: Exception) {
+                try {
+                    // FALLBACK: Attempt legacy decryption for Python cross-platform parity
+                    securityUtil.decryptLegacy(rawContent)
+                } catch (le: Exception) {
+                    // If all decryption fails, assume it's plaintext
+                    rawContent
+                }
+            }
+        } else {
+            rawContent
         }
     }
 

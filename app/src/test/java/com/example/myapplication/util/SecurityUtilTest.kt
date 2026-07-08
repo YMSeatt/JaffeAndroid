@@ -102,12 +102,21 @@ class SecurityUtilTest {
     }
 
     @Test
-    fun `test fallback decryption`() {
+    fun `test legacy decryption`() {
         val originalText = "This is a secret message."
         val oldKey = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
         val oldToken = Token.generate(oldKey, originalText)
-        val decryptedText = securityUtil.decrypt(oldToken.serialise())
-        assertEquals("Decrypted text should match original text", originalText, decryptedText)
+        val decryptedText = securityUtil.decryptLegacy(oldToken.serialise())
+        assertEquals("Legacy decrypted text should match original text", originalText, decryptedText)
+    }
+
+    @Test(expected = Exception::class)
+    fun `test standard decryption should fail for legacy token`() {
+        val originalText = "This is a secret message."
+        val oldKey = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
+        val oldToken = Token.generate(oldKey, originalText)
+        // This should now throw an exception because standard decrypt no longer falls back to the legacy key
+        securityUtil.decrypt(oldToken.serialise())
     }
 
     @Test
