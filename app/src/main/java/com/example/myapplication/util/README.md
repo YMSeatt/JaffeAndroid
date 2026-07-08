@@ -53,6 +53,12 @@ A robust entry point for bulk student data ingestion.
 - **Heuristic Name Parsing**: Gracefully handles various name formats (combined vs. split) to minimize user data-cleaning effort.
 - **N+1 Avoidance**: Pre-loads student groups into memory to ensure high-performance ID resolution during batch imports.
 
+### 7. Aesthetic & Contextual Utilities
+Utilities that support the application's "Fluid Interaction" UI philosophy by providing high-performance access to system and aesthetic resources.
+- **Color Utilities (`ColorUtils.kt`)**: Provides a high-performance bridge between Hex-based storage and the Compose `Color` system, utilizing concurrent caching to eliminate redundant parsing.
+- **Font Utilities (`FontUtils.kt`)**: Manages the mapping of system font families to Compose `FontFamily` objects, enabling user customization of the seating chart's typography.
+- **Context Utilities (`ContextUtils.kt`)**: Safely unwraps the Android `Context` hierarchy to access the underlying `Activity`, critical for managing window-level security flags and lifecycle-bound operations.
+
 ## 🖼️ Visual Serialization & Artifact Generation
 
 The application includes a sophisticated engine for transforming GPU-rendered UI components into shareable visual artifacts. This is used for generating seating chart snapshots and blueprints.
