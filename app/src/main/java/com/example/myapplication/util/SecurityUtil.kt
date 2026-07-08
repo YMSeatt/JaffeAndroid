@@ -338,29 +338,40 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
     }
 
     /**
-     * Decrypts a Fernet token into a UTF-8 string. It first tries to decrypt with the new, secure key.
-     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     * Decrypts a Fernet token into a UTF-8 string using the modern hardware-backed key.
      */
     fun decrypt(token: String): String {
         return String(decryptToByteArray(token), Charsets.UTF_8)
     }
 
     /**
-     * Decrypts a Fernet token into a byte array. It first tries to decrypt with the new, secure key.
-     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     * Decrypts a Fernet token into a byte array using the modern hardware-backed key.
+     * Unlike legacy decryption, this method does NOT fall back to the hardcoded shared secret.
      */
     fun decryptToByteArray(token: String): ByteArray {
+        return fernetCipher.decrypt(token, TTL_SECONDS)
+    }
+
+    /**
+     * Decrypts a Fernet token into a byte array using the legacy fallback key.
+     *
+     * **Security Warning**: This method uses a hardcoded shared secret and should be used
+     * strictly for ingestion of external data from the Python desktop application.
+     * Standard application data should use [decrypt].
+     */
+    fun decryptLegacyToByteArray(token: String): ByteArray {
+        val oldToken = Token.fromString(token)
+        return oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
+    }
+
+    /**
+     * Decrypts a Fernet token into a UTF-8 string using the legacy fallback key.
+     */
+    fun decryptLegacy(token: String): String {
         return try {
-            fernetCipher.decrypt(token, TTL_SECONDS)
+            String(decryptLegacyToByteArray(token), Charsets.UTF_8)
         } catch (e: Exception) {
-            // If the token is valid but expired, do NOT fall back to the legacy key.
-            // This ensures we respect the TTL for primary security.
-            if (e is TokenExpiredException) {
-                throw e
-            }
-            // Fallback to old key
-            val oldToken = Token.fromString(token)
-            oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
+            throw SecurityException("Legacy decryption failed", e)
         }
     }
 
