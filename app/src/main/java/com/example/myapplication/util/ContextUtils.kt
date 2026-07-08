@@ -6,7 +6,16 @@ import android.content.ContextWrapper
 
 /**
  * Utility for finding the [Activity] from a given [Context].
- * This safely unwraps [ContextWrapper]s (like those used by Hilt or for theming).
+ *
+ * ### Why this is needed:
+ * In Jetpack Compose and modern Android development, the provided [Context] is
+ * frequently a [ContextWrapper] (e.g., [dagger.hilt.android.internal.managers.ViewComponentManager.FragmentContextWrapper]
+ * or a themed context). This can cause [Activity]-specific operations to fail
+ * if the context is cast directly.
+ *
+ * This utility safely unwraps the context hierarchy to access the underlying [Activity],
+ * which is required for operations like modifying window flags (e.g., `FLAG_SECURE`)
+ * or accessing the `Window` object.
  */
 fun Context.findActivity(): Activity? {
     var context = this
