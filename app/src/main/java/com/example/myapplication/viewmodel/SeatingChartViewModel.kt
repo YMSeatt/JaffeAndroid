@@ -1789,25 +1789,57 @@ class SeatingChartViewModel @Inject constructor(
 
                         val sessionLogs = if (sessionActive) {
                             val sLogs = ArrayList<String>(maxLogsToDisplay)
-                            val qLogsSess = sessionQuizLogsGrouped[student.id]
-                            if (qLogsSess != null) {
-                                for (i in 0 until qLogsSess.size) {
-                                    if (sLogs.size >= maxLogsToDisplay) break
-                                    sLogs.add("Quiz: ${qLogsSess[i].comment}")
+                            if (currentModeValue == "quiz") {
+                                val scoreInfo = liveQuizScoresSnapshot[student.id]
+                                if (scoreInfo != null) {
+                                    val correct = scoreInfo["correct"] as? Int ?: 0
+                                    val total = scoreInfo["total_asked"] as? Int ?: 0
+                                    sLogs.add("Quiz: $correct of $total")
+                                } else {
+                                    sLogs.add("Quiz: (Pending)")
+                                }
+                            } else if (currentModeValue == "homework") {
+                                val hwData = liveHomeworkScoresSnapshot[student.id]
+                                if (hwData != null) {
+                                    val selected = hwData["selected_options"] as? List<*>
+                                    if (selected != null) {
+                                        selected.forEach { opt ->
+                                            if (sLogs.size < maxLogsToDisplay) sLogs.add(opt.toString())
+                                        }
+                                    } else {
+                                        hwData.forEach { (name, status) ->
+                                            if (name != "selected_options" && sLogs.size < maxLogsToDisplay) {
+                                                sLogs.add("$name: $status")
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    sLogs.add("Homework: (Pending)")
                                 }
                             }
-                            val hLogsSess = sessionHomeworkLogsGrouped[student.id]
-                            if (hLogsSess != null) {
-                                for (i in 0 until hLogsSess.size) {
-                                    if (sLogs.size >= maxLogsToDisplay) break
-                                    val log = hLogsSess[i]
-                                    val status = log.status
-                                    val statusDescription = if (useInitialsForHomework) {
-                                        homeworkInitialsMap[status] ?: status.generateLogInitials().ifEmpty { "?" }
-                                    } else {
-                                        status
+
+                            // Fallback: If no dedicated session summary was added, show recent session logs
+                            if (sLogs.isEmpty()) {
+                                val qLogsSess = sessionQuizLogsGrouped[student.id]
+                                if (qLogsSess != null) {
+                                    for (i in 0 until qLogsSess.size) {
+                                        if (sLogs.size >= maxLogsToDisplay) break
+                                        sLogs.add("Quiz: ${qLogsSess[i].comment}")
                                     }
-                                    sLogs.add("${log.assignmentName}: $statusDescription")
+                                }
+                                val hLogsSess = sessionHomeworkLogsGrouped[student.id]
+                                if (hLogsSess != null) {
+                                    for (i in 0 until hLogsSess.size) {
+                                        if (sLogs.size >= maxLogsToDisplay) break
+                                        val log = hLogsSess[i]
+                                        val status = log.status
+                                        val statusDescription = if (useInitialsForHomework) {
+                                            homeworkInitialsMap[status] ?: status.generateLogInitials().ifEmpty { "?" }
+                                        } else {
+                                            status
+                                        }
+                                        sLogs.add("${log.assignmentName}: $statusDescription")
+                                    }
                                 }
                             }
                             sLogs
@@ -3328,6 +3360,8 @@ class SeatingChartViewModel @Inject constructor(
                 // Clear the session data
                 sessionQuizLogs.postValue(emptyList())
                 sessionHomeworkLogs.postValue(emptyList())
+                liveQuizScores.postValue(emptyMap())
+                liveHomeworkScores.postValue(emptyMap())
                 isSessionActive.postValue(false)
             }
         }
@@ -3347,15 +3381,10 @@ class SeatingChartViewModel @Inject constructor(
     fun addQuizLogToSession(quizLog: QuizLog) {
         if (isSessionActive.value == true) {
             val currentLogs = sessionQuizLogs.value.orEmpty().toMutableList()
-            val existingLogIndex = currentLogs.indexOfFirst {
-                it.studentId == quizLog.studentId && it.quizName == quizLog.quizName
-            }
-
-            if (existingLogIndex != -1) {
-                currentLogs[existingLogIndex] = quizLog
-            } else {
-                currentLogs.add(quizLog)
-            }
+            // In a session, we usually want to KEEP all marks, but for simple progress tracking
+            // we treat marks for the SAME quiz name as updates if they are from the same "session".
+            // However, to match Python keypad behavior, we append.
+            currentLogs.add(quizLog)
             sessionQuizLogs.postValue(currentLogs)
 
             // Update live scores for immediate UI feedback
@@ -3366,12 +3395,14 @@ class SeatingChartViewModel @Inject constructor(
             studentScores["marks_data"] = quizLog.marksData
 
             // Aggregate session progress (Ported from Python)
-            val totalAsked = (studentScores["total_asked"] as? Int ?: 0) + 1
-            studentScores["total_asked"] = totalAsked
+            if (quizLog.numQuestions > 0) {
+                val totalAsked = (studentScores["total_asked"] as? Int ?: 0) + 1
+                studentScores["total_asked"] = totalAsked
+            }
 
             if (quizLog.comment.equals("Correct", ignoreCase = true)) {
-                val correctCount = (studentScores["correct_count"] as? Int ?: 0) + 1
-                studentScores["correct_count"] = correctCount
+                val correctCount = (studentScores["correct"] as? Int ?: 0) + 1
+                studentScores["correct"] = correctCount
             }
 
             val allScores = liveQuizScores.value?.toMutableMap() ?: mutableMapOf()
@@ -3388,35 +3419,53 @@ class SeatingChartViewModel @Inject constructor(
         }
     }
 
-    fun addHomeworkLogToSession(homeworkLog: HomeworkLog) {
+    /**
+     * BOLT: Bulk session logging for homework. Handles aggregated "Quick Mark" logs
+     * from the enhanced LiveHomeworkMarkDialog.
+     */
+    fun addHomeworkLogsToSession(logs: List<HomeworkLog>) {
         if (isSessionActive.value == true) {
             val currentLogs = sessionHomeworkLogs.value.orEmpty().toMutableList()
-            val existingLogIndex = currentLogs.indexOfFirst {
-                it.studentId == homeworkLog.studentId && it.assignmentName == homeworkLog.assignmentName
-            }
+            val allLiveScores = liveHomeworkScores.value?.toMutableMap() ?: mutableMapOf()
 
-            if (existingLogIndex != -1) {
-                currentLogs[existingLogIndex] = homeworkLog
-            } else {
+            logs.forEach { homeworkLog ->
+                // 1. Update session logs list (for persistence)
+                // We keep all logs in the session unless they are identical updates.
                 currentLogs.add(homeworkLog)
+
+                // 2. Update live scores map (for UI/Conditional Formatting)
+                val studentScores = allLiveScores[homeworkLog.studentId]?.toMutableMap() ?: mutableMapOf()
+
+                val marksData = HomeworkScoreEngine.parseMarksData(homeworkLog.marksData)
+                if (marksData.containsKey("selected_options")) {
+                    // "Select" mode aggregation
+                    studentScores["selected_options"] = marksData["selected_options"] ?: emptyList<String>()
+                } else if (homeworkLog.assignmentName == "Yes/No Update") {
+                    // "Yes/No" mode aggregation
+                    marksData.forEach { (key, value) ->
+                        studentScores[key] = value
+                    }
+                } else {
+                    // Individual assignment or Template
+                    studentScores[homeworkLog.assignmentName] = homeworkLog.status
+                }
+                allLiveScores[homeworkLog.studentId] = studentScores
             }
+
             sessionHomeworkLogs.postValue(currentLogs)
-
-            // Update live scores for immediate UI feedback
-            val studentScores = liveHomeworkScores.value?.get(homeworkLog.studentId)?.toMutableMap() ?: mutableMapOf()
-            studentScores[homeworkLog.assignmentName] = homeworkLog.status
-            val allScores = liveHomeworkScores.value?.toMutableMap() ?: mutableMapOf()
-            allScores[homeworkLog.studentId] = studentScores
-            liveHomeworkScores.postValue(allScores)
-
+            liveHomeworkScores.postValue(allLiveScores)
 
             Log.d(
                 "SeatingChartViewModel",
-                "Homework log added/updated in session for student_${homeworkLog.studentId.toString().hashCode()}."
+                "Added ${logs.size} homework log(s) to session."
             )
         } else {
-            addHomeworkLog(homeworkLog)
+            logs.forEach { addHomeworkLog(it) }
         }
+    }
+
+    fun addHomeworkLogToSession(homeworkLog: HomeworkLog) {
+        addHomeworkLogsToSession(listOf(homeworkLog))
     }
 
     private suspend fun executeCommand(command: Command) {
