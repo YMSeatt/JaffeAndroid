@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.min
 
@@ -27,14 +26,16 @@ import kotlin.math.min
  * supports AGSL (API 33+).
  *
  * @param students The list of students to visualize.
- * @param behaviorLogs Historical behavior data used to determine aura intensity.
+ * @param negativeCounts Pre-calculated negative behavior counts per student ID.
+ * @param groupedStudentsByGroup Students grouped by their group ID for connection rendering.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan position of the seating chart.
  */
 @Composable
 fun NeuralMapLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    negativeCounts: android.util.LongSparseArray<Int>,
+    groupedStudentsByGroup: android.util.LongSparseArray<List<StudentUiItem>>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -51,15 +52,6 @@ fun NeuralMapLayer(
         ),
         label = "time"
     )
-
-    val groupedStudents = remember(students) {
-        students.filter { it.groupId.value != null }.groupBy { it.groupId.value }
-    }
-
-    val negativeLogsByStudent = remember(behaviorLogs) {
-        behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
-    }
 
     // BOLT: Pre-allocate shader pools to avoid O(N) allocations in the draw loop.
     // Unique instances are required per item because Android's recording Canvas
@@ -78,7 +70,7 @@ fun NeuralMapLayer(
             // BOLT: Manual index-based loop to eliminate Iterator churn
             for (i in 0 until students.size) {
                 val student = students[i]
-                val negativeCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
+                val negativeCount = negativeCounts.get(student.id.toLong()) ?: 0
                 if (negativeCount > 2) {
                     val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
                     val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
@@ -104,8 +96,9 @@ fun NeuralMapLayer(
         }
 
         // BOLT: Optimized group connection rendering to avoid per-frame list/Offset allocations.
-        for (entry in groupedStudents) {
-            val groupMembers = entry.value
+        // Uses pre-calculated groups from ViewModel and manual index loops to avoid Iterator churn.
+        for (idx in 0 until groupedStudentsByGroup.size()) {
+            val groupMembers = groupedStudentsByGroup.valueAt(idx)
             if (groupMembers.size < 2) continue
 
             val groupColor = groupMembers[0].groupColor.value ?: Color.Cyan

@@ -598,6 +598,14 @@ class SeatingChartViewModel @Inject constructor(
     /** BOLT: Student vibes for Ghost Prism pre-calculated in background. */
     val prismStates: StateFlow<android.util.LongSparseArray<GhostPrismEngine.Vibe>> = _prismStates.asStateFlow()
 
+    private val _negativeCounts = MutableStateFlow<android.util.LongSparseArray<Int>>(android.util.LongSparseArray())
+    /** BOLT: Pre-calculated negative behavior counts for high-performance UI layers. */
+    val negativeCounts: StateFlow<android.util.LongSparseArray<Int>> = _negativeCounts.asStateFlow()
+
+    private val _groupedStudentsByGroup = MutableStateFlow<android.util.LongSparseArray<List<StudentUiItem>>>(android.util.LongSparseArray())
+    /** BOLT: Students grouped by classroom group ID for high-performance UI layers. */
+    val groupedStudentsByGroup: StateFlow<android.util.LongSparseArray<List<StudentUiItem>>> = _groupedStudentsByGroup.asStateFlow()
+
     private var memoizedHomeworkLogs: List<HomeworkLog>? = null
     /**
      * Caches homework logs grouped by student ID to avoid $O(L)$ filtering inside the student loop.
@@ -960,6 +968,14 @@ class SeatingChartViewModel @Inject constructor(
 
                     behaviorLogsByStudentCache = finalGrouped
                     memoizedBehaviorEvents = behaviorEvents
+
+                    // BOLT: Update exposed negative counts StateFlow
+                    val negCountsArr = android.util.LongSparseArray<Int>(finalGrouped.size)
+                    for (i in 0 until finalGrouped.size) {
+                        val key = finalGrouped.keyAt(i)
+                        negCountsArr.put(key, negativeCountsCache[key] ?: 0)
+                    }
+                    _negativeCounts.value = negCountsArr
                 }
                 val behaviorLogsByStudent = behaviorLogsByStudentCache
 
@@ -2040,6 +2056,22 @@ class SeatingChartViewModel @Inject constructor(
                 if (listChanged) {
                     lastSentStudentsList = studentsWithBehavior
                     studentsForDisplay.postValue(studentsWithBehavior)
+
+                    // BOLT: Update exposed grouped students StateFlow
+                    val groupsMap = android.util.LongSparseArray<List<StudentUiItem>>()
+                    for (i in 0 until studentsWithBehavior.size) {
+                        val s = studentsWithBehavior[i]
+                        val gid = s.groupId.value
+                        if (gid != null) {
+                            var list = groupsMap.get(gid) as? MutableList<StudentUiItem>
+                            if (list == null) {
+                                list = ArrayList()
+                                groupsMap.put(gid, list)
+                            }
+                            list.add(s)
+                        }
+                    }
+                    _groupedStudentsByGroup.value = groupsMap
                 }
 
                 // BOLT: Calculate classroom curvature analysis in the background pipeline (Memoized)

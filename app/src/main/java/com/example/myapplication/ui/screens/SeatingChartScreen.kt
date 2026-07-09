@@ -371,6 +371,9 @@ fun SeatingChartScreen(
     val prismStates by seatingChartViewModel.prismStates.collectAsState()
     val coralReef by seatingChartViewModel.coralReef.collectAsState()
 
+    val negativeCounts by seatingChartViewModel.negativeCounts.collectAsState()
+    val groupedStudentsByGroup by seatingChartViewModel.groupedStudentsByGroup.collectAsState()
+
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
@@ -1856,7 +1859,8 @@ fun SeatingChartScreen(
 
                 NeuralMapLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    negativeCounts = negativeCounts,
+                    groupedStudentsByGroup = groupedStudentsByGroup,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
