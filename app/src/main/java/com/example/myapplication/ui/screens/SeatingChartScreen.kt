@@ -2110,7 +2110,7 @@ fun SeatingChartScreen(
                         viewModel = seatingChartViewModel,
                         settingsViewModel = settingsViewModel,
                         onDismissRequest = { showLiveHomeworkMarkDialog = false; selectedStudentUiItemForAction = null },
-                        onSave = { homeworkLog -> seatingChartViewModel.addHomeworkLogToSession(homeworkLog) }
+                        onSave = { homeworkLogs -> seatingChartViewModel.addHomeworkLogsToSession(homeworkLogs) }
                     )
                 }
             }
