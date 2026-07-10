@@ -213,6 +213,8 @@ import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
 import com.example.myapplication.labs.ghost.moss.GhostMossLayer
 import com.example.myapplication.labs.ghost.coral.GhostCoralLayer
 import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
+import com.example.myapplication.labs.ghost.scape.GhostScapeEngine
+import com.example.myapplication.labs.ghost.scape.GhostScapeLayer
 import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
 import com.example.myapplication.labs.ghost.radar.GhostRadarEngine
@@ -395,6 +397,7 @@ fun SeatingChartScreen(
     var isMossActive by remember { mutableStateOf(false) }
     var isPrismActive by remember { mutableStateOf(false) }
     var isCoralActive by remember { mutableStateOf(false) }
+    var isScapeActive by remember { mutableStateOf(false) }
     var isPhoenixActive by remember { mutableStateOf(false) }
     var isKaleidoscopeActive by remember { mutableStateOf(false) }
     var isBioSyncActive by remember { mutableStateOf(false) }
@@ -603,6 +606,7 @@ fun SeatingChartScreen(
     val ghostCortexEngine = remember { GhostCortexEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
+    val ghostScapeEngine = remember { GhostScapeEngine() }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
@@ -670,6 +674,7 @@ fun SeatingChartScreen(
         }
         onDispose {
             ghostVoiceAssistant.destroy()
+            ghostScapeEngine.release()
             ghostEchoEngine.stop()
             ghostHologramEngine.stop()
             ghostMagnetarEngine.stop()
@@ -1204,6 +1209,14 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isWeaverActive
+            )
+            GhostScapeLayer(
+                engine = ghostScapeEngine,
+                students = students,
+                negativeCounts = negativeCounts,
+                isActive = isScapeActive,
+                canvasScale = scale,
+                canvasOffset = offset
             )
             com.example.myapplication.labs.ghost.link.GhostLinkLayer(
                 links = neuralLinks,
@@ -2493,6 +2506,10 @@ fun SeatingChartScreen(
                             }
                             "PRISM" -> {
                                 isPrismActive = !isPrismActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "SCAPE" -> {
+                                isScapeActive = !isScapeActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
                         }

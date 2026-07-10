@@ -1,9 +1,9 @@
 # 👻 Ghost Android Backlog
-- [ ] Idea: Ghost Scape - Neural Spatial Audio pings for eyes-free classroom monitoring.
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-09-03: Ghost Scape - Neural Spatial Audio pings in `/labs/ghost/scape/`
 - [DONE] 2028-09-02: Ghost Prism - Dynamic Individual Student Themes in `/labs/ghost/prism/`
 - [DONE] 2028-09-01: Ghost Coral - Social Reef & Collaborative Growth Visualization in `/labs/ghost/coral/`
 - [DONE] 2028-08-29: Ghost Moss - Social Stagnation & Dormancy Visualization in `/labs/ghost/moss/`
