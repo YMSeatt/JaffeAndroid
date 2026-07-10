@@ -279,4 +279,7 @@ object GhostConfig {
 
     /** Enables "Ghost Prism" dynamic individual student themes based on vibes. */
     const val PRISM_MODE_ENABLED = true
+
+    /** Enables "Ghost Scape" neural spatial audio monitoring. */
+    const val SCAPE_MODE_ENABLED = true
 }

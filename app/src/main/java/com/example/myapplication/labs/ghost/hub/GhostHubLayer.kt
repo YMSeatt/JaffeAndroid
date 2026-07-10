@@ -154,6 +154,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PRISM_MODE_ENABLED) {
                 add(GhostAction("PRISM", Icons.Default.InvertColors, "Ghost Prism"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SCAPE_MODE_ENABLED) {
+                add(GhostAction("SCAPE", Icons.Default.MusicNote, "Ghost Scape"))
+            }
         }
     }
 
