@@ -21,13 +21,21 @@ import com.example.myapplication.ui.theme.GhostCyan
 import com.example.myapplication.ui.theme.GhostMagenta
 
 /**
- * GhostGlanceSurface: A modular, glassmorphic UI component for the Glance preview.
+ * GhostGlanceSurface: A high-fidelity, glassmorphic HUD component for the Glance preview.
  *
- * It uses a background AGSL shader to visualize "Neural Momentum" and "Stability"
- * behind a frosted-glass surface.
+ * This component visualizes a student's "Neural State" using a combination of structural
+ * UI elements and dynamic AGSL shaders.
  *
- * @param studentName The student's name to display.
- * @param state The current [GhostGlanceEngine.GlanceState] synthesized from student logs.
+ * ### Visual Metaphor:
+ * - **Background Shader**: Renders a "Neural Wave" pattern using the `GhostGlanceShader.NEURAL_WAVE`
+ *   program. The wave's intensity and color interpolation are driven by the student's
+ *   synthesized `momentum` and `stability`.
+ * - **Glassmorphism**: Leverages [GhostGlassmorphicSurface] to create a translucent,
+ *   frosted-glass effect, signaling that this is a temporary, data-rich "Glance" overlay.
+ *
+ * @param studentName The student's full name to display in the header.
+ * @param state The current synthesized state containing behavioral archetypes and intensity metrics.
+ * @param modifier Custom modifier for layout and positioning.
  */
 @Composable
 fun GhostGlanceSurface(
@@ -113,6 +121,13 @@ fun GhostGlanceSurface(
     }
 }
 
+/**
+ * A stylized metric display for the Glance HUD.
+ *
+ * @param label The 3-character metric code (e.g., "SIG", "STB").
+ * @param value The resolved string value of the metric.
+ * @param color The accent color representing the metric's "Vibe."
+ */
 @Composable
 fun GlanceMetric(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.Start) {
