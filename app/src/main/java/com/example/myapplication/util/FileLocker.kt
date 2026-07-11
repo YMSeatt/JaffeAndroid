@@ -28,8 +28,8 @@ object FileLocker {
         }
 
         return try {
-            // Set readable for all, consistent with Python's 444 (r--r--r--)
-            file.setReadable(true, false)
+            // HARDEN: Restrict read access to owner-only (600/400) instead of world-readable (644/444)
+            file.setReadable(true, true)
             val success = file.setReadOnly()
             if (success) {
                 Log.i(TAG, "'${file.name}' has been locked (set to read-only).")
@@ -58,8 +58,8 @@ object FileLocker {
         }
 
         return try {
-            // Set readable for all, and writable for owner, consistent with Python's 644 (rw-r--r--)
-            file.setReadable(true, false)
+            // HARDEN: Restrict read access to owner-only instead of world-readable
+            file.setReadable(true, true)
             val success = file.setWritable(true, true)
             if (success) {
                 Log.i(TAG, "'${file.name}' has been unlocked (set to writable).")
