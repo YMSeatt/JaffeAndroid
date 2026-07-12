@@ -654,6 +654,7 @@ class SeatingChartViewModel @Inject constructor(
     private var groupColorMapCache: Map<Long, Color?> = emptyMap()
 
     private var memoizedStudents: List<Student>? = null
+    private var memoizedRosterIdentityHash: Int = 0
 
     /** BOLT: Identity-based cache for student data hashes to avoid O(N) calculations. Keyed by student ID. */
     private val studentDataHashCache = ConcurrentHashMap<Long, Pair<Student, Int>>()
@@ -971,9 +972,8 @@ class SeatingChartViewModel @Inject constructor(
 
                     // BOLT: Update exposed negative counts StateFlow
                     val negCountsArr = android.util.LongSparseArray<Int>(finalGrouped.size)
-                    for (i in 0 until finalGrouped.size) {
-                        val key = finalGrouped.keyAt(i)
-                        negCountsArr.put(key, negativeCountsCache[key] ?: 0)
+                    finalGrouped.forEach { studentId, _ ->
+                        negCountsArr.put(studentId, negativeCountsCache[studentId] ?: 0)
                     }
                     _negativeCounts.value = negCountsArr
                 }
@@ -1128,7 +1128,12 @@ class SeatingChartViewModel @Inject constructor(
 
                 val groups = allGroups.value ?: emptyList()
                 if (groups !== memoizedGroups) {
-                    groupColorMapCache = groups.associate { it.id to com.example.myapplication.util.safeParseColor(it.color) }
+                    val newGroupColorMap = mutableMapOf<Long, Color?>()
+                    for (i in groups.indices) {
+                        val g = groups[i]
+                        newGroupColorMap[g.id] = com.example.myapplication.util.safeParseColor(g.color)
+                    }
+                    groupColorMapCache = newGroupColorMap
                     memoizedGroups = groups
                 }
                 val groupColorMap = groupColorMapCache
@@ -1635,13 +1640,18 @@ class SeatingChartViewModel @Inject constructor(
                 }
 
                 // BOLT: Robust cleanup of all student-associated caches when the roster changes.
-                // Detects additions/removals even if the total count remains the same.
-                if (students !== memoizedStudents) {
+                // Detects additions/removals or renames even if the list instance changed (e.g. from Room).
+                // IDENTITY GUARD: Identity check first for a "free" fast-path.
+                val currentRosterHash = if (students !== memoizedStudents) calculateRosterIdentityHash(students) else memoizedRosterIdentityHash
+                if (currentRosterHash != memoizedRosterIdentityHash) {
                     // BOLT: Pre-calculate student names once per roster change to avoid redundant allocations in loops.
-                    studentNameMapCache = students.associate { it.id to "${it.firstName} ${it.lastName}" }
-
+                    val newNameMap = mutableMapOf<Long, String>()
                     val currentStudentIds = HashSet<Long>(students.size * 2)
-                    for (s in students) currentStudentIds.add(s.id)
+                    for (s in students) {
+                        newNameMap[s.id] = "${s.firstName} ${s.lastName}"
+                        currentStudentIds.add(s.id)
+                    }
+                    studentNameMapCache = newNameMap
 
                     val isPresent: (Long) -> Boolean = { it in currentStudentIds }
 
@@ -1666,6 +1676,8 @@ class SeatingChartViewModel @Inject constructor(
 
                     studentDataHashCache.keys.retainAll(isPresent)
                     studentSocialSignaturesCache.keys.retainAll(isPresent)
+
+                    memoizedRosterIdentityHash = currentRosterHash
                     memoizedStudents = students
                 }
 
@@ -3614,6 +3626,22 @@ class SeatingChartViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Computes a stable hash for the entire student roster, excluding volatile positioning fields.
+     * This allows the update pipeline to skip expensive cache invalidations during dragging.
+     */
+    private fun calculateRosterIdentityHash(students: List<Student>): Int {
+        var result = students.size
+        for (i in students.indices) {
+            val s = students[i]
+            // We include ID and names to detect additions, removals, and renames.
+            result = 31 * result + s.id.hashCode()
+            result = 31 * result + s.firstName.hashCode()
+            result = 31 * result + s.lastName.hashCode()
+        }
+        return result
     }
 
     /**
