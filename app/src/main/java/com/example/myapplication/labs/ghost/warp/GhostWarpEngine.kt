@@ -6,7 +6,16 @@ import java.util.Locale
 import kotlin.math.max
 
 /**
- * GhostWarpEngine: Calculates spatial "curvature" points for the Ghost Warp experiment.
+ * GhostWarpEngine: The analytical core of the "Neural Spacetime Dilation" experiment.
+ *
+ * This engine calculates spatial "curvature" by treating student behavioral activity
+ * as gravitational mass. It synthesizes raw database logs into macroscopic spacetime
+ * metrics, identifying "Gravity Wells" and "Hotspots" within the classroom fabric.
+ *
+ * ### Physics Metaphor:
+ * - **Mass**: Derived from the frequency, recency, and polarity of student logs.
+ * - **Curvature**: The local distortion of the data-plane caused by high-mass nodes.
+ * - **Gravity Wells**: Persistent areas of high behavioral energy.
  */
 object GhostWarpEngine {
 
@@ -49,7 +58,20 @@ object GhostWarpEngine {
 
     /**
      * Analyzes classroom curvature based on student behavioral density.
-     * Ported from `Python/ghost_warp_analysis.py`.
+     *
+     * This method implements a high-fidelity port of `Python/ghost_warp_analysis.py`,
+     * maintaining logical parity with the desktop R&D suite.
+     *
+     * ### Mass Calculation Heuristics:
+     * 1. **Recency Factor (2.0x)**: Logs within the last 60 minutes create a stronger
+     *    gravitational pull, prioritizing current classroom "energy" over historical state.
+     * 2. **Negativity Bias (1.5x)**: Negative behavioral incidents are modeled as
+     *    possessing higher "Social Mass" due to their disproportionate impact on
+     *    classroom stability.
+     *
+     * @param students The current list of student UI items.
+     * @param behaviorLogs The complete set of filtered behavior logs.
+     * @return A [ClassroomWarpAnalysis] containing global and local curvature metrics.
      */
     fun analyzeClassroomCurvature(
         students: List<StudentUiItem>,
@@ -138,6 +160,14 @@ object GhostWarpEngine {
 
     /**
      * Identifies the top "Gravity Wells" in the classroom based on student activity.
+     *
+     * These points are used by the [GhostWarpLayer] to drive the AGSL distortion shader.
+     * To prevent GPU overdraw and maintain 60fps, the engine caps the number of
+     * concurrent gravity wells to a maximum of 10.
+     *
+     * @param students The current list of student UI items.
+     * @param behaviorLogs The behavioral logs used to calculate student mass.
+     * @param maxPoints The maximum number of points to pass to the shader (default 10).
      */
     fun calculateGravityPoints(
         students: List<StudentUiItem>,
