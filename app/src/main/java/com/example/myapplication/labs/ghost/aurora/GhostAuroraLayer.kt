@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.aurora
 
 import android.graphics.RuntimeShader
 import android.os.Build
@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.ShaderBrush
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.QuizLog
+import com.example.myapplication.labs.ghost.GhostConfig
 
 /**
  * GhostAuroraLayer: A futuristic background layer that visualizes "Classroom Climate"

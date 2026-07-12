@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.aurora
 
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.HomeworkLog
@@ -50,6 +50,10 @@ object GhostAuroraEngine {
                 } else {
                     positiveCount++
                 }
+            } else {
+                // BOLT: Behavior logs are sorted DESC (newest first).
+                // Once we hit a log outside the window, all subsequent logs are also outside.
+                break
             }
         }
 

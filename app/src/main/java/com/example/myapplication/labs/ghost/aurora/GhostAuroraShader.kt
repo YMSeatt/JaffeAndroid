@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.aurora
 
 import org.intellij.lang.annotations.Language
 
