@@ -1,4 +1,4 @@
-package com.example.myapplication.labs.ghost
+package com.example.myapplication.labs.ghost.aurora
 
 import com.example.myapplication.data.BehaviorEvent
 import org.junit.Assert.assertEquals

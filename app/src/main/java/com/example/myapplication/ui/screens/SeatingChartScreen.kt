@@ -127,7 +127,7 @@ import com.example.myapplication.labs.ghost.GhostSpectraDialog
 import com.example.myapplication.labs.ghost.GhostSpectraEngine
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
-import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.aurora.GhostAuroraLayer
 import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
 import com.example.myapplication.labs.ghost.mood.GhostMoodLayer
 import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeLayer
