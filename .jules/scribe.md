@@ -166,5 +166,11 @@
 - **Constraint**: Resilience is only calculated if `HistoricalNegativeCount > 0`. A student who has never struggled is not a Phoenix in this model; they are simply "Stable".
 - **Visual Trigger**: The "Phoenix Rising" fire aura triggers when the score exceeds the **0.6f threshold**.
 
+## 💡 Ghost Warp "Neural Spacetime" Constants
+- **Recency Bias**: The engine applies a **2.0x weight** to behavior logs recorded within the last **60 minutes**. This ensures that the visual "warp" reflects the current classroom atmosphere rather than long-term history.
+- **Negativity Polarity**: Negative logs are weighted **1.5x** more heavily than positive ones in the mass calculation. This is a deliberate pedagogical choice to highlight areas of social friction in the spacetime grid.
+- **Shader Smoothing**: The `NEURAL_WARP` shader utilizes a **0.1 softening factor** to prevent mathematical singularities at the center of student nodes.
+- **Cap**: The system is hard-coded to a maximum of **10 concurrent gravity wells** for performance stability.
+
 ---
 *Documentation love letter from Scribe 📜*

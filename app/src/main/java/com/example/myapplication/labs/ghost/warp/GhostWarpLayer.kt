@@ -16,6 +16,16 @@ import androidx.compose.ui.geometry.Offset
 /**
  * GhostWarpLayer: Applies the "Neural Spacetime Dilation" AGSL effect to the background.
  *
+ * This component visualizes the classroom's "Spacetime Curvature" by distorting a
+ * background grid using a procedural AGSL shader. Distortion hotspots are driven
+ * by the "Gravity Wells" calculated in [GhostWarpEngine].
+ *
+ * ### BOLT Performance Architecture:
+ * - **Zero-Allocation Uniforms**: Batches up to 10 student mass points into a single
+ *   `FloatArray` (40 floats) to minimize JNI overhead and object churn.
+ * - **Memoized Analysis**: Gravity points are recalculated only when the underlying
+ *   student or log data changes, ensuring 60fps interaction during pan and zoom.
+ *
  * @param students Current list of students.
  * @param behaviorLogs Current list of behavior logs.
  * @param canvasScale The current zoom level of the seating chart.

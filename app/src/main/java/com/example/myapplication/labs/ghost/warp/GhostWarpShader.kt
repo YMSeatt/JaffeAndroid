@@ -3,13 +3,24 @@ package com.example.myapplication.labs.ghost.warp
 import org.intellij.lang.annotations.Language
 
 /**
- * GhostWarpShader: AGSL shaders for the "Ghost Warp" experiment.
+ * GhostWarpShader: Procedural AGSL programs for the "Neural Spacetime Dilation" experiment.
  *
- * Implements a "Neural Spacetime Dilation" effect where the coordinate system
- * is distorted based on the "mass" (behavioral intensity) of student nodes.
+ * Implements a non-linear coordinate distortion effect where the "Social Spacetime"
+ * fabric is bent by behavioral energy.
  */
 object GhostWarpShader {
 
+    /**
+     * The primary Spacetime Dilation shader.
+     *
+     * ### Algorithm:
+     * 1. **Inverse-Square Displacement**: Calculates a displacement vector for each
+     *    fragment based on the sum of gravitational pulls from student "Mass Points."
+     * 2. **Smoothing**: Uses a softening factor (`0.1`) in the denominator to prevent
+     *    visual singularities (infinite displacement) at student centers.
+     * 3. **Grid Distortion**: Displaces a procedural background grid, visually
+     *    revealing the classroom's curvature hotspots.
+     */
     @Language("AGSL")
     const val NEURAL_WARP = """
         uniform float2 iResolution;
