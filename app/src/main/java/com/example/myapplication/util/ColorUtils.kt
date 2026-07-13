@@ -4,6 +4,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.core.graphics.toColorInt
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * ColorUtils: High-performance color management utilities.
+ *
+ * This utility provides a bridge between the application's Hex-based storage model
+ * and the Jetpack Compose [Color] system.
+ *
+ * ### BOLT (Performance-Obsessed) Strategy:
+ * Because the seating chart frequently updates (e.g., during student movement or
+ * live quiz sessions), color parsing can become a significant source of CPU overhead
+ * and string allocation churn. This utility utilizes a [ConcurrentHashMap] cache
+ * to ensure that identical color strings are only parsed once, maintaining 60fps
+ * responsiveness across the UI.
+ */
+
+/**
+ * Global cache for parsed colors to minimize string-to-int conversion overhead.
+ */
 private val colorCache = ConcurrentHashMap<String, Color>()
 
 /**

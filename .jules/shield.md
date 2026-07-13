@@ -77,3 +77,74 @@
 - **Vulnerability:** Temporary export files (`.xlsx`), screenshots (`.png`), and blueprints (`.svg`) containing student PII were stored in the app's cache directory and could persist indefinitely.
 - **Fix:** Implemented an automated cleanup routine in `MainActivity.kt` that purges these temporary file types from the cache directory on application startup.
 - **Location:** `app/src/main/java/com/example/myapplication/MainActivity.kt`
+
+## 🛡️ Privacy Hardening: ID-Only Intent Protocol for Reminders
+- **Vulnerability:** Teacher reminders (containing student PII) were passed as plain-text extras in `AlarmManager` intents. These intents are persisted by the system, potentially exposing PII to system logs or backups.
+- **Fix:**
+    - Transitioned to an **ID-Only Intent Protocol**. Alarms now only carry the `reminder_id`.
+    - `ReminderReceiver` fetches and decrypts the PII from the secure database only when the alarm triggers.
+- **Location:** `app/src/main/java/com/example/myapplication/util/ReminderManager.kt`, `app/src/main/java/com/example/myapplication/util/ReminderReceiver.kt`
+
+## 🛡️ Privacy and Reliability Hardening: Universal Database Size Limits
+- **Vulnerability:** Size limits (50MB) for database operations were only enforced for encrypted files, leaving the app vulnerable to OOM/DoS attacks via large plaintext database backups, shares, or restores. Additionally, `shareDatabase` used a static filename, creating a risk of race conditions and data corruption.
+- **Fix:**
+    - Implemented a mandatory 50MB size limit for **all** database operations (backup, share, restore) regardless of encryption status.
+    - Hardened `shareDatabase` to use unique, timestamp-based filenames to prevent collisions in the shared cache.
+- **Location:** `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`
+
+## 🛡️ Privacy Hardening: ID-Only Intent Protocol & Screen Protection
+- **Vulnerability:** Student PII (full name) was passed via Intent extras to `GhostMorphActivity`, potentially exposing it to system logs or malicious Intent interceptors. Additionally, the sensitive 'Neural Dossier' screen lacked protection against screenshots and screen recordings.
+- **Fix:**
+    - Transitioned to an **ID-Only Intent Protocol** for the Neural Morph transition.
+    - Updated `GhostMorphActivity` to fetch the student name directly from the secure local database using the provided ID.
+    - Enforced `WindowManager.LayoutParams.FLAG_SECURE` in `GhostMorphActivity` to prevent unauthorized data capture.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/morph/GhostMorphActivity.kt`
+
+## 🛡️ Privacy Hardening: Screen Protection for Reminders
+- **Vulnerability:** The 'Reminders' screen, which often contains student PII and sensitive classroom tasks, lacked protection against screenshots and screen recordings.
+- **Fix:** Implemented a `DisposableEffect` in `RemindersScreen.kt` to proactively enforce `WindowManager.LayoutParams.FLAG_SECURE` whenever the screen is active.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/RemindersScreen.kt`
+
+## 🛡️ Privacy Hardening: Screen Protection for Ghost Lab Sandbox Activities
+- **Vulnerability:** Experimental sandbox activities (Cortex, Strategist, Vision, Ray, Filter, and Preferences) that process or display sensitive classroom data and student metrics lacked protection against screenshots and screen recordings.
+- **Fix:** Enforced `WindowManager.LayoutParams.FLAG_SECURE` in the `onCreate` method of all relevant sandbox activities.
+- **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/` (Multiple Activities)
+
+## 🛡️ Privacy Hardening: Voice Assistant PII Protection
+- **Vulnerability:** The Ghost Voice Assistant transcribes spoken student names and behavioral logs directly onto the UI. Without `FLAG_SECURE` being active during this period, this sensitive PII is vulnerable to capture via screenshots or screen recordings. Additionally, the specific behavior type was logged in plain text in the system logcat.
+- **Fix:**
+    - Integrated `isGhostListening` into the `isSensitiveModeActive` check in `SeatingChartScreen.kt` to enforce `FLAG_SECURE` whenever the voice assistant is active.
+    - Implemented null-safe behavior type masking in `GhostVoiceAssistant.kt` logs to prevent PII leakage to the system logcat.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostVoiceAssistant.kt`
+
+## 🛡️ Privacy Hardening: Comprehensive Screen Capture Protection
+- **Vulnerability:** Sensitive student data (behavior logs, quiz scores, homework status) and experimental AI analysis (Neural Insights, Synapses, Oracle Prophecies) were exposed to screen capture (screenshots/recordings) because the corresponding dialogs were not included in the "Privacy Shield" logic.
+- **Fix:** Extended the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include all identified sensitive dialog states, proactively enforcing `WindowManager.LayoutParams.FLAG_SECURE` whenever student PII or predictive analysis is on screen.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
+
+## 🛡️ Privacy Hardening: Expanded Screen Capture Protection
+- **Vulnerability:** Several sensitive UI states in the seating chart (Student Action Menus, Export/Email dialogs, Layout management, and Box styling) were still vulnerable to screen capture because they were not integrated into the "Privacy Shield" logic.
+- **Fix:** Expanded the `isSensitiveModeActive` flag in `SeatingChartScreen.kt` to include 10 additional sensitive states: `showStudentActionMenu`, `showSaveLayoutDialog`, `showLoadLayoutDialog`, `showExportDialog`, `showUndoHistoryDialog`, `showChangeBoxSizeDialog`, `showStudentStyleDialog`, `showAssignTaskDialog`, `showAddEditFurnitureDialog`, and `showEmailDialog`.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`
+
+## 🛡️ Privacy and Configuration Hardening: Removal of Hardcoded Email Fallback
+- **Vulnerability:** The application used a hardcoded fallback email address (`behaviorlogger@gmail.com`) when a user-defined address was missing. This created a privacy risk of leaking student PII to an unauthorized developer-owned inbox and was identified as a security risk for automated reporting. Additionally, the email-sending pipeline lacked robust input validation.
+- **Fix:**
+    - Removed the hardcoded fallback from `AppPreferencesRepository.kt` and `SettingsViewModel.kt`, transitioning to an empty-string default.
+    - Enhanced `EmailUtil.kt` by making `isValidEmail` public and enforcing address validation at the start of all sending methods.
+    - Hardened `EmailWorker.kt` by adding mandatory `isValidEmail` checks for both sender and recipient in all background reporting paths (`daily_report`, `send_email`, `process_pending_emails`, `on_stop_export`).
+    - Standardized exception messages in the email pipeline to be generic ("Invalid email address configuration") to prevent PII leakage to system logs or UI toasts.
+- **Location:** `app/src/main/java/com/example/myapplication/preferences/AppPreferencesRepository.kt`, `app/src/main/java/com/example/myapplication/viewmodel/SettingsViewModel.kt`, `app/src/main/java/com/example/myapplication/util/EmailUtil.kt`, `app/src/main/java/com/example/myapplication/util/EmailWorker.kt`
+
+## 🛡️ Privacy Hardening: Neural Spectroscopy Report Masking
+- **Vulnerability:** The experimental "Neural Spectroscopy" report contained raw student names in the Markdown output and intent subjects, potentially leaking PII to external applications and unencrypted system logs.
+- **Fix:** Implemented PII masking using the `maskStudentName` utility for all student entries in `GhostSpectraEngine.kt` and for intent subjects in `GhostSpectraDialog.kt`.
+- **Location:** `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraEngine.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostSpectraDialog.kt`
+
+## 🛡️ Privacy Hardening: Unified Privacy Shield for Voice Assistant
+- **Vulnerability:** Voice transcriptions (containing student names/PII) persisted on the screen indefinitely after speech ended. Furthermore, the `FLAG_SECURE` protection (Privacy Shield) was tied only to the active microphone state, leaving PII exposed to screen capture during the result-display window.
+- **Fix:**
+    - Implemented a **Unified Privacy Shield** in `SeatingChartScreen.kt` that monitors both the listening state and the presence of transcribed text.
+    - Added an automatic **State Purge** mechanism via `LaunchedEffect` that clears transcribed PII from memory after a 5-second timeout.
+    - Updated `GhostVoiceVisualizer.kt` to allow persistent feedback during the timeout period while suppressing expensive shader animations when the microphone is inactive.
+- **Location:** `app/src/main/java/com/example/myapplication/ui/screens/SeatingChartScreen.kt`, `app/src/main/java/com/example/myapplication/labs/ghost/GhostVisualizer.kt`

@@ -42,23 +42,43 @@ enum class ItemType { STUDENT, FURNITURE }
  * @param moves A list of [ItemMove] objects describing the changes to be applied.
  */
 class MoveItemsCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val moves: List<ItemMove>
+    internal val viewModel: SeatingChartViewModel,
+    internal val moves: List<ItemMove>
 ) : Command {
     override suspend fun execute() {
-        val studentUpdates = moves.filter { it.itemType == ItemType.STUDENT }
-            .mapNotNull { it.student?.copy(xPosition = it.newX, yPosition = it.newY) }
-        val furnitureUpdates = moves.filter { it.itemType == ItemType.FURNITURE }
-            .mapNotNull { it.furniture?.copy(xPosition = it.newX, yPosition = it.newY) }
+        val studentUpdates = ArrayList<Student>(moves.size)
+        val furnitureUpdates = ArrayList<Furniture>(moves.size)
+        for (i in moves.indices) {
+            val move = moves[i]
+            if (move.itemType == ItemType.STUDENT) {
+                move.student?.copy(xPosition = move.newX, yPosition = move.newY)?.let {
+                    studentUpdates.add(it)
+                }
+            } else {
+                move.furniture?.copy(xPosition = move.newX, yPosition = move.newY)?.let {
+                    furnitureUpdates.add(it)
+                }
+            }
+        }
 
         viewModel.internalUpdateAll(studentUpdates, furnitureUpdates)
     }
 
     override suspend fun undo() {
-        val studentUpdates = moves.filter { it.itemType == ItemType.STUDENT }
-            .mapNotNull { it.student?.copy(xPosition = it.oldX, yPosition = it.oldY) }
-        val furnitureUpdates = moves.filter { it.itemType == ItemType.FURNITURE }
-            .mapNotNull { it.furniture?.copy(xPosition = it.oldX, yPosition = it.oldY) }
+        val studentUpdates = ArrayList<Student>(moves.size)
+        val furnitureUpdates = ArrayList<Furniture>(moves.size)
+        for (i in moves.indices) {
+            val move = moves[i]
+            if (move.itemType == ItemType.STUDENT) {
+                move.student?.copy(xPosition = move.oldX, yPosition = move.oldY)?.let {
+                    studentUpdates.add(it)
+                }
+            } else {
+                move.furniture?.copy(xPosition = move.oldX, yPosition = move.oldY)?.let {
+                    furnitureUpdates.add(it)
+                }
+            }
+        }
 
         viewModel.internalUpdateAll(studentUpdates, furnitureUpdates)
     }

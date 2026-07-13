@@ -20,25 +20,23 @@ object GhostIrisEngine {
 
     /**
      * Generates iris parameters for a student.
+     *
+     * BOLT: Refactored to accept pre-calculated metrics to eliminate redundant O(L)
+     * log traversals in the background update pipeline.
+     *
+     * @param studentId The unique student ID.
+     * @param behaviorBalance Normalized behavior stability (0.0 to 1.0).
+     * @param avgQuiz Normalized average quiz score (0.0 to 1.0).
+     * @param totalLogs Combined count of behavior, quiz, and homework logs.
      */
     fun calculateIris(
         studentId: Long,
-        behaviorLogs: List<BehaviorEvent>,
-        quizLogs: List<QuizLog>,
-        homeworkLogs: List<HomeworkLog>
+        behaviorBalance: Float,
+        avgQuiz: Float,
+        totalLogs: Int
     ): IrisParameters {
         // Deterministic seed based on student ID
         val seed = (studentId * 12345.678f) % 1000f
-
-        // Calculate performance metrics
-        val positiveCount = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-        val negativeCount = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
-        val behaviorBalance = if (behaviorLogs.isEmpty()) 0.5f
-            else (positiveCount.toFloat() / behaviorLogs.size).coerceIn(0f, 1f)
-
-        val avgQuiz = if (quizLogs.isNotEmpty()) {
-            quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> if (m > 0) v / m else null } } }.average().toFloat()
-        } else 0.75f
 
         // Colors based on behavior balance
         // Positive: Cyan/Blue, Negative: Red/Purple, Neutral: Green/Teal
@@ -55,7 +53,6 @@ object GhostIrisEngine {
         }
 
         // Complexity based on log density (more logs = more complex iris)
-        val totalLogs = behaviorLogs.size + quizLogs.size + homeworkLogs.size
         val complexity = (totalLogs.toFloat() / 20f).coerceIn(0.1f, 1.0f)
 
         return IrisParameters(

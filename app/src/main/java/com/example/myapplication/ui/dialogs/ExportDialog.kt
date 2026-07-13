@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.viewmodel.SeatingChartViewModel
+import com.example.myapplication.viewmodel.SettingsViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -29,6 +30,7 @@ import java.util.Locale
 @Composable
 fun ExportDialog(
     viewModel: SeatingChartViewModel,
+    settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit,
     onExport: (ExportOptions, Boolean) -> Unit
 ) {
@@ -38,11 +40,12 @@ fun ExportDialog(
     val endDateState = rememberDatePickerState()
 
     var studentFilter by remember { mutableStateOf("all") }
-    var selectedStudentIds by remember { mutableStateOf<List<Long>>(emptyList()) }
+    // BOLT: Use Set for O(1) lookup during checkbox list composition.
+    var selectedStudentIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var behaviorFilter by remember { mutableStateOf("all") }
-    var selectedBehaviorTypes by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedBehaviorTypes by remember { mutableStateOf<Set<String>>(emptySet()) }
     var homeworkFilter by remember { mutableStateOf("all") }
-    var selectedHomeworkTypes by remember { mutableStateOf<List<String>>(emptyList()) }
+    var selectedHomeworkTypes by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     var includeBehaviorLogs by remember { mutableStateOf(true) }
     var includeQuizLogs by remember { mutableStateOf(true) }
@@ -50,13 +53,17 @@ fun ExportDialog(
     var includeSummarySheet by remember { mutableStateOf(true) }
     var separateSheets by remember { mutableStateOf(true) }
     var includeMasterLog by remember { mutableStateOf(true) }
+    val encryptDataFilesPref by settingsViewModel.encryptDataFiles.collectAsState()
     var includeIndividualStudentSheets by remember { mutableStateOf(true) }
     var includeAttendanceSheet by remember { mutableStateOf(false) }
+    var encryptFile by remember { mutableStateOf(encryptDataFilesPref) }
 
     val students by viewModel.allStudents.observeAsState(initial = emptyList())
     val customBehaviors by viewModel.allCustomBehaviors.observeAsState(initial = emptyList())
     val customHomeworkTypes by viewModel.allCustomHomeworkTypes.observeAsState(initial = emptyList())
     val dateFormatter = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+    // BOLT: Hoist Date object to avoid allocations in start/end preview text.
+    val date = remember { Date() }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -70,8 +77,8 @@ fun ExportDialog(
                     Spacer(modifier = Modifier.width(8.dp))
                     Button(onClick = { showEndDatePicker = true }) { Text("End Date") }
                 }
-                Text("Start: ${startDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
-                Text("End: ${endDateState.selectedDateMillis?.let { dateFormatter.format(Date(it)) } ?: "Not set"}")
+                Text("Start: ${startDateState.selectedDateMillis?.let { date.time = it; dateFormatter.format(date) } ?: "Not set"}")
+                Text("End: ${endDateState.selectedDateMillis?.let { date.time = it; dateFormatter.format(date) } ?: "Not set"}")
 
                 if (showStartDatePicker) {
                     DatePickerDialog(
@@ -107,13 +114,12 @@ fun ExportDialog(
                 if (studentFilter == "specific") {
                     LazyColumn(modifier = Modifier.height(150.dp)) {
                         items(students) { student ->
-                            var isChecked by remember { mutableStateOf(selectedStudentIds.contains(student.id)) }
+                            val isChecked = selectedStudentIds.contains(student.id)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedStudentIds = if (isChecked) {
+                                    onCheckedChange = { checked ->
+                                        selectedStudentIds = if (checked) {
                                             selectedStudentIds + student.id
                                         } else {
                                             selectedStudentIds - student.id
@@ -138,13 +144,12 @@ fun ExportDialog(
                 if (behaviorFilter == "specific") {
                     LazyColumn(modifier = Modifier.height(150.dp)) {
                         items(customBehaviors) { behavior ->
-                            var isChecked by remember { mutableStateOf(selectedBehaviorTypes.contains(behavior.name)) }
+                            val isChecked = selectedBehaviorTypes.contains(behavior.name)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedBehaviorTypes = if (isChecked) {
+                                    onCheckedChange = { checked ->
+                                        selectedBehaviorTypes = if (checked) {
                                             selectedBehaviorTypes + behavior.name
                                         } else {
                                             selectedBehaviorTypes - behavior.name
@@ -169,13 +174,12 @@ fun ExportDialog(
                 if (homeworkFilter == "specific") {
                     LazyColumn(modifier = Modifier.height(150.dp)) {
                         items(customHomeworkTypes) { homework ->
-                            var isChecked by remember { mutableStateOf(selectedHomeworkTypes.contains(homework.name)) }
+                            val isChecked = selectedHomeworkTypes.contains(homework.name)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(
                                     checked = isChecked,
-                                    onCheckedChange = {
-                                        isChecked = it
-                                        selectedHomeworkTypes = if (isChecked) {
+                                    onCheckedChange = { checked ->
+                                        selectedHomeworkTypes = if (checked) {
                                             selectedHomeworkTypes + homework.name
                                         } else {
                                             selectedHomeworkTypes - homework.name
@@ -226,6 +230,14 @@ fun ExportDialog(
                     Checkbox(checked = includeAttendanceSheet, onCheckedChange = { includeAttendanceSheet = it })
                     Text("Attendance Sheet")
                 }
+                HorizontalDivider(Modifier.padding(vertical = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = encryptFile, onCheckedChange = { encryptFile = it })
+                    Column {
+                        Text("Protect with Encryption (Fernet)")
+                        Text("Adds cryptographic layer to the exported file.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -235,9 +247,9 @@ fun ExportDialog(
                         val options = ExportOptions(
                             startDate = startDateState.selectedDateMillis,
                             endDate = endDateState.selectedDateMillis,
-                            studentIds = if (studentFilter == "all") null else selectedStudentIds,
-                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
-                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
+                            studentIds = if (studentFilter == "all") null else selectedStudentIds.toList(),
+                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes.toList(),
+                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes.toList(),
                             includeBehaviorLogs = includeBehaviorLogs,
                             includeQuizLogs = includeQuizLogs,
                             includeHomeworkLogs = includeHomeworkLogs,
@@ -245,7 +257,9 @@ fun ExportDialog(
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
                             includeIndividualStudentSheets = includeIndividualStudentSheets,
-                            includeAttendanceSheet = includeAttendanceSheet
+                            includeStudentInfoSheet = includeIndividualStudentSheets, // Defaulting info sheet to same as individual sheets for now
+                            includeAttendanceSheet = includeAttendanceSheet,
+                            encrypt = encryptFile
                         )
                         onExport(options, false)
                     }
@@ -258,9 +272,9 @@ fun ExportDialog(
                         val options = ExportOptions(
                             startDate = startDateState.selectedDateMillis,
                             endDate = endDateState.selectedDateMillis,
-                            studentIds = if (studentFilter == "all") null else selectedStudentIds,
-                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes,
-                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes,
+                            studentIds = if (studentFilter == "all") null else selectedStudentIds.toList(),
+                            behaviorTypes = if (behaviorFilter == "all") null else selectedBehaviorTypes.toList(),
+                            homeworkTypes = if (homeworkFilter == "all") null else selectedHomeworkTypes.toList(),
                             includeBehaviorLogs = includeBehaviorLogs,
                             includeQuizLogs = includeQuizLogs,
                             includeHomeworkLogs = includeHomeworkLogs,
@@ -268,7 +282,8 @@ fun ExportDialog(
                             separateSheets = separateSheets,
                             includeMasterLog = includeMasterLog,
                             includeIndividualStudentSheets = includeIndividualStudentSheets,
-                            includeAttendanceSheet = includeAttendanceSheet
+                            includeAttendanceSheet = includeAttendanceSheet,
+                            encrypt = encryptFile
                         )
                         onExport(options, true)
                     }

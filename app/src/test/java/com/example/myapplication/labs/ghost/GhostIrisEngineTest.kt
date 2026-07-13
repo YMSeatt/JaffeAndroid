@@ -11,8 +11,8 @@ class GhostIrisEngineTest {
     @Test
     fun `calculateIris should be deterministic for the same student ID`() {
         val studentId = 1L
-        val params1 = GhostIrisEngine.calculateIris(studentId, emptyList(), emptyList(), emptyList())
-        val params2 = GhostIrisEngine.calculateIris(studentId, emptyList(), emptyList(), emptyList())
+        val params1 = GhostIrisEngine.calculateIris(studentId, 0.5f, 0.75f, 0)
+        val params2 = GhostIrisEngine.calculateIris(studentId, 0.5f, 0.75f, 0)
 
         assertEquals(params1.seed, params2.seed)
         assertEquals(params1.colorA, params2.colorA)
@@ -22,8 +22,8 @@ class GhostIrisEngineTest {
 
     @Test
     fun `calculateIris should produce different seeds for different student IDs`() {
-        val params1 = GhostIrisEngine.calculateIris(1L, emptyList(), emptyList(), emptyList())
-        val params2 = GhostIrisEngine.calculateIris(2L, emptyList(), emptyList(), emptyList())
+        val params1 = GhostIrisEngine.calculateIris(1L, 0.5f, 0.75f, 0)
+        val params2 = GhostIrisEngine.calculateIris(2L, 0.5f, 0.75f, 0)
 
         assertNotEquals(params1.seed, params2.seed)
     }
@@ -31,10 +31,8 @@ class GhostIrisEngineTest {
     @Test
     fun `calculateIris complexity should increase with more logs`() {
         val studentId = 1L
-        val paramsLow = GhostIrisEngine.calculateIris(studentId, emptyList(), emptyList(), emptyList())
-
-        val behaviorLogs = List(10) { BehaviorEvent(studentId = studentId, type = "Positive", timestamp = 0L, comment = null) }
-        val paramsHigh = GhostIrisEngine.calculateIris(studentId, behaviorLogs, emptyList(), emptyList())
+        val paramsLow = GhostIrisEngine.calculateIris(studentId, 0.5f, 0.75f, 0)
+        val paramsHigh = GhostIrisEngine.calculateIris(studentId, 0.5f, 0.75f, 10)
 
         assertTrue("Complexity should increase with logs", paramsHigh.complexity > paramsLow.complexity)
     }
@@ -43,11 +41,8 @@ class GhostIrisEngineTest {
     fun `calculateIris colorA should reflect behavior balance`() {
         val studentId = 1L
 
-        val positiveLogs = listOf(BehaviorEvent(studentId = studentId, type = "Positive", timestamp = 0L, comment = null))
-        val paramsPositive = GhostIrisEngine.calculateIris(studentId, positiveLogs, emptyList(), emptyList())
-
-        val negativeLogs = listOf(BehaviorEvent(studentId = studentId, type = "Negative Behavior", timestamp = 0L, comment = null))
-        val paramsNegative = GhostIrisEngine.calculateIris(studentId, negativeLogs, emptyList(), emptyList())
+        val paramsPositive = GhostIrisEngine.calculateIris(studentId, 0.8f, 0.75f, 1)
+        val paramsNegative = GhostIrisEngine.calculateIris(studentId, 0.2f, 0.75f, 1)
 
         assertNotEquals("Colors should differ based on behavior", paramsPositive.colorA, paramsNegative.colorA)
     }

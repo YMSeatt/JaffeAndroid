@@ -1,0 +1,268 @@
+package com.example.myapplication.labs.ghost.catalyst
+
+import com.example.myapplication.data.BehaviorEvent
+import kotlin.math.sqrt
+
+/**
+ * GhostCatalystEngine: Detects behavioral chain reactions in the classroom.
+ *
+ * This engine treats students as chemical components. When a "Catalyst" student
+ * performs an action, it can trigger "Reactions" in nearby students within a
+ * specific spatio-temporal window.
+ *
+ * ### Kinetics Metrics:
+ * - **Reaction Rate**: Frequency of triggered events per time unit.
+ * - **Activation Energy**: The behavioral threshold required to initiate a chain reaction.
+ */
+object GhostCatalystEngine {
+    /**
+     * Represents a detected behavioral reaction between two students.
+     * @property catalystId The ID of the student who performed the initial action.
+     * @property reactantId The ID of the student who performed the subsequent action.
+     * @property intensity The temporal intensity (0.0 to 1.0) of the reaction.
+     * @property timestamp The timestamp of the reactant's action.
+     */
+    data class Reaction(
+        val catalystId: Long,
+        val reactantId: Long,
+        val intensity: Float,
+        val timestamp: Long
+    )
+
+    /**
+     * Localized metrics for a specific social catalyst.
+     * @property reactionRate Frequency of triggered reactions (reactions/5min).
+     * @property activationEnergy The social "energy" required to trigger this student.
+     */
+    data class CatalystMetrics(
+        val reactionRate: Float,
+        val activationEnergy: Float
+    )
+
+    /**
+     * Macroscopic kinetics summary for the entire classroom.
+     * @property reactionsDetected Total number of student-to-student reactions found.
+     * @property reactionRate Classroom-wide reaction rate (r/5min).
+     * @property activationEnergy Global activation energy (eV eq).
+     * @property equilibriumConstant Stability ratio (Rate / Activation Energy).
+     */
+    data class GlobalKinetics(
+        val reactionsDetected: Int,
+        val reactionRate: Float,
+        val activationEnergy: Float,
+        val equilibriumConstant: Float
+    )
+
+    /**
+     * Minimal spatial info for students to avoid complex dependencies in tests.
+     */
+    data class StudentPos(val id: Long, val x: Float, val y: Float)
+
+    /**
+     * Identifies behavioral reactions where one student's log precedes another's.
+     *
+     * ### Algorithm (BOLT):
+     * 1. **Temporal Pruning**: Filters catalysts to only those within the [analysisWindowMs]
+     *    (default 30m) to transform O(L^2) into O(Recent * Window).
+     * 2. **Chronological Reversal**: Processes DESC-sorted logs in reverse to scan chronologically.
+     * 3. **Spatial Pruning**: Uses squared distance checks against [radius] (default 800 logical units)
+     *    to identify localized chain reactions.
+     *
+     * @param students List of student positions for spatial distance mapping.
+     * @param events List of behavior events to analyze.
+     * @param timeWindowMs The temporal window for chain reaction detection (default 300,000ms).
+     * @param radius The spatial clustering threshold (default 800 logical units).
+     * @param analysisWindowMs The global window for catalyst identification (default 30m).
+     * @return A list of unique student-to-student [Reaction] pairs.
+     */
+    fun calculateReactions(
+        students: List<StudentPos>,
+        events: List<BehaviorEvent>,
+        timeWindowMs: Long = 300_000L,
+        radius: Float = 800f,
+        analysisWindowMs: Long = 1_800_000L
+    ): List<Reaction> {
+        if (events.isEmpty() || students.isEmpty()) return emptyList()
+
+        val reactions = mutableListOf<Reaction>()
+        val radiusSq = radius * radius
+        val currentTime = System.currentTimeMillis()
+        val analysisStart = currentTime - analysisWindowMs
+
+        // BOLT: Removed redundant sortedBy call as DAO provides logs in sorted order (DESC).
+        // Using asReversed() to process chronologically without O(N log N) overhead.
+        val chronologicalEvents = events.asReversed()
+        val studentMap = students.associateBy { it.id }
+
+        for (i in chronologicalEvents.indices) {
+            val catalystEvent = chronologicalEvents[i]
+
+            // BOLT: Skip catalysts outside the active analysis window to reduce search space
+            if (catalystEvent.timestamp < analysisStart) continue
+
+            val catalystStudent = studentMap[catalystEvent.studentId] ?: continue
+
+            for (j in i + 1 until chronologicalEvents.size) {
+                val reactantEvent = chronologicalEvents[j]
+
+                // Temporal Pruning
+                if (reactantEvent.timestamp > catalystEvent.timestamp + timeWindowMs) break
+
+                // Self-reaction is ignored
+                if (catalystEvent.studentId == reactantEvent.studentId) continue
+
+                val reactantStudent = studentMap[reactantEvent.studentId] ?: continue
+
+                // Spatial Pruning (Squared distance for BOLT performance)
+                val dx = catalystStudent.x - reactantStudent.x
+                val dy = catalystStudent.y - reactantStudent.y
+                val distSq = dx * dx + dy * dy
+
+                if (distSq < radiusSq) {
+                    val timeDiff = (reactantEvent.timestamp - catalystEvent.timestamp).toFloat() / timeWindowMs
+                    val intensity = (1.0f - timeDiff).coerceIn(0.1f, 1.0f)
+                    reactions.add(
+                        Reaction(
+                            catalystId = catalystEvent.studentId,
+                            reactantId = reactantEvent.studentId,
+                            intensity = intensity,
+                            timestamp = reactantEvent.timestamp
+                        )
+                    )
+                }
+            }
+        }
+        return reactions.distinctBy { it.catalystId to it.reactantId }.take(100)
+    }
+
+    /** BOLT: Manual index-based access to avoid iterator allocations in high-frequency path. */
+    fun calculateReactionsUI(
+        students: List<com.example.myapplication.ui.model.StudentUiItem>,
+        events: List<BehaviorEvent>,
+        timeWindowMs: Long = 300_000L,
+        radius: Float = 800f
+    ): List<Reaction> {
+        if (students.isEmpty()) return emptyList()
+        val posList = ArrayList<StudentPos>(students.size)
+        for (i in students.indices) {
+            val s = students[i]
+            posList.add(StudentPos(s.id.toLong(), s.xPosition.value, s.yPosition.value))
+        }
+        return calculateReactions(posList, events, timeWindowMs, radius)
+    }
+
+    /**
+     * Calculates kinetic metrics for a specific student.
+     *
+     * BOLT: Replaced functional filter/size with manual loops to minimize list allocations.
+     *
+     * @param studentId The student to analyze.
+     * @param reactions The pre-calculated classroom reaction list.
+     * @param allEvents All behavior events for frequency analysis.
+     * @return [CatalystMetrics] containing the student's reaction rate and activation energy.
+     */
+    fun calculateMetrics(
+        studentId: Long,
+        reactions: List<Reaction>,
+        allEvents: List<BehaviorEvent>
+    ): CatalystMetrics {
+        var reactionCount = 0
+        for (i in reactions.indices) {
+            if (reactions[i].catalystId == studentId) reactionCount++
+        }
+        val reactionRate = reactionCount.toFloat() / 5.0f // Normalized to 5-min window
+
+        var studentLogCount = 0
+        var firstTs = Long.MAX_VALUE
+        var lastTs = Long.MIN_VALUE
+
+        for (i in allEvents.indices) {
+            val log = allEvents[i]
+            if (log.studentId == studentId) {
+                studentLogCount++
+                if (log.timestamp < firstTs) firstTs = log.timestamp
+                if (log.timestamp > lastTs) lastTs = log.timestamp
+            }
+        }
+
+        val avgFrequency = if (studentLogCount < 2) 0.05f else {
+            val spanSec = (lastTs - firstTs).coerceAtLeast(1000L) / 1000f
+            studentLogCount / spanSec
+        }
+
+        // Activation Energy: High frequency students are 'hotter' and require less energy to react.
+        val activationEnergy = (1.0f - (avgFrequency * 2.0f).coerceIn(0.0f, 0.9f))
+
+        return CatalystMetrics(reactionRate, activationEnergy)
+    }
+
+    /**
+     * Performs macroscopic kinetics analysis on classroom behavioral data.
+     * Ported from `Python/ghost_catalyst_analysis.py` for logical parity.
+     *
+     * BOLT: Optimized to find min/max timestamps in a single pass.
+     *
+     * @param events Total behavior logs for global frequency mapping.
+     * @param reactions The list of unique student-to-student reactions.
+     * @return [GlobalKinetics] summary of the classroom's social state.
+     */
+    fun analyzeCatalystKinetics(
+        events: List<BehaviorEvent>,
+        reactions: List<Reaction>
+    ): GlobalKinetics {
+        val reactionRate = reactions.size / 5.0f
+
+        val activationEnergy = if (events.isEmpty()) {
+            1.0f
+        } else {
+            var minTs = Long.MAX_VALUE
+            var maxTs = Long.MIN_VALUE
+            for (i in events.indices) {
+                val ts = events[i].timestamp
+                if (ts < minTs) minTs = ts
+                if (ts > maxTs) maxTs = ts
+            }
+
+            val duration = (maxTs - minTs).coerceAtLeast(1000L) / 1000f
+            val globalFreq = events.size / duration
+            (1.0f - (globalFreq * 10.0f)).coerceIn(0.1f, 1.0f)
+        }
+
+        val equilibriumConstant = reactionRate / maxOf(0.1f, activationEnergy)
+
+        return GlobalKinetics(
+            reactionsDetected = reactions.size,
+            reactionRate = reactionRate,
+            activationEnergy = activationEnergy,
+            equilibriumConstant = equilibriumConstant
+        )
+    }
+
+    /**
+     * Generates a Markdown report of the macroscopic kinetics analysis.
+     * Parity-matched with Python/ghost_catalyst_analysis.py.
+     */
+    fun generateCatalystReport(kinetics: GlobalKinetics): String {
+        val timestamp = java.time.LocalDateTime.now().format(
+            java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        )
+
+        val report = StringBuilder()
+        report.append("# 🧪 GHOST CATALYST: KINETICS ANALYSIS REPORT\n")
+        report.append("**Status:** ANALYSIS COMPLETE\n")
+        report.append("**Timestamp:** $timestamp\n\n")
+
+        report.append("## [MACROSCOPIC METRICS]\n")
+        report.append("| Metric | Value | Unit |\n")
+        report.append("| :--- | :--- | :--- |\n")
+        report.append("| Reactions Detected | ${kinetics.reactionsDetected} | count |\n")
+        report.append("| Reaction Rate | ${String.format(java.util.Locale.US, "%.2f", kinetics.reactionRate)} | r/5min |\n")
+        report.append("| Activation Energy | ${String.format(java.util.Locale.US, "%.2f", kinetics.activationEnergy)} | eV (eq) |\n")
+        report.append("| Equilibrium Constant | ${String.format(java.util.Locale.US, "%.2f", kinetics.equilibriumConstant)} | K_eq |\n\n")
+
+        report.append("---\n")
+        report.append("*Generated by Ghost Catalyst Engine v1.0 (Experimental)*")
+
+        return report.toString()
+    }
+}

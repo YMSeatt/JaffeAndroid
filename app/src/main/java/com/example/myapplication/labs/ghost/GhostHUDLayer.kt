@@ -76,6 +76,7 @@ fun GhostHUDLayer(
     }
 
     val shader = remember { RuntimeShader(GhostHUDShader.TACTICAL_RADAR) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     // Pre-allocate arrays to avoid per-frame allocations
     val targetArray = remember { FloatArray(10) }
@@ -99,7 +100,7 @@ fun GhostHUDLayer(
         shader.setFloatUniform("iTargets", targetArray)
         shader.setFloatUniform("iTargetScores", scoreArray)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }
 

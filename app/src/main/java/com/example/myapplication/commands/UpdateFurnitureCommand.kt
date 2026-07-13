@@ -12,9 +12,9 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param newFurniture The furniture state after the update.
  */
 class UpdateFurnitureCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val oldFurniture: Furniture,
-    private val newFurniture: Furniture
+    internal val viewModel: SeatingChartViewModel,
+    internal val oldFurniture: Furniture,
+    internal val newFurniture: Furniture
 ) : Command {
     override suspend fun execute() {
         viewModel.internalUpdateFurniture(newFurniture)

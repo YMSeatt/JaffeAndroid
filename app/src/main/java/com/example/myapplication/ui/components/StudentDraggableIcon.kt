@@ -1,6 +1,8 @@
 package com.example.myapplication.ui.components
 
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import android.content.ClipData
@@ -28,6 +30,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -46,11 +49,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draganddrop.DragAndDropTransferData
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -62,6 +67,15 @@ import androidx.compose.ui.unit.sp
 import com.example.myapplication.labs.ghost.GhostConfig
 import com.example.myapplication.labs.ghost.GhostIrisEngine
 import com.example.myapplication.labs.ghost.GhostIrisLayer
+import com.example.myapplication.labs.ghost.prism.GhostPrismEngine
+import com.example.myapplication.labs.ghost.prism.GhostPrismLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.myapplication.labs.ghost.kinetic.GhostKineticEngine
+import com.example.myapplication.labs.ghost.lod.GhostLODEngine
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
+import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
 import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.getFontFamily
 import com.example.myapplication.viewmodel.SeatingChartViewModel
@@ -80,6 +94,14 @@ import kotlin.math.roundToInt
  *    Compose only recomposes the specific parts of the icon (e.g., position or background)
  *    that change, rather than the entire icon or the parent canvas.
  *
+ * ### ⚡ BOLT & Ghost Lab Integrations:
+ * - **Level of Detail (LOD)**: Automatically sheds rendering tasks (like drawing full names
+ *   or log text) when zoomed out, preserving frame budget.
+ * - **Ghost Iris & Helix**: Seamlessly overlays procedural neural signatures from the
+ *   "Ghost Lab" suite when enabled.
+ * - **Shared Transitions**: Integrated with the "Ghost Morph" system for fluid shared-element
+ *   transitions to the Neural Dossier view.
+ *
  * @param studentUiItem The UI-optimized state object for the student.
  * @param viewModel The ViewModel for database synchronization.
  * @param showBehavior Whether to display the recent behavior/quiz logs.
@@ -95,7 +117,7 @@ fun StudentDraggableIcon(
     canvasSize: androidx.compose.ui.unit.IntSize,
     isSelected: Boolean,
     onClick: () -> Unit,
-    onLongClick: () -> Unit,
+    onLongClick: (Offset) -> Unit,
     onResize: (Float, Float) -> Unit,
     noAnimations: Boolean,
     editModeEnabled: Boolean,
@@ -106,17 +128,41 @@ fun StudentDraggableIcon(
     canvasOffset: Offset,
     isIrisActive: Boolean = false,
     irisParams: GhostIrisEngine.IrisParameters? = null,
+    isPrismActive: Boolean = false,
+    vibe: GhostPrismEngine.Vibe? = null,
+    onGlance: (Long) -> Unit = {},
+    isZenithActive: Boolean = false,
+    altitude: Float = 0f,
+    isHelixActive: Boolean = false,
+    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
+    ghostPrefsViewModel: GhostPreferencesViewModel = viewModel(),
     quizLogFontColor: Color = Color(0xFF006400),
     homeworkLogFontColor: Color = Color(0xFF800080),
     quizLogFontBold: Boolean = true,
-    homeworkLogFontBold: Boolean = true
+    homeworkLogFontBold: Boolean = true,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     var offsetX by remember { mutableFloatStateOf(studentUiItem.xPosition.value) }
     var offsetY by remember { mutableFloatStateOf(studentUiItem.yPosition.value) }
+
+    // BOLT: Kinetic state tracking
+    val kineticScope = rememberCoroutineScope()
+    val velocityTracker = remember { VelocityTracker() }
+    var kineticJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
     var width by remember { mutableStateOf(studentUiItem.displayWidth.value) }
     var height by remember { mutableStateOf(studentUiItem.displayHeight.value) }
     var cardSize by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
     val density = LocalDensity.current
+
+    val lodEnabled by ghostPrefsViewModel.lodEnabled.collectAsState()
+    val lodLevel = remember(canvasScale, lodEnabled) {
+        if (GhostConfig.LOD_MODE_ENABLED && lodEnabled) {
+            GhostLODEngine.calculateLOD(canvasScale)
+        } else {
+            GhostLODEngine.DetailLevel.FULL
+        }
+    }
 
 
     // Boundary check removed to prevent unexpected jumping. 
@@ -145,11 +191,13 @@ fun StudentDraggableIcon(
         Modifier.dragAndDropSource {
             detectTapGestures(
                 onLongPress = {
-                    val studentJson = """{"id": ${studentUiItem.id}, "name": "${studentUiItem.fullName.value}"}"""
+                    // HARDEN: ID-Only Protocol - only pass the student ID in the drag payload.
+                    // The student's name (PII) is omitted to minimize data exposure in the drag framework.
+                    val studentJson = """{"id": ${studentUiItem.id}}"""
                     startTransfer(
                         DragAndDropTransferData(
                             clipData = ClipData.newPlainText("student_data", studentJson),
-                            flags = 0 // HARDEN: Removed DRAG_FLAG_GLOBAL to prevent PII leak outside the app
+                            flags = 0 // HARDEN: Restricted to internal app process
                         )
                     )
                 }
@@ -168,49 +216,119 @@ fun StudentDraggableIcon(
                         y = ((offsetY * canvasScale) + canvasOffset.y).roundToInt()
                     )
                 }
+                .then(
+                    if (isZenithActive && zenithScope != null) {
+                        with(zenithScope) { Modifier.studentElevation(altitude) }
+                    } else Modifier
+                )
                 .scale(scale)
+                .graphicsLayer {
+                    // Counter-transformation for Mirror/Perspective
+                    rotationZ = -mirrorPerspective.rotationZ
+                    scaleX = mirrorPerspective.scaleX
+                }
         ) {
             Card(
                 modifier = Modifier
                     .onSizeChanged { cardSize = it }
                     .then(portalModifier)
                     .pointerInput(studentUiItem.id) {
+                        detectTapGestures(
+                            onTap = { onClick() },
+                            onLongPress = { offset ->
+                                // Calculate absolute screen-space position for the radial hub.
+                                // We take the student's current canvas position and add the local tap offset.
+                                val absoluteX = (offsetX * canvasScale) + canvasOffset.x + (offset.x * canvasScale)
+                                val absoluteY = (offsetY * canvasScale) + canvasOffset.y + (offset.y * canvasScale)
+                                onLongClick(Offset(absoluteX, absoluteY))
+                            },
+                            onDoubleTap = {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
+                                    onGlance(studentUiItem.id.toLong())
+                                }
+                            }
+                        )
+                    }
+                    .pointerInput(studentUiItem.id) {
+                        /**
+                         * Gesture Handler: Implements high-responsiveness dragging with Ghost Kinetic momentum.
+                         */
                         detectDragGestures(
+                            onDragStart = {
+                                if (studentUiItem.isPinned.value) return@detectDragGestures
+                                kineticJob?.cancel()
+                                velocityTracker.resetTracking()
+                                viewModel.onStudentDragStarted(
+                                    studentUiItem.id,
+                                    offsetX,
+                                    offsetY,
+                                    width.value,
+                                    height.value
+                                )
+                            },
                             onDrag = { change, dragAmount ->
+                                if (studentUiItem.isPinned.value) return@detectDragGestures
                                 change.consume()
                                 offsetX += dragAmount.x / canvasScale
                                 offsetY += dragAmount.y / canvasScale
+
+                                // BOLT: Track velocity in logical units for decay calculation
+                                velocityTracker.addPosition(change.uptimeMillis, Offset(offsetX, offsetY))
 
                                 // Update MutableState for instant UI feedback to observers
                                 studentUiItem.xPosition.value = offsetX
                                 studentUiItem.yPosition.value = offsetY
                             },
                             onDragEnd = {
-                                val finalX = if (gridSnapEnabled) {
-                                    (offsetX / gridSize).roundToInt() * gridSize
-                                } else {
-                                    offsetX.roundToInt()
-                                }
-                                val finalY = if (gridSnapEnabled) {
-                                    (offsetY / gridSize).roundToInt() * gridSize
-                                } else {
-                                    offsetY.roundToInt()
-                                }
+                                val velocity = velocityTracker.calculateVelocity()
+                                val velocityMag = Offset(velocity.x, velocity.y).getDistance()
 
-                                viewModel.updateStudentPosition(
-                                    studentUiItem.id,
-                                    studentUiItem.xPosition.value,
-                                    studentUiItem.yPosition.value,
-                                    finalX.toFloat(),
-                                    finalY.toFloat()
-                                )
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.KINETIC_MODE_ENABLED &&
+                                    velocityMag > GhostKineticEngine.VELOCITY_THRESHOLD) {
+
+                                    kineticJob = kineticScope.launch {
+                                        val animPos = Animatable(Offset(offsetX, offsetY), Offset.VectorConverter)
+                                        animPos.animateDecay(
+                                            initialVelocity = Offset(velocity.x, velocity.y),
+                                            animationSpec = GhostKineticEngine.decaySpec()
+                                        ) {
+                                            offsetX = value.x
+                                            offsetY = value.y
+                                            studentUiItem.xPosition.value = offsetX
+                                            studentUiItem.yPosition.value = offsetY
+                                        }
+
+                                        // Final Sync after kinetic glide
+                                        val finalX = if (gridSnapEnabled) (offsetX / gridSize).roundToInt() * gridSize else offsetX.roundToInt()
+                                        val finalY = if (gridSnapEnabled) (offsetY / gridSize).roundToInt() * gridSize else offsetY.roundToInt()
+
+                                        viewModel.updateStudentPosition(
+                                            studentUiItem.id,
+                                            studentUiItem.xPosition.value,
+                                            studentUiItem.yPosition.value,
+                                            finalX.toFloat(),
+                                            finalY.toFloat()
+                                        )
+                                        kineticJob = null
+                                    }
+                                } else {
+                                    val finalX = if (gridSnapEnabled) (offsetX / gridSize).roundToInt() * gridSize else offsetX.roundToInt()
+                                    val finalY = if (gridSnapEnabled) (offsetY / gridSize).roundToInt() * gridSize else offsetY.roundToInt()
+
+                                    viewModel.updateStudentPosition(
+                                        studentUiItem.id,
+                                        studentUiItem.xPosition.value,
+                                        studentUiItem.yPosition.value,
+                                        finalX.toFloat(),
+                                        finalY.toFloat()
+                                    )
+                                }
+                            },
+                            onDragCancel = {
+                                viewModel.onStudentDragEnded(studentUiItem.id)
                             }
                         )
                     }
-                    .combinedClickable(
-                        onClick = onClick,
-                        onLongClick = onLongClick
-                    )
                     .then(
                         if (!autoExpandEnabled) {
                             Modifier.width(width).height(height)
@@ -222,7 +340,8 @@ fun StudentDraggableIcon(
                     ),
                 shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isIrisActive && irisParams != null) Color.Transparent else studentUiItem.displayBackgroundColor.value.first()
+                    containerColor = if ((isIrisActive && irisParams != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) ||
+                                         (isPrismActive && vibe != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)) Color.Transparent else studentUiItem.displayBackgroundColor.value.first()
                 ),
                 border = BorderStroke(
                     if (isSelected) 6.dp else studentUiItem.displayOutlineThickness.value,
@@ -238,6 +357,13 @@ fun StudentDraggableIcon(
                         .fillMaxSize()
                         .padding(studentUiItem.displayPadding.value)
                 ) {
+                    if (isPrismActive && vibe != null) {
+                        GhostPrismLayer(
+                            vibe = vibe,
+                            modifier = Modifier.matchParentSize()
+                        )
+                    }
+
                     if (isIrisActive && irisParams != null) {
                         GhostIrisLayer(
                             params = irisParams,
@@ -245,18 +371,48 @@ fun StudentDraggableIcon(
                         )
                     }
 
+                    if (isHelixActive) {
+                        val sequence = remember(studentUiItem.id) {
+                             GhostHelixEngine.sequenceStudentData(
+                                 studentUiItem.id.toLong(),
+                                 emptyList(), // In a real scenario, these would be passed down
+                                 emptyList()
+                             )
+                        }
+                        GhostHelixLayer(
+                            sequence = sequence,
+                            modifier = Modifier.matchParentSize()
+                        ) {
+                            // Helix wraps the content
+                        }
+                    }
+
                     val backgroundColors = studentUiItem.displayBackgroundColor.value
                     if (backgroundColors.size > 1) {
-                        Box(modifier = Modifier.matchParentSize()) {
-                            backgroundColors.forEachIndexed { index, color ->
-                                Box(
-                                    modifier = Modifier
-                                        .matchParentSize()
-                                        .padding( (index * 4).dp)
-                                        .background(color, shape = RoundedCornerShape(studentUiItem.displayCornerRadius.value - (index * 4).dp))
-                                )
-                            }
-                        }
+                        // BOLT: Optimize multi-color background by drawing directly to canvas,
+                        // reducing the UI tree depth by eliminating nested Box composables.
+                        Spacer(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .drawBehind {
+                                    val cornerRadiusPx = studentUiItem.displayCornerRadius.value.toPx()
+                                    val paddingPx = 4.dp.toPx()
+                                    backgroundColors.forEachIndexed { index, color ->
+                                        val inset = index * paddingPx
+                                        drawRoundRect(
+                                            color = color,
+                                            topLeft = Offset(inset, inset),
+                                            size = androidx.compose.ui.geometry.Size(
+                                                size.width - 2 * inset,
+                                                size.height - 2 * inset
+                                            ),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(
+                                                (cornerRadiusPx - inset).coerceAtLeast(0f)
+                                            )
+                                        )
+                                    }
+                                }
+                        )
                     }
 
                     val outlineColors = studentUiItem.displayOutlineColor.value
@@ -278,6 +434,17 @@ fun StudentDraggableIcon(
                             }
                         }
                     }
+                    if (studentUiItem.isPinned.value) {
+                        Icon(
+                            imageVector = Icons.Default.PushPin,
+                            contentDescription = "Student Pinned",
+                            tint = Color.Red,
+                            modifier = Modifier
+                                .align(Alignment.TopStart)
+                                .size(16.dp)
+                                .scale(1.2f)
+                        )
+                    }
                     if (studentUiItem.temporaryTask.value != null) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Assignment,
@@ -289,28 +456,52 @@ fun StudentDraggableIcon(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val nameParts = studentUiItem.fullName.value.split(" ")
-                        val firstName = nameParts.firstOrNull() ?: ""
-                        val lastName = if (nameParts.size > 1) nameParts.last() else ""
-                        Text(
-                            text = firstName,
-                            style = TextStyle(
-                                color = studentUiItem.fontColor.value,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
-                                fontSize = studentUiItem.fontSize.value.sp,
-                                textAlign = TextAlign.Center
+                        // BOLT: Cache name split results to avoid O(N) string allocations during high-frequency dragging.
+                        val (firstName, lastName, initials) = remember(studentUiItem.fullName.value) {
+                            val nameParts = studentUiItem.fullName.value.split(" ")
+                            val fName = nameParts.firstOrNull() ?: ""
+                            val lName = if (nameParts.size > 1) nameParts.last() else ""
+                            val init = (fName.take(1) + lName.take(1)).uppercase()
+                            Triple(fName, lName, init)
+                        }
+
+                        // LOD: Hide full names and logs in MINIMAL mode
+                        if (lodLevel != GhostLODEngine.DetailLevel.MINIMAL) {
+                            Text(
+                                text = firstName,
+                                style = TextStyle(
+                                    color = studentUiItem.fontColor.value,
+                                    fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                    fontSize = studentUiItem.fontSize.value.sp,
+                                    textAlign = TextAlign.Center
+                                )
                             )
-                        )
-                        Text(
-                            text = lastName,
-                            style = TextStyle(
-                                color = studentUiItem.fontColor.value,
-                                fontFamily = getFontFamily(studentUiItem.fontFamily.value),
-                                fontSize = studentUiItem.fontSize.value.sp,
-                                textAlign = TextAlign.Center
+                            if (lodLevel != GhostLODEngine.DetailLevel.COMPACT) {
+                                Text(
+                                    text = lastName,
+                                    style = TextStyle(
+                                        color = studentUiItem.fontColor.value,
+                                        fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                        fontSize = studentUiItem.fontSize.value.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                )
+                            }
+                        } else {
+                            // MINIMAL: Show initials only
+                            Text(
+                                text = initials,
+                                style = TextStyle(
+                                    color = studentUiItem.fontColor.value,
+                                    fontFamily = getFontFamily(studentUiItem.fontFamily.value),
+                                    fontSize = (studentUiItem.fontSize.value * 1.5f).sp,
+                                    fontWeight = FontWeight.Bold,
+                                    textAlign = TextAlign.Center
+                                )
                             )
-                        )
-                        if (showBehavior) {
+                        }
+
+                        if (showBehavior && (lodLevel == GhostLODEngine.DetailLevel.FULL || lodLevel == GhostLODEngine.DetailLevel.CRITICAL)) {
                             val behaviorLogs = studentUiItem.recentBehaviorDescription.value
                             val quizLogs = studentUiItem.recentQuizDescription.value
                             val homeworkLogs = studentUiItem.recentHomeworkDescription.value

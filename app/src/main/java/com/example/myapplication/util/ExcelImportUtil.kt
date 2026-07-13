@@ -15,11 +15,31 @@ import java.util.Locale
 
 /**
  * Utility class for importing student data from Excel files.
- * Ported logic from the Python blueprint to support dynamic headers and flexible name parsing.
+ *
+ * This utility serves as a critical entry point for bulk data ingestion, allowing teachers
+ * to import student rosters from standard spreadsheet formats. It is a mobile-optimized
+ * port of the logic defined in the Python desktop application, ensuring consistent
+ * ingestion behavior across platforms.
+ *
+ * ### Key Features:
+ * 1. **Dynamic Header Detection**: Automatically identifies columns based on a curated set
+ *    of aliases (e.g., "surname" or "last" are both mapped to the `last_name` field).
+ * 2. **Flexible Name Parsing**: Gracefully handles combined name fields (e.g., "Doe, John"
+ *    or "John Doe") as well as split first/last name columns.
+ * 3. **Relational Group Assignment**: Automatically links students to their respective
+ *    [com.example.myapplication.data.StudentGroup] by matching group names found in the spreadsheet.
  */
 object ExcelImportUtil {
     private const val TAG = "ExcelImportUtil"
 
+    /** BOLT: Private constants to avoid per-row allocations in the import loop. */
+    private val GENDER_GIRL_ALIASES = setOf("girl", "female", "f")
+
+    /**
+     * A mapping of canonical student fields to their common spreadsheet aliases.
+     * This map drives the [importStudentsFromExcel] header detection logic, providing
+     * resilience against varying CSV/Excel naming conventions.
+     */
     private val commonHeaders = mapOf(
         "first_name" to listOf("first", "first name", "firstname"),
         "last_name" to listOf("last", "last name", "lastname", "surname"),
@@ -30,14 +50,39 @@ object ExcelImportUtil {
     )
 
     /**
-     * Imports students from an Excel file URI.
-     * Detects headers dynamically and handles various name formats (separate or combined).
+     * Imports students from an Excel file URI and persists them to the local database.
      *
-     * @param uri The URI of the Excel file.
-     * @param context The application context.
-     * @param studentRepository The repository to insert students.
-     * @param studentGroupDao The DAO to lookup or assign student groups by name.
-     * @return A Result containing the number of students successfully imported.
+     * ### Ingestion Logic & Heuristics:
+     *
+     * #### 1. Header Resolution
+     * The method performs a single pass over the first row to match cell values against
+     * [commonHeaders]. Only matched columns are used for data extraction.
+     *
+     * #### 2. Efficient Group Matching
+     * To avoid the **N+1 query problem**, the utility pre-loads all student groups into
+     * an in-memory map. Group assignments are resolved via case-insensitive name lookups.
+     *
+     * #### 3. Name Parsing Heuristics
+     * If dedicated first/last name columns are missing, the engine attempts to split the
+     * "full name" field using the following priority:
+     * - **Comma Delimiter**: Splits "Last, First" into its constituent parts.
+     * - **Space Delimiter**: Splits "First Last" at the first space encountered.
+     * - **Fallback**: Treats the entire string as the first name if no delimiters are found.
+     *
+     * #### 4. Data Normalization
+     * - **Gender**: Strings containing "girl", "female", or "f" are normalized to "Girl";
+     *   all others default to "Boy".
+     * - **Coordinates**: New students are initialized at (0, 0). The [CollisionDetector]
+     *   will automatically reposition them when they are first added to the seating chart.
+     *
+     * @param uri The URI of the Excel file (content:// or file://).
+     * @param context The application context for content resolution.
+     * @param studentRepository The repository for student persistence.
+     * @param studentGroupDao The DAO for pre-fetching group identities.
+     * @return A [Result] containing the count of successfully imported students.
+     *
+     * **Security Hardening**: Enforces a 50MB limit to prevent Out-of-Memory (OOM)
+     * Denial-of-Service attacks when ingesting large or malformed spreadsheet files.
      */
     suspend fun importStudentsFromExcel(
         uri: Uri,
@@ -45,11 +90,14 @@ object ExcelImportUtil {
         studentRepository: StudentRepository,
         studentGroupDao: StudentGroupDao
     ): Result<Int> = withContext(Dispatchers.IO) {
-        var importedCount = 0
         try {
+            val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
+
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             inputStream.use { stream ->
-                val workbook = WorkbookFactory.create(stream)
+                if (stream == null) return@withContext Result.success(0)
+                val limitedStream = LimitedInputStream(stream, maxSizeBytes)
+                val workbook = WorkbookFactory.create(limitedStream)
                 val sheet = workbook.getSheetAt(0)
                 val rows = sheet.iterator()
 
@@ -59,9 +107,12 @@ object ExcelImportUtil {
                 val formatter = DataFormatter()
                 val colIndices = mutableMapOf<String, Int>()
 
+                // BOLT: Cache locale for use in loops
+                val locale = Locale.getDefault()
+
                 // Dynamic Header Detection (Ported from Python)
                 for (cell in headerRow) {
-                    val headerVal = formatter.formatCellValue(cell).lowercase(Locale.getDefault()).trim()
+                    val headerVal = formatter.formatCellValue(cell).lowercase(locale).trim()
                     for ((key, aliases) in commonHeaders) {
                         if (aliases.contains(headerVal)) {
                             colIndices[key] = cell.columnIndex
@@ -71,27 +122,32 @@ object ExcelImportUtil {
                 }
 
                 // Pre-load groups to avoid N+1 query problem
-                val groupMap = studentGroupDao.getAllStudentGroupsList().associateBy { it.name.lowercase(Locale.getDefault()) }
+                val groupMap = studentGroupDao.getAllStudentGroupsList().associateBy { it.name.lowercase(locale) }
+
+                // BOLT: Use a list to collect students for a single bulk insertion.
+                // This reduces database transactions from O(N) to O(1).
+                val studentsToInsert = mutableListOf<Student>()
 
                 while (rows.hasNext()) {
                     try {
                         val row = rows.next()
 
-                        fun getVal(key: String): String? {
-                            return colIndices[key]?.let { idx ->
-                                row.getCell(idx)?.let { formatter.formatCellValue(it).trim() }
-                            }
-                        }
+                        // BOLT: Inline value extraction to avoid repeated function object allocations in the loop.
+                        val firstNameRaw = colIndices["first_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val lastNameRaw = colIndices["last_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val nicknameRaw = colIndices["nickname"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val genderStrRaw = colIndices["gender"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
+                        val groupNameRaw = colIndices["group_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
 
-                        var firstName = getVal("first_name") ?: ""
-                        var lastName = getVal("last_name") ?: ""
-                        val nickname = getVal("nickname") ?: ""
-                        val genderStr = getVal("gender") ?: "Boy"
-                        val groupName = getVal("group_name")
+                        var firstName = firstNameRaw ?: ""
+                        var lastName = lastNameRaw ?: ""
+                        val nickname = nicknameRaw ?: ""
+                        val genderStr = genderStrRaw ?: "Boy"
+                        val groupName = groupNameRaw
 
                         // Combined Name Parsing (Ported from Python)
                         if (firstName.isBlank() || lastName.isBlank()) {
-                            val fullNameStr = getVal("full_name")
+                            val fullNameStr = colIndices["full_name"]?.let { idx -> row.getCell(idx)?.let { formatter.formatCellValue(it).trim() } }
                             if (!fullNameStr.isNullOrBlank()) {
                                 when {
                                     fullNameStr.contains(",") -> {
@@ -114,31 +170,70 @@ object ExcelImportUtil {
                         if (firstName.isNotBlank()) {
                             // Find group ID by name if provided (Ported from Python)
                             val groupId = groupName?.let { name ->
-                                groupMap[name.lowercase(Locale.getDefault())]?.id
+                                groupMap[name.lowercase(locale)]?.id
                             }
 
                             val student = Student(
                                 firstName = firstName,
                                 lastName = lastName,
                                 nickname = nickname.ifBlank { null },
-                                gender = if (genderStr.lowercase(Locale.getDefault()) in listOf("girl", "female", "f")) "Girl" else "Boy",
+                                gender = if (genderStr.lowercase(locale) in GENDER_GIRL_ALIASES) "Girl" else "Boy",
                                 stringId = "",
                                 xPosition = 0f,
                                 yPosition = 0f,
                                 groupId = groupId
                             )
-                            studentRepository.insertStudent(student)
-                            importedCount++
+                            studentsToInsert.add(student)
                         }
                     } catch (e: Exception) {
-                        Log.e(TAG, "Error importing student row", e)
+                        Log.e(TAG, "Error extracting student row", e)
                     }
                 }
+
+                if (studentsToInsert.isNotEmpty()) {
+                    studentRepository.insertStudents(studentsToInsert)
+                }
+                Result.success(studentsToInsert.size)
             }
-            Result.success(importedCount)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to import from Excel", e)
             Result.failure(e)
+        }
+    }
+
+    /**
+     * A wrapper [InputStream] that enforces a maximum byte limit.
+     * Throws [SecurityException] if the limit is exceeded.
+     */
+    private class LimitedInputStream(private val inputStream: InputStream, private val maxSize: Long) : InputStream() {
+        private var bytesRead = 0L
+
+        override fun read(): Int {
+            val result = inputStream.read()
+            if (result != -1) {
+                bytesRead++
+                checkSize()
+            }
+            return result
+        }
+
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val result = inputStream.read(b, off, len)
+            if (result != -1) {
+                bytesRead += result
+                checkSize()
+            }
+            return result
+        }
+
+        private fun checkSize() {
+            if (bytesRead > maxSize) {
+                throw SecurityException("Import failed: File exceeds 50MB limit.")
+            }
+        }
+
+        override fun close() {
+            inputStream.close()
         }
     }
 }

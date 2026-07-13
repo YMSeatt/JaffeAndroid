@@ -96,6 +96,12 @@ fun DataSettingsTab(
     var quizMarkTypeNameError by remember { mutableStateOf<String?>(null) }
     var quizMarkPointsError by remember { mutableStateOf<String?>(null) }
 
+    val homeworkMarkMetadataList by settingsViewModel.homeworkMarkMetadata.observeAsState(initial = emptyList())
+    var newHomeworkMarkName by remember { mutableStateOf("") }
+    var newHomeworkMarkPoints by remember { mutableStateOf("") }
+    var homeworkMarkNameError by remember { mutableStateOf<String?>(null) }
+    var homeworkMarkPointsError by remember { mutableStateOf<String?>(null) }
+
     val importStudentsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
         onResult = { uri: Uri? ->
@@ -158,6 +164,72 @@ fun DataSettingsTab(
     var showResetHomeworkTypesConfirm by remember { mutableStateOf(false) }
     var showResetHomeworkStatusesConfirm by remember { mutableStateOf(false) }
     var showResetQuizMarkTypesConfirm by remember { mutableStateOf(false) }
+    var showResetHomeworkMarkMetadataConfirm by remember { mutableStateOf(false) }
+    var showResetApplicationConfirm1 by remember { mutableStateOf(false) }
+    var showResetApplicationConfirm2 by remember { mutableStateOf(false) }
+
+    if (showResetApplicationConfirm1) {
+        AlertDialog(
+            onDismissRequest = { showResetApplicationConfirm1 = false },
+            title = { Text("Confirm Application Reset") },
+            text = { Text("This will reset ALL application data including students, furniture, logs, settings, custom behaviors, templates, and groups. This action CANNOT be undone.\n\nAre you absolutely sure you want to reset the application to its default state?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showResetApplicationConfirm1 = false
+                    showResetApplicationConfirm2 = true
+                }) {
+                    Text("Continue", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetApplicationConfirm1 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetHomeworkMarkMetadataConfirm) {
+        AlertDialog(
+            onDismissRequest = { showResetHomeworkMarkMetadataConfirm = false },
+            title = { Text("Reset Homework Mark Types") },
+            text = { Text("Are you sure you want to reset all homework mark types to application defaults? This will delete all custom mark types.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetHomeworkMarkMetadataToDefaults()
+                    showResetHomeworkMarkMetadataConfirm = false
+                }) {
+                    Text("Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetHomeworkMarkMetadataConfirm = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetApplicationConfirm2) {
+        AlertDialog(
+            onDismissRequest = { showResetApplicationConfirm2 = false },
+            title = { Text("Final Confirmation") },
+            text = { Text("Really reset everything? This is your last chance to cancel.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    settingsViewModel.resetApplication()
+                    showResetApplicationConfirm2 = false
+                }) {
+                    Text("Reset Everything", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetApplicationConfirm2 = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     if (showResetQuizMarkTypesConfirm) {
         AlertDialog(
@@ -287,6 +359,17 @@ fun DataSettingsTab(
             Spacer(Modifier.height(8.dp))
             Button(onClick = { showArchiveViewerDialog = true }, modifier = Modifier.fillMaxWidth()) {
                 Text("View Archived Data")
+            }
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { showResetApplicationConfirm1 = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Text("Reset Application (Caution!)")
             }
             Spacer(Modifier.height(8.dp))
             Row(
@@ -555,6 +638,84 @@ fun DataSettingsTab(
                 enabled = newQuizMarkTypeName.isNotBlank() && newQuizMarkDefaultPoints.toDoubleOrNull() != null
             ) {
                 Text("Add Quiz Mark Type")
+            }
+            HorizontalDivider(Modifier.padding(top = 8.dp))
+        }
+
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Manage Homework Mark Types", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { showResetHomeworkMarkMetadataConfirm = true }) {
+                    Text("Reset to Defaults")
+                }
+            }
+        }
+        items(homeworkMarkMetadataList) { metadata ->
+            Card(modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(metadata.name, style = MaterialTheme.typography.bodyLarge)
+                        IconButton(onClick = {
+                            settingsViewModel.deleteHomeworkMarkMetadata(metadata)
+                        }) {
+                            Icon(Icons.Filled.Delete, contentDescription = "Remove homework mark type")
+                        }
+                    }
+                    Text("Points: ${metadata.defaultPoints}")
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(8.dp))
+            Text("Add New Homework Mark Type:", style = MaterialTheme.typography.titleSmall)
+            OutlinedTextField(
+                value = newHomeworkMarkName,
+                onValueChange = { newHomeworkMarkName = it; homeworkMarkNameError = null },
+                label = { Text("Mark type name") },
+                modifier = Modifier.fillMaxWidth(),
+                isError = homeworkMarkNameError != null
+            )
+            homeworkMarkNameError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            OutlinedTextField(
+                value = newHomeworkMarkPoints,
+                onValueChange = { newHomeworkMarkPoints = it; homeworkMarkPointsError = null },
+                label = { Text("Default points") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                isError = homeworkMarkPointsError != null
+            )
+            homeworkMarkPointsError?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Button(
+                onClick = {
+                    val isNameValid = newHomeworkMarkName.isNotBlank()
+                    val pointsValue = newHomeworkMarkPoints.toDoubleOrNull()
+
+                    homeworkMarkNameError = if (isNameValid) null else "Name cannot be blank."
+                    homeworkMarkPointsError = if (pointsValue != null) null else "Points must be a valid number."
+
+                    if (isNameValid && pointsValue != null) {
+                        settingsViewModel.addHomeworkMarkMetadata(newHomeworkMarkName.trim(), pointsValue)
+                        newHomeworkMarkName = ""
+                        newHomeworkMarkPoints = ""
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = newHomeworkMarkName.isNotBlank() && newHomeworkMarkPoints.toDoubleOrNull() != null
+            ) {
+                Text("Add Homework Mark Type")
             }
             HorizontalDivider(Modifier.padding(top = 8.dp))
         }

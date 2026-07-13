@@ -12,7 +12,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlin.math.min
 
@@ -27,14 +26,16 @@ import kotlin.math.min
  * supports AGSL (API 33+).
  *
  * @param students The list of students to visualize.
- * @param behaviorLogs Historical behavior data used to determine aura intensity.
+ * @param negativeCounts Pre-calculated negative behavior counts per student ID.
+ * @param groupedStudentsByGroup Students grouped by their group ID for connection rendering.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan position of the seating chart.
  */
 @Composable
 fun NeuralMapLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    negativeCounts: android.util.LongSparseArray<Int>,
+    groupedStudentsByGroup: android.util.LongSparseArray<List<StudentUiItem>>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -52,62 +53,83 @@ fun NeuralMapLayer(
         label = "time"
     )
 
-    val groupedStudents = remember(students) {
-        students.filter { it.groupId.value != null }.groupBy { it.groupId.value }
-    }
-
-    val negativeLogsByStudent = remember(behaviorLogs) {
-        behaviorLogs.filter { it.type.contains("Negative", ignoreCase = true) }
-            .groupBy { it.studentId }
-    }
+    // BOLT: Pre-allocate shader pools to avoid O(N) allocations in the draw loop.
+    // Unique instances are required per item because Android's recording Canvas
+    // captures the shader's state at the time of the draw call.
+    val auraShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val auraBrushPool = remember { mutableListOf<ShaderBrush>() }
+    val lineShaderPool = remember { mutableListOf<RuntimeShader>() }
+    val lineBrushPool = remember { mutableListOf<ShaderBrush>() }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        var auraIdx = 0
+        var lineIdx = 0
+
         // Draw Cognitive Auras for students with many negative logs
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
-            students.forEach { student ->
-                val negativeCount = negativeLogsByStudent[student.id.toLong()]?.size ?: 0
+            // BOLT: Manual index-based loop to eliminate Iterator churn
+            for (i in 0 until students.size) {
+                val student = students[i]
+                val negativeCount = negativeCounts.get(student.id.toLong()) ?: 0
                 if (negativeCount > 2) {
                     val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
                     val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
-                    val shader = RuntimeShader(GhostShader.COGNITIVE_AURA)
+                    if (auraIdx >= auraShaderPool.size) {
+                        val s = RuntimeShader(GhostShader.COGNITIVE_AURA)
+                        auraShaderPool.add(s)
+                        auraBrushPool.add(ShaderBrush(s))
+                    }
+                    val shader = auraShaderPool[auraIdx]
+                    val brush = auraBrushPool[auraIdx]
+                    auraIdx++
+
                     shader.setFloatUniform("iResolution", size.width, size.height)
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iCenter", centerX, centerY)
                     shader.setFloatUniform("iColor", 1.0f, 0.2f, 0.1f) // Reddish aura
                     shader.setFloatUniform("iIntensity", min(negativeCount / 5f, 1.0f))
 
-                    drawRect(brush = ShaderBrush(shader))
+                    drawRect(brush = brush)
                 }
             }
         }
 
-        groupedStudents.forEach { (_, groupMembers) ->
-            if (groupMembers.size < 2) return@forEach
+        // BOLT: Optimized group connection rendering to avoid per-frame list/Offset allocations.
+        // Uses pre-calculated groups from ViewModel and manual index loops to avoid Iterator churn.
+        for (idx in 0 until groupedStudentsByGroup.size()) {
+            val groupMembers = groupedStudentsByGroup.valueAt(idx)
+            if (groupMembers.size < 2) continue
 
-            val groupColor = groupMembers.first().groupColor.value ?: Color.Cyan
+            val groupColor = groupMembers[0].groupColor.value ?: Color.Cyan
 
-            // Calculate centers in the canvas coordinate system
-            val centers = groupMembers.map { student ->
-                val x = (student.xPosition.value * canvasScale) + canvasOffset.x
-                val y = (student.yPosition.value * canvasScale) + canvasOffset.y
-                val w = student.displayWidth.value.toPx() * canvasScale
-                val h = student.displayHeight.value.toPx() * canvasScale
-                Offset(x + w / 2f, y + h / 2f)
-            }
+            // BOLT: Avoid map/list allocation. Calculate center of first member and draw lines to others.
+            val s1 = groupMembers[0]
+            val x1 = (s1.xPosition.value * canvasScale) + canvasOffset.x + (s1.displayWidth.value.toPx() * canvasScale / 2f)
+            val y1 = (s1.yPosition.value * canvasScale) + canvasOffset.y + (s1.displayHeight.value.toPx() * canvasScale / 2f)
+            val center1 = Offset(x1, y1)
 
             // Draw connections (star pattern: everyone connects to the first member)
-            val center1 = centers.first()
-            for (i in 1 until centers.size) {
-                val center2 = centers[i]
+            for (i in 1 until groupMembers.size) {
+                val s2 = groupMembers[i]
+                val x2 = (s2.xPosition.value * canvasScale) + canvasOffset.x + (s2.displayWidth.value.toPx() * canvasScale / 2f)
+                val y2 = (s2.yPosition.value * canvasScale) + canvasOffset.y + (s2.displayHeight.value.toPx() * canvasScale / 2f)
+                val center2 = Offset(x2, y2)
 
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val shader = RuntimeShader(GhostShader.NEURAL_LINE)
+                    if (lineIdx >= lineShaderPool.size) {
+                        val s = RuntimeShader(GhostShader.NEURAL_LINE)
+                        lineShaderPool.add(s)
+                        lineBrushPool.add(ShaderBrush(s))
+                    }
+                    val shader = lineShaderPool[lineIdx]
+                    val brush = lineBrushPool[lineIdx]
+                    lineIdx++
+
                     shader.setFloatUniform("iTime", time)
                     shader.setFloatUniform("iColor", groupColor.red, groupColor.green, groupColor.blue)
                     shader.setFloatUniform("iResolution", size.width, size.height)
 
-                    val brush = ShaderBrush(shader)
                     drawLine(
                         brush = brush,
                         start = center1,

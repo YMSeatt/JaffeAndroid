@@ -14,11 +14,12 @@ import com.example.myapplication.ui.model.StudentUiItem
 
 /**
  * GhostChronosLayer: Renders the behavioral heatmap.
+ *
+ * BOLT: Optimized to receive pre-calculated [heatmapGrid] from background pipeline.
  */
 @Composable
 fun GhostChronosLayer(
-    students: List<StudentUiItem>,
-    events: List<BehaviorEvent>,
+    heatmapGrid: FloatArray,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -36,18 +37,15 @@ fun GhostChronosLayer(
         label = "time"
     )
 
-    val heatmapGrid = remember(students, events) {
-        GhostChronosEngine.calculateHeatmap(students, events)
-    }
-
     val shader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             RuntimeShader(GhostChronosShader.CHRONOS_HEATMAP)
         } else null
     }
+    val brush = remember(shader) { shader?.let { ShaderBrush(it) } }
 
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && shader != null && brush != null) {
             shader.setFloatUniform("iResolution", size.width, size.height)
             shader.setFloatUniform("iTime", time)
             shader.setFloatUniform("iIntensity", heatmapGrid)
@@ -56,7 +54,7 @@ fun GhostChronosLayer(
             shader.setFloatUniform("iOffset", canvasOffset.x, canvasOffset.y)
             shader.setFloatUniform("iScale", canvasScale)
 
-            drawRect(brush = ShaderBrush(shader))
+            drawRect(brush = brush)
         }
     }
 }

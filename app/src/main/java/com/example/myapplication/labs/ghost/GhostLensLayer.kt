@@ -43,8 +43,21 @@ fun GhostLensLayer(
     val lensPos by engine.lensPosition.collectAsState()
     val lensRadius by engine.lensRadius.collectAsState()
 
-    val currentProphecies = remember(lensPos, students, allProphecies) {
-        engine.getPropheciesForStudentsUnderLens(students, allProphecies, canvasScale, canvasOffset)
+    // BOLT: Pre-group prophecies to avoid O(P) grouping during high-frequency drags.
+    val propheciesByStudent = remember(allProphecies) {
+        allProphecies.groupBy { it.studentId }
+    }
+
+    // BOLT: Exhaustive keys for predictive state calculation.
+    val currentProphecies = remember(lensPos, lensRadius, students, propheciesByStudent, canvasScale, canvasOffset) {
+        engine.getPropheciesForStudentsUnderLens(
+            students = students,
+            propheciesByStudent = propheciesByStudent,
+            lensPos = lensPos,
+            lensRadius = lensRadius,
+            canvasScale = canvasScale,
+            canvasOffset = canvasOffset
+        )
     }
 
     val lensShader = remember {
@@ -117,7 +130,10 @@ fun GhostLensLayer(
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        currentProphecies.take(2).forEach { prophecy ->
+                        // BOLT: Use manual loop to avoid iterator and small list allocations from .take().
+                        val prophecyCount = currentProphecies.size
+                        for (i in 0 until minOf(prophecyCount, 2)) {
+                            val prophecy = currentProphecies[i]
                             Text(
                                 text = "• ${prophecy.description}",
                                 color = Color.White,

@@ -33,7 +33,9 @@ fun GhostVoiceVisualizer(
     currentText: String,
     modifier: Modifier = Modifier
 ) {
-    if (!GhostConfig.GHOST_MODE_ENABLED || !isListening) return
+    // HARDEN: Allow visualizer to remain active if there is still text to display,
+    // ensuring the teacher can see the final command result under Privacy Shield.
+    if (!GhostConfig.GHOST_MODE_ENABLED || (!isListening && currentText.isEmpty())) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "voiceWave")
     val time by infiniteTransition.animateFloat(
@@ -53,16 +55,17 @@ fun GhostVoiceVisualizer(
     )
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && isListening) {
             val color = MaterialTheme.colorScheme.tertiary
             val shader = remember { RuntimeShader(GhostShader.VOICE_WAVEFORM) }
+            val brush = remember(shader) { ShaderBrush(shader) }
             Canvas(modifier = Modifier.fillMaxSize()) {
                 shader.setFloatUniform("iResolution", size.width, size.height)
                 shader.setFloatUniform("iTime", time)
                 shader.setFloatUniform("iAmplitude", animatedAmplitude * 0.5f + 0.1f)
                 shader.setFloatUniform("iColor", color.red, color.green, color.blue)
 
-                drawRect(brush = ShaderBrush(shader))
+                drawRect(brush = brush)
             }
         }
 

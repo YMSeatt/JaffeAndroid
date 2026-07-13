@@ -30,6 +30,11 @@ class EncryptedFileHandler @Inject constructor(
             return null
         }
 
+        // HARDEN: Enforce a 50MB limit to prevent OOM
+        if (file.length() > 50 * 1024 * 1024) {
+            throw IOException("File exceeds 50MB limit")
+        }
+
         val fileContentBytes = file.readBytes()
 
         // Try to decrypt first

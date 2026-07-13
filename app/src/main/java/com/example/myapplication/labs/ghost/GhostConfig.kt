@@ -85,6 +85,204 @@ object GhostConfig {
     /** Enables "Ghost Spark" high-performance neural particle system. */
     const val SPARK_MODE_ENABLED = true
 
+    /** Enables "Ghost Sync" real-time collaboration visualization. */
+    const val SYNC_MODE_ENABLED = true
+
     /** Enables "Ghost Entanglement" quantum social synchronicity visualization. */
     const val ENTANGLEMENT_MODE_ENABLED = true
+
+    /** Enables "Ghost Ion" neural ionization and electrostatic discharge visualization. */
+    const val ION_MODE_ENABLED = true
+
+    /** Enables "Ghost Entropy" neural turbulence and thermal distortion visualization. */
+    const val ENTROPY_MODE_ENABLED = true
+
+    /** Enables "Ghost Zenith" spatial depth and device-tilt parallax effects. */
+    const val ZENITH_MODE_ENABLED = true
+
+    /** Enables "Ghost Emergence" behavioral cellular automata visualization. */
+    const val EMERGENCE_MODE_ENABLED = true
+
+    /** Enables "Ghost Catalyst" behavioral chain reaction mapping. */
+    const val CATALYST_MODE_ENABLED = true
+
+    /** Enables "Ghost Flora" neural botanical visualization. */
+    const val FLORA_MODE_ENABLED = true
+
+    /** Enables "Ghost Tectonics" social stability visualization. */
+    const val TECTONICS_MODE_ENABLED = true
+
+    /** Enables "Ghost Horizon" context-aware atmospheric visualization. */
+    const val HORIZON_MODE_ENABLED = true
+
+    /** Enables "Ghost Pulsar" harmonic synchronicity visualization. */
+    const val PULSAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Magnetar" social magnetism and field polarity visualization. */
+    const val MAGNETAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Cortex" neural intent and somatic haptic exploration. */
+    const val CORTEX_MODE_ENABLED = true
+
+    /** Enables "Ghost Quasar" high-energy student node visualization. */
+    const val QUASAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Helix" neural DNA and genomic trajectory visualization. */
+    const val HELIX_MODE_ENABLED = true
+
+    /** Enables "Ghost Supernova" classroom criticality and data-reset visualization. */
+    const val SUPERNOVA_MODE_ENABLED = true
+
+    /** Enables the "Ghost Vortex" rotational social momentum visualization. */
+    const val VORTEX_MODE_ENABLED = true
+
+    /** Enables the "Ghost Ray" neural directional pointer. */
+    const val RAY_MODE_ENABLED = true
+
+    /** Enables the "Ghost Orbit" classroom galaxy visualization. */
+    const val ORBIT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Architect" strategic layout generative engine. */
+    const val ARCHITECT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Vision" sensor-driven AR viewport. */
+    const val VISION_MODE_ENABLED = true
+
+    /** Enables the "Ghost Strategist" generative AI tactical engine. */
+    const val STRATEGIST_MODE_ENABLED = true
+
+    /** Enables the "Ghost Glyph" neural gesture logging. */
+    const val GLYPH_MODE_ENABLED = true
+
+    /** Enables the "Ghost Filter" optimized student list. */
+    const val FILTER_MODE_ENABLED = true
+
+    /** Enables the "Ghost Glance" double-tap preview. */
+    const val GLANCE_MODE_ENABLED = true
+
+    /** Enables the "Ghost Spotlight" focused pedagogical assessment mode. */
+    const val SPOTLIGHT_MODE_ENABLED = true
+
+    /** Enables the "Ghost Navigator" high-performance mini-map. */
+    const val NAVIGATOR_MODE_ENABLED = true
+
+    /** Enables the adaptive Level of Detail (LOD) rendering engine. */
+    const val LOD_MODE_ENABLED = true
+
+    /** Enables the Ghost Adaptive UI density-aware layout optimization. */
+    const val ADAPTIVE_MODE_ENABLED = true
+
+    /** Enables "Ghost Memento" persistent undo/redo history. */
+    const val MEMENTO_MODE_ENABLED = true
+
+    /** Enables "Ghost Silhouette" drag placeholders. */
+    const val SILHOUETTE_MODE_ENABLED = true
+
+    /** Enables the "Ghost Morph" shared element neural transitions. */
+    const val MORPH_MODE_ENABLED = true
+
+    /** Enables "Ghost Lasso" gesture-based multi-selection. */
+    const val LASSO_MODE_ENABLED = true
+
+    /** Enables "Ghost Glitch" neural feedback during spatial conflicts. */
+    const val GLITCH_MODE_ENABLED = true
+
+    /** Enables "Ghost Kinetic" physics-based momentum for student icons. */
+    const val KINETIC_MODE_ENABLED = true
+
+    /** Enables "Ghost Shell" immersive neural dock. */
+    const val SHELL_MODE_ENABLED = true
+
+    /** Enables "Ghost Seeds" native home screen shortcuts. */
+    const val SEED_MODE_ENABLED = true
+
+    /** Enables "Ghost Deck" neural student card stack for rapid review. */
+    const val DECK_MODE_ENABLED = true
+
+    /** Enables "Ghost Comet" high-momentum activity trails. */
+    const val COMET_MODE_ENABLED = true
+
+    /** Enables "Ghost Halo" peak performer neural visualization. */
+    const val HALO_MODE_ENABLED = true
+
+    /** Enables "Ghost Flare" high-intensity behavioral milestone visualization. */
+    const val FLARE_MODE_ENABLED = true
+
+    /** Enables "Ghost Snapshot" high-fidelity full-canvas archival. */
+    const val SNAPSHOT_MODE_ENABLED = true
+
+    /** Enables "Ghost Stream" neural activity ticker. */
+    const val STREAM_MODE_ENABLED = true
+
+    /** Enables "Ghost Ink" persistent spatial annotations. */
+    const val INK_MODE_ENABLED = true
+
+    /** Enables "Ghost Trace" spatiotemporal path visualization. */
+    const val TRACE_MODE_ENABLED = true
+
+    /** Enables "Ghost Carbon" behavioral twin visualization. */
+    const val CARBON_MODE_ENABLED = true
+
+    /** Enables "Ghost Weaver" academic milestone visualization. */
+    const val WEAVER_MODE_ENABLED = true
+
+    /** Enables "Ghost Neural Rain" data-driven atmospheric visualization. */
+    const val RAIN_MODE_ENABLED = true
+
+    /** Enables "Ghost Beacon" neural student selection and volumetric attention. */
+    const val BEACON_MODE_ENABLED = true
+
+    /** Enables "Ghost Mirror" spatial perspective flipping. */
+    const val MIRROR_MODE_ENABLED = true
+
+    /** Enables the "Neural Mood Board" atmospheric visualization. */
+    const val MOOD_MODE_ENABLED = true
+
+    /** Enables "Ghost Link" proximity-based neural pairing visualization. */
+    const val LINK_MODE_ENABLED = true
+
+    /** Enables "Ghost Frost" procedural crystallization and "Cold Zone" visualization. */
+    const val FROST_MODE_ENABLED = true
+
+    /** Enables "Ghost Radar" localized behavioral resonance visualization. */
+    const val RADAR_MODE_ENABLED = true
+
+    /** Enables "Ghost Neural Origami" foldable UI transitions. */
+    const val ORIGAMI_MODE_ENABLED = true
+
+    /** Enables "Ghost Phoenix" neural resilience and recovery visualization. */
+    const val PHOENIX_MODE_ENABLED = true
+
+    /** Enables "Ghost Weather" dynamic particle weather systems. */
+    const val WEATHER_MODE_ENABLED = true
+
+    /** Enables "Ghost Sonar" spatial engagement discovery. */
+    const val SONAR_MODE_ENABLED = true
+
+    /** Enables "Ghost BioSync" biological state visualization. */
+    const val BIOSYNC_MODE_ENABLED = true
+
+    /** Enables "Ghost EKG" real-time biological signal visualization. */
+    const val EKG_MODE_ENABLED = true
+
+    /** Enables "Ghost Mirage" neural focus tracking heatmap. */
+    const val MIRAGE_MODE_ENABLED = true
+
+    /** Enables "Ghost Kaleidoscope" neural symmetry visualization. */
+    const val KALEIDOSCOPE_MODE_ENABLED = true
+
+    /** Enables "Ghost Moss" social stagnation and dormancy visualization. */
+    const val MOSS_MODE_ENABLED = true
+
+    /** Enables "Ghost Coral" social reef and collaborative growth visualization. */
+    const val CORAL_MODE_ENABLED = true
+
+    /** Enables "Ghost Prism" dynamic individual student themes based on vibes. */
+    const val PRISM_MODE_ENABLED = true
+
+    /** Enables "Ghost Scape" neural spatial audio monitoring. */
+    const val SCAPE_MODE_ENABLED = true
+
+    /** Enables "Ghost Stellar" neural constellation mapping. */
+    const val STELLAR_MODE_ENABLED = true
 }

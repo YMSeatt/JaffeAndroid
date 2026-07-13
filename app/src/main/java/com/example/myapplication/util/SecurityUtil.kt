@@ -24,6 +24,11 @@ import javax.crypto.spec.PBEKeySpec
 import javax.crypto.spec.SecretKeySpec
 
 /**
+ * Thrown when a Fernet token is valid but has exceeded its configured time-to-live.
+ */
+class TokenExpiredException(message: String) : SecurityException(message)
+
+/**
  * SecurityUtil: The central security manager for the application.
  *
  * This class is responsible for:
@@ -49,7 +54,11 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
 
         // PBKDF2 Configuration
         private const val PBKDF2_ALGORITHM = "PBKDF2WithHmacSHA256"
-        private const val PBKDF2_ITERATIONS = 100000
+        /**
+         * The recommended iteration count for PBKDF2-HMAC-SHA256.
+         * OWASP currently recommends a minimum of 600,000 iterations for defense-in-depth.
+         */
+        private const val PBKDF2_ITERATIONS = 600000
         private const val PBKDF2_KEY_LENGTH = 256
         private const val PBKDF2_PREFIX = "pbkdf2"
 
@@ -57,9 +66,15 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
          * The legacy, hardcoded shared key used by the Python desktop application
          * and earlier versions of the Android app.
          *
-         * **Role in Ecosystem**: This key serves as the cryptographic bridge for cross-platform
-         * data sync. It allows the Android app to decrypt classroom data exported from the
-         * Python app, which still relies on this shared secret (see `Python/encryption_key.py`).
+         * **Role in Ecosystem (Cryptographic Glue)**: This key serves as the primary bridge
+         * for cross-platform data synchronization. It allows the Android app to decrypt
+         * classroom data exported from the Python application, which still relies on this
+         * shared secret (see `Python/encryption_key.py`).
+         *
+         * **Security Strategy**: To minimize the risk of maintaining this hardcoded key, the
+         * application uses it strictly for ingestion. Once data is successfully decrypted
+         * during an import, it is immediately re-encrypted using modern, hardware-backed keys
+         * managed by the Android KeyStore (`fernet.key.v2`).
          */
         private val FALLBACK_KEY = Key("7-BH7qsnKyRK0jdAZrjXSIW9VmcdpfHHeZor0ACBkmU=")
 
@@ -72,17 +87,46 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
             SecureRandom().nextBytes(salt)
             val saltHex = salt.toHex()
 
+            val passwordChars = password.toCharArray()
             val spec = PBEKeySpec(
-                password.toCharArray(),
+                passwordChars,
                 salt,
                 PBKDF2_ITERATIONS,
                 PBKDF2_KEY_LENGTH
             )
-            val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-            val hash = factory.generateSecret(spec).encoded
-            val hashHex = hash.toHex()
+            var hash: ByteArray? = null
+            try {
+                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+                hash = factory.generateSecret(spec).encoded
+                val hashHex = hash.toHex()
 
-            return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
+                return "$PBKDF2_PREFIX:$PBKDF2_ITERATIONS:$saltHex:$hashHex"
+            } finally {
+                spec.clearPassword()
+                passwordChars.fill('\u0000')
+                hash?.fill(0.toByte())
+            }
+        }
+
+        /**
+         * Checks if the stored hash requires an upgrade.
+         *
+         * A hash requires an upgrade if:
+         * 1. It uses a legacy algorithm (unsalted or non-PBKDF2).
+         * 2. It uses PBKDF2 but with an iteration count less than [PBKDF2_ITERATIONS].
+         *
+         * @param storedHash The hash string retrieved from persistent storage.
+         * @return True if the hash should be re-generated, false otherwise.
+         */
+        fun needsUpgrade(storedHash: String): Boolean {
+            if (storedHash.isBlank()) return false
+            if (!storedHash.startsWith("$PBKDF2_PREFIX:")) return true
+
+            val parts = storedHash.split(":")
+            if (parts.size != 4) return true
+            val iterations = parts[1].toIntOrNull() ?: return true
+
+            return iterations < PBKDF2_ITERATIONS
         }
 
         /**
@@ -108,17 +152,27 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
                 val expectedHashHex = parts[3]
 
                 val salt = saltHex.hexToByteArray()
+                val passwordChars = password.toCharArray()
                 val spec = PBEKeySpec(
-                    password.toCharArray(),
+                    passwordChars,
                     salt,
                     iterations,
                     PBKDF2_KEY_LENGTH
                 )
-                val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
-                val actualHash = factory.generateSecret(spec).encoded
-                val expectedHash = expectedHashHex.hexToByteArray()
+                var actualHash: ByteArray? = null
+                var expectedHash: ByteArray? = null
+                try {
+                    val factory = SecretKeyFactory.getInstance(PBKDF2_ALGORITHM)
+                    actualHash = factory.generateSecret(spec).encoded
+                    expectedHash = expectedHashHex.hexToByteArray()
 
-                return MessageDigest.isEqual(actualHash, expectedHash)
+                    return MessageDigest.isEqual(actualHash, expectedHash)
+                } finally {
+                    spec.clearPassword()
+                    passwordChars.fill('\u0000')
+                    actualHash?.fill(0.toByte())
+                    expectedHash?.fill(0.toByte())
+                }
             }
 
             return if (storedHash.contains(":")) {
@@ -284,24 +338,40 @@ class SecurityUtil @Inject constructor(@ApplicationContext context: Context) {
     }
 
     /**
-     * Decrypts a Fernet token into a UTF-8 string. It first tries to decrypt with the new, secure key.
-     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     * Decrypts a Fernet token into a UTF-8 string using the modern hardware-backed key.
      */
     fun decrypt(token: String): String {
         return String(decryptToByteArray(token), Charsets.UTF_8)
     }
 
     /**
-     * Decrypts a Fernet token into a byte array. It first tries to decrypt with the new, secure key.
-     * If that fails, it falls back to the old, hardcoded key to support data migration.
+     * Decrypts a Fernet token into a byte array using the modern hardware-backed key.
+     * Unlike legacy decryption, this method does NOT fall back to the hardcoded shared secret.
      */
     fun decryptToByteArray(token: String): ByteArray {
+        return fernetCipher.decrypt(token, TTL_SECONDS)
+    }
+
+    /**
+     * Decrypts a Fernet token into a byte array using the legacy fallback key.
+     *
+     * **Security Warning**: This method uses a hardcoded shared secret and should be used
+     * strictly for ingestion of external data from the Python desktop application.
+     * Standard application data should use [decrypt].
+     */
+    fun decryptLegacyToByteArray(token: String): ByteArray {
+        val oldToken = Token.fromString(token)
+        return oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
+    }
+
+    /**
+     * Decrypts a Fernet token into a UTF-8 string using the legacy fallback key.
+     */
+    fun decryptLegacy(token: String): String {
         return try {
-            fernetCipher.decrypt(token, TTL_SECONDS)
+            String(decryptLegacyToByteArray(token), Charsets.UTF_8)
         } catch (e: Exception) {
-            // Fallback to old key
-            val oldToken = Token.fromString(token)
-            oldToken.validateAndDecrypt(FALLBACK_KEY, ByteArrayValidator())
+            throw SecurityException("Legacy decryption failed", e)
         }
     }
 
@@ -430,7 +500,7 @@ class FernetCipher(private val key: ByteArray) {
         val timestamp = buffer.long
         val currentTime = System.currentTimeMillis() / 1000
         if (ttl > 0 && currentTime > timestamp + ttl) {
-            throw SecurityException("Token has expired")
+            throw TokenExpiredException("Token has expired")
         }
 
         val iv = ByteArray(IV_SIZE)

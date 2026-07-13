@@ -11,11 +11,18 @@ def analyze_vectors(classroom_data):
     vs friction). It calculates a net force vector for each student, indicating
     their current "Social Momentum."
 
+    ### Implementation Details:
+    - **Force Threshold**: Students only exert influence within an 800-unit radius.
+    - **Logic Parity**: This Python implementation serves as the mathematical reference
+      for the `GhostVectorLayer` and `GhostVectorEngine` on Android.
+    - **Units**: Net force is calculated in 'mG' (milli-Gravities), a synthetic unit
+      defined for this application's social physics model.
+
     Args:
-        classroom_data (dict): The classroom data including student positions.
+        classroom_data (dict): The classroom data including student positions and IDs.
 
     Returns:
-        str: A Markdown-formatted report of the classroom's social cohesion metrics.
+        str: A Markdown-formatted report summarizing social cohesion and individual student vectors.
     """
     students = classroom_data.get('students', [])
 

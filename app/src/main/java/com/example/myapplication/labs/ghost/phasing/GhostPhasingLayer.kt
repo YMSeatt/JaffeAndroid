@@ -32,13 +32,13 @@ fun GhostPhasingLayer(
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "phasingTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 1000f,
         animationSpec = infiniteRepeatable(tween(100000, easing = LinearEasing)),
         label = "time"
     )
 
-    val phase by engine.phaseLevel
+    val phaseState = engine.phaseLevel
 
     // Optimize by remembering shaders and effects
     val voidShader = remember {
@@ -46,6 +46,7 @@ fun GhostPhasingLayer(
             RuntimeShader(GhostPhasingShader.NEURAL_VOID)
         } else null
     }
+    val voidBrush = remember(voidShader) { voidShader?.let { androidx.compose.ui.graphics.ShaderBrush(it) } }
 
     val transitionShader = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -55,12 +56,16 @@ fun GhostPhasingLayer(
 
     Box(modifier = modifier.fillMaxSize()) {
         // Backstage Background (Neural Void)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && phase > 0.01f && voidShader != null) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && voidShader != null && voidBrush != null) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                voidShader.setFloatUniform("iResolution", size.width, size.height)
-                voidShader.setFloatUniform("iTime", time)
-                voidShader.setFloatUniform("iIntensity", phase)
-                drawRect(brush = androidx.compose.ui.graphics.ShaderBrush(voidShader))
+                // BOLT: Access high-frequency state inside the draw block.
+                val phase = phaseState.value
+                if (phase > 0.01f) {
+                    voidShader.setFloatUniform("iResolution", size.width, size.height)
+                    voidShader.setFloatUniform("iTime", timeState.value)
+                    voidShader.setFloatUniform("iIntensity", phase)
+                    drawRect(brush = voidBrush)
+                }
             }
         }
 
@@ -69,6 +74,10 @@ fun GhostPhasingLayer(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
+                    // BOLT: Access high-frequency state inside the graphicsLayer block.
+                    val phase = phaseState.value
+                    val time = timeState.value
+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && phase > 0f && transitionShader != null) {
                         transitionShader.setFloatUniform("iResolution", size.width, size.height)
                         transitionShader.setFloatUniform("iTime", time)

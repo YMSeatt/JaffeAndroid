@@ -1,16 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <data-extraction-rules>
     <cloud-backup>
-        <include domain="database" />
-        <include domain="sharedpref" />
-        <include domain="file" />
         <exclude domain="file" path="fernet.key" />
         <exclude domain="file" path="fernet.key.v2" />
     </cloud-backup>
     <device-transfer>
-        <include domain="database" />
-        <include domain="sharedpref" />
-        <include domain="file" />
         <exclude domain="file" path="fernet.key" />
         <exclude domain="file" path="fernet.key.v2" />
     </device-transfer>

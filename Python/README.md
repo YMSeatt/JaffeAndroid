@@ -53,16 +53,75 @@ This application is designed to maintain logical parity with its [Android counte
 *   **Coordinate Parity**: While Python uses a **2000x1500** logical canvas and Android uses **4000x4000**, the data is import-compatible.
 *   **Feature Alignment**: Shared implementations of the Command pattern for Undo/Redo and complex conditional formatting rules.
 
+## 🛠️ Developing with Commands
+
+The Python application uses the **Command Pattern** to manage all state-modifying actions. This architecture ensures that every feature is automatically compatible with the multi-step Undo/Redo system and the persistent history model.
+
+### Implementing a New Command
+To add a new reversible feature, follow these requirements in `commands.py`:
+
+1.  **State Snapshotting**: During `__init__`, you **must** capture all state that will be changed. If you are modifying a student, store their current data dictionary as `self.old_data`.
+2.  **Execution Logic**: Implement `execute()` to apply the change. This method should update the `self.app` state and trigger a UI redraw (e.g., `self.app.draw_all_items()`).
+3.  **Undo Logic**: Implement `undo()` to perfectly restore the application to its previous state using the snapshots captured during initialization.
+4.  **Serialization Parity**:
+    -   Implement `_get_data_for_serialization()` to return a dictionary of the command's internal state.
+    -   Implement the `@classmethod _from_serializable_data()` to re-instantiate your command from that dictionary.
+    -   **Important**: Ensure all data in the serialization dictionary is JSON-compatible.
+
+### High-Integrity Deletion
+When implementing deletion commands (like `DeleteItemCommand`), you must capture all **associated relational data** (such as behavioral logs) to ensure that undoing a deletion doesn't result in data loss.
+
 ## 👻 Ghost Lab (Experimental Analysis)
 
-This directory includes a suite of experimental analysis tools that bridge the gap between the desktop application and futuristic neural visualizations. These tools process classroom data exports to generate high-fidelity insights and stylized blueprints.
+The `Python/` directory contains the **Ghost Lab Suite**—a collection of 30+ R&D scripts that serve as the logical foundation for the Android application's futuristic experimental features. These scripts process classroom data (exported via JSON v10) to generate high-fidelity insights, stylized blueprints, and mathematical models for "Neural" visualizations.
 
-- **`ghost_blueprint.py`**: Generates a futuristic SVG blueprint of the classroom layout, compatible with the Android Ghost Blueprint Engine's coordinate system.
-- **`ghost_flux_simulator.py`**: Calculates "Neural Flow" intensity from student logs, providing recommendations for haptic feedback and shader scaling.
-- **`ghost_lattice.py`**: Analyzes social proximity and shared behavioral markers to infer a "Social Lattice" graph of student relationships.
-- **`ghost_link.py`**: Simulates a 2027-era AI analysis, generating "Neural Dossiers" with predictive trajectories for student performance.
-- **`ghost_spectra_analyzer.py`**: Performs "Neural Spectroscopy" to identify students in Infrared (at-risk) or Ultraviolet (high engagement) spectral states.
-- **`ghost_vector_analysis.py`**: Implements a "Social Gravity" model to calculate net social force vectors and classroom cohesion metrics.
+### 🏛️ Core Analysis Suite
+
+| Script | Functional Category | Android Counterpart | Description |
+| :--- | :--- | :--- | :--- |
+| **`ghost_architect_analysis.py`** | Spatial Strategy | `ARCHITECT_MODE` | Calculates layout synergy scores for COLLABORATION and FOCUS goals. |
+| **`ghost_blueprint.py`** | Visualization | `BLUEPRINT_ENGINE` | Generates stylized 1200x800 SVG classroom blueprints. |
+| **`ghost_catalyst_analysis.py`** | Behavioral Kinetics | `CATALYST_MODE` | Maps behavioral chain reactions and social "Reaction Rates." |
+| **`ghost_emergence_analysis.py`** | Cellular Automata | `EMERGENCE_MODE` | Simulates behavioral diffusion on a vitality grid. |
+| **`ghost_entanglement.py`** | Social Physics | `ENTANGLEMENT_MODE` | Identifies "Quantum Links" between synchronized students. |
+| **`ghost_entropy_analyzer.py`** | Predictability | `ENTROPY_MODE` | Calculates Shannon entropy for student behavior variance. |
+| **`ghost_flora_analysis.py`** | Biological Metaphor | `FLORA_MODE` | Maps student performance to a digital "Neural Botanical" ecosystem. |
+| **`ghost_flux_simulator.py`** | Temporal Flow | `FLUX_MODE` | Calculates "Neural Flow" intensity and classroom tempo. |
+| **`ghost_future.py`** | Stochastic Modeling | `FUTURE_MODE` | Generates simulated future trajectories for the classroom. |
+| **`ghost_glyph_analysis.py`** | Symbolic Logic | `GLYPH_MODE` | Processes neural gestures and symbolic behavioral signatures. |
+| **`ghost_helix_analysis.py`** | Genomic Metaphor | `HELIX_MODE` | Transforms log history into "Neural DNA" sequences. |
+| **`ghost_ion_analyzer.py`** | Atmospheric Energy | `ION_MODE` | Calculates classroom "Ionic Potential" and charge distribution. |
+| **`ghost_lattice.py`** | Social Graph | `LATTICE_MODE` | Infers relationship networks based on proximity and logs. |
+| **`ghost_link.py`** | AI Synthesis | `LINK_ENGINE` | Generates 2027-era "Neural Dossiers" with predictive insights. |
+| **`ghost_magnetar_analysis.py`** | Social Magnetism | `MAGNETAR_MODE` | Models student interactions as a dipole-based magnetic field. |
+| **`ghost_nebula_analyzer.py`** | Density Mapping | `NEBULA_MODE` | Visualizes classroom "Social Atmosphere" density. |
+| **`ghost_orbit_analysis.py`** | Orbital Dynamics | `ORBIT_MODE` | Maps students to orbits around high-engagement "Social Suns." |
+| **`ghost_osmosis_analyzer.py`** | Diffusion Modeling | `OSMOSIS_MODE` | Calculates "Knowledge Potential" and behavioral concentration. |
+| **`ghost_pulsar_analyzer.py`** | Rhythmic Sync | `PULSAR_MODE` | Detects harmonic synchronicity and classroom rhythms. |
+| **`ghost_quasar_analysis.py`** | Energy Focal Points | `QUASAR_MODE` | Identifies "Quasars" (students with rapid activity bursts). |
+| **`ghost_ray_analysis.py`** | Spatial Navigation | `RAY_MODE` | Simulates volumetric beam intersections for eyes-free UI. |
+| **`ghost_spark_simulator.py`** | Particle Physics | `SPARK_MODE` | Models "Data Sparks" in a social gravity field. |
+| **`ghost_spectra_analyzer.py`** | Spectroscopy | `SPECTRA_MODE` | Identifies Infrared (at-risk) vs Ultraviolet (engaged) states. |
+| **`ghost_strategist_analysis.py`** | AI Tactics | `STRATEGIST_MODE` | Generates pedagogical interventions using heuristic trees. |
+| **`ghost_supernova_analysis.py`** | Criticality | `SUPERNOVA_MODE` | Measures classroom "Core Pressure" and explosion risk. |
+| **`ghost_tectonics_analysis.py`** | Social Stability | `TECTONICS_MODE` | Identifies social fault lines and localized stress. |
+| **`ghost_vector_analysis.py`** | Social Gravity | `VECTOR_MODE` | Calculates net social force vectors and cohesion index. |
+| **`ghost_vision_analysis.py`** | Sensor Synthesis | `VISION_MODE` | Processes spatial AR viewport metadata. |
+| **`ghost_vortex_analysis.py`** | Rotational Momentum | `VORTEX_MODE` | Detects "Social Whirlpools" and angular momentum. |
+| **`ghost_warp_analysis.py`** | Spacetime Dilation | `WARP_MODE` | Visualizes behavioral "Gravity Wells" and grid distortion. |
+| **`ghost_zenith_analysis.py`** | Parallax Mapping | `ZENITH_MODE` | Calculates student "Altitude" and 3D depth offsets. |
+
+### 🚀 Execution Model
+
+Most scripts can be executed independently from the command line, accepting a classroom JSON export (v10 format) as their primary input.
+
+**Usage:**
+```bash
+python ghost_vector_analysis.py path/to/classroom_data_v10.json
+```
+
+**Output:**
+Scripts generate high-fidelity Markdown reports to `stdout` or produce visual artifacts (like `.svg` blueprints) in the `Python/` directory. These reports serve as the deterministic gold-standard for the Android app's implementation.
 
 ---
 *Documentation love letter from Scribe 📜*

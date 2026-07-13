@@ -33,16 +33,42 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import android.content.Context
+import java.io.File
 import androidx.activity.result.ActivityResultLauncher
 
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.example.myapplication.labs.ghost.util.GhostSeedEngine
+import com.example.myapplication.labs.ghost.morph.GhostDossierScreen
 import kotlinx.coroutines.delay
 
+/**
+ * MainActivity: The primary UI orchestration hub for the Seating Chart application.
+ *
+ * This activity serves as the main entry point and "control center," managing the transition
+ * between the interactive seating chart, data analysis screens, and system-level reminders.
+ *
+ * ### Responsibilities:
+ * 1. **State Orchestration**: Manages the high-level application state, including the
+ *    password-protected "unlocked" status and the navigation between major screens.
+ * 2. **System Integration**: Registers [ActivityResultLauncher]s for handling common
+ *    file operations like exporting Excel reports and importing classroom JSON data.
+ * 3. **Privacy Hardening**: Implements a background "Cleanup Service" on startup to
+ *    purge temporary PII-laden files from the internal cache.
+ * 4. **Auto-Lock Security**: Monitors user interaction to enforce a configurable
+ *    security timeout, automatically re-locking the app when idle.
+ */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private var lastActivityTime by mutableStateOf(System.currentTimeMillis())
+    private var currentIntent by mutableStateOf<Intent?>(null)
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        currentIntent = intent
+    }
 
     override fun onUserInteraction() {
         super.onUserInteraction()
@@ -121,18 +147,29 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        currentIntent = intent
+
         // HARDEN: Cleanup temporary files on startup to protect privacy
         lifecycleScope.launch(Dispatchers.IO) {
             val cacheDir = applicationContext.cacheDir
-            val tempFiles = cacheDir.listFiles { _, name ->
-                name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg") || name.endsWith(".db")
-            }
-            tempFiles?.forEach { file ->
-                try {
-                    file.delete()
-                } catch (e: Exception) {
-                    // Ignore deletion errors
+            val sharedDir = File(cacheDir, "shared")
+
+            val cleanup = { dir: File ->
+                val tempFiles = dir.listFiles { _, name ->
+                    name.endsWith(".xlsx") || name.endsWith(".png") || name.endsWith(".svg") || name.endsWith(".db")
                 }
+                tempFiles?.forEach { file ->
+                    try {
+                        file.delete()
+                    } catch (e: Exception) {
+                        // Ignore deletion errors
+                    }
+                }
+            }
+
+            cleanup(cacheDir)
+            if (sharedDir.exists()) {
+                cleanup(sharedDir)
             }
         }
 
@@ -156,6 +193,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
+            var deepLinkStudentId by remember { mutableStateOf<Long?>(null) }
+            var deepLinkStudentName by remember { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(currentIntent) {
+                currentIntent?.let { intent ->
+                    if (intent.action == GhostSeedEngine.ACTION_OPEN_DOSSIER) {
+                        val id = intent.getLongExtra(GhostSeedEngine.EXTRA_STUDENT_ID, -1L)
+                        if (id != -1L) {
+                            deepLinkStudentId = id
+                            // HARDEN: Securely resolve student name from the database instead of trusting Intent extras
+                            val student = seatingChartViewModel.getStudentForEditing(id)
+                            deepLinkStudentName = student?.let { "${it.firstName} ${it.lastName}" }
+                        } else {
+                            deepLinkStudentId = null
+                            deepLinkStudentName = null
+                        }
+                    }
+                }
+            }
+
             MyApplicationTheme(
                 darkTheme = when (currentAppThemeState) {
                     AppTheme.LIGHT -> false
@@ -168,7 +225,20 @@ class MainActivity : ComponentActivity() {
                 useBoldFont = useBoldFont
             ) {
                 if (unlocked) {
-                    if (showDataViewer) {
+                    if (deepLinkStudentId != null && deepLinkStudentName != null) {
+                        GhostDossierScreen(
+                            studentId = deepLinkStudentId!!,
+                            studentName = deepLinkStudentName!!,
+                            onDismiss = {
+                                deepLinkStudentId = null
+                                deepLinkStudentName = null
+                            }
+                        )
+                        BackHandler {
+                            deepLinkStudentId = null
+                            deepLinkStudentName = null
+                        }
+                    } else if (showDataViewer) {
                         DataViewerScreen(
                             seatingChartViewModel = seatingChartViewModel,
                             statsViewModel = statsViewModel,

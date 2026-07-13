@@ -13,11 +13,39 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.Calendar
 
+/**
+ * EmailSchedulerWorker: The periodic evaluation engine for automated reporting.
+ *
+ * This [CoroutineWorker] acts as the "Metronome" for the application's scheduled email system.
+ * It is registered as a unique periodic task (typically every 15 minutes) and is responsible
+ * for scanning the [EmailRepository] to identify any reports that are due for transmission.
+ *
+ * ### Architectural Role:
+ * - **Schedule Evaluation**: Compares the current system time and day against the user-defined
+ *   schedules stored in the database.
+ * - **Task Dispatcher**: Instead of performing the heavy lifting (Excel generation and SMTP)
+ *   itself, it dispatches specialized [com.example.myapplication.util.EmailWorker] tasks
+ *   via [WorkManager]. This ensures that scheduling logic is isolated from execution logic.
+ *
+ * ### Performance & Security:
+ * - **Dispatchers.IO**: Runs strictly on the IO thread to avoid blocking background task slots.
+ * - **Encrypted Handshake**: Ensures that all sensitive schedule metadata is encrypted using
+ *   [SecurityUtil] before being passed to the execution worker.
+ */
 class EmailSchedulerWorker(
     appContext: Context,
     workerParams: WorkerParameters
 ) : CoroutineWorker(appContext, workerParams) {
 
+    /**
+     * Executes the periodic check for due reports.
+     *
+     * 1. Retrieves all active schedules from the [EmailRepository].
+     * 2. Matches the current [Calendar] state (Hour, Minute, Day) against each schedule.
+     * 3. If a match is found, enqueues a standard `daily_report` task for the [EmailWorker].
+     *
+     * @return [Result.success] once all schedules have been evaluated.
+     */
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
         val db = AppDatabase.getDatabase(applicationContext)
         val securityUtil = SecurityUtil(applicationContext)

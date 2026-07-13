@@ -22,6 +22,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+/**
+ * An interactive dropdown component that allows users to select multiple items from a list.
+ *
+ * This component is optimized for teacher workflows, such as filtering logs by multiple
+ * behavior types or selecting a subset of students for a report. It wraps the standard
+ * Material 3 [ExposedDropdownMenuBox] and adds multi-selection logic using checkboxes.
+ *
+ * @param options The complete list of available strings to select from.
+ * @param selectedOptions The current list of strings that are marked as selected.
+ * @param onSelectionChanged Callback triggered whenever an item is toggled.
+ * @param label The label to display for the collapsed dropdown field.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MultiSelectDropdown(

@@ -5,6 +5,8 @@ import android.content.ClipDescription
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import java.io.File
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.MoreVert
@@ -44,6 +47,7 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Settings
@@ -119,15 +123,29 @@ import com.example.myapplication.labs.ghost.GhostPhantasmLayer
 import com.example.myapplication.labs.ghost.GhostPhantasmEngine
 import com.example.myapplication.labs.ghost.GhostPortalLayer
 import com.example.myapplication.labs.ghost.GhostSpectraLayer
+import com.example.myapplication.labs.ghost.GhostSpectraDialog
+import com.example.myapplication.labs.ghost.GhostSpectraEngine
 import com.example.myapplication.labs.ghost.GhostFluxLayer
 import com.example.myapplication.labs.ghost.GhostSingularityLayer
-import com.example.myapplication.labs.ghost.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.aurora.GhostAuroraLayer
+import com.example.myapplication.labs.ghost.mood.GhostMoodEngine
+import com.example.myapplication.labs.ghost.mood.GhostMoodLayer
+import com.example.myapplication.labs.ghost.kaleidoscope.GhostKaleidoscopeLayer
+import com.example.myapplication.labs.ghost.silhouette.GhostSilhouetteLayer
+import com.example.myapplication.labs.ghost.ion.GhostIonLayer
+import com.example.myapplication.labs.ghost.sync.GhostSyncLayer
+import com.example.myapplication.labs.ghost.sync.GhostSyncEngine
 import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
-import com.example.myapplication.labs.ghost.GhostPulseLayer
+import com.example.myapplication.labs.ghost.pulse.GhostPulseLayer
+import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarEngine
+import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarDialog
 import com.example.myapplication.labs.ghost.warp.GhostWarpLayer
+import com.example.myapplication.labs.ghost.warp.GhostWarpDialog
 import com.example.myapplication.labs.ghost.GhostLensEngine
 import com.example.myapplication.labs.ghost.GhostLensLayer
 import com.example.myapplication.labs.ghost.lattice.GhostLatticeLayer
@@ -135,10 +153,96 @@ import com.example.myapplication.labs.ghost.phasing.GhostPhasingEngine
 import com.example.myapplication.labs.ghost.phasing.GhostPhasingLayer
 import com.example.myapplication.labs.ghost.vector.GhostVectorLayer
 import com.example.myapplication.labs.ghost.synapse.GhostSynapseDialog
+import com.example.myapplication.labs.ghost.glitch.GhostGlitchLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisLayer
 import com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementLayer
 import com.example.myapplication.labs.ghost.entanglement.GhostEntanglementEngine
+import com.example.myapplication.labs.ghost.entropy.GhostEntropyLayer
+import com.example.myapplication.labs.ghost.emergence.GhostEmergenceEngine
+import com.example.myapplication.labs.ghost.emergence.GhostEmergenceLayer
+import com.example.myapplication.labs.ghost.catalyst.GhostCatalystLayer
+import com.example.myapplication.labs.ghost.catalyst.GhostCatalystDialog
+import com.example.myapplication.labs.ghost.flora.GhostFloraLayer
+import com.example.myapplication.labs.ghost.tectonics.GhostTectonicLayer
+import com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveLayer
+import com.example.myapplication.labs.ghost.adaptive.GhostAdaptiveEngine
+import com.example.myapplication.labs.ghost.GhostHorizonEngine
+import com.example.myapplication.labs.ghost.GhostHorizonLayer
+import com.example.myapplication.labs.ghost.zenith.GhostZenithEngine
+import com.example.myapplication.labs.ghost.zenith.GhostZenithLayer
+import com.example.myapplication.labs.ghost.cortex.GhostCortexEngine
+import com.example.myapplication.labs.ghost.cortex.GhostCortexLayer
+import com.example.myapplication.labs.ghost.ray.GhostRayEngine
+import com.example.myapplication.labs.ghost.ray.GhostRayLayer
+import com.example.myapplication.labs.ghost.quasar.GhostQuasarLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixLayer
+import com.example.myapplication.labs.ghost.helix.GhostHelixEngine
+import com.example.myapplication.labs.ghost.lasso.GhostLassoLayer
+import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
+import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
+import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
+import com.example.myapplication.labs.ghost.stellar.GhostStellarLayer
+import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
+import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
+import com.example.myapplication.labs.ghost.architect.GhostArchitectDialog
+import com.example.myapplication.labs.ghost.comet.GhostCometEngine
+import com.example.myapplication.labs.ghost.comet.GhostCometLayer
+import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
+import com.example.myapplication.labs.ghost.flare.GhostFlareLayer
+import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
+import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotLayer
+import com.example.myapplication.labs.ghost.stream.GhostStreamEngine
+import com.example.myapplication.labs.ghost.stream.GhostStreamLayer
+import com.example.myapplication.labs.ghost.carbon.GhostCarbonLayer
+import com.example.myapplication.labs.ghost.weaver.GhostWeaverLayer
+import com.example.myapplication.labs.ghost.rain.GhostRainEngine
+import com.example.myapplication.labs.ghost.rain.GhostRainLayer
+import com.example.myapplication.labs.ghost.weather.GhostWeatherEngine
+import com.example.myapplication.labs.ghost.weather.GhostWeatherLayer
+import com.example.myapplication.labs.ghost.sonar.GhostSonarEngine
+import com.example.myapplication.labs.ghost.sonar.GhostSonarLayer
+import com.example.myapplication.labs.ghost.beacon.GhostBeaconEngine
+import com.example.myapplication.labs.ghost.beacon.GhostBeaconLayer
+import com.example.myapplication.labs.ghost.GhostTraceEngine
+import com.example.myapplication.labs.ghost.GhostTraceLayer
+import com.example.myapplication.labs.ghost.GhostBioSyncLayer
+import com.example.myapplication.labs.ghost.ekg.GhostEKGLayer
+import com.example.myapplication.labs.ghost.ink.GhostInkLayer
+import com.example.myapplication.labs.ghost.origami.GhostOrigamiEngine
+import com.example.myapplication.labs.ghost.origami.GhostOrigamiLayer
+import com.example.myapplication.labs.ghost.moss.GhostMossLayer
+import com.example.myapplication.labs.ghost.coral.GhostCoralLayer
+import com.example.myapplication.labs.ghost.frost.GhostFrostLayer
+import com.example.myapplication.labs.ghost.scape.GhostScapeEngine
+import com.example.myapplication.labs.ghost.scape.GhostScapeLayer
+import com.example.myapplication.labs.ghost.phoenix.GhostPhoenixLayer
+import com.example.myapplication.labs.ghost.radar.GhostRadarLayer
+import com.example.myapplication.labs.ghost.radar.GhostRadarEngine
+import com.example.myapplication.labs.ghost.GhostHaloLayer
+import com.example.myapplication.labs.ghost.GhostDeckLayer
+import com.example.myapplication.labs.ghost.GhostDeckEngine
+import com.example.myapplication.labs.ghost.glyph.GhostGlyphLayer
+import com.example.myapplication.labs.ghost.glyph.GhostGlyphEngine
+import com.example.myapplication.labs.ghost.shell.GhostShellLayer
+import com.example.myapplication.labs.ghost.vision.GhostVisionEngine
+import com.example.myapplication.labs.ghost.vision.GhostVisionLayer
+import com.example.myapplication.labs.ghost.vision.GhostVisionActivity
+import com.example.myapplication.labs.ghost.strategist.GhostStrategistLayer
+import com.example.myapplication.labs.ghost.strategist.GhostStrategistEngine
+import com.example.myapplication.labs.ghost.filtering.GhostFilterActivity
+import com.example.myapplication.labs.ghost.glance.GhostGlanceSurface
+import com.example.myapplication.labs.ghost.glance.GhostGlanceEngine
+import com.example.myapplication.labs.ghost.spotlight.GhostSpotlightLayer
+import com.example.myapplication.labs.ghost.hub.GhostHubLayer
+import com.example.myapplication.labs.ghost.hub.GhostStudentHubLayer
+import com.example.myapplication.labs.ghost.hub.GhostAction
+import com.example.myapplication.labs.ghost.GhostLinkEngine
+import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
+import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
+import com.example.myapplication.labs.ghost.util.GhostHapticManager
+import com.example.myapplication.labs.ghost.util.GhostShakeDetector
+import android.hardware.SensorManager
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
@@ -169,12 +273,48 @@ import com.example.myapplication.ui.model.StudentUiItem
 import com.example.myapplication.util.EmailException
 import com.example.myapplication.util.EmailUtil
 import com.example.myapplication.util.captureComposable
+import com.example.myapplication.util.findActivity
+import com.example.myapplication.util.maskStudentName
 import com.example.myapplication.util.toTitleCase
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import com.example.myapplication.viewmodel.StudentGroupsViewModel
 import kotlinx.coroutines.launch
 
+/**
+ * The primary entry point for the Seating Chart experience.
+ *
+ * `SeatingChartScreen` acts as the central hub of the application, orchestrating the
+ * classroom's spatial layout, behavioral logging, and advanced R&D visualizations.
+ *
+ * ### Architectural Design: The Multi-Layered Stack
+ * This screen is implemented as a sophisticated stack of layers (Atmospheric, Environmental,
+ * Social, Interactive, and HUD). This allows for complex analytical overlays (e.g., social
+ * gravity, behavioral heatmaps) to be rendered on top of the physical classroom layout
+ * without compromising performance.
+ *
+ * ### Performance: Fluid Interaction Model
+ * To maintain a fluid 60fps experience—even during high-frequency gestures like dragging
+ * students or zooming a 4000x4000 logical canvas—the screen utilizes several **BOLT**
+ * (Performance-Obsessed) design patterns:
+ * 1. **Optimistic UI**: Drag gestures update local `MutableState` properties for immediate
+ *    feedback, bypassing the database-to-UI update loop during the interaction.
+ * 2. **Identity Preservation**: Existing UI objects are updated in-place rather than replaced,
+ *    allowing Compose to perform highly efficient "diff-and-patch" updates.
+ * 3. **Background Pipeline**: Heavy calculations (e.g., social force simulation, spatial
+ *    clustering) are offloaded to a multi-stage background update pipeline in the [SeatingChartViewModel].
+ *
+ * ### Gesture System
+ * - **Single Finger**: Tapping for student/furniture interaction; Dragging for item movement.
+ * - **Two Fingers**: Panning and Pinch-to-Zoom navigation across the 4000-unit logical world.
+ * - **Long Press**: Triggers contextual radial menus ([GhostHubLayer]) or bulk selection tools.
+ *
+ * @param seatingChartViewModel The primary state manager and command invoker.
+ * @param settingsViewModel Manages user preferences and system-level configuration.
+ * @param studentGroupsViewModel Handles the relational management of classroom clusters.
+ * @param onNavigateToSettings Navigation callback to the Settings screen.
+ * @param onNavigateToDataViewer Navigation callback to the historical log viewer.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SeatingChartScreen(
@@ -196,15 +336,51 @@ fun SeatingChartScreen(
     val furniture by seatingChartViewModel.furnitureForDisplay.observeAsState(initial = emptyList())
     val layouts by seatingChartViewModel.allLayoutTemplates.observeAsState(initial = emptyList())
     val selectedItemIds by seatingChartViewModel.selectedItemIds.observeAsState(initial = emptySet())
+    val allProphecies by seatingChartViewModel.prophecies.collectAsState()
+    val globalKinetics by seatingChartViewModel.globalKinetics.collectAsState()
     val allBehaviorEvents by seatingChartViewModel.allBehaviorEvents.observeAsState(initial = emptyList())
     val allQuizLogs by seatingChartViewModel.allQuizLogs.observeAsState(initial = emptyList())
     val allHomeworkLogs by seatingChartViewModel.allHomeworkLogs.observeAsState(initial = emptyList())
+
+    val chronosHeatmap by seatingChartViewModel.chronosHeatmap.collectAsState()
+    val spectralDensity by seatingChartViewModel.spectralDensity.collectAsState()
+    val agitation by seatingChartViewModel.agitation.collectAsState()
+    val latticeEdges by seatingChartViewModel.latticeEdges.collectAsState()
+    val socialVectors by seatingChartViewModel.socialVectors.collectAsState()
+    val vortices by seatingChartViewModel.vortices.collectAsState()
+    val entangledLinks by seatingChartViewModel.entangledLinks.collectAsState()
+    val studentTraces by seatingChartViewModel.studentTraces.collectAsState()
+    val carbonTwins by seatingChartViewModel.carbonTwins.collectAsState()
+    val weaverThreads by seatingChartViewModel.weaverThreads.collectAsState()
+    val syncLinks by seatingChartViewModel.syncLinks.collectAsState()
+    val neuralLinks by seatingChartViewModel.neuralLinks.collectAsState()
+    val catalystReactions by seatingChartViewModel.catalystReactions.collectAsState()
+    val futureEvents by seatingChartViewModel.futureEvents.collectAsState()
+    val adaptiveZones by seatingChartViewModel.adaptiveZones.collectAsState()
+    val draggingSilhouettes by seatingChartViewModel.draggingSilhouettes.collectAsState()
+    val glitchIntensity by seatingChartViewModel.glitchIntensity.collectAsState()
+    val strategistInterventions by seatingChartViewModel.strategistInterventions.collectAsState()
+    val isStrategistThinking by seatingChartViewModel.isStrategistThinking.collectAsState()
+    val strategistGoal by seatingChartViewModel.strategistGoal.collectAsState()
+    val resilienceScores by seatingChartViewModel.resilienceScores.collectAsState()
+    val bioSyncPoints by seatingChartViewModel.bioSyncPoints.collectAsState()
+    val ekgSpike by seatingChartViewModel.ekgSpike.collectAsState()
+    val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
+    val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
+    val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
+    val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
+    val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
+    val mossScores by seatingChartViewModel.mossScores.collectAsState()
+    val prismStates by seatingChartViewModel.prismStates.collectAsState()
+    val coralReef by seatingChartViewModel.coralReef.collectAsState()
+
+    val negativeCounts by seatingChartViewModel.negativeCounts.collectAsState()
+    val groupedStudentsByGroup by seatingChartViewModel.groupedStudentsByGroup.collectAsState()
 
     var showGhostInsightDialog by remember { mutableStateOf(false) }
     var showGhostSynapseDialog by remember { mutableStateOf(false) }
     var currentGhostInsight by remember { mutableStateOf<GhostInsight?>(null) }
     var showGhostOracleDialog by remember { mutableStateOf(false) }
-    var currentProphecies by remember { mutableStateOf<List<GhostOracle.Prophecy>>(emptyList()) }
     var isHudActive by remember { mutableStateOf(false) }
     var isChronosActive by remember { mutableStateOf(false) }
     var isHologramActive by remember { mutableStateOf(false) }
@@ -212,26 +388,116 @@ fun SeatingChartScreen(
     var isSpectraActive by remember { mutableStateOf(false) }
     var isFluxActive by remember { mutableStateOf(false) }
     var isAuroraActive by remember { mutableStateOf(false) }
+    var isMoodActive by remember { mutableStateOf(false) }
     var isNebulaActive by remember { mutableStateOf(false) }
     var isPulseActive by remember { mutableStateOf(false) }
     var isLensActive by remember { mutableStateOf(false) }
     var isSingularityActive by remember { mutableStateOf(false) }
     var isWarpActive by remember { mutableStateOf(false) }
+    var showWarpReport by remember { mutableStateOf(false) }
+    var isMossActive by remember { mutableStateOf(false) }
+    var isPrismActive by remember { mutableStateOf(false) }
+    var isCoralActive by remember { mutableStateOf(false) }
+    var isScapeActive by remember { mutableStateOf(false) }
+    var isPhoenixActive by remember { mutableStateOf(false) }
+    var isKaleidoscopeActive by remember { mutableStateOf(false) }
+    var isBioSyncActive by remember { mutableStateOf(false) }
+    var isEkgActive by remember { mutableStateOf(false) }
+    var isMirageActive by remember { mutableStateOf(false) }
+    var showGhostSpectraDialog by remember { mutableStateOf(false) }
     var isFutureActive by remember { mutableStateOf(false) }
     var isSparkActive by remember { mutableStateOf(false) }
+    var isSyncActive by remember { mutableStateOf(false) }
+    var isLinkActive by remember { mutableStateOf(false) }
+    var isFrostActive by remember { mutableStateOf(false) }
+    var isRadarActive by remember { mutableStateOf(false) }
     var isOsmosisActive by remember { mutableStateOf(false) }
     var isEntanglementActive by remember { mutableStateOf(false) }
+    var isIonActive by remember { mutableStateOf(false) }
+    var isEntropyActive by remember { mutableStateOf(false) }
+    var isZenithActive by remember { mutableStateOf(false) }
+    var isEmergenceActive by remember { mutableStateOf(false) }
+    var isCatalystActive by remember { mutableStateOf(false) }
+    var showCatalystReport by remember { mutableStateOf(false) }
+    var isFloraActive by remember { mutableStateOf(false) }
+    var isTectonicsActive by remember { mutableStateOf(false) }
+    var isPulsarActive by remember { mutableStateOf(false) }
+    var isMagnetarActive by remember { mutableStateOf(false) }
+    var showMagnetarReport by remember { mutableStateOf(false) }
+    var isHorizonActive by remember { mutableStateOf(false) }
+    var isHelixActive by remember { mutableStateOf(false) }
+    var isSupernovaActive by remember { mutableStateOf(false) }
+    var isVortexActive by remember { mutableStateOf(false) }
+    var isOrbitActive by remember { mutableStateOf(false) }
+    var isStellarActive by remember { mutableStateOf(false) }
+    var isArchitectActive by remember { mutableStateOf(false) }
+    var showArchitectReport by remember { mutableStateOf(false) }
+    var isSnapshotTriggered by remember { mutableStateOf(false) }
+    var isStreamActive by remember { mutableStateOf(false) }
+    var isCarbonActive by remember { mutableStateOf(false) }
+    var isWeaverActive by remember { mutableStateOf(false) }
+    var isRainActive by remember { mutableStateOf(false) }
+    var isWeatherActive by remember { mutableStateOf(false) }
+    var isSonarActive by remember { mutableStateOf(false) }
+    var sonarOrigin by remember { mutableStateOf(Offset.Zero) }
+    var quietStudentIds by remember { mutableStateOf(emptySet<Long>()) }
+    var isBeaconActive by remember { mutableStateOf(false) }
+    var beaconTargetPosition by remember { mutableStateOf(Offset.Zero) }
+    var isInkActive by remember { mutableStateOf(false) }
+    var isTraceActive by remember { mutableStateOf(false) }
+    var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
+    var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
+    var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
+    var isDeckActive by remember { mutableStateOf(false) }
+    var isVisionActive by remember { mutableStateOf(false) }
+    var isShellActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) }
+    var isGlitchActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLITCH_MODE_ENABLED) }
+    var isGlyphActive by remember { mutableStateOf(false) }
+    var isSpotlightActive by remember { mutableStateOf(false) }
+    var isNavigatorActive by remember { mutableStateOf(false) }
+    var isAdaptiveActive by remember { mutableStateOf(false) }
+    var isStrategistActive by remember { mutableStateOf(false) }
+    var isLassoActive by remember { mutableStateOf(false) }
+    var architectGoal by remember { mutableStateOf(GhostArchitectEngine.StrategicGoal.COLLABORATION) }
+    var isRayActive by remember { mutableStateOf(false) }
+    var isCortexActive by remember { mutableStateOf(false) }
+    var isQuasarActive by remember { mutableStateOf(false) }
     var isPhasingActive by remember { mutableStateOf(false) }
     var isIrisActive by remember { mutableStateOf(false) }
+    var isOrigamiActive by remember { mutableStateOf(false) }
+    var isSilhouetteActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) }
     var isPhantasmActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) }
     var isScreenRecording by remember { mutableStateOf(false) }
+    var activeGlanceStudentId by remember { mutableStateOf<Long?>(null) }
+    var isGhostHubVisible by remember { mutableStateOf(false) }
+    var ghostHubPosition by remember { mutableStateOf(Offset.Zero) }
+    var isStudentHubVisible by remember { mutableStateOf(false) }
+    var studentHubPosition by remember { mutableStateOf(Offset.Zero) }
+    /**
+     * SHIELD: Track the last shared artifact (screenshot/blueprint) for cleanup.
+     * This ensures that temporary files created for sharing don't persist longer than necessary.
+     */
+    var lastSharedArtifactUri by remember { mutableStateOf<Uri?>(null) }
     val hudViewModel: GhostHUDViewModel = viewModel()
+    val ghostPrefsViewModel: GhostPreferencesViewModel = viewModel()
     val context = LocalContext.current
+    val hapticManager = remember { GhostHapticManager(context) }
 
-    // Portal State
+    val shakeToRecenterEnabled by ghostPrefsViewModel.shakeToRecenterEnabled.collectAsState()
+
+    // Portal State: Manages the visibility and position of the Ghost Portal during drag-and-drop.
     var isDraggingPortalActive by remember { mutableStateOf(false) }
     var portalPosition by remember { mutableStateOf(Offset.Zero) }
 
+    /**
+     * Implementation of [DragAndDropTarget] that facilitates inter-app data transfer
+     * via the Ghost Portal.
+     *
+     * ### Inter-app Teleportation:
+     * When a drag event containing "student_data" enters the portal, it triggers a visual
+     * response. Dropping the item on the portal completes the "teleportation," simulating
+     * data transfer between compatible classroom management apps.
+     */
     val portalTarget = remember {
         object : DragAndDropTarget {
             override fun onStarted(event: DragAndDropEvent) {
@@ -272,6 +538,7 @@ fun SeatingChartScreen(
     var showLiveQuizMarkDialog by remember { mutableStateOf(false) }
     var showAdvancedHomeworkLogDialog by remember { mutableStateOf(false) }
     var showLiveHomeworkMarkDialog by remember { mutableStateOf(false) }
+    var showBehaviorLogViewer by remember { mutableStateOf(false) }
     var showStudentActionMenu by remember { mutableStateOf(false) }
     var showSaveLayoutDialog by remember { mutableStateOf(false) }
     var showLoadLayoutDialog by remember { mutableStateOf(false) }
@@ -303,6 +570,14 @@ fun SeatingChartScreen(
     var ghostAmplitude by remember { mutableFloatStateOf(0f) }
     var ghostCurrentText by remember { mutableStateOf("") }
 
+    // HARDEN: Automatically clear transcribed PII after a short timeout
+    LaunchedEffect(isGhostListening, ghostCurrentText) {
+        if (!isGhostListening && ghostCurrentText.isNotEmpty()) {
+            delay(5000)
+            ghostCurrentText = ""
+        }
+    }
+
     val ghostVoiceAssistant = remember(behaviorTypeNames) {
         GhostVoiceAssistant(
             context = context,
@@ -320,18 +595,66 @@ fun SeatingChartScreen(
     }
 
     val ghostEchoEngine = remember { GhostEchoEngine() }
+    val ghostOrigamiEngine = remember { GhostOrigamiEngine() }
+    val ghostRainEngine = remember { GhostRainEngine() }
+    val ghostWeatherEngine = remember { GhostWeatherEngine() }
     val ghostSparkEngine = remember { GhostSparkEngine() }
     val ghostHologramEngine = remember { GhostHologramEngine(context) }
+    val ghostHorizonEngine = remember { GhostHorizonEngine(context) }
+    val ghostVisionEngine = remember { GhostVisionEngine(context) }
+    val ghostMagnetarEngine = remember { GhostMagnetarEngine(context) }
+    val ghostZenithEngine = remember { GhostZenithEngine(context) }
+    val ghostEmergenceEngine = remember { GhostEmergenceEngine() }
+    val ghostCortexEngine = remember { GhostCortexEngine(context) }
     val ghostLensEngine = remember { GhostLensEngine() }
     val ghostPhantasmEngine = remember { GhostPhantasmEngine(context) }
+    val ghostScapeEngine = remember { GhostScapeEngine() }
     val ghostPhasingEngine = remember { GhostPhasingEngine(context) }
+    val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
+    val ghostRayEngine = remember { GhostRayEngine(context) }
+    val ghostCometEngine = remember { GhostCometEngine() }
+    val ghostFlareEngine = remember { GhostFlareEngine() }
+    val ghostMirrorEngine = remember { GhostMirrorEngine() }
+    val mirrorPerspective by ghostMirrorEngine.perspective
 
-    DisposableEffect(Unit) {
+    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, isInkActive, isStellarActive, shakeToRecenterEnabled) {
+        val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
+        val shakeDetector = if (shakeToRecenterEnabled && sensorManager != null) {
+            GhostShakeDetector {
+                scale = 1f
+                offset = Offset.Zero
+                hapticManager.perform(GhostHapticManager.Pattern.SUCCESS)
+                Toast.makeText(context, "Canvas Recentered 👻", Toast.LENGTH_SHORT).show()
+            }.apply {
+                start(sensorManager)
+            }
+        } else null
+
         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PHANTASM_MODE_ENABLED) {
             ghostPhantasmEngine.observeScreenRecording(ContextCompat.getMainExecutor(context)) { recording ->
                 isScreenRecording = recording
             }
         }
+
+        // HARDEN: Proactively enforce FLAG_SECURE whenever high-PII experiments or sensitive dialogs are active
+        val isSensitiveModeActive = isPhantasmActive || isFutureActive || isVisionActive ||
+                                   isCortexActive || isHudActive || isArchitectActive || isShellActive ||
+                                   isStreamActive || isInkActive || isLensActive || isSyncActive || isLinkActive ||
+                                   isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
+                                   isHaloActive || isTraceActive || isCarbonActive || isWeaverActive || isPrismActive ||
+                                   isFrostActive || isRadarActive || isOrigamiActive || isSonarActive ||
+                                   isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive || isStellarActive ||
+                                   isGhostListening || ghostCurrentText.isNotEmpty() || isStudentHubVisible || (activeGlanceStudentId != null) ||
+                                   showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
+                                   showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
+                                   showLiveQuizMarkDialog || showAdvancedHomeworkLogDialog ||
+                                   showLiveHomeworkMarkDialog || showAddEditStudentDialog ||
+                                   showStudentActionMenu || showSaveLayoutDialog || showLoadLayoutDialog ||
+                                   showExportDialog || showUndoHistoryDialog || showChangeBoxSizeDialog ||
+                                   showStudentStyleDialog || showAssignTaskDialog || showAddEditFurnitureDialog ||
+                                   showEmailDialog || showBehaviorLogViewer
+        ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), isSensitiveModeActive)
+
         if (GhostConfig.GHOST_MODE_ENABLED) {
             if (GhostConfig.ECHO_MODE_ENABLED) {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -341,12 +664,34 @@ fun SeatingChartScreen(
             if (GhostConfig.HOLOGRAM_MODE_ENABLED) {
                 ghostHologramEngine.start()
             }
+            if (GhostConfig.MAGNETAR_MODE_ENABLED) {
+                ghostMagnetarEngine.start()
+            }
+            if (GhostConfig.HORIZON_MODE_ENABLED) {
+                ghostHorizonEngine.start()
+            }
+            if (GhostConfig.VISION_MODE_ENABLED) {
+                ghostVisionEngine.start()
+            }
         }
         onDispose {
             ghostVoiceAssistant.destroy()
+            ghostScapeEngine.release()
             ghostEchoEngine.stop()
             ghostHologramEngine.stop()
+            ghostMagnetarEngine.stop()
+            ghostHorizonEngine.stop()
+            ghostVisionEngine.stop()
+            ghostRayEngine.stop()
             ghostPhantasmEngine.stopObservingScreenRecording()
+            sensorManager?.let { shakeDetector?.stop(it) }
+            // Ensure privacy shield is cleared on dispose
+            ghostPhantasmEngine.updatePrivacyShield(context.findActivity(), false)
+
+            // SHIELD: Clean up the last shared artifact on screen disposal
+            lastSharedArtifactUri?.let { uri ->
+                try { context.contentResolver.delete(uri, null, null) } catch (e: Exception) { /* Ignore */ }
+            }
         }
     }
 
@@ -393,7 +738,11 @@ fun SeatingChartScreen(
         }
     }
 
-    // Phasing Transition Animation
+    /**
+     * Phasing Transition: Animates the 'phaseLevel' uniform for the Ghost Phasing AGSL shader.
+     * This transition creates a glitchy chromatic aberration effect as the UI "phases"
+     * into the hidden data layer.
+     */
     val phaseLevel by animateFloatAsState(
         targetValue = if (isPhasingActive) 1f else 0f,
         animationSpec = tween(1500, easing = LinearOutSlowInEasing),
@@ -404,7 +753,31 @@ fun SeatingChartScreen(
         ghostPhasingEngine.updatePhase(phaseLevel)
     }
 
-    // Phantasm Heartbeat Effect
+    LaunchedEffect(glitchIntensity) {
+        if (glitchIntensity > 0.3f && isGlitchActive) {
+            hapticManager.perform(GhostHapticManager.Pattern.NEURAL_FRICTION)
+        }
+    }
+
+    LaunchedEffect(isSupernovaActive, allBehaviorEvents) {
+        if (isSupernovaActive) {
+            ghostSupernovaEngine.updatePressure(allBehaviorEvents)
+        } else {
+            ghostSupernovaEngine.reset()
+        }
+    }
+
+    LaunchedEffect(isFlareActive, students) {
+        if (isFlareActive) {
+            ghostFlareEngine.checkMilestones(students)
+        }
+    }
+
+    /**
+     * Phantasm Heartbeat: Drives a periodic 'heartbeat' pulse in the Ghost Phantasm meta-ball
+     * layer. The pulse frequency and intensity are dynamically scaled based on the ratio
+     * of negative behavior events in the classroom (the "Agitation Level").
+     */
     LaunchedEffect(isPhantasmActive, allBehaviorEvents) {
         if (isPhantasmActive) {
             val agitation = if (allBehaviorEvents.isEmpty()) 0.2f
@@ -425,6 +798,9 @@ fun SeatingChartScreen(
 
     val snackbarHostState = remember { SnackbarHostState() }
     val isSessionActive by seatingChartViewModel.isSessionActive.observeAsState(initial = false)
+    val classroomMood by seatingChartViewModel.classroomMood.collectAsState()
+    val globalIonBalance by seatingChartViewModel.globalIonBalance.collectAsState()
+    val focusHeatmap by seatingChartViewModel.focusHeatmap.collectAsState()
     val lastExportPath by settingsViewModel.lastExportPath.collectAsState()
 
     Scaffold(
@@ -447,9 +823,10 @@ fun SeatingChartScreen(
                 onShowUndoHistory = { showUndoHistoryDialog = true },
                 onBehaviorLog = { type ->
                     val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
-                    targets.forEach { id ->
-                        seatingChartViewModel.addBehaviorEvent(BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null))
+                    val behaviorEvents = targets.map { id ->
+                        BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null)
                     }
+                    seatingChartViewModel.addBehaviorEvents(behaviorEvents)
                     if (!selectMode) selectedStudentUiItemForAction = null
                     coroutineScope.launch { snackbarHostState.showSnackbar("Logged $type for ${targets.size} student(s)") }
                 },
@@ -462,11 +839,17 @@ fun SeatingChartScreen(
                 onHelpClick = onHelpClick,
                 onTakeScreenshot = {
                     coroutineScope.launch {
+                        // SHIELD: Clean up previous artifact before creating a new one
+                        lastSharedArtifactUri?.let { oldUri ->
+                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                        }
+
                         val view = (context as Activity).window.decorView
                         val bitmap = captureComposable(view, (context as Activity).window)
                         if (bitmap != null) {
                             val uri = settingsViewModel.saveScreenshot(bitmap)
                             if (uri != null) {
+                                lastSharedArtifactUri = uri
                                 val intent = Intent(Intent.ACTION_SEND).apply {
                                     type = "image/png"
                                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -482,6 +865,7 @@ fun SeatingChartScreen(
                 editModeEnabled = editModeEnabled,
                 seatingChartViewModel = seatingChartViewModel,
                 settingsViewModel = settingsViewModel,
+                studentGroupsViewModel = studentGroupsViewModel,
                 onShowSaveLayout = { showSaveLayoutDialog = true },
                 onShowLoadLayout = { showLoadLayoutDialog = true },
                 onShowExport = { showExportDialog = true },
@@ -510,11 +894,17 @@ fun SeatingChartScreen(
                 lastExportPath = lastExportPath,
                 selectedStudentUiItemForAction = selectedStudentUiItemForAction,
                 onNeuralOracleClick = {
-                    currentProphecies = GhostOracle.consult(students, allBehaviorEvents)
                     showGhostOracleDialog = true
                 },
                 isHudActive = isHudActive,
                 onToggleHud = { isHudActive = !isHudActive },
+                isStrategistActive = isStrategistActive,
+                onToggleStrategist = {
+                    isStrategistActive = !isStrategistActive
+                    if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                },
+                strategistGoal = strategistGoal,
+                onStrategistGoalChange = { seatingChartViewModel.setStrategistGoal(it) },
                 isChronosActive = isChronosActive,
                 onToggleChronos = { isChronosActive = !isChronosActive },
                 isHologramActive = isHologramActive,
@@ -546,6 +936,7 @@ fun SeatingChartScreen(
                 onToggleIris = { isIrisActive = !isIrisActive },
                 isWarpActive = isWarpActive,
                 onToggleWarp = { isWarpActive = !isWarpActive },
+                onShowWarpReport = { showWarpReport = true },
                 isFutureActive = isFutureActive,
                 onToggleFuture = { isFutureActive = !isFutureActive },
                 isSparkActive = isSparkActive,
@@ -554,11 +945,83 @@ fun SeatingChartScreen(
                 onToggleOsmosis = { isOsmosisActive = !isOsmosisActive },
                 isEntanglementActive = isEntanglementActive,
                 onToggleEntanglement = { isEntanglementActive = !isEntanglementActive },
+                isSyncActive = isSyncActive,
+                onToggleSync = { isSyncActive = !isSyncActive },
+                isIonActive = isIonActive,
+                onToggleIon = { isIonActive = !isIonActive },
+                isMirageActive = isMirageActive,
+                onToggleMirage = { isMirageActive = !isMirageActive },
+                isEntropyActive = isEntropyActive,
+                onToggleEntropy = { isEntropyActive = !isEntropyActive },
+                isZenithActive = isZenithActive,
+                onToggleZenith = { isZenithActive = !isZenithActive },
+                isHorizonActive = isHorizonActive,
+                onToggleHorizon = { isHorizonActive = !isHorizonActive },
+                isGlitchActive = isGlitchActive,
+                onToggleGlitch = { isGlitchActive = !isGlitchActive },
+                isHelixActive = isHelixActive,
+                onToggleHelix = { isHelixActive = !isHelixActive },
+                isMagnetarActive = isMagnetarActive,
+                onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
+                onShowMagnetarReport = { showMagnetarReport = true },
+                isEmergenceActive = isEmergenceActive,
+                onToggleEmergence = { isEmergenceActive = !isEmergenceActive },
+                isCatalystActive = isCatalystActive,
+                onToggleCatalyst = { isCatalystActive = !isCatalystActive },
+                onShowCatalystReport = { showCatalystReport = true },
+                isFloraActive = isFloraActive,
+                onToggleFlora = { isFloraActive = !isFloraActive },
+                isTectonicsActive = isTectonicsActive,
+                onToggleTectonics = { isTectonicsActive = !isTectonicsActive },
+                isPulsarActive = isPulsarActive,
+                onTogglePulsar = { isPulsarActive = !isPulsarActive },
+                isCortexActive = isCortexActive,
+                onToggleCortex = { isCortexActive = !isCortexActive },
+                isVortexActive = isVortexActive,
+                onToggleVortex = { isVortexActive = !isVortexActive },
+                isOrbitActive = isOrbitActive,
+                onToggleOrbit = { isOrbitActive = !isOrbitActive },
+                isStellarActive = isStellarActive,
+                onToggleStellar = { isStellarActive = !isStellarActive },
+                isQuasarActive = isQuasarActive,
+                onToggleQuasar = { isQuasarActive = !isQuasarActive },
+                isSpotlightActive = isSpotlightActive,
+                onToggleSpotlight = { isSpotlightActive = !isSpotlightActive },
+                isNavigatorActive = isNavigatorActive,
+                onToggleNavigator = { isNavigatorActive = !isNavigatorActive },
+                isAdaptiveActive = isAdaptiveActive,
+                onToggleAdaptive = { isAdaptiveActive = !isAdaptiveActive },
+                isGlyphActive = isGlyphActive,
+                onToggleGlyph = { isGlyphActive = !isGlyphActive },
+                isArchitectActive = isArchitectActive,
+                onToggleArchitect = { isArchitectActive = !isArchitectActive },
+                onArchitectGoalChange = { architectGoal = it },
+                onShowArchitectReport = { showArchitectReport = true },
+                isVisionActive = isVisionActive,
+                onToggleVision = { isVisionActive = !isVisionActive },
+                isMagnetarActive = isMagnetarActive,
+                onToggleMagnetar = { isMagnetarActive = !isMagnetarActive },
+                isCarbonActive = isCarbonActive,
+                isWeaverActive = isWeaverActive,
+                onToggleCarbon = { isCarbonActive = !isCarbonActive },
+                onToggleWeaver = { isWeaverActive = !isWeaverActive },
+                isSupernovaActive = isSupernovaActive,
+                onToggleSupernova = { isSupernovaActive = !isSupernovaActive },
+                isInkActive = isInkActive,
+                onToggleInk = { isInkActive = !isInkActive },
+                isTraceActive = isTraceActive,
+                onToggleTrace = { isTraceActive = !isTraceActive },
                 onExportBlueprint = {
                     coroutineScope.launch {
+                        // SHIELD: Clean up previous artifact before creating a new one
+                        lastSharedArtifactUri?.let { oldUri ->
+                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                        }
+
                         val svgContent = GhostBlueprintEngine.generateBlueprint(students, furniture)
                         val uri = settingsViewModel.saveBlueprint(svgContent)
                         if (uri != null) {
+                            lastSharedArtifactUri = uri
                             val intent = Intent(Intent.ACTION_SEND).apply {
                                 type = "image/svg+xml"
                                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -619,61 +1082,269 @@ fun SeatingChartScreen(
             }
         }
     ) { paddingValues ->
-        val onStudentClick: (StudentUiItem) -> Unit = { studentItem ->
-            if (selectMode) {
-                val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
-                val currentSelected = selectedItemIds.toMutableSet()
-                if (currentSelected.contains(itemId)) {
-                    currentSelected.remove(itemId)
+        // BOLT: Stabilize high-frequency callbacks using rememberUpdatedState to capture volatile state
+        // without breaking lambda identity. This allows SeatingChartContent to skip recomposition.
+        val currentSelectMode by androidx.compose.runtime.rememberUpdatedState(selectMode)
+        val currentSelectedItemIds by androidx.compose.runtime.rememberUpdatedState(selectedItemIds)
+        val currentSessionType by androidx.compose.runtime.rememberUpdatedState(sessionType)
+        val currentIsSessionActive by androidx.compose.runtime.rememberUpdatedState(isSessionActive)
+
+        val onStudentClick: (StudentUiItem) -> Unit = remember {
+            { studentItem ->
+                if (currentSelectMode) {
+                    val itemId = ChartItemId(studentItem.id, ItemType.STUDENT)
+                    val currentSelected = currentSelectedItemIds.toMutableSet()
+                    if (currentSelected.contains(itemId)) {
+                        currentSelected.remove(itemId)
+                    } else {
+                        currentSelected.add(itemId)
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
                 } else {
-                    currentSelected.add(itemId)
+                    selectedStudentUiItemForAction = studentItem
+                    when (currentSessionType) {
+                        SessionType.BEHAVIOR -> showBehaviorDialog = true
+                        SessionType.QUIZ -> if (currentIsSessionActive) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                        SessionType.HOMEWORK -> if (currentIsSessionActive) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                    }
                 }
-                seatingChartViewModel.selectedItemIds.value = currentSelected
-            } else {
+            }
+        }
+
+        val onStudentLongClick: (StudentUiItem, Offset) -> Unit = remember {
+            { studentItem, pos ->
                 selectedStudentUiItemForAction = studentItem
-                when (sessionType) {
-                    SessionType.BEHAVIOR -> showBehaviorDialog = true
-                    SessionType.QUIZ -> if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
-                    SessionType.HOMEWORK -> if (seatingChartViewModel.isSessionActive.value == true) showLiveHomeworkMarkDialog = true else showAdvancedHomeworkLogDialog = true
+                studentHubPosition = pos
+                isStudentHubVisible = true
+            }
+        }
+
+        val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = remember {
+            { furnitureItem ->
+                if (currentSelectMode) {
+                    val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
+                    val currentSelected = currentSelectedItemIds.toMutableSet()
+                    if (currentSelected.contains(itemId)) {
+                        currentSelected.remove(itemId)
+                    } else {
+                        currentSelected.add(itemId)
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
                 }
             }
         }
 
-        val onStudentLongClick: (StudentUiItem) -> Unit = { studentItem ->
-            selectedStudentUiItemForAction = studentItem
-            showStudentActionMenu = true
-        }
-
-        val onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
-            if (selectMode) {
-                val itemId = ChartItemId(furnitureItem.id, ItemType.FURNITURE)
-                val currentSelected = selectedItemIds.toMutableSet()
-                if (currentSelected.contains(itemId)) {
-                    currentSelected.remove(itemId)
-                } else {
-                    currentSelected.add(itemId)
+        val onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = remember {
+            { furnitureItem ->
+                coroutineScope.launch {
+                    editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
+                    showAddEditFurnitureDialog = true
                 }
-                seatingChartViewModel.selectedItemIds.value = currentSelected
             }
         }
 
-        val onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit = { furnitureItem ->
-            coroutineScope.launch {
-                editingFurniture = seatingChartViewModel.getFurnitureById(furnitureItem.id)
-                showAddEditFurnitureDialog = true
-            }
-        }
-
+        /**
+         * Root Layout Container: Orchestrates the layered composition of the seating chart.
+         * The order of items in this Box determines their Z-index.
+         *
+         * ### Layer Order (Bottom to Top):
+         * 1. **Atmospheric Layers**: Horizon, Zenith, Phasing background.
+         * 2. **Social Dynamics (Experimental)**: Warp, Future, Aurora, Nebula, etc.
+         * 3. **Environmental Framework**: Grid, Rulers, Guides.
+         * 4. **Core Content**: Students and Furniture (wrapped in Pan/Zoom container).
+         * 5. **Refraction & HUD Layers**: Ghost Lens, HUD, Oracle, Voice Assist overlays.
+         */
         Box(
             modifier = Modifier
                 .padding(paddingValues)
                 .fillMaxSize()
+        ) {
+            GhostSnapshotLayer(
+                trigger = isSnapshotTriggered,
+                onAnimationComplete = { isSnapshotTriggered = false }
+            )
+            val streamEntries = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                GhostStreamEngine.synthesizeStream(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+            }
+            GhostStreamLayer(
+                entries = streamEntries,
+                isActive = isStreamActive,
+                modifier = Modifier.align(Alignment.CenterEnd)
+            )
+            GhostGlitchLayer(
+                intensity = glitchIntensity,
+                isActive = isGlitchActive
+            )
+            GhostInkLayer(
+                engine = seatingChartViewModel.ghostInkEngine,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isInkActive
+            )
+            GhostMossLayer(
+                students = students,
+                mossScores = mossScores,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isMossActive
+            )
+            GhostCoralLayer(
+                branches = coralReef,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCoralActive
+            )
+            GhostTraceLayer(
+                traces = studentTraces,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isTraceActive
+            )
+            GhostCarbonLayer(
+                students = students,
+                twins = carbonTwins,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCarbonActive
+            )
+            GhostWeaverLayer(
+                students = students,
+                threads = weaverThreads,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isWeaverActive
+            )
+            GhostScapeLayer(
+                engine = ghostScapeEngine,
+                students = students,
+                negativeCounts = negativeCounts,
+                isActive = isScapeActive,
+                canvasScale = scale,
+                canvasOffset = offset
+            )
+            com.example.myapplication.labs.ghost.link.GhostLinkLayer(
+                links = neuralLinks,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isLinkActive
+            )
+            val radarIntensity = remember(
+                isRadarActive,
+                selectedStudentUiItemForAction,
+                selectedStudentUiItemForAction?.xPosition?.value,
+                selectedStudentUiItemForAction?.yPosition?.value,
+                students,
+                seatingChartViewModel.behaviorLogsByStudentCache
+            ) {
+                if (isRadarActive) {
+                    val target = selectedStudentUiItemForAction
+                    if (target != null) {
+                        GhostRadarEngine.calculateLocalResonance(
+                            targetX = target.xPosition.value,
+                            targetY = target.yPosition.value,
+                            students = students,
+                            behaviorLogsByStudent = seatingChartViewModel.behaviorLogsByStudentCache
+                        )
+                    } else 0f
+                } else 0f
+            }
+
+            GhostRadarLayer(
+                targetOffset = Offset(
+                    selectedStudentUiItemForAction?.xPosition?.value ?: 0f,
+                    selectedStudentUiItemForAction?.yPosition?.value ?: 0f
+                ),
+                intensity = radarIntensity,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isRadarActive && selectedStudentUiItemForAction != null
+            )
+            GhostRainLayer(
+                engine = ghostRainEngine,
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isRainActive
+            )
+            GhostWeatherLayer(
+                engine = ghostWeatherEngine,
+                behaviorLogs = allBehaviorEvents,
+                quizLogs = allQuizLogs,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isWeatherActive
+            )
+            GhostBeaconLayer(
+                targetPosition = beaconTargetPosition,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isBeaconActive,
+                onAnimationComplete = { isBeaconActive = false }
+            )
+            GhostSonarLayer(
+                origin = sonarOrigin,
+                quietStudentIds = quietStudentIds,
+                students = students,
+                isActive = isSonarActive,
+                canvasScale = scale,
+                canvasOffset = offset,
+                onFinished = { isSonarActive = false }
+            )
+            GhostPhoenixLayer(
+                students = students,
+                resilienceScores = resilienceScores,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isVisible = isPhoenixActive
+            )
+            GhostBioSyncLayer(
+                vitalityPoints = bioSyncPoints,
+                harmony = classroomHarmony,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isBioSyncActive
+            )
+            selectedStudentUiItemForAction?.let { student ->
+                val vitality = bioSyncPoints.find { it.x == student.xPosition.value && it.y == student.yPosition.value }?.vitality ?: 0.5f
+                val stress = bioSyncPoints.find { it.x == student.xPosition.value && it.y == student.yPosition.value }?.stress ?: 0f
+
+                GhostEKGLayer(
+                    studentName = student.fullName.value,
+                    vitality = vitality,
+                    stress = stress,
+                    recentSpike = ekgSpike,
+                    isActive = isEkgActive && selectedStudentUiItemForAction != null,
+                    onDismiss = { isEkgActive = false }
+                )
+            }
+            GhostMirageLayer(
+                heatmap = focusHeatmap,
+                isActive = isMirageActive
+            )
+            GhostKaleidoscopeLayer(
+                fragments = kaleidoscopeFragments,
+                harmony = harmonyIndex,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isKaleidoscopeActive
+            )
+            Box(
+                modifier = Modifier
+                .fillMaxSize()
                 .pointerInput(Unit) {
                     detectTapGestures(
-                        onLongPress = {
-                            // Two-finger long press is hard with detectTapGestures
-                            // but we can simulate a special "Ghost Gesture" if needed.
-                            // For now, the menu toggle is primary.
+                        onLongPress = { pos ->
+                            ghostHubPosition = pos
+                            isGhostHubVisible = true
+                        },
+                        onTap = { pos ->
+                            if (isMirageActive) {
+                                // Map screen-space touch to logical 4000x4000 canvas
+                                val logicalX = ((pos.x - offset.x) / scale)
+                                val logicalY = ((pos.y - offset.y) / scale)
+                                seatingChartViewModel.recordFocus(logicalX, logicalY)
+                            }
                         }
                     )
                 }
@@ -690,6 +1361,108 @@ fun SeatingChartScreen(
                 )
 
         ) {
+            GhostHorizonLayer(engine = ghostHorizonEngine, isActive = isHorizonActive)
+            GhostLassoLayer(
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isLassoActive,
+                onSelectionChange = { ids ->
+                    selectMode = true
+                    val currentSelected = selectedItemIds.toMutableSet()
+                    ids.forEach { id ->
+                        currentSelected.add(ChartItemId(id.toInt(), ItemType.STUDENT))
+                    }
+                    seatingChartViewModel.selectedItemIds.value = currentSelected
+                }
+            )
+            GhostAdaptiveLayer(zones = adaptiveZones, isActive = isAdaptiveActive)
+            GhostSilhouetteLayer(
+                silhouettes = draggingSilhouettes,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isSilhouetteActive
+            )
+            GhostArchitectLayer(
+                students = students,
+                edges = latticeEdges,
+                behaviorLogs = allBehaviorEvents,
+                goal = architectGoal,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isArchitectActive
+            )
+            GhostCortexLayer(engine = ghostCortexEngine, isActive = isCortexActive)
+            GhostSupernovaLayer(engine = ghostSupernovaEngine, isActive = isSupernovaActive)
+            GhostVortexLayer(
+                vortices = vortices,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isVortexActive
+            )
+            GhostOrbitLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                isActive = isOrbitActive
+            )
+            GhostStellarLayer(
+                students = students,
+                quizLogsByStudent = seatingChartViewModel.quizLogsByStudentCache,
+                isActive = isStellarActive,
+                canvasScale = scale,
+                canvasOffset = offset
+            )
+            GhostRayLayer(
+                engine = ghostRayEngine,
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isRayActive
+            )
+            GhostVisionLayer(
+                engine = ghostVisionEngine,
+                students = students,
+                isActive = isVisionActive
+            )
+            GhostGlyphLayer(
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isGlyphActive,
+                onLogBehavior = { id, type ->
+                    seatingChartViewModel.addBehaviorEvent(BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis()))
+                },
+                onLogAcademic = { id, type ->
+                    seatingChartViewModel.saveQuizLog(com.example.myapplication.data.QuizLog(studentId = id, quizName = type, markValue = 100.0, maxMarkValue = 100.0, timestamp = System.currentTimeMillis()))
+                }
+            )
+            GhostQuasarLayer(
+                students = students,
+                behaviorLogs = allBehaviorEvents,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isQuasarActive
+            )
+            GhostCometLayer(
+                engine = ghostCometEngine,
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isCometActive
+            )
+            GhostFlareLayer(
+                engine = ghostFlareEngine,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isFlareActive
+            )
+            GhostHaloLayer(
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isHaloActive
+            )
+            GhostZenithLayer(engine = ghostZenithEngine) { zenithScope ->
             GhostPhasingLayer(engine = ghostPhasingEngine) {
                 if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PORTAL_MODE_ENABLED) {
                 GhostPortalLayer(
@@ -707,12 +1480,45 @@ fun SeatingChartScreen(
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+
+                if (showWarpReport) {
+                    val report = remember(warpAnalysis) {
+                        if (warpAnalysis != null) {
+                            com.example.myapplication.labs.ghost.warp.GhostWarpEngine.generateWarpReport(warpAnalysis!!)
+                        } else "Analyzing classroom curvature..."
+                    }
+                    GhostWarpDialog(
+                        report = report,
+                        onDismiss = { showWarpReport = false }
+                    )
+                }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FROST_MODE_ENABLED && isFrostActive) {
+                GhostFrostLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    homeworkLogs = allHomeworkLogs,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SYNC_MODE_ENABLED) {
+                GhostSyncLayer(
+                    students = students,
+                    syncLinks = syncLinks,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isSyncActive
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FUTURE_MODE_ENABLED && isFutureActive) {
                 GhostFutureLayer(
                     students = students,
-                    historicalLogs = allBehaviorEvents,
+                    futureEvents = futureEvents,
                     isFutureActive = isFutureActive,
                     canvasScale = scale,
                     canvasOffset = offset
@@ -724,6 +1530,15 @@ fun SeatingChartScreen(
                     behaviorLogs = allBehaviorEvents,
                     quizLogs = allQuizLogs,
                     homeworkLogs = allHomeworkLogs
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MOOD_MODE_ENABLED && isMoodActive) {
+                // BOLT: Removed redundant O(S*L) calculation in UI.
+                // Observed from SeatingChartViewModel background pipeline.
+                GhostMoodLayer(
+                    classroomMood = classroomMood,
+                    isVisible = isMoodActive
                 )
             }
 
@@ -747,19 +1562,125 @@ fun SeatingChartScreen(
                 val osmoticNodes = remember(students) {
                     students.mapNotNull { it.osmoticNode.value }
                 }
-                GhostOsmosisLayer(students = osmoticNodes)
+                GhostOsmosisLayer(
+                    students = osmoticNodes,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTANGLEMENT_MODE_ENABLED && isEntanglementActive) {
                 GhostEntanglementLayer(
                     students = students,
+                    entangledLinks = entangledLinks,
+                    canvasScale = scale,
+                    canvasOffset = offset,
                     isEntanglementActive = isEntanglementActive
                 )
             }
 
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ION_MODE_ENABLED && isIonActive) {
+                GhostIonLayer(
+                    students = students,
+                    globalBalance = globalIonBalance,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED && isCatalystActive) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    GhostCatalystLayer(
+                        students = students,
+                        reactions = catalystReactions,
+                        canvasScale = scale,
+                        canvasOffset = offset,
+                        isActive = isCatalystActive
+                    )
+                }
+            }
+
+            if (showArchitectReport) {
+                val report = remember(students, latticeEdges, allBehaviorEvents) {
+                    GhostArchitectEngine.generateReport(students, latticeEdges, allBehaviorEvents)
+                }
+                GhostArchitectDialog(
+                    report = report,
+                    onDismiss = { showArchitectReport = false }
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CATALYST_MODE_ENABLED && isCatalystActive) {
+                IconButton(onClick = onShowCatalystReport) {
+                    Icon(
+                        Icons.Default.Science,
+                        contentDescription = "Catalyst Kinetics",
+                        tint = androidx.compose.ui.graphics.Color.Cyan
+                    )
+                }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLORA_MODE_ENABLED && isFloraActive) {
+                GhostFloraLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    quizLogs = allQuizLogs,
+                    homeworkLogs = allHomeworkLogs,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isFloraActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TECTONICS_MODE_ENABLED && isTectonicsActive) {
+                GhostTectonicLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isTectonicsActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.PULSAR_MODE_ENABLED && isPulsarActive) {
+                GhostPulsarLayer(
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isPulsarActive
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MAGNETAR_MODE_ENABLED && isMagnetarActive) {
+                GhostMagnetarLayer(
+                    engine = ghostMagnetarEngine,
+                    students = students,
+                    behaviorLogs = allBehaviorEvents,
+                    canvasScale = scale,
+                    canvasOffset = offset,
+                    isActive = isMagnetarActive
+                )
+
+                if (showMagnetarReport) {
+                    val report = remember(magnetarAnalysis, students) {
+                        if (magnetarAnalysis != null) {
+                            val names = students.associate { it.id.toLong() to it.fullName.value }
+                            ghostMagnetarEngine.generateMagnetarReport(magnetarAnalysis!!, names)
+                        } else "Analyzing classroom social magnetic field..."
+                    }
+                    GhostMagnetarDialog(
+                        report = report,
+                        onDismiss = { showMagnetarReport = false }
+                    )
+                }
+            }
+
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPECTRA_MODE_ENABLED && isSpectraActive) {
                 GhostSpectraLayer(
-                    behaviorLogs = allBehaviorEvents
+                    density = spectralDensity,
+                    agitation = agitation
                 )
             }
 
@@ -796,12 +1717,39 @@ fun SeatingChartScreen(
                     canvasOffset = offset,
                     isRecording = isScreenRecording
                 )
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SPOTLIGHT_MODE_ENABLED) {
+                GhostSpotlightLayer(
+                    targetStudent = selectedStudentUiItemForAction,
+                    isActive = isSpotlightActive,
+                    canvasScale = scale,
+                    canvasOffset = offset
+                )
+            }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SHELL_MODE_ENABLED) {
+                GhostShellLayer(
+                    behaviorLogs = allBehaviorEvents,
+                    isActive = isShellActive,
+                    isHudActive = isHudActive,
+                    onToggleHud = { isHudActive = !isHudActive },
+                    isVisionActive = isVisionActive,
+                    onToggleVision = { isVisionActive = !isVisionActive },
+                    isStrategistActive = isStrategistActive,
+                    onToggleStrategist = {
+                        isStrategistActive = !isStrategistActive
+                        if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                    },
+                    isAuroraActive = isAuroraActive,
+                    onToggleAurora = { isAuroraActive = !isAuroraActive }
+                )
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.LATTICE_MODE_ENABLED) {
                 GhostLatticeLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    edges = latticeEdges,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
@@ -810,7 +1758,7 @@ fun SeatingChartScreen(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VECTOR_MODE_ENABLED && isVectorActive) {
                 GhostVectorLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    vectors = socialVectors,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
@@ -825,7 +1773,8 @@ fun SeatingChartScreen(
                 seatingChartViewModel = seatingChartViewModel,
                 scale = scale,
                 offset = offset,
-                canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat())
+                canvasSize = androidx.compose.ui.geometry.Size(canvasSize.width.toFloat(), canvasSize.height.toFloat()),
+                mirrorPerspective = mirrorPerspective
             )
 
             // Main Content Rendering
@@ -837,6 +1786,7 @@ fun SeatingChartScreen(
                     canvasSize = canvasSize,
                     students = students,
                     furniture = furniture,
+                    mirrorPerspective = mirrorPerspective,
                     selectedItemIds = selectedItemIds,
                     selectMode = selectMode,
                     sessionType = sessionType,
@@ -848,6 +1798,7 @@ fun SeatingChartScreen(
                     quizLogFontBold = quizLogFontBold,
                     homeworkLogFontBold = homeworkLogFontBold,
                     isIrisActive = isIrisActive,
+                isPrismActive = isPrismActive,
                     allBehaviorEvents = allBehaviorEvents,
                     allQuizLogs = allQuizLogs,
                     allHomeworkLogs = allHomeworkLogs,
@@ -855,8 +1806,27 @@ fun SeatingChartScreen(
                     onStudentLongClick = onStudentLongClick,
                     onFurnitureClick = onFurnitureClick,
                     onFurnitureLongClick = onFurnitureLongClick,
-                    seatingChartViewModel = seatingChartViewModel
+                    seatingChartViewModel = seatingChartViewModel,
+                    isZenithActive = isZenithActive,
+                    zenithScope = zenithScope
                 )
+            }
+
+            val seatingChartWithEntropy = @Composable {
+                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ENTROPY_MODE_ENABLED && isEntropyActive) {
+                    GhostEntropyLayer(
+                        students = students,
+                        behaviorLogs = allBehaviorEvents,
+                        quizLogs = allQuizLogs,
+                        canvasScale = scale,
+                        canvasOffset = offset,
+                        isActive = isEntropyActive
+                    ) {
+                        chartContent()
+                    }
+                } else {
+                    chartContent()
+                }
             }
 
             val seatingChartWithLens = @Composable {
@@ -864,37 +1834,48 @@ fun SeatingChartScreen(
                     GhostLensLayer(
                         engine = ghostLensEngine,
                         students = students,
-                        allProphecies = GhostOracle.consult(students, allBehaviorEvents),
+                        allProphecies = allProphecies,
                         canvasScale = scale,
                         canvasOffset = offset
                     ) {
                         if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
                             GhostHologramLayer(engine = ghostHologramEngine) {
-                                chartContent()
+                                seatingChartWithEntropy()
                             }
                         } else {
-                            chartContent()
+                            seatingChartWithEntropy()
                         }
                     }
                 } else {
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HOLOGRAM_MODE_ENABLED && isHologramActive) {
                         GhostHologramLayer(engine = ghostHologramEngine) {
-                            chartContent()
+                            seatingChartWithEntropy()
                         }
                     } else {
-                        chartContent()
+                        seatingChartWithEntropy()
                     }
                 }
             }
 
-            seatingChartWithLens()
+            GhostOrigamiLayer(engine = ghostOrigamiEngine) {
+                seatingChartWithLens()
+            }
 
             // Ghost Overlays
             if (GhostConfig.GHOST_MODE_ENABLED) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (GhostConfig.EMERGENCE_MODE_ENABLED && isEmergenceActive) {
+                        GhostEmergenceLayer(
+                            engine = ghostEmergenceEngine,
+                            students = students,
+                            behaviorLogs = allBehaviorEvents
+                        )
+                    }
+                }
+
                 if (GhostConfig.CHRONOS_MODE_ENABLED && isChronosActive) {
                     GhostChronosLayer(
-                        students = students,
-                        events = allBehaviorEvents,
+                        heatmapGrid = chronosHeatmap,
                         canvasScale = scale,
                         canvasOffset = offset
                     )
@@ -902,18 +1883,39 @@ fun SeatingChartScreen(
 
                 NeuralMapLayer(
                     students = students,
-                    behaviorLogs = allBehaviorEvents,
+                    negativeCounts = negativeCounts,
+                    groupedStudentsByGroup = groupedStudentsByGroup,
                     canvasScale = scale,
                     canvasOffset = offset
                 )
+
+                if (showGhostSpectraDialog) {
+                    selectedStudentUiItemForAction?.let { student ->
+                        val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                        val spectra = GhostSpectraEngine.analyzeStudentSpectra(student.id.toLong(), behavior)
+                        GhostSpectraDialog(
+                            studentName = student.fullName.value,
+                            spectra = spectra,
+                            globalDensity = spectralDensity,
+                            globalAgitation = agitation,
+                            onDismiss = { showGhostSpectraDialog = false }
+                        )
+                    }
+                }
 
                 if (isHudActive) {
                     GhostHUDLayer(
                         hudViewModel = hudViewModel,
                         students = students,
-                        prophecies = GhostOracle.consult(students, allBehaviorEvents)
+                        prophecies = allProphecies
                     )
                 }
+
+                GhostStrategistLayer(
+                    interventions = strategistInterventions,
+                    isActive = isStrategistActive,
+                    isThinking = isStrategistThinking
+                )
             }
 
             if (showGhostSynapseDialog) {
@@ -945,7 +1947,6 @@ fun SeatingChartScreen(
                 selectedStudentUiItemForAction?.let { student ->
                     val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
                     var showGroupMenu by remember { mutableStateOf(false) }
-                    var showBehaviorLogViewer by remember { mutableStateOf(false) }
 
                     DropdownMenu(
                         expanded = true,
@@ -1049,13 +2050,6 @@ fun SeatingChartScreen(
                             })
                         }
                     }
-                    if (showBehaviorLogViewer) {
-                        BehaviorLogViewerDialog(
-                            studentId = student.id.toLong(),
-                            viewModel = seatingChartViewModel,
-                            onDismiss = { showBehaviorLogViewer = false }
-                        )
-                    }
                     DropdownMenu(
                         expanded = showGroupMenu,
                         onDismissRequest = { showGroupMenu = false }) {
@@ -1081,12 +2075,20 @@ fun SeatingChartScreen(
                     behaviorTypes = behaviorTypeNames,
                     onDismiss = { showBehaviorDialog = false; selectedStudentUiItemForAction = null },
                     onBehaviorLogged = { count ->
+                    val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                     if (isSparkActive) {
-                        val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                         targets.forEach { id ->
                             val s = students.find { it.id.toLong() == id }
                             if (s != null) {
                                 ghostSparkEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
+                            }
+                        }
+                    }
+                    if (isCometActive) {
+                        targets.forEach { id ->
+                            val s = students.find { it.id.toLong() == id }
+                            if (s != null) {
+                                ghostCometEngine.emit(s.xPosition.value, s.yPosition.value, "Behavior")
                             }
                         }
                     }
@@ -1136,7 +2138,7 @@ fun SeatingChartScreen(
                         viewModel = seatingChartViewModel,
                         settingsViewModel = settingsViewModel,
                         onDismissRequest = { showLiveHomeworkMarkDialog = false; selectedStudentUiItemForAction = null },
-                        onSave = { homeworkLog -> seatingChartViewModel.addHomeworkLogToSession(homeworkLog) }
+                        onSave = { homeworkLogs -> seatingChartViewModel.addHomeworkLogsToSession(homeworkLogs) }
                     )
                 }
             }
@@ -1160,15 +2162,30 @@ fun SeatingChartScreen(
             }
 
             if (showExportDialog) {
-                ExportDialog(viewModel = seatingChartViewModel, onDismissRequest = { showExportDialog = false }, onExport = { options, share ->
-                    seatingChartViewModel.pendingExportOptions = options
-                    if (share) {
-                        onShowEmailDialogChange(true)
-                    } else {
-                        createDocumentLauncher.launch("seating_chart_export.xlsx")
+                ExportDialog(
+                    viewModel = seatingChartViewModel,
+                    settingsViewModel = settingsViewModel,
+                    onDismissRequest = { showExportDialog = false },
+                    onExport = { options, share ->
+                        seatingChartViewModel.pendingExportOptions = options
+                        if (share) {
+                            onShowEmailDialogChange(true)
+                        } else {
+                            createDocumentLauncher.launch("seating_chart_export.xlsx")
+                        }
+                        showExportDialog = false
                     }
-                    showExportDialog = false
-                })
+                )
+            }
+
+            if (showBehaviorLogViewer) {
+                selectedStudentUiItemForAction?.let { student ->
+                    BehaviorLogViewerDialog(
+                        studentId = student.id.toLong(),
+                        viewModel = seatingChartViewModel,
+                        onDismiss = { showBehaviorLogViewer = false }
+                    )
+                }
             }
 
             if (showEmailDialog) {
@@ -1183,39 +2200,51 @@ fun SeatingChartScreen(
                         activity?.let { mainActivity ->
                             mainActivity.lifecycleScope.launch {
                                 val emailUtil = EmailUtil(mainActivity)
-                                // HARDEN: Create temporary file in the app's private cache directory
-                                val file = File.createTempFile("export_", ".xlsx", mainActivity.cacheDir)
-                                val uri = FileProvider.getUriForFile(
-                                    mainActivity,
-                                    "com.example.myapplication.fileprovider",
-                                    file
-                                )
-                                seatingChartViewModel.pendingExportOptions?.let { options ->
-                                    val result = seatingChartViewModel.exportData(
-                                        context = mainActivity,
-                                        uri = uri,
-                                        options = options
+                                // HARDEN: Create temporary file in the restricted shared cache directory
+                                val sharedDir = File(mainActivity.cacheDir, "shared")
+                                if (!sharedDir.exists()) sharedDir.mkdirs()
+                                val file = File.createTempFile("export_", ".xlsx", sharedDir)
+                                var successfullyHandedOff = false
+                                try {
+                                    val uri = FileProvider.getUriForFile(
+                                        mainActivity,
+                                        "com.example.myapplication.fileprovider",
+                                        file
                                     )
-                                    if (result.isSuccess) {
-                                        try {
-                                            emailUtil.sendEmailWithRetry(
-                                                from = from,
-                                                password = emailPassword,
-                                                to = to,
-                                                subject = subject,
-                                                body = body,
-                                                attachmentPath = file.absolutePath,
-                                                smtpSettings = smtpSettings
-                                            )
-                                            Toast.makeText(mainActivity, "Email sent!", Toast.LENGTH_SHORT).show()
-                                        } catch (e: EmailException) {
-                                            Toast.makeText(mainActivity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                    seatingChartViewModel.pendingExportOptions?.let { options ->
+                                        val result = seatingChartViewModel.exportData(
+                                            context = mainActivity,
+                                            uri = uri,
+                                            options = options
+                                        )
+                                        if (result.isSuccess) {
+                                            try {
+                                                emailUtil.sendEmailWithRetry(
+                                                    from = from,
+                                                    password = emailPassword,
+                                                    to = to,
+                                                    subject = subject,
+                                                    body = body,
+                                                    attachmentPath = file.absolutePath,
+                                                    smtpSettings = smtpSettings
+                                                )
+                                                successfullyHandedOff = true
+                                                Toast.makeText(mainActivity, "Email sent!", Toast.LENGTH_SHORT).show()
+                                            } catch (e: EmailException) {
+                                                Toast.makeText(mainActivity, "Email failed to send: ${e.message}", Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            Toast.makeText(mainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                         }
-                                    } else {
-                                        Toast.makeText(mainActivity, "Export failed: ${result.exceptionOrNull()?.message}", Toast.LENGTH_LONG).show()
                                     }
+                                } finally {
+                                    // HARDEN: If the export failed or the hand-off to WorkManager was interrupted,
+                                    // ensure the temporary file is deleted immediately to prevent PII leakage.
+                                    if (!successfullyHandedOff && file.exists()) {
+                                        file.delete()
+                                    }
+                                    onShowEmailDialogChange(false)
                                 }
-                                onShowEmailDialogChange(false)
                             }
                         }
                     }
@@ -1263,9 +2292,18 @@ fun SeatingChartScreen(
 
             if (showGhostOracleDialog) {
                 GhostOracleDialog(
-                    prophecies = currentProphecies,
+                    prophecies = allProphecies,
                     onDismiss = { showGhostOracleDialog = false }
                 )
+            }
+
+            if (showCatalystReport) {
+                globalKinetics?.let { kinetics ->
+                    GhostCatalystDialog(
+                        kinetics = kinetics,
+                        onDismiss = { showCatalystReport = false }
+                    )
+                }
             }
 
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VOICE_ASSISTANT_ENABLED) {
@@ -1275,12 +2313,309 @@ fun SeatingChartScreen(
                     currentText = ghostCurrentText
                 )
             }
+
+            if (GhostConfig.GHOST_MODE_ENABLED) {
+                GhostStudentHubLayer(
+                    isVisible = isStudentHubVisible,
+                    position = studentHubPosition,
+                    onActionSelected = { action ->
+                        when (action.id) {
+                            "LOG_BEHAVIOR" -> showBehaviorDialog = true
+                            "NEURAL_INSIGHT" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
+                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
+                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+
+                                    currentGhostInsight = GhostInsightEngine.generateInsight(
+                                        student.fullName.value, behavior, quiz, homework
+                                    )
+                                    showGhostInsightDialog = true
+                                }
+                            }
+                            "NEURAL_SYNAPSE" -> showGhostSynapseDialog = true
+                            "NEURAL_SPECTRA" -> showGhostSpectraDialog = true
+                            "LOG_ACADEMIC" -> {
+                                if (seatingChartViewModel.isSessionActive.value == true) showLiveQuizMarkDialog = true else showLogQuizScoreDialog = true
+                            }
+                            "NEURAL_DOSSIER" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    val fullName = student.fullName.value
+                                    val dossier = GhostLinkEngine.generateNeuralDossier(student.id.toLong(), fullName)
+
+                                    // PRIVACY: Mask the student name in the intent subject using the hardened standard
+                                    val maskedName = maskStudentName(fullName)
+
+                                    val intent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "text/plain"
+                                        putExtra(Intent.EXTRA_SUBJECT, "Neural Dossier: $maskedName")
+                                        putExtra(Intent.EXTRA_TEXT, dossier)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Share Neural Dossier"))
+                                }
+                            }
+                            "NEURAL_EKG" -> {
+                                isEkgActive = !isEkgActive
+                                if (isEkgActive) hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "PIN_STUDENT" -> {
+                                selectedStudentUiItemForAction?.let { student ->
+                                    seatingChartViewModel.toggleStudentPin(student.id.toLong())
+                                }
+                            }
+                            "NEURAL_MORPH" -> {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MORPH_MODE_ENABLED) {
+                                    selectedStudentUiItemForAction?.let { student ->
+                                        val intent = Intent(context, com.example.myapplication.labs.ghost.morph.GhostMorphActivity::class.java).apply {
+                                            putExtra("STUDENT_ID", student.id.toLong())
+                                            // Pass triggering position for potential transition refinement
+                                            putExtra("TRIGGER_X", studentHubPosition.x)
+                                            putExtra("TRIGGER_Y", studentHubPosition.y)
+                                        }
+                                        context.startActivity(intent)
+                                    }
+                                }
+                            }
+                            "EDIT_STUDENT" -> {
+                                coroutineScope.launch {
+                                    selectedStudentUiItemForAction?.let { student ->
+                                        editingStudent = seatingChartViewModel.getStudentForEditing(student.id.toLong())
+                                        showAddEditStudentDialog = true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    onDismiss = { isStudentHubVisible = false }
+                )
+
+                GhostHubLayer(
+                    isVisible = isGhostHubVisible,
+                    position = ghostHubPosition,
+                    onActionSelected = { action ->
+                        when (action.id) {
+                            "HUD" -> isHudActive = !isHudActive
+                            "MOOD" -> isMoodActive = !isMoodActive
+                            "VISION" -> isVisionActive = !isVisionActive
+                            "PHANTASM" -> isPhantasmActive = !isPhantasmActive
+                            "SPECTRA" -> isSpectraActive = !isSpectraActive
+                            "AURORA" -> isAuroraActive = !isAuroraActive
+                            "FUTURE" -> isFutureActive = !isFutureActive
+                            "CATALYST" -> isCatalystActive = !isCatalystActive
+                            "STRATEGIST" -> {
+                                isStrategistActive = !isStrategistActive
+                                if (isStrategistActive) seatingChartViewModel.runStrategistSynthesis()
+                            }
+                            "SYNC" -> isSyncActive = !isSyncActive
+                            "COMET" -> isCometActive = !isCometActive
+                            "FLARE" -> isFlareActive = !isFlareActive
+                            "HALO" -> isHaloActive = !isHaloActive
+                            "LASSO" -> isLassoActive = !isLassoActive
+                            "PIP" -> {
+                                val intent = Intent(context, com.example.myapplication.labs.ghost.pip.GhostPipActivity::class.java)
+                                context.startActivity(intent)
+                            }
+                            "STREAM" -> isStreamActive = !isStreamActive
+                            "SNAPSHOT" -> {
+                                if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SNAPSHOT_MODE_ENABLED) {
+                                    isSnapshotTriggered = true
+                                    coroutineScope.launch {
+                                        // SHIELD: Clean up previous artifact before creating a new one
+                                        lastSharedArtifactUri?.let { oldUri ->
+                                            try { context.contentResolver.delete(oldUri, null, null) } catch (e: Exception) { /* Ignore */ }
+                                        }
+
+                                        val bgColor = try { android.graphics.Color.parseColor(canvasBackgroundColor) } catch (e: Exception) { android.graphics.Color.BLACK }
+                                        val uri = GhostSnapshotEngine.captureFullCanvas(context, students, furniture, bgColor)
+                                        if (uri != null) {
+                                            lastSharedArtifactUri = uri
+                                            val intent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "image/png"
+                                                putExtra(Intent.EXTRA_STREAM, uri)
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            context.startActivity(Intent.createChooser(intent, "Share Ghost Snapshot"))
+                                        } else {
+                                            Toast.makeText(context, "Snapshot Failed", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            }
+                            "SHELL" -> isShellActive = !isShellActive
+                            "DECK" -> isDeckActive = !isDeckActive
+                            "INK" -> isInkActive = !isInkActive
+                            "TRACE" -> isTraceActive = !isTraceActive
+                            "CARBON" -> isCarbonActive = !isCarbonActive
+                            "WEAVER" -> isWeaverActive = !isWeaverActive
+                            "RAIN" -> isRainActive = !isRainActive
+                            "BEACON" -> {
+                                val targetId = GhostBeaconEngine.pickBeaconTarget(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+                                if (targetId != null) {
+                                    val target = students.find { it.id.toLong() == targetId }
+                                    if (target != null) {
+                                        beaconTargetPosition = Offset(target.xPosition.value, target.yPosition.value)
+                                        isBeaconActive = true
+                                        coroutineScope.launch {
+                                            kotlinx.coroutines.delay(5000)
+                                            isBeaconActive = false
+                                        }
+                                    }
+                                } else {
+                                    Toast.makeText(context, "No beacon target found", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            "PULSE" -> isPulseActive = !isPulseActive
+                            "WARP" -> isWarpActive = !isWarpActive
+                            "MOSS" -> isMossActive = !isMossActive
+                            "CORAL" -> isCoralActive = !isCoralActive
+                            "LINK" -> isLinkActive = !isLinkActive
+                            "FROST" -> isFrostActive = !isFrostActive
+                            "WEATHER" -> isWeatherActive = !isWeatherActive
+                            "RADAR" -> isRadarActive = !isRadarActive
+                            "ORIGAMI" -> {
+                                isOrigamiActive = !isOrigamiActive
+                                ghostOrigamiEngine.toggleFold()
+                            }
+                            "TECTONICS" -> {
+                                isTectonicsActive = !isTectonicsActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "PHOENIX" -> {
+                                isPhoenixActive = !isPhoenixActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "MIRROR" -> {
+                                ghostMirrorEngine.togglePerspective()
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                                Toast.makeText(context, "Perspective: ${mirrorPerspective.name}", Toast.LENGTH_SHORT).show()
+                            }
+                            "ARCHITECT" -> {
+                                isArchitectActive = !isArchitectActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "SONAR" -> {
+                                sonarOrigin = ghostHubPosition
+                                quietStudentIds = GhostSonarEngine.identifyQuietStudents(
+                                    students = students,
+                                    behaviorLogs = allBehaviorEvents,
+                                    quizLogs = allQuizLogs,
+                                    homeworkLogs = allHomeworkLogs
+                                )
+                                isSonarActive = true
+                            }
+                            "BIOSYNC" -> {
+                                isBioSyncActive = !isBioSyncActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "MIRAGE" -> {
+                                isMirageActive = !isMirageActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "KALEIDOSCOPE" -> {
+                                isKaleidoscopeActive = !isKaleidoscopeActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "PRISM" -> {
+                                isPrismActive = !isPrismActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "SCAPE" -> {
+                                isScapeActive = !isScapeActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                            "STELLAR" -> {
+                                isStellarActive = !isStellarActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
+                        }
+                    },
+                    onDismiss = { isGhostHubVisible = false }
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.DECK_MODE_ENABLED && isDeckActive) {
+                val deck = remember(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs) {
+                    GhostDeckEngine.createDeck(students, allBehaviorEvents, allQuizLogs, allHomeworkLogs)
+                }
+                GhostDeckLayer(
+                    deck = deck,
+                    onLog = { id, isPositive ->
+                        val type = if (isPositive) "Positive (Deck Swipe)" else "Negative (Deck Swipe)"
+                        seatingChartViewModel.addBehaviorEvent(com.example.myapplication.data.BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis()))
+                        hapticManager.perform(if (isPositive) GhostHapticManager.Pattern.SUCCESS else GhostHapticManager.Pattern.ERROR)
+                    },
+                    onDismiss = { isDeckActive = false }
+                )
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.NAVIGATOR_MODE_ENABLED) {
+                GhostNavigatorLayer(
+                    students = students,
+                    scale = scale,
+                    offset = offset,
+                    containerSize = canvasSize,
+                    onTeleport = { newOffset -> offset = newOffset },
+                    isActive = isNavigatorActive
+                )
+            }
+
+            // Ghost Glance Overlay
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.GLANCE_MODE_ENABLED) {
+                activeGlanceStudentId?.let { id ->
+                    // BOLT: Optimize Glance overlay by using pre-grouped log caches from ViewModel
+                    // and memoizing the student lookup to avoid O(S + L) on every recomposition.
+                    val glanceData = remember(
+                        id,
+                        students,
+                        seatingChartViewModel.behaviorLogsByStudentCache,
+                        seatingChartViewModel.quizLogsByStudentCache,
+                        seatingChartViewModel.homeworkLogsByStudentCache
+                    ) {
+                        val student = students.find { it.id.toLong() == id }
+                        if (student != null) {
+                            val bLogs = seatingChartViewModel.behaviorLogsByStudentCache[id] ?: emptyList()
+                            val qLogs = seatingChartViewModel.quizLogsByStudentCache[id] ?: emptyList()
+                            val hLogs = seatingChartViewModel.homeworkLogsByStudentCache[id] ?: emptyList()
+                            val state = GhostGlanceEngine.synthesize(bLogs, qLogs, hLogs)
+                            student to state
+                        } else null
+                    }
+
+                    glanceData?.let { (student, glanceState) ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onTap = { activeGlanceStudentId = null })
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            GhostGlanceSurface(
+                                studentName = student.fullName.value,
+                                state = glanceState
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
 }
+}
 
 
+/**
+ * Renders the core interactive layer of the seating chart, including students and furniture.
+ *
+ * This component manages the **Pan and Zoom** transformations using the `graphicsLayer`
+ * and coordinate normalization for the 4000x4000 logical canvas.
+ *
+ * @param scale The current zoom factor.
+ * @param offset The current pan offset (in screen pixels).
+ * @param onTransformChange Callback for updating pan/zoom state during gestures.
+ * @param zenithScope Optional scope for applying 3D spatial elevation in Zenith mode.
+ */
 @Composable
 fun SeatingChartContent(
     scale: Float,
@@ -1300,14 +2635,18 @@ fun SeatingChartContent(
     quizLogFontBold: Boolean,
     homeworkLogFontBold: Boolean,
     isIrisActive: Boolean = false,
+    isHelixActive: Boolean = false,
     allBehaviorEvents: List<BehaviorEvent> = emptyList(),
     allQuizLogs: List<com.example.myapplication.data.QuizLog> = emptyList(),
     allHomeworkLogs: List<com.example.myapplication.data.HomeworkLog> = emptyList(),
     onStudentClick: (StudentUiItem) -> Unit,
-    onStudentLongClick: (StudentUiItem) -> Unit,
+    onStudentLongClick: (StudentUiItem, Offset) -> Unit,
     onFurnitureClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
     onFurnitureLongClick: (com.example.myapplication.ui.model.FurnitureUiItem) -> Unit,
-    seatingChartViewModel: SeatingChartViewModel
+    seatingChartViewModel: SeatingChartViewModel,
+    isZenithActive: Boolean = false,
+    zenithScope: com.example.myapplication.labs.ghost.zenith.ZenithScope? = null,
+    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
 ) {
     Box(
         modifier = Modifier
@@ -1320,12 +2659,13 @@ fun SeatingChartContent(
                     onTransformChange(newScale, newOffset)
                 }
             }
-            .graphicsLayer(
-                scaleX = scale,
-                scaleY = scale,
-                translationX = offset.x,
+            .graphicsLayer {
+                scaleX = scale * mirrorPerspective.scaleX
+                scaleY = scale
+                rotationZ = mirrorPerspective.rotationZ
+                translationX = offset.x
                 translationY = offset.y
-            )
+            }
     ) {
         Box(modifier = Modifier.size(4000.dp)) {
             val noAnimations = userPreferences?.noAnimations ?: false
@@ -1333,16 +2673,31 @@ fun SeatingChartContent(
             val gridSize = userPreferences?.gridSize ?: 20
             val autoExpandEnabled = userPreferences?.autoExpandStudentBoxes ?: true
 
-            students.forEach { studentItem ->
+            // BOLT: Pre-calculate selection sets to transform O(N*S) lookup into O(1).
+            // Optimized to single-pass iteration to reduce intermediate list allocations.
+            val (selectedStudentIds, selectedFurnitureIds) = remember(selectedItemIds) {
+                val students = HashSet<Int>()
+                val furniture = HashSet<Int>()
+                for (item in selectedItemIds) {
+                    if (item.type == ItemType.STUDENT) students.add(item.id)
+                    else if (item.type == ItemType.FURNITURE) furniture.add(item.id)
+                }
+                students to furniture
+            }
+
+            // BOLT: Replace forEach with manual index loops to eliminate iterator churn in the high-frequency rendering path.
+            for (i in students.indices) {
+                val studentItem = students[i]
                 val irisParams = if (isIrisActive) studentItem.irisParams.value else null
+                val altitude = if (isZenithActive) studentItem.altitude.value else 0f
 
                 StudentDraggableIcon(
                     studentUiItem = studentItem,
                     viewModel = seatingChartViewModel,
                     showBehavior = showRecentBehavior,
-                    isSelected = selectedItemIds.any { it.id == studentItem.id && it.type == ItemType.STUDENT },
+                    isSelected = studentItem.id in selectedStudentIds,
                     onClick = { onStudentClick(studentItem) },
-                    onLongClick = { onStudentLongClick(studentItem) },
+                    onLongClick = { pos -> onStudentLongClick(studentItem, pos) },
                     onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(studentItem.id, ItemType.STUDENT)), w.toInt(), h.toInt()) },
                     noAnimations = noAnimations,
                     editModeEnabled = editModeEnabled,
@@ -1354,26 +2709,36 @@ fun SeatingChartContent(
                     canvasOffset = offset,
                     isIrisActive = isIrisActive,
                     irisParams = irisParams,
+                    isPrismActive = isPrismActive,
+                    vibe = prismStates[studentItem.id.toLong()],
+                    isHelixActive = isHelixActive,
+                    onGlance = { activeGlanceStudentId = it },
+                    isZenithActive = isZenithActive,
+                    altitude = altitude,
+                    zenithScope = zenithScope,
                     quizLogFontColor = quizLogFontColor,
                     homeworkLogFontColor = homeworkLogFontColor,
                     quizLogFontBold = quizLogFontBold,
-                    homeworkLogFontBold = homeworkLogFontBold
+                    homeworkLogFontBold = homeworkLogFontBold,
+                    mirrorPerspective = mirrorPerspective
                 )
             }
-            furniture.forEach { furnitureItem ->
+            for (i in furniture.indices) {
+                val furnitureItem = furniture[i]
                 FurnitureDraggableIcon(
                     furnitureUiItem = furnitureItem,
                     viewModel = seatingChartViewModel,
                     scale = scale,
                     canvasOffset = offset,
-                    isSelected = selectedItemIds.any { it.id == furnitureItem.id && it.type == ItemType.FURNITURE },
+                    isSelected = furnitureItem.id in selectedFurnitureIds,
                     onClick = { onFurnitureClick(furnitureItem) },
                     onLongClick = { onFurnitureLongClick(furnitureItem) },
                     onResize = { w, h -> seatingChartViewModel.changeBoxSize(setOf(ChartItemId(furnitureItem.id, ItemType.FURNITURE)), w.toInt(), h.toInt()) },
                     noAnimations = noAnimations,
                     editModeEnabled = editModeEnabled,
                     gridSnapEnabled = gridSnapEnabled,
-                    gridSize = gridSize
+                    gridSize = gridSize,
+                    mirrorPerspective = mirrorPerspective
                 )
             }
         }
@@ -1406,6 +2771,7 @@ fun SeatingChartTopAppBar(
     editModeEnabled: Boolean,
     seatingChartViewModel: SeatingChartViewModel,
     settingsViewModel: SettingsViewModel,
+    studentGroupsViewModel: StudentGroupsViewModel,
     onShowSaveLayout: () -> Unit,
     onShowLoadLayout: () -> Unit,
     onShowExport: () -> Unit,
@@ -1420,6 +2786,10 @@ fun SeatingChartTopAppBar(
     onNeuralOracleClick: () -> Unit,
     isHudActive: Boolean,
     onToggleHud: () -> Unit,
+    isStrategistActive: Boolean,
+    onToggleStrategist: () -> Unit,
+    strategistGoal: GhostStrategistEngine.StrategistGoal,
+    onStrategistGoalChange: (GhostStrategistEngine.StrategistGoal) -> Unit,
     isChronosActive: Boolean,
     onToggleChronos: () -> Unit,
     isHologramActive: Boolean,
@@ -1448,6 +2818,7 @@ fun SeatingChartTopAppBar(
     onToggleIris: () -> Unit,
     isWarpActive: Boolean,
     onToggleWarp: () -> Unit,
+    onShowWarpReport: () -> Unit,
     isFutureActive: Boolean,
     onToggleFuture: () -> Unit,
     isSparkActive: Boolean,
@@ -1456,6 +2827,68 @@ fun SeatingChartTopAppBar(
     onToggleOsmosis: () -> Unit,
     isEntanglementActive: Boolean,
     onToggleEntanglement: () -> Unit,
+    isSyncActive: Boolean,
+    onToggleSync: () -> Unit,
+    isIonActive: Boolean,
+    onToggleIon: () -> Unit,
+    isEntropyActive: Boolean,
+    onToggleEntropy: () -> Unit,
+    isZenithActive: Boolean,
+    onToggleZenith: () -> Unit,
+    isHorizonActive: Boolean,
+    onToggleHorizon: () -> Unit,
+    isGlitchActive: Boolean,
+    onToggleGlitch: () -> Unit,
+    isHelixActive: Boolean,
+    onToggleHelix: () -> Unit,
+    isEmergenceActive: Boolean,
+    onToggleEmergence: () -> Unit,
+    isCatalystActive: Boolean,
+    onToggleCatalyst: () -> Unit,
+    onShowCatalystReport: () -> Unit,
+    isFloraActive: Boolean,
+    onToggleFlora: () -> Unit,
+    isTectonicsActive: Boolean,
+    onToggleTectonics: () -> Unit,
+    isPulsarActive: Boolean,
+    onTogglePulsar: () -> Unit,
+    isCortexActive: Boolean,
+    onToggleCortex: () -> Unit,
+    isVortexActive: Boolean,
+    onToggleVortex: () -> Unit,
+    isOrbitActive: Boolean,
+    onToggleOrbit: () -> Unit,
+    isStellarActive: Boolean,
+    onToggleStellar: () -> Unit,
+    isSupernovaActive: Boolean,
+    onToggleSupernova: () -> Unit,
+    isQuasarActive: Boolean,
+    onToggleQuasar: () -> Unit,
+    isSpotlightActive: Boolean,
+    onToggleSpotlight: () -> Unit,
+    isNavigatorActive: Boolean,
+    onToggleNavigator: () -> Unit,
+    isAdaptiveActive: Boolean,
+    onToggleAdaptive: () -> Unit,
+    isGlyphActive: Boolean,
+    onToggleGlyph: () -> Unit,
+    isArchitectActive: Boolean,
+    onToggleArchitect: () -> Unit,
+    onArchitectGoalChange: (GhostArchitectEngine.StrategicGoal) -> Unit,
+    onShowArchitectReport: () -> Unit,
+    isVisionActive: Boolean,
+    onToggleVision: () -> Unit,
+    isMirageActive: Boolean,
+    onToggleMirage: () -> Unit,
+    isMagnetarActive: Boolean,
+    onToggleMagnetar: () -> Unit,
+    onShowMagnetarReport: () -> Unit,
+    isCarbonActive: Boolean,
+    onToggleCarbon: () -> Unit,
+    isInkActive: Boolean,
+    onToggleInk: () -> Unit,
+    isTraceActive: Boolean,
+    onToggleTrace: () -> Unit,
     onExportBlueprint: () -> Unit
 ) {
     var showMoreMenu by remember { mutableStateOf(false) }
@@ -1482,26 +2915,74 @@ fun SeatingChartTopAppBar(
             IconButton(onClick = onRedo) { Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Redo") }
 
             // Behaviors Dropdown
-            val behaviorTargetCount = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.size else if (selectedStudentUiItemForAction != null) 1 else 0
-            if (behaviorTargetCount > 0 && behaviorTypeNames.isNotEmpty()) {
-                var showQuickBehaviorMenu by remember { mutableStateOf(false) }
+            // BOLT: Wrap target count calculation in remember to avoid O(S) set filtering
+            // on every recomposition of the TopAppBar.
+            val behaviorTargetCount = remember(selectMode, selectedItemIds, selectedStudentUiItemForAction) {
+                if (selectMode) {
+                    var count = 0
+                    for (item in selectedItemIds) {
+                        if (item.type == ItemType.STUDENT) count++
+                    }
+                    count
+                } else if (selectedStudentUiItemForAction != null) 1 else 0
+            }
+
+            if (behaviorTargetCount > 0) {
+                if (behaviorTypeNames.isNotEmpty()) {
+                    var showQuickBehaviorMenu by remember { mutableStateOf(false) }
+                    Box {
+                        TextButton(onClick = { showQuickBehaviorMenu = true }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Text("Log ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = showQuickBehaviorMenu,
+                            onDismissRequest = { showQuickBehaviorMenu = false }
+                        ) {
+                            behaviorTypeNames.forEach { type ->
+                                DropdownMenuItem(
+                                    text = { Text(type) },
+                                    onClick = {
+                                        onBehaviorLog(type)
+                                        showQuickBehaviorMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Groups Dropdown (Ported from Python bulk group assignment)
+                val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
+                var showQuickGroupMenu by remember { mutableStateOf(false) }
                 Box {
-                    TextButton(onClick = { showQuickBehaviorMenu = true }) {
+                    TextButton(onClick = { showQuickGroupMenu = true }) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text("Log ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
+                            Icon(Icons.Default.Group, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("Group ($behaviorTargetCount)", modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                     DropdownMenu(
-                        expanded = showQuickBehaviorMenu,
-                        onDismissRequest = { showQuickBehaviorMenu = false }
+                        expanded = showQuickGroupMenu,
+                        onDismissRequest = { showQuickGroupMenu = false }
                     ) {
-                        behaviorTypeNames.forEach { type ->
+                        DropdownMenuItem(
+                            text = { Text("No Group") },
+                            onClick = {
+                                val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                                seatingChartViewModel.assignStudentsToGroup(targets, null)
+                                showQuickGroupMenu = false
+                            }
+                        )
+                        groups.forEach { group ->
                             DropdownMenuItem(
-                                text = { Text(type) },
+                                text = { Text(group.name) },
                                 onClick = {
-                                    onBehaviorLog(type)
-                                    showQuickBehaviorMenu = false
+                                    val targets = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
+                                    seatingChartViewModel.assignStudentsToGroup(targets, group.id)
+                                    showQuickGroupMenu = false
                                 }
                             )
                         }
@@ -1568,12 +3049,96 @@ fun SeatingChartTopAppBar(
             }
 
             // Tactical HUD Toggle
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.ARCHITECT_MODE_ENABLED) {
+                Box {
+                    var showArchitectGoals by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        onToggleArchitect()
+                        if (!isArchitectActive) showArchitectGoals = true
+                    }) {
+                        Icon(
+                            Icons.Default.Chair,
+                            contentDescription = "Neural Architect",
+                            tint = if (isArchitectActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(expanded = showArchitectGoals, onDismissRequest = { showArchitectGoals = false }) {
+                        GhostArchitectEngine.StrategicGoal.entries.forEach { goal ->
+                            DropdownMenuItem(
+                                text = { Text(goal.name.toTitleCase()) },
+                                onClick = {
+                                    onArchitectGoalChange(goal)
+                                    showArchitectGoals = false
+                                },
+                                trailingIcon = {
+                                    if (architectGoal == goal) Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(18.dp))
+                                }
+                            )
+                        }
+                        HorizontalDivider()
+                        DropdownMenuItem(
+                            text = { Text("Apply Strategic Alignment") },
+                            onClick = {
+                                seatingChartViewModel.applyArchitectLayout(architectGoal)
+                                showArchitectGoals = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("View Strategic Report") },
+                            onClick = {
+                                onShowArchitectReport()
+                                showArchitectGoals = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Analytics, null) }
+                        )
+                    }
+                }
+            }
+
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HUD_MODE_ENABLED) {
                 IconButton(onClick = onToggleHud) {
                     Icon(
                         Icons.Default.AutoFixHigh,
                         contentDescription = "Tactical HUD",
                         tint = if (isHudActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.STRATEGIST_MODE_ENABLED) {
+                Box {
+                    var showStrategistGoals by remember { mutableStateOf(false) }
+                    IconButton(onClick = {
+                        onToggleStrategist()
+                        if (!isStrategistActive) showStrategistGoals = true
+                    }) {
+                        Icon(
+                            Icons.Default.Psychology,
+                            contentDescription = "Neural Strategist",
+                            tint = if (isStrategistActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    DropdownMenu(expanded = showStrategistGoals, onDismissRequest = { showStrategistGoals = false }) {
+                        GhostStrategistEngine.StrategistGoal.entries.forEach { goal ->
+                            DropdownMenuItem(
+                                text = { Text(goal.name.toTitleCase()) },
+                                onClick = {
+                                    onStrategistGoalChange(goal)
+                                    showStrategistGoals = false
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.VISION_MODE_ENABLED) {
+                IconButton(onClick = onToggleVision) {
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = "Ghost Vision",
+                        tint = if (isVisionActive) androidx.compose.ui.graphics.Color.Cyan else MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -1588,7 +3153,57 @@ fun SeatingChartTopAppBar(
                 }
 
                 DropdownMenu(expanded = showMoreMenu, onDismissRequest = { showMoreMenu = false }) {
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.MIRAGE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isMirageActive) "Collapse Focus Mirage 👻" else "Ghost Mirage 👻") },
+                            onClick = {
+                                isMirageActive = !isMirageActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Visibility, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SILHOUETTE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isSilhouetteActive) "Disable Neural Silhouette 👻" else "Ghost Silhouette 👻") },
+                            onClick = {
+                                isSilhouetteActive = !isSilhouetteActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                        if (GhostConfig.LASSO_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isLassoActive) "Disable Ghost Lasso 👻" else "Ghost Lasso 👻") },
+                                onClick = {
+                                    isLassoActive = !isLassoActive
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Gesture, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                    }
                     if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COGNITIVE_ENGINE_ENABLED) {
+                        if (GhostConfig.FILTER_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Neural Filter 👻") },
+                                onClick = {
+                                    context.startActivity(Intent(context, GhostFilterActivity::class.java))
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Search, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.VISION_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text("Ghost Vision AR 👻") },
+                                onClick = {
+                                    context.startActivity(Intent(context, GhostVisionActivity::class.java))
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.PhotoCamera, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text("Neural Optimize 👻") },
                             onClick = {
@@ -1605,6 +3220,16 @@ fun SeatingChartTopAppBar(
                             },
                             leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                         )
+                        if (GhostConfig.STRATEGIST_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isStrategistActive) "Disable Strategist 👻" else "Neural Strategist 👻") },
+                                onClick = {
+                                    onToggleStrategist()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
                         DropdownMenuItem(
                             text = { Text(if (isChronosActive) "Disable Chronos 👻" else "Enable Chronos 👻") },
                             onClick = {
@@ -1690,6 +3315,76 @@ fun SeatingChartTopAppBar(
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
+                            if (isWarpActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Spacetime Analysis 👻") },
+                                    onClick = {
+                                        onShowWarpReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
+                            if (isCatalystActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Catalyst Kinetics 👻") },
+                                    onClick = {
+                                        onShowCatalystReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Science, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
+                        }
+                        if (GhostConfig.SYNC_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSyncActive) "Disable Neural Sync 👻" else "Neural Sync 👻") },
+                                onClick = {
+                                    onToggleSync()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Link, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.NAVIGATOR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isNavigatorActive) "Disable Ghost Navigator 👻" else "Ghost Navigator 👻") },
+                                onClick = {
+                                    onToggleNavigator()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ADAPTIVE_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isAdaptiveActive) "Disable Ghost Adaptive 👻" else "Ghost Adaptive 👻") },
+                                onClick = {
+                                    onToggleAdaptive()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.GridView, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ORBIT_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isOrbitActive) "Stabilize Galaxy 👻" else "Ghost Orbit 👻") },
+                                onClick = {
+                                    onToggleOrbit()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.STELLAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isStellarActive) "Stabilize Constellation 👻" else "Ghost Stellar 👻") },
+                                onClick = {
+                                    onToggleStellar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
                         }
                         if (GhostConfig.FUTURE_MODE_ENABLED) {
                             DropdownMenuItem(
@@ -1700,7 +3395,93 @@ fun SeatingChartTopAppBar(
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
                             )
+                            if (isMagnetarActive) {
+                                DropdownMenuItem(
+                                    text = { Text("Magnetar Analysis 👻") },
+                                    onClick = {
+                                        onShowMagnetarReport()
+                                        showMoreMenu = false
+                                    },
+                                    leadingIcon = { Icon(Icons.Default.Explore, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                                )
+                            }
                         }
+                        if (GhostConfig.HELIX_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isHelixActive) "Sequencing Off 👻" else "Ghost Helix 👻") },
+                                onClick = {
+                                    onToggleHelix()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.GLITCH_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isGlitchActive) "Suppress Glitch 👻" else "Neural Glitch 👻") },
+                                onClick = {
+                                    onToggleGlitch()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                if (GhostConfig.CORTEX_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isCortexActive) "De-Sensitize Cortex 👻" else "Neural Cortex 👻") },
+                        onClick = {
+                            onToggleCortex()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                    )
+                    if (GhostConfig.VORTEX_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isVortexActive) "Stabilize Spindrift 👻" else "Ghost Vortex 👻") },
+                            onClick = {
+                                onToggleVortex()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    DropdownMenuItem(
+                        text = { Text("Neural History 👻") },
+                        onClick = {
+                            context.startActivity(Intent(context, GhostCortexActivity::class.java))
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Psychology, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Ghost Ray Calibration 👻") },
+                        onClick = {
+                            context.startActivity(Intent(context, com.example.myapplication.labs.ghost.ray.GhostRayActivity::class.java))
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.FlashlightOn, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                }
+                if (GhostConfig.GLYPH_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isGlyphActive) "Disable Neural Glyph 👻" else "Ghost Glyph 👻") },
+                        onClick = {
+                            onToggleGlyph()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.Edit, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                    )
+                }
+                if (GhostConfig.QUASAR_MODE_ENABLED) {
+                    DropdownMenuItem(
+                        text = { Text(if (isQuasarActive) "Collapse Quasar 👻" else "Ghost Quasar 👻") },
+                        onClick = {
+                            onToggleQuasar()
+                            showMoreMenu = false
+                        },
+                        leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                    )
+                }
                         if (GhostConfig.SPARK_MODE_ENABLED) {
                             DropdownMenuItem(
                                 text = { Text(if (isSparkActive) "Static State 👻" else "Ghost Spark 👻") },
@@ -1726,6 +3507,126 @@ fun SeatingChartTopAppBar(
                                 text = { Text(if (isEntanglementActive) "De-Entangle 👻" else "Ghost Entanglement 👻") },
                                 onClick = {
                                     onToggleEntanglement()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.ION_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isIonActive) "Discharge Ions 👻" else "Ghost Ion 👻") },
+                                onClick = {
+                                    onToggleIon()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.ENTROPY_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEntropyActive) "Stabilize Entropy 👻" else "Ghost Entropy 👻") },
+                                onClick = {
+                                    onToggleEntropy()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Magenta) }
+                            )
+                        }
+                        if (GhostConfig.ZENITH_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isZenithActive) "Flatten Space 👻" else "Ghost Zenith 👻") },
+                                onClick = {
+                                    onToggleZenith()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.Layers, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.HORIZON_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isHorizonActive) "Static Sky 👻" else "Ghost Horizon 👻") },
+                                onClick = {
+                                    onToggleHorizon()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.EMERGENCE_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            DropdownMenuItem(
+                                text = { Text(if (isEmergenceActive) "De-Emerge 👻" else "Ghost Emergence 👻") },
+                                onClick = {
+                                    onToggleEmergence()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.TECTONICS_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isTectonicsActive) "Stabilize Lithosphere 👻" else "Ghost Tectonics 👻") },
+                                onClick = {
+                                    onToggleTectonics()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Red) }
+                            )
+                        }
+                        if (GhostConfig.CATALYST_MODE_ENABLED && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            DropdownMenuItem(
+                                text = { Text(if (isCatalystActive) "De-Catalyze 👻" else "Ghost Catalyst 👻") },
+                                onClick = {
+                                    onToggleCatalyst()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.FLORA_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isFloraActive) "De-Flora 👻" else "Ghost Flora 👻") },
+                                onClick = {
+                                    onToggleFlora()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
+                            )
+                        }
+                        if (GhostConfig.PULSAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isPulsarActive) "Stabilize Harmonics 👻" else "Ghost Pulsar 👻") },
+                                onClick = {
+                                    onTogglePulsar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.MAGNETAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isMagnetarActive) "De-Polarize 👻" else "Ghost Magnetar 👻") },
+                                onClick = {
+                                    onToggleMagnetar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Yellow) }
+                            )
+                        }
+                        if (GhostConfig.SPOTLIGHT_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isSpotlightActive) "Disable Ghost Spotlight 👻" else "Ghost Spotlight 👻") },
+                                onClick = {
+                                    onToggleSpotlight()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.SUPERNOVA_MODE_ENABLED) {
+                             DropdownMenuItem(
+                                text = { Text(if (isSupernovaActive) "Stabilize Singularity 👻" else "Ghost Supernova 👻") },
+                                onClick = {
+                                    onToggleSupernova()
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
@@ -1772,6 +3673,77 @@ fun SeatingChartTopAppBar(
                             leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Green) }
                         )
                     }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.INK_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isInkActive) "Static Canvas 👻" else "Neural Ink 👻") },
+                            onClick = {
+                                onToggleInk()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.TRACE_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isTraceActive) "Hide Neural Trace 👻" else "Ghost Trace 👻") },
+                            onClick = {
+                                onToggleTrace()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Route, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.CARBON_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isCarbonActive) "Collapse Resonance 👻" else "Ghost Carbon 👻") },
+                            onClick = {
+                                onToggleCarbon()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.Grain, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.WEAVER_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isWeaverActive) "Collapse Threads 👻" else "Ghost Weaver 👻") },
+                            onClick = {
+                                onToggleWeaver()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AccountTree, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAIN_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isRainActive) "Stabilize Atmosphere 👻" else "Neural Rain 👻") },
+                            onClick = {
+                                isRainActive = !isRainActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.WaterDrop, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isCometActive) "Disable Ghost Comet 👻" else "Ghost Comet 👻") },
+                            onClick = {
+                                isCometActive = !isCometActive
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
+                    if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.RAY_MODE_ENABLED) {
+                        DropdownMenuItem(
+                            text = { Text(if (isRayActive) "Disable Ghost Ray" else "Enable Ghost Ray") },
+                            onClick = {
+                                isRayActive = !isRayActive
+                                if (isRayActive) ghostRayEngine.start() else ghostRayEngine.stop()
+                                showMoreMenu = false
+                            },
+                            leadingIcon = { Icon(Icons.Default.FlashlightOn, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                        )
+                    }
                     DropdownMenuItem(
                         text = { Text("Undo History") },
                         onClick = {
@@ -1780,6 +3752,10 @@ fun SeatingChartTopAppBar(
                         },
                         leadingIcon = { Icon(Icons.AutoMirrored.Filled.Undo, null) }
                     )
+                    HorizontalDivider()
+                    DropdownMenuItem(text = { Text("Select All Students") }, onClick = { seatingChartViewModel.selectAllStudents(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.Group, null) })
+                    DropdownMenuItem(text = { Text("Select All Furniture") }, onClick = { seatingChartViewModel.selectAllFurniture(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.Chair, null) })
+                    DropdownMenuItem(text = { Text("Select All Items") }, onClick = { seatingChartViewModel.selectAllItems(); showMoreMenu = false }, leadingIcon = { Icon(Icons.Default.SelectAll, null) })
                     HorizontalDivider()
                     DropdownMenuItem(
                         text = { Text(if (editModeEnabled) "Disable Edit Mode" else "Enable Edit Mode") },
@@ -1843,4 +3819,5 @@ fun SeatingChartTopAppBar(
             }
         }
     )
+}
 }

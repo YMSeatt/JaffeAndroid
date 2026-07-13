@@ -13,6 +13,7 @@ import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_OUTLINE_THICKNE
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_PADDING_DP
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_TEXT_COLOR_HEX
 import com.example.myapplication.preferences.DEFAULT_STUDENT_BOX_WIDTH_DP
+import com.example.myapplication.util.DecodedConditionalFormattingRule
 import com.example.myapplication.util.safeParseColor
 
 /**
@@ -24,18 +25,18 @@ import com.example.myapplication.util.safeParseColor
  * @param recentHomeworkDescription Formatted list of recent homework logs.
  * @param recentQuizDescription Formatted list of recent quiz logs.
  * @param sessionLogText Combined history of events for the current session.
- * @param groupColor The Hex color of the student's group, if any.
- * @param conditionalFormattingResult List of active color/outline pairs from the formatting engine.
+ * @param groupColor The color of the student's group, if any.
  * @param defaultFontFamily Global default font family from user preferences.
  * @param defaultFontSize Global default font size from user preferences.
  * @param defaultFontColor Global default font color from user preferences.
  */
 fun Student.toStudentUiItem(
+    fullName: String,
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
-    groupColor: String?,
+    groupColor: Color?,
     backgroundColors: List<Color>,
     outlineColors: List<Color>,
     textColor: Color,
@@ -48,11 +49,24 @@ fun Student.toStudentUiItem(
     defaultFontFamily: String,
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
+    altitude: Float,
+    behaviorEntropy: Float,
+    tectonicStress: Float,
+    quasarEnergy: Float,
+    quasarPolarity: Float,
+    ionCharge: Float,
+    ionDensity: Float,
+    magneticStrength: Float,
+    magneticRadius: Float,
+    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
+    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
+    moodIntensity: Float,
+    moodValence: Float
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
-        fullName = mutableStateOf("$firstName $lastName"),
+        fullName = mutableStateOf(fullName),
         nickname = mutableStateOf(nickname),
         initials = mutableStateOf(getEffectiveInitials()),
         xPosition = mutableStateOf(xPosition),
@@ -69,14 +83,28 @@ fun Student.toStudentUiItem(
         recentHomeworkDescription = mutableStateOf(recentHomeworkDescription),
         recentQuizDescription = mutableStateOf(recentQuizDescription),
         sessionLogText = mutableStateOf(sessionLogText),
-        groupColor = mutableStateOf(groupColor?.let { safeParseColor(it) }),
+        groupColor = mutableStateOf(groupColor),
         groupId = mutableStateOf(groupId),
         fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
         fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
         fontColor = mutableStateOf(fontColor),
         temporaryTask = mutableStateOf(temporaryTask),
         irisParams = mutableStateOf(irisParams),
-        osmoticNode = mutableStateOf(osmoticNode)
+        osmoticNode = mutableStateOf(osmoticNode),
+        altitude = mutableStateOf(altitude),
+        behaviorEntropy = mutableStateOf(behaviorEntropy),
+        tectonicStress = mutableStateOf(tectonicStress),
+        quasarEnergy = mutableStateOf(quasarEnergy),
+        quasarPolarity = mutableStateOf(quasarPolarity),
+        ionCharge = mutableStateOf(ionCharge),
+        ionDensity = mutableStateOf(ionDensity),
+        magneticStrength = mutableStateOf(magneticStrength),
+        magneticRadius = mutableStateOf(magneticRadius),
+        isPinned = mutableStateOf(this.isPinned),
+        insightStatus = mutableStateOf(insightStatus),
+        moodState = mutableStateOf(moodState),
+        moodIntensity = mutableStateOf(moodIntensity),
+        moodValence = mutableStateOf(moodValence)
     )
 }
 
@@ -93,11 +121,12 @@ fun Student.toStudentUiItem(
  */
 fun Student.updateStudentUiItem(
     item: StudentUiItem,
+    fullName: String,
     recentBehaviorDescription: List<String>,
     recentHomeworkDescription: List<String>,
     recentQuizDescription: List<String>,
     sessionLogText: List<String>,
-    groupColor: String?,
+    groupColor: Color?,
     backgroundColors: List<Color>,
     outlineColors: List<Color>,
     textColor: Color,
@@ -110,9 +139,22 @@ fun Student.updateStudentUiItem(
     defaultFontFamily: String,
     defaultFontSize: Int,
     irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?
+    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
+    altitude: Float,
+    behaviorEntropy: Float,
+    tectonicStress: Float,
+    quasarEnergy: Float,
+    quasarPolarity: Float,
+    ionCharge: Float,
+    ionDensity: Float,
+    magneticStrength: Float,
+    magneticRadius: Float,
+    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
+    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
+    moodIntensity: Float,
+    moodValence: Float
 ) {
-    updateIfChanged(item.fullName, "$firstName $lastName")
+    updateIfChanged(item.fullName, fullName)
     updateIfChanged(item.nickname, nickname)
     updateIfChanged(item.initials, getEffectiveInitials())
     updateIfChanged(item.xPosition, xPosition)
@@ -129,7 +171,7 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.recentHomeworkDescription, recentHomeworkDescription)
     updateIfChanged(item.recentQuizDescription, recentQuizDescription)
     updateIfChanged(item.sessionLogText, sessionLogText)
-    updateIfChanged(item.groupColor, groupColor?.let { safeParseColor(it) })
+    updateIfChanged(item.groupColor, groupColor)
     updateIfChanged(item.groupId, groupId)
     updateIfChanged(item.fontFamily, customFontFamily ?: defaultFontFamily)
     updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
@@ -137,6 +179,20 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.temporaryTask, temporaryTask)
     updateIfChanged(item.irisParams, irisParams)
     updateIfChanged(item.osmoticNode, osmoticNode)
+    updateIfChanged(item.altitude, altitude)
+    updateIfChanged(item.behaviorEntropy, behaviorEntropy)
+    updateIfChanged(item.tectonicStress, tectonicStress)
+    updateIfChanged(item.quasarEnergy, quasarEnergy)
+    updateIfChanged(item.quasarPolarity, quasarPolarity)
+    updateIfChanged(item.ionCharge, ionCharge)
+    updateIfChanged(item.ionDensity, ionDensity)
+    updateIfChanged(item.magneticStrength, magneticStrength)
+    updateIfChanged(item.magneticRadius, magneticRadius)
+    updateIfChanged(item.isPinned, this.isPinned)
+    updateIfChanged(item.insightStatus, insightStatus)
+    updateIfChanged(item.moodState, moodState)
+    updateIfChanged(item.moodIntensity, moodIntensity)
+    updateIfChanged(item.moodValence, moodValence)
 }
 
 /**
@@ -198,51 +254,63 @@ private fun getSingletonColorList(color: Color): List<Color> {
  *
  * @return A [StudentStyles] object containing the resolved colors.
  */
-/**
- * Resolves the visual styling for a student based on a hierarchy of priorities.
- * Moved to public/internal for access in SeatingChartViewModel's optimization pipeline.
- */
 fun Student.calculateStyles(
-    groupColor: String?,
-    conditionalFormattingResult: List<Pair<String?, String?>>,
+    groupColor: Color?,
+    matchingRules: List<DecodedConditionalFormattingRule>,
     liveQuizProgressColor: Color?,
-    defaultBackgroundColor: String,
-    defaultOutlineColor: String,
-    defaultTextColor: String,
-    defaultFontColor: String
+    defaultBackgroundColor: Color,
+    defaultOutlineColor: Color,
+    defaultTextColor: Color,
+    defaultFontColor: Color
 ): StudentStyles {
     val customOutlineColor = customOutlineColor?.let { safeParseColor(it) }
     val customTextColor = customTextColor?.let { safeParseColor(it) }
 
-    val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: safeParseColor(defaultBackgroundColor)).copy(alpha = 1f)
-    val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor?.let { safeParseColor(it) } ?: safeParseColor(defaultOutlineColor) ?: Color.Black
+    val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: defaultBackgroundColor).copy(alpha = 1f)
+    val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor ?: defaultOutlineColor
 
-    val formattedColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.mapNotNull {
-            it.first?.let { colorStr -> safeParseColor(colorStr) }
-                ?.takeIf { color -> color.alpha > 0f }
-                ?.copy(alpha = 1f)
+    // BOLT: Priority-based style resolution. "Override" rules take absolute precedence,
+    // setting the base colors and suppressing all subsequent "stripe" rules.
+    val overrideRule = matchingRules.find { it.format.applicationStyle == "override" }
+
+    val backgroundColors: List<Color>
+    val outlineColors: List<Color>
+
+    if (overrideRule != null) {
+        val overrideBackground = overrideRule.format.color?.let { safeParseColor(it) }?.copy(alpha = 1f)
+        backgroundColors = getSingletonColorList(overrideBackground ?: baseBackgroundColor)
+
+        val overrideOutline = overrideRule.format.outline?.let { safeParseColor(it) }
+        outlineColors = getSingletonColorList(overrideOutline ?: baseOutlineColor)
+    } else {
+        val formattedColors = if (matchingRules.isNotEmpty()) {
+            matchingRules.mapNotNull {
+                it.format.color?.let { colorStr -> safeParseColor(colorStr) }
+                    ?.takeIf { color -> color.alpha > 0f }
+                    ?.copy(alpha = 1f)
+            }
+        } else {
+            emptyList()
         }
-    } else {
-        emptyList()
+
+        // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
+        backgroundColors = if (formattedColors.isNotEmpty()) {
+            formattedColors
+        } else {
+            getSingletonColorList(baseBackgroundColor)
+        }
+
+        outlineColors = if (matchingRules.isNotEmpty()) {
+            matchingRules.map { rule ->
+                rule.format.outline?.let { colorString -> safeParseColor(colorString) } ?: baseOutlineColor
+            }
+        } else {
+            getSingletonColorList(baseOutlineColor)
+        }
     }
 
-    // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
-    val backgroundColors = if (formattedColors.isNotEmpty()) {
-        formattedColors
-    } else {
-        getSingletonColorList(baseBackgroundColor)
-    }
-
-    val outlineColors = if (conditionalFormattingResult.isNotEmpty()) {
-        conditionalFormattingResult.map { it.second?.let { colorString -> safeParseColor(colorString) }
-            ?: baseOutlineColor }
-    } else {
-        getSingletonColorList(baseOutlineColor)
-    }
-
-    val textColor = customTextColor ?: safeParseColor(defaultTextColor) ?: Color.Black
-    val fontColor = customFontColor?.let { safeParseColor(it) } ?: safeParseColor(defaultFontColor) ?: Color.Black
+    val textColor = customTextColor ?: defaultTextColor
+    val fontColor = customFontColor?.let { safeParseColor(it) } ?: defaultFontColor
 
     return StudentStyles(backgroundColors, outlineColors, textColor, fontColor)
 }

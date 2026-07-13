@@ -3,9 +3,28 @@ package com.example.myapplication.data
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-import androidx.room.ColumnInfo
-import androidx.room.ForeignKey
-
+/**
+ * Represents a reusable blueprint for a classroom quiz or assessment.
+ *
+ * ### Architectural Intent:
+ * The [QuizTemplate] is the core of the "Normalized Assignment Model." It defines the
+ * "shape" of an assessment once, which can then be reused to create individual [Quiz]
+ * attempts for many students.
+ *
+ * ### Why use Templates?
+ * 1. **Consistency**: Ensures that a "Midterm Quiz" follows the same scoring rules for
+ *    everyone.
+ * 2. **Efficiency**: Allows teachers to define question counts and default mark distributions
+ *    (e.g., how many "Correct" marks are expected) once.
+ * 3. **Rich Analytics**: Enables the system to compare student performance across specific
+ *    standardized assessments.
+ *
+ * @property id Unique identifier for the template.
+ * @property name The display name of the quiz (e.g., "Unit 1 Vocabulary").
+ * @property numQuestions The total number of questions or items in this quiz.
+ * @property defaultMarks A mapping of mark type names (e.g., "Correct", "Half Credit")
+ *           to their default occurrences or weights. This allows for rapid session setup.
+ */
 @Entity(tableName = "quiz_templates")
 data class QuizTemplate(
     @PrimaryKey(autoGenerate = true)
@@ -13,29 +32,4 @@ data class QuizTemplate(
     val name: String,
     val numQuestions: Int,
     val defaultMarks: Map<String, Int>
-)
-
-@Entity(
-    tableName = "quizzes",
-    foreignKeys = [
-        ForeignKey(
-            entity = Student::class,
-            parentColumns = ["id"],
-            childColumns = ["student_id"],
-            onDelete = ForeignKey.CASCADE
-        ),
-        ForeignKey(
-            entity = QuizTemplate::class,
-            parentColumns = ["id"],
-            childColumns = ["template_id"],
-            onDelete = ForeignKey.SET_NULL
-        )
-    ]
-)
-data class Quiz(
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "student_id", index = true) val studentId: Long,
-    @ColumnInfo(name = "template_id", index = true) val templateId: Long?,
-    val score: Double,
-    val timestamp: Long = System.currentTimeMillis()
 )

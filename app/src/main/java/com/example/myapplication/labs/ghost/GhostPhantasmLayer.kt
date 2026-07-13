@@ -44,7 +44,7 @@ fun GhostPhantasmLayer(
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
     val infiniteTransition = rememberInfiniteTransition(label = "phantasmTime")
-    val time by infiniteTransition.animateFloat(
+    val timeState = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 100f,
         animationSpec = infiniteRepeatable(
@@ -84,6 +84,7 @@ fun GhostPhantasmLayer(
     val agitationLevel = processedLogs.third
 
     val shader = remember { RuntimeShader(GhostPhantasmShader.PHANTASM_BLOBS) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     // Pre-allocate arrays to avoid GC pressure during high-frequency Canvas drawing
     val pointsArray = remember { FloatArray(40) }
@@ -91,18 +92,24 @@ fun GhostPhantasmLayer(
     val colorsArray = remember { FloatArray(60) }
 
     Canvas(modifier = modifier.fillMaxSize()) {
+        // BOLT: Access time value inside the draw block to avoid whole-layer recomposition.
+        val time = timeState.value
+
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
         shader.setFloatUniform("iAgitation", agitationLevel)
         shader.setFloatUniform("iIsRecording", if (isRecording) 1.0f else 0.0f)
-        shader.setIntUniform("iNumPoints", studentsToDisplay.size)
+
+        val count = studentsToDisplay.size
+        shader.setIntUniform("iNumPoints", count)
 
         // Clear arrays for reuse
         pointsArray.fill(0f)
         weightsArray.fill(0f)
         colorsArray.fill(0f)
 
-        studentsToDisplay.forEachIndexed { index, student ->
+        for (index in 0 until count) {
+            val student = studentsToDisplay[index]
             val centerX = (student.xPosition.value * canvasScale) + canvasOffset.x + (student.displayWidth.value.toPx() * canvasScale / 2f)
             val centerY = (student.yPosition.value * canvasScale) + canvasOffset.y + (student.displayHeight.value.toPx() * canvasScale / 2f)
 
@@ -130,6 +137,6 @@ fun GhostPhantasmLayer(
         shader.setFloatUniform("iWeights", weightsArray)
         shader.setFloatUniform("iColors", colorsArray)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

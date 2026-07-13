@@ -48,9 +48,9 @@ class GhostBlueprintEngineTest {
 
         // Verify student content
         assertTrue(svg.contains(">AW</text>"))
-        assertTrue(svg.contains(">Alice Wonderland</text>"))
+        assertTrue("Student name should be masked", svg.contains(">A. WONDERLAND</text>"))
         assertTrue(svg.contains(">BB</text>"))
-        assertTrue(svg.contains(">Bob Builder</text>"))
+        assertTrue("Student name should be masked", svg.contains(">B. BUILDER</text>"))
 
         // Verify furniture scaling: (800 / 4) + 200 = 400, (1200 / 4) + 100 = 400
         assertTrue(svg.contains("translate(400.0,400.0)"))
@@ -59,6 +59,45 @@ class GhostBlueprintEngineTest {
 
         // Verify grid lines
         assertTrue(svg.contains("<!-- Grid Lines"))
+    }
+
+    @Test
+    fun testGenerateBlueprintWithMaliciousInput() {
+        val maliciousName = "</text><script>alert('XSS')</script><text>"
+        val maliciousInitials = "\"><img src=x onerror=alert(1)>"
+        val maliciousFurnitureName = "Desk & Table <script>"
+
+        val students = listOf(
+            createMockStudent(1, maliciousName, maliciousInitials, 400f, 400f)
+        )
+        val furniture = listOf(
+            FurnitureUiItem(
+                id = 1,
+                stringId = "f1",
+                name = mutableStateOf(maliciousFurnitureName),
+                type = mutableStateOf("desk"),
+                xPosition = mutableStateOf(800f),
+                yPosition = mutableStateOf(1200f),
+                displayWidth = mutableStateOf(200.dp),
+                displayHeight = mutableStateOf(100.dp),
+                displayBackgroundColor = mutableStateOf(Color.Gray),
+                displayOutlineColor = mutableStateOf(Color.Black),
+                displayTextColor = mutableStateOf(Color.White),
+                displayOutlineThickness = mutableStateOf(2.dp)
+            )
+        )
+
+        val svg = GhostBlueprintEngine.generateBlueprint(students, furniture)
+
+        // Verify that special characters are escaped
+        assertTrue("Name should be escaped", svg.contains("&lt;/text&gt;&lt;script&gt;alert(&apos;XSS&apos;)&lt;/script&gt;&lt;text&gt;"))
+        assertTrue("Initials should be escaped", svg.contains("&quot;&gt;&lt;img src=x onerror=alert(1)&gt;"))
+        assertTrue("Furniture name should be escaped", svg.contains("Desk &amp; Table &lt;script&gt;"))
+
+        // Verify that the literal malicious strings are NOT present
+        assertTrue("Raw malicious name should not be present", !svg.contains(maliciousName))
+        assertTrue("Raw malicious initials should not be present", !svg.contains(maliciousInitials))
+        assertTrue("Raw malicious furniture name should not be present", !svg.contains(maliciousFurnitureName))
     }
 
     private fun createMockStudent(id: Int, name: String, initials: String, x: Float, y: Float): StudentUiItem {

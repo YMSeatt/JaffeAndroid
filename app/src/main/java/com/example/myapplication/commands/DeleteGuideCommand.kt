@@ -11,8 +11,8 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param guide The [Guide] entity to be deleted.
  */
 class DeleteGuideCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val guide: Guide
+    internal val viewModel: SeatingChartViewModel,
+    internal val guide: Guide
 ) : Command {
     override suspend fun execute() {
         viewModel.internalDeleteGuide(guide)

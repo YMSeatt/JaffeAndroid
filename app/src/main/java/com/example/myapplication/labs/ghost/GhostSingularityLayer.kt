@@ -50,20 +50,24 @@ fun GhostSingularityLayer(
     val radius = 60f // Base radius of the event horizon
 
     val shader = remember { RuntimeShader(GhostSingularityShader.GRAVITATIONAL_LENSING) }
+    val brush = remember(shader) { ShaderBrush(shader) }
 
     // Haptic Feedback Loop: Monitor student proximity to the singularity
     LaunchedEffect(students, singularityPos, isSingularityActive) {
         if (!isSingularityActive || singularityPos == Offset.Zero) return@LaunchedEffect
+        val singX = singularityPos.x
+        val singY = singularityPos.y
 
         while (true) {
             var maxPull = 0f
-            students.forEach { student ->
+            // BOLT: Manual index loop and primitive pull calculation to eliminate Offset churn
+            for (i in students.indices) {
+                val student = students[i]
                 // Calculate pull based on center of student icon
-                val studentCenter = Offset(
-                    student.xPosition.value + student.displayWidth.value.value / 2f,
-                    student.yPosition.value + student.displayHeight.value.value / 2f
-                )
-                val pull = engine.calculatePull(studentCenter, singularityPos, radius)
+                val centerX = student.xPosition.value + student.displayWidth.value.value / 2f
+                val centerY = student.yPosition.value + student.displayHeight.value.value / 2f
+
+                val pull = engine.calculatePull(centerX, centerY, singX, singY, radius)
                 if (pull > maxPull) maxPull = pull
             }
 
@@ -95,6 +99,6 @@ fun GhostSingularityLayer(
         val intensity = 1.0f + (0.2f * (1.0f + kotlin.math.sin(time * 2.0f)))
         shader.setFloatUniform("iIntensity", intensity)
 
-        drawRect(brush = ShaderBrush(shader))
+        drawRect(brush = brush)
     }
 }

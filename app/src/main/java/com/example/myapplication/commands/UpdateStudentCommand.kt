@@ -12,9 +12,9 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param newStudent The student state after the update.
  */
 class UpdateStudentCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val oldStudent: Student,
-    private val newStudent: Student
+    internal val viewModel: SeatingChartViewModel,
+    internal val oldStudent: Student,
+    internal val newStudent: Student
 ) : Command {
     override suspend fun execute() {
         viewModel.internalUpdateStudent(newStudent)

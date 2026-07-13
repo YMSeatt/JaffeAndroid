@@ -20,23 +20,25 @@ import com.example.myapplication.labs.ghost.GhostConfig
  * [GhostLatticeEngine]. It utilizes high-performance AGSL shaders to draw glowing, pulsing
  * connections between student nodes.
  *
- * **Visual Dynamics:**
- * - **Collaboration**: Glowing cyan/green lines indicate positive synergy.
- * - **Friction**: Pulsing red lines with high-frequency interference indicate social tension.
- * - **Neutral**: Deep blue lines represent standard proximity-based connections.
+ * BOLT: Optimized to receive pre-calculated [edges] from background pipeline.
  *
- * The lattice dynamically adjusts as students are moved, with connection strength and
- * visuals driven by real-time spatial data and historical logs.
+ * ### Performance Design:
+ * - **Shader Pooling**: Reuses `RuntimeShader` instances to avoid the overhead of native object
+ *   re-allocation and the "Uniform Overwrite" bug in rapid Draw passes.
+ * - **Bounding Box Clipping**: Instead of drawing a full-screen Canvas for every edge, this
+ *   layer calculates a tight `drawRect` around each connection line to minimize fragment shader
+ *   work and pixel-fill pressure.
  *
  * @param students The list of student UI items, providing current positions and dimensions.
- * @param behaviorLogs Historical behavior logs used to categorize relationships.
+ * @param edges Pre-calculated social connection edges.
  * @param canvasScale The current zoom level of the seating chart.
  * @param canvasOffset The current pan offset of the seating chart.
+ * @param modifier The modifier to apply to the [Canvas].
  */
 @Composable
 fun GhostLatticeLayer(
     students: List<StudentUiItem>,
-    behaviorLogs: List<BehaviorEvent>,
+    edges: List<GhostLatticeEngine.Edge>,
     canvasScale: Float,
     canvasOffset: Offset,
     modifier: Modifier = Modifier
@@ -44,7 +46,6 @@ fun GhostLatticeLayer(
     if (!GhostConfig.GHOST_MODE_ENABLED || !GhostConfig.LATTICE_MODE_ENABLED) return
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
 
-    val engine = remember { GhostLatticeEngine() }
     val infiniteTransition = rememberInfiniteTransition(label = "latticeTime")
     val time by infiniteTransition.animateFloat(
         initialValue = 0f, targetValue = 100f,
@@ -52,19 +53,34 @@ fun GhostLatticeLayer(
         label = "time"
     )
 
-    val edges = remember(students, behaviorLogs) {
-        val nodes = students.map { GhostLatticeEngine.LatticeNode(it.id.toLong(), it.xPosition.value, it.yPosition.value) }
-        engine.computeLattice(nodes, behaviorLogs)
+    // BOLT: Pool shaders and brushes to avoid Uniform Overwrite bug and allocations.
+    // Using a growable list for lazy initialization of native shader objects.
+    val shaderPool = remember { mutableListOf<RuntimeShader>() }
+    val brushPool = remember { mutableListOf<ShaderBrush>() }
+
+    // BOLT: Use LongSparseArray to avoid Long boxing during student lookup.
+    val studentMap = remember(students) {
+        val map = android.util.LongSparseArray<StudentUiItem>(students.size)
+        for (i in 0 until students.size) {
+            val s = students[i]
+            map.put(s.id.toLong(), s)
+        }
+        map
     }
 
-    val shader = remember { RuntimeShader(GhostLatticeShader.NEURAL_LATTICE) }
-    val brush = remember(shader) { ShaderBrush(shader) }
-    val studentMap = remember(students) { students.associateBy { it.id.toLong() } }
-
     Canvas(modifier = modifier.fillMaxSize()) {
-        edges.forEach { edge ->
-            val fromStudent = studentMap[edge.fromId]
-            val toStudent = studentMap[edge.toId]
+        // BOLT: Hoist invariant uniforms that don't change per-edge.
+        val poolSize = shaderPool.size
+        for (i in 0 until poolSize) {
+            shaderPool[i].setFloatUniform("iResolution", size.width, size.height)
+            shaderPool[i].setFloatUniform("iTime", time)
+        }
+
+        // BOLT: Manual index loop to avoid iterator allocation.
+        for (index in 0 until edges.size) {
+            val edge = edges[index]
+            val fromStudent = studentMap.get(edge.fromId)
+            val toStudent = studentMap.get(edge.toId)
             if (fromStudent != null && toStudent != null) {
                 // Calculate pixel-perfect centers for connection endpoints, accounting for scale and offset.
                 val startX = (fromStudent.xPosition.value * canvasScale) + canvasOffset.x + (fromStudent.displayWidth.value.toPx() * canvasScale / 2f)
@@ -72,8 +88,17 @@ fun GhostLatticeLayer(
                 val endX = (toStudent.xPosition.value * canvasScale) + canvasOffset.x + (toStudent.displayWidth.value.toPx() * canvasScale / 2f)
                 val endY = (toStudent.yPosition.value * canvasScale) + canvasOffset.y + (toStudent.displayHeight.value.toPx() * canvasScale / 2f)
 
-                shader.setFloatUniform("iResolution", size.width, size.height)
-                shader.setFloatUniform("iTime", time)
+                if (index >= shaderPool.size) {
+                    val s = RuntimeShader(GhostLatticeShader.NEURAL_LATTICE)
+                    // BOLT: Ensure new shaders also get the invariant uniforms for the current frame.
+                    s.setFloatUniform("iResolution", size.width, size.height)
+                    s.setFloatUniform("iTime", time)
+                    shaderPool.add(s)
+                    brushPool.add(ShaderBrush(s))
+                }
+                val shader = shaderPool[index]
+                val brush = brushPool[index]
+
                 shader.setFloatUniform("iStartPos", startX, startY)
                 shader.setFloatUniform("iEndPos", endX, endY)
                 shader.setFloatUniform("iColor", edge.color.red, edge.color.green, edge.color.blue)
@@ -81,8 +106,10 @@ fun GhostLatticeLayer(
                 shader.setFloatUniform("iType", edge.type.value)
 
                 // Optimized drawing: only draw the bounding box of the connection line to reduce fragment shader overhead.
-                val minX = minOf(startX, endX) - 50; val minY = minOf(startY, endY) - 50
-                val maxX = maxOf(startX, endX) + 50; val maxY = maxOf(startY, endY) + 50
+                val minX = minOf(startX, endX) - 50f
+                val minY = minOf(startY, endY) - 50f
+                val maxX = maxOf(startX, endX) + 50f
+                val maxY = maxOf(startY, endY) + 50f
                 drawRect(brush = brush, topLeft = Offset(minX, minY), size = androidx.compose.ui.geometry.Size(maxX - minX, maxY - minY))
             }
         }

@@ -28,8 +28,10 @@ import kotlin.random.Random
  *    heuristic to infer collaboration, this Android engine uses a deterministic [Random] seed (42)
  *    combined with log density. This ensures consistent visual results during Proof-of-Concept
  *    while avoiding name-based assumptions that may not hold true in all cultures.
+ * 3. **Connection Cap**: To maintain 60fps stability and prevent JNI/Shader overhead, the engine
+ *    limits the lattice to **50 edges** per frame.
  */
-class GhostLatticeEngine {
+object GhostLatticeEngine {
 
     /**
      * Represents a single connection between two students in the social lattice.
@@ -79,54 +81,154 @@ class GhostLatticeEngine {
     )
 
     /**
+     * BOLT: Optimized overload for Student entities to avoid intermediate LatticeNode allocations.
+     *
+     * @param students The list of student entities with positions.
+     * @param negativeCounts Pre-calculated negative log counts per student.
+     * @return A list of inferred [Edge] connections, capped at 50 for visual performance.
+     */
+    fun computeLatticeForStudents(
+        students: List<com.example.myapplication.data.Student>,
+        negativeCounts: Map<Long, Int>
+    ): List<Edge> {
+        val n = students.size
+        if (n < 2) return emptyList()
+        val edges = ArrayList<Edge>(50)
+        val random = Random(42)
+
+        // BOLT: Hoist behavioral metrics into a primitive array to avoid O(N^2) boxing/map overhead.
+        val negCounts = IntArray(n)
+        for (i in 0 until n) {
+            negCounts[i] = negativeCounts[students[i].id] ?: 0
+        }
+
+        val thresholdSq = 800f * 800f
+
+        for (i in 0 until n) {
+            val nodeA = students[i]
+            val negA = negCounts[i]
+
+            for (j in i + 1 until n) {
+                if (edges.size >= 50) return edges // BOLT: Early exit when cap reached
+
+                val nodeB = students[j]
+                val dx = nodeA.xPosition - nodeB.xPosition
+                val dy = nodeA.yPosition - nodeB.yPosition
+                val distSq = dx * dx + dy * dy
+
+                if (distSq < thresholdSq) {
+                    val negB = negCounts[j]
+                    val dist = sqrt(distSq)
+
+                    // Logic improved to use real behavioral markers
+                    val isNegative = (negA + negB) > 5 || random.nextFloat() > 0.9
+                    val isPositive = !isNegative && random.nextFloat() > 0.7
+
+                    val type = when {
+                        isNegative -> ConnectionType.FRICTION
+                        isPositive -> ConnectionType.COLLABORATION
+                        else -> ConnectionType.NEUTRAL
+                    }
+
+                    val color = when (type) {
+                        ConnectionType.FRICTION -> Color(0xFFFF3366)      // Pulsing Red
+                        ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
+                        else -> Color(0xFF6699FF)                         // Deep Blue
+                    }
+
+                    val strength = (1.0f - (dist / 1200f)).coerceIn(0.1f, 1.0f)
+                    edges.add(Edge(nodeA.id, nodeB.id, strength, type, color))
+                }
+            }
+        }
+        return edges
+    }
+
+    /**
      * Computes the social lattice for a set of student nodes and behavior logs.
      *
      * This method employs a proximity-based heuristic to identify potential connections.
      * Relationships are then categorized using a mock logic based on random seeding (for PoC)
      * and historical log density.
      *
+     * BOLT: Optimized to minimize allocations and cap edge growth early.
+     *
      * @param nodes The list of spatial student representations.
-     * @param events The historical behavior logs used to weight the relationships.
+     * @param negativeCounts Pre-calculated negative log counts per student.
      * @return A list of inferred [Edge] connections, capped at 50 for visual performance.
      */
-    fun computeLattice(nodes: List<LatticeNode>, events: List<BehaviorEvent>): List<Edge> {
-        val edges = mutableListOf<Edge>()
-        if (nodes.size < 2) return edges
-        val random = Random(42) // Deterministic seeding for consistent visual results
+    fun computeLattice(
+        nodes: List<LatticeNode>,
+        negativeCounts: Map<Long, Int>
+    ): List<Edge> {
+        val n = nodes.size
+        if (n < 2) return emptyList()
+        val edges = ArrayList<Edge>(50)
+        val random = Random(42)
 
-        // BOLT: Threshold for proximity is 800, use squared distance to avoid sqrt in O(N^2) loop
+        // BOLT: Hoist behavioral metrics into a primitive array.
+        val negCounts = IntArray(n)
+        for (i in 0 until n) {
+            negCounts[i] = negativeCounts[nodes[i].id] ?: 0
+        }
+
         val thresholdSq = 800f * 800f
 
-        for (i in nodes.indices) {
+        for (i in 0 until n) {
             val nodeA = nodes[i]
-            for (j in i + 1 until nodes.size) {
+            val negA = negCounts[i]
+
+            for (j in i + 1 until n) {
+                if (edges.size >= 50) return edges // BOLT: Early exit when cap reached
+
                 val nodeB = nodes[j]
                 val dx = nodeA.x - nodeB.x
                 val dy = nodeA.y - nodeB.y
                 val distSq = dx * dx + dy * dy
 
-                // Only students within 800 logical units are considered for lattice connections
                 if (distSq < thresholdSq) {
+                    val negB = negCounts[j]
                     val dist = sqrt(distSq)
-                    val isPositive = random.nextFloat() > 0.7
-                    val isNegative = !isPositive && random.nextFloat() > 0.8
+
+                    // Logic improved to use real behavioral markers
+                    val isNegative = (negA + negB) > 5 || random.nextFloat() > 0.9
+                    val isPositive = !isNegative && random.nextFloat() > 0.7
+
                     val type = when {
-                        isPositive -> ConnectionType.COLLABORATION
                         isNegative -> ConnectionType.FRICTION
+                        isPositive -> ConnectionType.COLLABORATION
                         else -> ConnectionType.NEUTRAL
                     }
+
                     val color = when (type) {
-                        ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
                         ConnectionType.FRICTION -> Color(0xFFFF3366)      // Pulsing Red
+                        ConnectionType.COLLABORATION -> Color(0xFF00FFCC) // Glowing Cyan/Green
                         else -> Color(0xFF6699FF)                         // Deep Blue
                     }
-                    // Strength decays as distance increases
+
                     val strength = (1.0f - (dist / 1200f)).coerceIn(0.1f, 1.0f)
                     edges.add(Edge(nodeA.id, nodeB.id, strength, type, color))
                 }
             }
         }
-        return edges.take(50)
+        return edges
+    }
+
+    /**
+     * Compatibility overload for legacy callers.
+     *
+     * @param nodes The list of spatial student representations.
+     * @param events The full stream of behavioral events.
+     * @return A list of inferred [Edge] connections.
+     */
+    fun computeLattice(nodes: List<LatticeNode>, events: List<BehaviorEvent>): List<Edge> {
+        val negativeCounts = mutableMapOf<Long, Int>()
+        for (log in events) {
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                negativeCounts[log.studentId] = (negativeCounts[log.studentId] ?: 0) + 1
+            }
+        }
+        return computeLattice(nodes, negativeCounts)
     }
 
     /**

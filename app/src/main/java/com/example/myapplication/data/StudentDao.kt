@@ -58,6 +58,9 @@ interface StudentDao {
     @Query("SELECT * FROM students WHERE id = :studentId")
     suspend fun getStudentByIdNonLiveData(studentId: Long): Student?
 
+    @Query("SELECT * FROM students WHERE id = :studentId")
+    fun getStudentByIdFlow(studentId: Long): Flow<Student?>
+
     @Query("SELECT * FROM students WHERE id IN (:studentIds)")
     suspend fun getStudentsByIdsList(studentIds: List<Long>): List<Student>
 
@@ -67,7 +70,11 @@ interface StudentDao {
 
     /**
      * Retrieves a student by their [Student.stringId].
-     * String IDs are typically UUIDs imported from the Python desktop application.
+     *
+     * String IDs are typically UUIDs imported from the Python desktop application. This lookup
+     * is essential for the **Multi-Pass Ingestion Strategy**, allowing the importer to
+     * resolve relationships between students and logs using persistent IDs rather than
+     * volatile auto-incrementing primary keys.
      */
     @Query("SELECT * FROM students WHERE stringId = :stringId")
     suspend fun getStudentByStringId(stringId: String): Student?

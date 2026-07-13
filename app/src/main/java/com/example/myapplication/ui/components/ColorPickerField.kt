@@ -17,6 +17,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.myapplication.util.safeParseColor
 
+/**
+ * A specialized text field for entering and previewing Hex color strings.
+ *
+ * This component provides a text input for direct Hex code entry and a companion
+ * color swatch that displays the current color. Tapping the swatch triggers an
+ * external color picker dialog.
+ *
+ * @param label The label to display for the text field.
+ * @param color The current Hex color string (e.g., "#RRGGBB").
+ * @param onColorChange Callback triggered when the text input changes.
+ * @param onColorPickerClick Callback triggered when the color swatch is tapped.
+ */
 @Composable
 fun ColorPickerField(
     label: String,

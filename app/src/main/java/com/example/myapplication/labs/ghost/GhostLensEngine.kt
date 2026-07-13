@@ -4,7 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import com.example.myapplication.ui.model.StudentUiItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlin.math.sqrt
 
 /**
  * GhostLensEngine: Manages the spatiotemporal state of the Ghost Lens.
@@ -25,28 +24,55 @@ class GhostLensEngine {
 
     /**
      * Identifies students currently under the lens and maps them to prophecies.
+     *
+     * BOLT: Optimized to eliminate functional operator overhead and redundant math.
+     * Uses squared distance comparison and single-pass manual loops to avoid O(N) list churn.
+     *
+     * @param students Current student UI items.
+     * @param propheciesByStudent Pre-grouped prophecies for O(1) lookup.
+     * @param lensPos Current screen coordinates of the lens.
+     * @param lensRadius Radius of the predictive field.
+     * @param canvasScale Current chart zoom level.
+     * @param canvasOffset Current chart pan offset.
      */
     fun getPropheciesForStudentsUnderLens(
         students: List<StudentUiItem>,
-        allProphecies: List<GhostOracle.Prophecy>,
+        propheciesByStudent: Map<Long, List<GhostOracle.Prophecy>>,
+        lensPos: Offset,
+        lensRadius: Float,
         canvasScale: Float,
         canvasOffset: Offset
     ): List<GhostOracle.Prophecy> {
-        val lensPos = _lensPosition.value
-        val radius = _lensRadius.value
+        val radiusSq = lensRadius * lensRadius
+        val result = mutableListOf<GhostOracle.Prophecy>()
+        val seenDescriptions = mutableSetOf<String>()
 
-        return students.filter { student ->
+        // BOLT: Use manual index-based loop to avoid iterator allocation.
+        for (i in students.indices) {
+            val student = students[i]
+
             // Convert student logical coordinates to screen coordinates
             val screenX = student.xPosition.value * canvasScale + canvasOffset.x
             val screenY = student.yPosition.value * canvasScale + canvasOffset.y
 
             val dx = screenX - lensPos.x
             val dy = screenY - lensPos.y
-            val dist = sqrt(dx * dx + dy * dy)
+            val distSq = dx * dx + dy * dy
 
-            dist < radius
-        }.flatMap { student ->
-            allProphecies.filter { it.studentId == student.id.toLong() }
-        }.distinctBy { it.description }
+            // BOLT: Use squared distance to avoid expensive sqrt() call.
+            if (distSq < radiusSq) {
+                val studentProphecies = propheciesByStudent[student.id.toLong()]
+                if (studentProphecies != null) {
+                    for (j in studentProphecies.indices) {
+                        val prophecy = studentProphecies[j]
+                        // BOLT: Inline deduplication using a set to avoid .distinctBy() overhead.
+                        if (seenDescriptions.add(prophecy.description)) {
+                            result.add(prophecy)
+                        }
+                    }
+                }
+            }
+        }
+        return result
     }
 }

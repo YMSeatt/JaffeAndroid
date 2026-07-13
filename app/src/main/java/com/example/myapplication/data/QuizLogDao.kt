@@ -57,6 +57,9 @@ interface QuizLogDao {
     @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId ORDER BY loggedAt DESC LIMIT :limit")
     suspend fun getRecentQuizLogsForStudentList(studentId: Long, limit: Int): List<QuizLog>
 
+    @Query("SELECT * FROM quiz_logs WHERE studentId = :studentId")
+    suspend fun getQuizLogsForStudentNonLiveData(studentId: Long): List<QuizLog>
+
     /**
      * Retrieves quiz logs for UI display on student icons, specifically filtering for
      * active or recent relevant data.

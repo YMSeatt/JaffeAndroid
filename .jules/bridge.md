@@ -33,3 +33,15 @@ LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTi
 ## 2026-02-22 - Social Cohesion Analysis Port
 **Discrepancy:** The Python prototype uses a standalone script (`ghost_vector_analysis.py`) to generate Markdown reports and calculate student "Social Status" based on net force magnitudes. The Android application had the basic vector math in `GhostVectorEngine.kt` but lacked the categorization and reporting logic.
 **Adaptation:** Ported the classification thresholds (85/40/5) and global cohesion logic (threshold 50.0) into `GhostVectorEngine.kt`. Implemented `generateSocialReport` using `StringBuilder` and `Locale.US` to ensure floating-point formatting parity (dots vs commas) regardless of device locale, matching Python's default behavior.
+
+## 2026-03-05 - Ghost Architect Layout Analysis Port
+**Discrepancy:** The Python prototype uses `ghost_architect_analysis.py` to calculate 'Layout Synergy' and 'Strategic Alignment' scores based on Euclidean distance with 1000/1500 thresholds. The Android application had a basic layout proposer but lacked the scoring and reporting logic.
+**Adaptation:** Ported `calculateSynergy` and `generateReport` into `GhostArchitectEngine.kt`. Adjusted distance constants (1000 -> 2000, 1500 -> 3000) to account for the 2x scale difference in Android's 4000x4000 logical coordinate system. Used `Locale.US` for Markdown report formatting to maintain parity with Python's numeric string output.
+
+## 2028-05-15 - Homework Initials Logic Parity
+**Discrepancy:** The Python prototype maps homework initials based on the status string (e.g., "Done", "Late") rather than the assignment name. The Android application was incorrectly using the assignment name for initials mapping and displayed assignment types in the "Manage Initials" screen.
+**Adaptation:** Modified `SeatingChartViewModel.kt` to apply `homeworkInitialsMap` to the `log.status` field. Updated `ManageInitialsScreen.kt` to populate the "Homework" tab with `customHomeworkStatuses` to ensure the user can configure initials for the correct set of labels, matching Python's logical behavior.
+
+## 2024-05-20 - Quiz Mark Initials Discrepancy
+**Discrepancy:** Python combines Behaviors and Quiz Mark Types in a single initials map (`behavior_initial_overrides`). Android split them into tabs but omitted Quiz Mark Types from the customization UI entirely.
+**Adaptation:** Unified Quiz Mark Types into the "Behaviors" tab of `ManageInitialsScreen.kt` while maintaining the separate "Quizzes" tab for Template-specific initials to provide superior organization while keeping functional parity.

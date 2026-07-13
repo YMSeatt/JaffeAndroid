@@ -8,6 +8,10 @@ import kotlinx.serialization.Serializable
 
 /**
  * Represents a record of a student's homework completion status.
+ *
+ * This entity supports both simple status tracking (e.g., "Done", "Late") and complex
+ * scoring via the [marksData] JSON field. This hybrid approach ensures that the database
+ * remains flexible as classroom reporting requirements change.
  */
 @Serializable
 @Entity(
@@ -33,7 +37,11 @@ data class HomeworkLog(
     val status: String,
     val loggedAt: Long = System.currentTimeMillis(),
     val comment: String? = null,
-    /** A JSON string representing complex marks or effort scores. */
+    /**
+     * A JSON string representing complex marks or effort scores.
+     * This field is used to store dynamic scoring metrics that aren't captured by the
+     * primary [status] field.
+     */
     val marksData: String? = null,
     /** Whether the homework recording session is finished. */
     val isComplete: Boolean = false

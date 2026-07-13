@@ -8,7 +8,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.exp
-import kotlin.math.sqrt
 
 /**
  * GhostOsmosisEngine: Calculates Knowledge Diffusion and Behavioral Concentration.
@@ -19,6 +18,8 @@ import kotlin.math.sqrt
 object GhostOsmosisEngine {
     private const val CANVAS_SIZE = 4000f
     private const val DIFFUSION_RADIUS = 1000f // Effective radius for osmosis
+    /** BOLT: Pre-calculated constant for Gaussian weight (2 * 400^2) */
+    private const val GAUSSIAN_DENOMINATOR = 320000f
 
     data class OsmoticNode(
         val id: Long,
@@ -59,9 +60,13 @@ object GhostOsmosisEngine {
      * Analyzes the overall classroom osmotic balance by summing pairwise interactions.
      * Ported from `Python/ghost_osmosis_analyzer.py`.
      *
+     * This function performs an $O(N^2)$ analysis of student interactions to determine
+     * the "Neural Equilibrium" of the classroom. It calculates the average 'Osmotic Pressure'
+     * (difference in potential) weighted by spatial proximity using a Gaussian decay.
+     *
      * @param students List of osmotic nodes representing students.
-     * @param diffusionRadius The spatial range within which students influence one another.
-     * @return An [OsmosisAnalysis] containing global metrics.
+     * @param diffusionRadius The spatial range (in logical units) within which students influence one another.
+     * @return An [OsmosisAnalysis] containing global metrics such as balance score and status.
      */
     fun analyzeOsmoticBalance(
         students: List<OsmoticNode>,
@@ -73,6 +78,7 @@ object GhostOsmosisEngine {
 
         var totalDiffusion = 0.0
         var interactions = 0
+        val diffusionRadiusSq = diffusionRadius * diffusionRadius
 
         for (i in students.indices) {
             for (j in i + 1 until students.size) {
@@ -81,15 +87,16 @@ object GhostOsmosisEngine {
 
                 val dx = s1.x - s2.x
                 val dy = s1.y - s2.y
-                val dist = sqrt(dx * dx + dy * dy)
+                val distSq = dx * dx + dy * dy
 
-                if (dist < diffusionRadius) {
+                if (distSq < diffusionRadiusSq) {
                     // Calculate 'Osmotic Pressure' (difference in potential)
                     val kDiff = abs(s1.knowledgePotential - s2.knowledgePotential)
                     val bDiff = abs(s1.behaviorConcentration - s2.behaviorConcentration)
 
                     // Weight by proximity (Gaussian)
-                    val weight = exp(-(dist * dist) / (2 * 400f * 400f))
+                    // BOLT: Removed sqrt and used pre-calculated denominator
+                    val weight = exp(-distSq / GAUSSIAN_DENOMINATOR)
                     totalDiffusion += (kDiff + bDiff) * weight
                     interactions++
                 }
@@ -119,9 +126,12 @@ object GhostOsmosisEngine {
      * Generates a Markdown-formatted report of the classroom's osmotic balance.
      * Ported from `Python/ghost_osmosis_analyzer.py`.
      *
-     * @param analysis The global osmotic analysis metrics.
+     * The report categorizes the classroom climate (VOID, STABLE, EQUILIBRIUM, HIGH_GRADIENT)
+     * and provides human-readable interpretations of the neural diffusion deltas.
+     *
+     * @param analysis The global osmotic analysis metrics calculated by [analyzeOsmoticBalance].
      * @param timestamp Optional fixed timestamp for the report (defaults to current time).
-     * @return A formatted Markdown string.
+     * @return A formatted Markdown string suitable for display or export.
      */
     fun generateOsmosisReport(
         analysis: OsmosisAnalysis,
@@ -153,12 +163,24 @@ object GhostOsmosisEngine {
         return report.toString()
     }
 
+    /**
+     * Calculates the diffusion gradients for a sampling grid across the logical canvas.
+     *
+     * This is used by the UI layer ([GhostOsmosisLayer]) to render the fluid field.
+     * It maps the complex student potentials into a simplified grid of [DiffusionGradient]s
+     * which are then visualized using AGSL shaders.
+     *
+     * @param students The list of student nodes to process.
+     * @param gridSize The resolution of the sampling grid (e.g., 20x20).
+     * @return A list of [DiffusionGradient] points for the UI to render.
+     */
     fun calculateOsmosis(
         students: List<OsmoticNode>,
         gridSize: Int = 20
     ): List<DiffusionGradient> {
         val gradients = mutableListOf<DiffusionGradient>()
         val step = CANVAS_SIZE / gridSize
+        val diffusionRadiusSq = DIFFUSION_RADIUS * DIFFUSION_RADIUS
 
         for (iy in 0 until gridSize) {
             for (ix in 0 until gridSize) {
@@ -169,14 +191,17 @@ object GhostOsmosisEngine {
                 var totalBehavior = 0f
                 var totalWeight = 0f
 
-                students.forEach { student ->
+                // BOLT: Replace forEach with manual index loop.
+                for (i in students.indices) {
+                    val student = students[i]
                     val dx = gx - student.x
                     val dy = gy - student.y
-                    val dist = sqrt(dx * dx + dy * dy)
+                    val distSq = dx * dx + dy * dy
 
-                    if (dist < DIFFUSION_RADIUS) {
+                    if (distSq < diffusionRadiusSq) {
                         // Gaussian decay for diffusion weight
-                        val weight = exp(-(dist * dist) / (2 * 400f * 400f))
+                        // BOLT: Removed sqrt and used pre-calculated denominator
+                        val weight = exp(-distSq / GAUSSIAN_DENOMINATOR).toFloat()
                         totalKnowledge += student.knowledgePotential * weight
                         totalBehavior += student.behaviorConcentration * weight
                         totalWeight += weight
@@ -199,7 +224,7 @@ object GhostOsmosisEngine {
                         DiffusionGradient(
                             x = gx,
                             y = gy,
-                            potential = (avgK + avgB.let { if (it > 0) it else -it }) / 2f,
+                            potential = (avgK + (if (avgB > 0) avgB else -avgB)) / 2f,
                             color = Triple(r, g, b)
                         )
                     )
@@ -209,27 +234,68 @@ object GhostOsmosisEngine {
         return gradients
     }
 
+    /**
+     * Calculates the 'Academic Potential' and 'Behavioral Concentration' for a student.
+     *
+     * **Academic Potential (kPotential)**: An average of Quiz scores and Homework completion status.
+     * **Behavioral Concentration (bConcentration)**: A normalized ratio of positive vs negative logs.
+     *
+     * **BOLT Optimization**: Replaced functional operators (filter, map, average, count) with
+     * manual loops to avoid redundant object allocations and multiple list traversals
+     * per student during the high-frequency seating chart update pipeline.
+     *
+     * @return A Pair containing (kPotential [0..1], bConcentration [-1..1]).
+     */
     fun calculateStudentPotentials(
         behaviorLogs: List<BehaviorEvent>,
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): Pair<Float, Float> {
         val kPotential = if (quizLogs.isEmpty() && homeworkLogs.isEmpty()) 0.5f else {
-            val qAvg = if (quizLogs.isNotEmpty()) {
-                quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }.average().toFloat()
-            } else 0.5f
+            val qAvg = if (quizLogs.isEmpty()) 0.5f else {
+                var totalRatio = 0.0
+                var count = 0
+                // BOLT: Manual index loop instead of functional chain.
+                for (i in quizLogs.indices) {
+                    val log = quizLogs[i]
+                    val v = log.markValue
+                    val m = log.maxMarkValue
+                    if (v != null && m != null && m > 0) {
+                        totalRatio += (v / m)
+                        count++
+                    }
+                }
+                if (count > 0) (totalRatio / count).toFloat() else 0.5f
+            }
 
-            val hAvg = if (homeworkLogs.isNotEmpty()) {
-                homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toFloat() / homeworkLogs.size
-            } else 0.5f
+            val hAvg = if (homeworkLogs.isEmpty()) 0.5f else {
+                var doneCount = 0
+                // BOLT: Manual index loop instead of filter/count.
+                for (i in homeworkLogs.indices) {
+                    val log = homeworkLogs[i]
+                    if (log.status.contains("Done", ignoreCase = true)) {
+                        doneCount++
+                    }
+                }
+                doneCount.toFloat() / homeworkLogs.size
+            }
 
             (qAvg + hAvg) / 2f
         }
 
         val bConcentration = if (behaviorLogs.isEmpty()) 0f else {
-            val pos = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-            val neg = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
-            (pos - neg).toFloat() / behaviorLogs.size.coerceAtLeast(1)
+            var pos = 0
+            var neg = 0
+            // BOLT: Manual index loop instead of filter/count.
+            for (i in behaviorLogs.indices) {
+                val event = behaviorLogs[i]
+                if (event.type.contains("Negative", ignoreCase = true)) {
+                    neg++
+                } else {
+                    pos++
+                }
+            }
+            (pos - neg).toFloat() / behaviorLogs.size
         }
 
         return Pair(kPotential.coerceIn(0f, 1f), bConcentration.coerceIn(-1f, 1f))

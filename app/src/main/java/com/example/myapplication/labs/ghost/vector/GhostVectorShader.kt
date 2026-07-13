@@ -57,7 +57,9 @@ object GhostVectorShader {
             float mask = max(line, tip);
             float3 color = iColor * mask;
 
-            // Add a "Neural Flow" trail effect
+            // Add a "Neural Flow" trail effect.
+            // Uses exponential decay for the tail length and a sinusoidal wave
+            // to simulate a flowing social current along the vector direction.
             float trail = smoothstep(0.02, 0.0, abs(pr.y)) * exp(-pr.x * 30.0) * 0.4;
             float flow = sin(iTime * 20.0 - pr.x * 80.0) * 0.5 + 0.5;
             color += iColor * trail * flow;

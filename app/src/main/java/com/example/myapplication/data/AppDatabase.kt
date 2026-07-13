@@ -8,7 +8,19 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class], version = 33, exportSchema = false)
+/**
+ * AppDatabase: The primary Room database for the Seating Chart application.
+ *
+ * This database manages 20+ entities and handles the complex relational mapping
+ * between students, their physical layout, and their longitudinal behavior and
+ * academic history.
+ *
+ * ### Schema Evolution:
+ * The database utilizes a versioned migration strategy. For a comprehensive roadmap
+ * of architectural eras (including the transition to JSON-backed storage and
+ * relational hardening), refer to [MIGRATIONS.md](MIGRATIONS.md).
+ */
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class, HomeworkMarkMetadata::class], version = 35, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -33,6 +45,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pendingEmailDao(): PendingEmailDao
     abstract fun quizDao(): QuizDao
     abstract fun homeworkDao(): HomeworkDao
+    abstract fun homeworkMarkMetadataDao(): HomeworkMarkMetadataDao
 
     companion object {
         const val DATABASE_NAME = "seating_chart_database"
@@ -40,7 +53,11 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        val MIGRATION_1_2 = object : Migration(1, 2) { /* ... existing migration ... */
+        /**
+         * Migration from version 1 to 2: Standardizes the [Student] table structure.
+         * Adds explicit spatial coordinates (xPosition, yPosition) and ensures ID autoincrement.
+         */
+        val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
                     CREATE TABLE students_new (
@@ -59,7 +76,11 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE students_new RENAME TO students")
             }
         }
-        val MIGRATION_2_3 = object : Migration(2, 3) { /* ... existing migration ... */
+        /**
+         * Migration from version 2 to 3: Introduces the [HomeworkLog] entity.
+         * Allows tracking of homework status, completion dates, and teacher comments.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
                     CREATE TABLE homework_logs (
@@ -76,7 +97,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 3 to 4: Adds custom display fields to Student table
+        /**
+         * Migration from version 3 to 4: Enhances [Student] visual customization.
+         * Adds fields for individual icon sizing and custom color overrides.
+         */
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE students ADD COLUMN customWidth INTEGER")
@@ -87,14 +111,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 4 to 5: Adds initials field to Student table
+        /**
+         * Migration from version 4 to 5: Adds the initials field to [Student].
+         * Facilitates abbreviated display on the seating chart canvas.
+         */
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE students ADD COLUMN initials TEXT")
             }
         }
 
-        // Migration from version 5 to 6: Adds new fields to Student and creates Furniture table
+        /**
+         * Migration from version 5 to 6: Introduces classroom [Furniture] and student metadata.
+         * Adds [Furniture] tracking and enriches [Student] with nicknames and gender.
+         */
         val MIGRATION_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Add new columns to students table
@@ -121,7 +151,12 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        // Migration from version 6 to 7: Adds new tables and updates HomeworkLog and Student
+        /**
+         * Migration from version 6 to 7: Major architectural expansion.
+         * 1. Introduces [QuizLog], [StudentGroup], [LayoutTemplate], and [ConditionalFormattingRule].
+         * 2. Migrates student group associations from a simple String to a relational Long ID.
+         * 3. Adds scoring fields to [HomeworkLog].
+         */
         val MIGRATION_6_7 = object : Migration(6, 7) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create QuizLog table
@@ -208,6 +243,11 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 7 to 8: Primary Key and Foreign Key hardening.
+         * Recreates [Student] and its referencing tables ([HomeworkLog], [QuizLog], [BehaviorEvent])
+         * to ensure consistent Long ID types across all relational boundaries.
+         */
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create a new table with the correct id type (INTEGER for Long)
@@ -319,6 +359,11 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 8 to 9: Introduces Template and Category systems.
+         * Adds [QuizTemplate], [HomeworkTemplate], and custom behavior/homework category tables
+         * to allow for reusable data structures.
+         */
         val MIGRATION_8_9 = object : Migration(8, 9) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `custom_behaviors` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL)")
@@ -329,12 +374,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 9 to 10: Introduces [QuizMarkType].
+         * Allows for granular scoring (e.g., "Correct", "Partially Correct") with distinct point values.
+         */
         val MIGRATION_9_10 = object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) { // Renamed 'database' to 'db'
                 db.execSQL("CREATE TABLE IF NOT EXISTS `quiz_mark_types` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `defaultPoints` REAL NOT NULL, `contributesToTotal` INTEGER NOT NULL, `isExtraCredit` INTEGER NOT NULL)")
             }
         }
 
+        /**
+         * Migration from version 10 to 11: Transitions [HomeworkLog] to JSON-based storage.
+         * Migrates flat scoring columns into a flexible `marksData` JSON string, facilitating
+         * future scoring UI changes without schema modifications.
+         */
         val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create a new table with the desired schema
@@ -380,6 +434,11 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 11 to 12: Transitions [QuizLog] to JSON-based storage.
+         * Similar to [HomeworkLog], this migrates flat quiz scores into a flexible `marksData`
+         * JSON format and adds the `numQuestions` count.
+         */
         val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create a new table with the desired schema
@@ -425,24 +484,38 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 12 to 13: Maintenance release.
+         * Resolves a synchronization issue with Room's InvalidationTracker.
+         */
         val MIGRATION_12_13 = object : Migration(12, 13) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Empty migration to fix a bug with the InvalidationTracker.
             }
         }
-        
+
+        /**
+         * Migration from version 13 to 14: Placeholder for version sync.
+         */
         val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Empty migration.
             }
         }
 
+        /**
+         * Migration from version 14 to 15: Adds outline thickness customization to [Student].
+         */
         val MIGRATION_14_15 = object : Migration(14, 15) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE students ADD COLUMN customOutlineThickness INTEGER")
             }
         }
 
+        /**
+         * Migration from version 15 to 16: Enhances [Student] typography settings.
+         * Adds fields for custom font families, sizes, and colors.
+         */
         val MIGRATION_15_16 = object : Migration(15, 16) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE students ADD COLUMN customFontFamily TEXT")
@@ -451,6 +524,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 16 to 17: Introduces visual [Guide]s.
+         * Adds the [Guide] entity to support horizontal and vertical alignment lines on the canvas.
+         */
         val MIGRATION_16_17 = object : Migration(16, 17) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -463,12 +540,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 17 to 18: Placeholder for version sync.
+         */
         val MIGRATION_17_18 = object : Migration(17, 18) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Empty migration.
             }
         }
 
+        /**
+         * Migration from version 18 to 19: Adds corner radius and padding customization to [Student].
+         */
         val MIGRATION_18_19 = object : Migration(18, 19) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE students ADD COLUMN customCornerRadius INTEGER")
@@ -476,18 +559,30 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
         
+        /**
+         * Migration from version 19 to 20: Adds the 'type' field to [ConditionalFormattingRule].
+         * Allows for categorizing rules (e.g., by group, behavior count, or quiz score).
+         */
         val MIGRATION_19_20 = object : Migration(19, 20) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE conditional_formatting_rules ADD COLUMN type TEXT NOT NULL DEFAULT 'group'")
             }
         }
 
+        /**
+         * Migration from version 20 to 21: Adds `numQuestions` to [QuizTemplate].
+         */
         val MIGRATION_20_21 = object : Migration(20, 21) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE quiz_templates ADD COLUMN numQuestions INTEGER")
             }
         }
 
+        /**
+         * Migration from version 21 to 22: Introduces [SystemBehavior] and temporary tasks.
+         * 1. Adds [SystemBehavior] entity for standardized feedback.
+         * 2. Adds `temporaryTask` to [Student] for short-term classroom goals.
+         */
         val MIGRATION_21_22 = object : Migration(21, 22) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -501,6 +596,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 22 to 23: Introduces the [Reminder] entity.
+         * Supports automated notifications for teacher tasks and events.
+         */
         val MIGRATION_22_23 = object : Migration(22, 23) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -515,6 +614,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 23 to 24: Introduces [EmailSchedule].
+         * Supports scheduled automated exports and report deliveries.
+         */
         val MIGRATION_23_24 = object : Migration(23, 24) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -532,6 +635,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 24 to 25: Introduces the [PendingEmail] queue.
+         * Ensures reliable delivery by tracking emails that are waiting to be sent.
+         */
         val MIGRATION_24_25 = object : Migration(24, 25) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -546,24 +653,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 25 to 26: Adds behavior initials to [BehaviorEvent].
+         * Stores a snapshot of behavior initials at the time of logging for historical accuracy.
+         */
         val MIGRATION_25_26 = object : Migration(25, 26) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE behavior_events ADD COLUMN initials TEXT")
             }
         }
 
+        /**
+         * Migration from version 26 to 27: Idempotency fix for [BehaviorEvent] initials.
+         */
         val MIGRATION_26_27 = object : Migration(26, 27) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Empty migration to handle cases where the column was already added.
             }
         }
-        
+
+        /**
+         * Migration from version 27 to 28: Adds `exportOptionsJson` to [EmailSchedule].
+         * Allows for granular configuration of automated data exports.
+         */
         val MIGRATION_27_28 = object : Migration(27, 28) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE email_schedules ADD COLUMN exportOptionsJson TEXT")
             }
         }
 
+        /**
+         * Migration from version 28 to 29: Introduces 'timeout' for [BehaviorEvent].
+         * Allows logs to automatically expire or be hidden from the UI after a specific duration.
+         */
         val MIGRATION_28_29 = object : Migration(28, 29) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -588,6 +710,10 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 29 to 30: Introduces new relational structures for [Quiz] and [Homework].
+         * Adds normalized entities to track assignment progress linked to templates.
+         */
         val MIGRATION_29_30 = object : Migration(29, 30) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("""
@@ -620,12 +746,20 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 30 to 31: Idempotency placeholder.
+         */
         val MIGRATION_30_31 = object : Migration(30, 31) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Empty migration to handle cases where the column was already added.
             }
         }
 
+        /**
+         * Migration from version 31 to 32: Normalizes [QuizTemplate].
+         * Ensures `numQuestions` is NOT NULL and renames `marksData` to `defaultMarks`
+         * to clarify its role as a template.
+         */
         val MIGRATION_31_32 = object : Migration(31, 32) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Create a new table with the correct schema
@@ -652,9 +786,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 32 to 33: Adds an 'enabled' flag to [ConditionalFormattingRule].
+         * Allows users to temporarily deactivate rules without deleting them.
+         */
         val MIGRATION_32_33 = object : Migration(32, 33) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE conditional_formatting_rules ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        /**
+         * Migration from version 33 to 34: Adds an 'isPinned' flag to [Student].
+         * Allows teachers to anchor students to fixed positions on the canvas.
+         */
+        val MIGRATION_33_34 = object : Migration(33, 34) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE students ADD COLUMN isPinned INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        /**
+         * Migration from version 34 to 35: Introduces [HomeworkMarkMetadata].
+         * Allows for mapping homework statuses and marks to numeric point values.
+         */
+        val MIGRATION_34_35 = object : Migration(34, 35) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `homework_mark_metadata` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `defaultPoints` REAL NOT NULL
+                    )
+                """.trimIndent())
             }
         }
 
@@ -668,14 +832,20 @@ abstract class AppDatabase : RoomDatabase() {
                         DATABASE_NAME
                     )
                 } else {
+                    // HARDEN: Archives are stored in a dedicated 'archives' subdirectory within internal storage.
+                    // Validate filename to prevent path traversal.
+                    if (dbName.contains("/") || dbName.contains("\\") || dbName.contains("..")) {
+                        throw IllegalArgumentException("Invalid database name: $dbName")
+                    }
+                    val archiveFile = java.io.File(context.filesDir, "archives/$dbName")
                     Room.databaseBuilder(
                         context.applicationContext,
                         AppDatabase::class.java,
                         dbName
-                    ).createFromFile(context.getDatabasePath(dbName))
+                    ).createFromFile(archiveFile)
                 }
 
-                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33)
+                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
@@ -692,6 +862,16 @@ abstract class AppDatabase : RoomDatabase() {
         fun switchToLive(context: Context) {
             INSTANCE?.close()
             INSTANCE = getDatabase(context, DATABASE_NAME)
+        }
+
+        /**
+         * Closes the active database connection and clears the singleton instance.
+         * Essential for file-level operations like deletion or restoration to ensure
+         * no stale handles or journal locks remain.
+         */
+        fun closeDatabase() {
+            INSTANCE?.close()
+            INSTANCE = null
         }
     }
 }

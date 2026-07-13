@@ -9,7 +9,14 @@ def generate_neural_dossier(student_data):
 
     This function simulates a 2027-era AI analysis, transforming simple student
     metadata into a high-fidelity report featuring predictive trajectories
-    and complex neural metrics.
+    and complex neural metrics. It is the Python blueprint for the
+    `GhostLinkEngine` on Android.
+
+    ### Simulated Neural Metrics:
+    - **Cognitive Resonance**: A measure of student engagement stability.
+    - **Collaborative Flux**: Predicted peer-to-peer interaction intensity.
+    - **Academic Entropy**: The unpredictability of the student's next quiz result.
+    - **Social Gravity**: The student's influence on the surrounding seating layout.
 
     Args:
         student_data (dict): Dictionary containing student information (id, name, etc).

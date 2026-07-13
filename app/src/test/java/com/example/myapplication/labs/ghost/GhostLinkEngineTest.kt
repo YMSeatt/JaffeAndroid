@@ -11,9 +11,10 @@ class GhostLinkEngineTest {
         val studentName = "John Doe"
         val dossier = GhostLinkEngine.generateNeuralDossier(studentId, studentName)
 
-        // Asserting on smaller chunks to see what exactly fails
-        assertThat(dossier).contains("123")
-        assertThat(dossier).contains("JOHN DOE")
+        // PRIVACY HARDENING: Should NOT contain internal ID and should mask full name
+        assertThat(dossier).doesNotContain("123")
+        assertThat(dossier).contains("J. DOE")
+        assertThat(dossier).doesNotContain("JOHN DOE")
         assertThat(dossier).contains("Status")
         assertThat(dossier).contains("Neural Metrics")
     }

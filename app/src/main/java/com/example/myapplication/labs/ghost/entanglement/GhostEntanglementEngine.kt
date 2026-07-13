@@ -24,7 +24,8 @@ object GhostEntanglementEngine {
         val x: Float,
         val y: Float,
         val behaviorSync: Float, // 0..1 (Synchronicity in log timing)
-        val academicParity: Float // 0..1 (Similarity in performance)
+        val academicParity: Float, // 0..1 (Similarity in performance)
+        val groupId: Long? = null
     )
 
     data class EntanglementLink(
@@ -48,36 +49,53 @@ object GhostEntanglementEngine {
     )
 
     /**
-     * Calculates the coherence between two students.
-     * Ported from `Python/ghost_entanglement.py`.
+     * Calculates the Coherence Score (0.0 to 1.0) between two students.
+     * Ported from the Python R&D script `ghost_entanglement.py`.
+     *
+     * The score represents the strength of social "entanglement" based on three pillars:
+     * 1. **Spatial (40%)**: Gaussian decay of physical distance. Sigma is set to 600 logical units.
+     * 2. **Behavioral (30%)**: Average of student behavioral synchronicity metrics.
+     * 3. **Academic (30%)**: Parity of academic performance (1.0 - absolute difference).
+     *
+     * BOLT: Optimized to use squared distance to avoid redundant sqrt calls.
+     *
+     * @param nodeA The spatial and behavioral representation of the first student.
+     * @param nodeB The spatial and behavioral representation of the second student.
+     * @return A normalized coherence factor.
      */
     fun calculateCoherence(
         nodeA: EntangledNode,
-        nodeB: EntangledNode,
-        sharingGroup: Boolean = false
+        nodeB: EntangledNode
     ): Float {
-        // Physical Proximity factor (Gaussian)
+        // 1. Spatial Pillar: Gaussian Proximity
+        // Models the "Social Field" overlap. sigma = 600 units.
         val dx = nodeA.x - nodeB.x
         val dy = nodeA.y - nodeB.y
-        val dist = sqrt(dx * dx + dy * dy)
-        val spatialCoherence = exp(-(dist * dist) / (2 * 600f * 600f))
+        val distSq = dx * dx + dy * dy
+        // BOLT: Eliminated sqrt call as we only need the squared distance for the Gaussian exponent
+        val spatialCoherence = exp(-distSq / (2 * 600f * 600f))
 
-        // Behavioral & Academic Synchronicity
+        // 2. Behavioral Pillar: Average Sync
         val syncFactor = (nodeA.behaviorSync + nodeB.behaviorSync) / 2f
+
+        // 3. Academic Pillar: Performance Parity
         val parityFactor = 1f - abs(nodeA.academicParity - nodeB.academicParity)
 
-        // Group multiplier: Being in the same group significantly boosts entanglement
+        // Catalyst: Shared group membership provides a significant "Quantum Boost" (1.5x)
+        val sharingGroup = nodeA.groupId != null && nodeA.groupId == nodeB.groupId
         val groupMultiplier = if (sharingGroup) 1.5f else 1.0f
 
+        // Weighted Summation
         return ((spatialCoherence * 0.4f + syncFactor * 0.3f + parityFactor * 0.3f) * groupMultiplier).coerceIn(0f, 1f)
     }
 
     /**
      * Analyzes the overall classroom entanglement.
+     *
+     * BOLT: Removed [groupMap] dependency as [EntangledNode] now contains groupId.
      */
     fun analyzeEntanglement(
-        nodes: List<EntangledNode>,
-        groupMap: Map<Long, Long?> // studentId -> groupId
+        nodes: List<EntangledNode>
     ): EntanglementAnalysis {
         if (nodes.size < 2) return EntanglementAnalysis(CoherenceState.DECOHERED, 0f, 0f, 0)
 
@@ -89,9 +107,8 @@ object GhostEntanglementEngine {
             for (j in i + 1 until nodes.size) {
                 val nodeA = nodes[i]
                 val nodeB = nodes[j]
-                val sameGroup = groupMap[nodeA.id] != null && groupMap[nodeA.id] == groupMap[nodeB.id]
 
-                val coherence = calculateCoherence(nodeA, nodeB, sameGroup)
+                val coherence = calculateCoherence(nodeA, nodeB)
                 if (coherence > 0.6f) {
                     totalCoherence += coherence
                     if (coherence > maxCoherence) maxCoherence = coherence
@@ -142,36 +159,103 @@ object GhostEntanglementEngine {
     }
 
     /**
-     * Helper to calculate student synchronicity metrics.
+     * Identifies the strongest quantum links in the classroom.
+     *
+     * BOLT: Optimized to identify the top [limit] entangled pairs based on real coherence.
+     * Removed [groupMap] dependency.
+     */
+    fun identifyEntangledLinks(
+        nodes: List<EntangledNode>,
+        limit: Int = 3
+    ): List<EntanglementLink> {
+        if (nodes.size < 2) return emptyList()
+
+        val links = mutableListOf<EntanglementLink>()
+
+        for (i in nodes.indices) {
+            for (j in i + 1 until nodes.size) {
+                val nodeA = nodes[i]
+                val nodeB = nodes[j]
+
+                val coherence = calculateCoherence(nodeA, nodeB)
+                if (coherence > 0.7f) { // Threshold for visual entanglement
+                    links.add(EntanglementLink(nodeA.id, nodeB.id, coherence))
+                }
+            }
+        }
+
+        return links.sortedByDescending { it.coherence }.take(limit)
+    }
+
+    /**
+     * Calculates high-fidelity synchronicity metrics for a single student node.
+     *
+     * This method processes historical logs to extract a student's "Social Signature":
+     * - **Behavior Sync**: A measure of "Temporal Tempo" (0.0 to 1.0). High scores indicate
+     *   regular, predictable log intervals, suggesting synchronized interaction.
+     * - **Academic Parity Base**: A measure of overall performance (0.0 to 1.0).
+     *
+     * **BOLT Optimization**: Replaced functional operators with manual loops to minimize
+     * object allocations. Optimized variance calculation to be allocation-free (removed intervals array).
      */
     fun calculateNodeMetrics(
         behaviorLogs: List<BehaviorEvent>,
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): Pair<Float, Float> {
-        // behaviorSync: Measures the "tempo" of behavior logs
+        // 1. behaviorSync: Measures the "Tempo Variance" of behavior logs.
         val bSync = if (behaviorLogs.isEmpty()) 0.5f else {
-            val timestamps = behaviorLogs.map { it.timestamp.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }.sorted()
-            if (timestamps.size < 2) 0.5f else {
-                val intervals = mutableListOf<Long>()
-                for (i in 0 until timestamps.size - 1) {
-                    intervals.add(timestamps[i+1] - timestamps[i])
+            val n = behaviorLogs.size
+            val timestamps = LongArray(n)
+            for (i in 0 until n) {
+                timestamps[i] = behaviorLogs[i].timestamp
+            }
+            timestamps.sort()
+
+            if (n < 2) 0.5f else {
+                // BOLT: Two-pass variance calculation to avoid DoubleArray(n-1) allocation
+                var totalInterval = 0.0
+                for (i in 0 until n - 1) {
+                    totalInterval += (timestamps[i + 1] - timestamps[i]).toDouble()
                 }
-                val avgInterval = intervals.average()
-                // Higher sync for consistent intervals (lower variance)
-                val variance = intervals.map { (it - avgInterval) * (it - avgInterval) }.average()
-                exp(-variance / (1000f * 1000f * 60f)).toFloat().coerceIn(0f, 1f)
+                val avgInterval = totalInterval / (n - 1)
+
+                var totalVariance = 0.0
+                for (i in 0 until n - 1) {
+                    val interval = (timestamps[i + 1] - timestamps[i]).toDouble()
+                    val diff = interval - avgInterval
+                    totalVariance += diff * diff
+                }
+                val variance = totalVariance / (n - 1)
+                exp(-variance / (1000.0 * 1000.0 * 60.0)).toFloat().coerceIn(0f, 1f)
             }
         }
 
         // academicParity: Measures overall performance level
         val aParity = if (quizLogs.isEmpty() && homeworkLogs.isEmpty()) 0.5f else {
-            val qAvg = if (quizLogs.isNotEmpty()) {
-                quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }.average().toFloat()
-            } else 0.5f
-            val hAvg = if (homeworkLogs.isNotEmpty()) {
-                homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toFloat() / homeworkLogs.size
-            } else 0.5f
+            val qAvg = if (quizLogs.isEmpty()) 0.5f else {
+                var totalRatio = 0.0
+                var count = 0
+                for (log in quizLogs) {
+                    val v = log.markValue
+                    val m = log.maxMarkValue
+                    if (v != null && m != null && m > 0) {
+                        totalRatio += (v / m)
+                        count++
+                    }
+                }
+                if (count > 0) (totalRatio / count).toFloat() else 0.5f
+            }
+
+            val hAvg = if (homeworkLogs.isEmpty()) 0.5f else {
+                var doneCount = 0
+                for (log in homeworkLogs) {
+                    if (log.status.contains("Done", ignoreCase = true)) {
+                        doneCount++
+                    }
+                }
+                doneCount.toFloat() / homeworkLogs.size
+            }
             (qAvg + hAvg) / 2f
         }
 

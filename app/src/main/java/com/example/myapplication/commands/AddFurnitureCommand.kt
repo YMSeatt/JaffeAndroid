@@ -11,10 +11,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param furniture The [Furniture] entity to be added.
  */
 class AddFurnitureCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val furniture: Furniture
+    internal val viewModel: SeatingChartViewModel,
+    internal val furniture: Furniture
 ) : Command {
-    private var generatedId: Int = furniture.id
+    internal var generatedId: Int = furniture.id
 
     override suspend fun execute() {
         val furnitureToInsert = if (generatedId != 0) furniture.copy(id = generatedId) else furniture

@@ -2,14 +2,18 @@ package com.example.myapplication.data.exporter
 
 import android.content.Context
 import android.net.Uri
+import android.util.LruCache
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.CustomHomeworkStatus
 import com.example.myapplication.data.CustomHomeworkType
 import com.example.myapplication.data.HomeworkLog
+import com.example.myapplication.data.HomeworkMarkMetadata
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentGroup
+import com.example.myapplication.util.HomeworkScoreEngine
+import com.example.myapplication.util.QuizScoreEngine
 import com.example.myapplication.util.SecurityUtil
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -51,28 +55,6 @@ class Exporter(
     private val gson = Gson()
     private val mapType = object : TypeToken<Map<String, Any>>() {}.type
 
-    /**
-     * Cache for decoded marks data JSON strings to avoid redundant deserialization
-     * during large export operations involving many log entries.
-     */
-    private val parsedMarksCache = mutableMapOf<String, Map<String, Any>>()
-
-    /**
-     * Helper to safely deserialize JSON-based mark data.
-     *
-     * @param json The raw JSON string from the database (e.g., [QuizLog.marksData]).
-     * @return A map of keys to values, or an empty map if parsing fails.
-     */
-    private fun parseMarksData(json: String?): Map<String, Any> {
-        if (json.isNullOrEmpty()) return emptyMap()
-        return parsedMarksCache.getOrPut(json) {
-            try {
-                gson.fromJson(json, mapType)
-            } catch (e: Exception) {
-                emptyMap()
-            }
-        }
-    }
 
     private data class FormattingContext(
         val headerStyle: org.apache.poi.ss.usermodel.CellStyle,
@@ -112,6 +94,7 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         encrypt: Boolean
     ) {
         val workbook = XSSFWorkbook()
@@ -157,13 +140,44 @@ class Exporter(
 
         val filteredQuizLogs = quizLogs
 
-        val allLogs = (filteredBehaviorEvents + filteredHomeworkLogs + filteredQuizLogs).sortedBy {
-            when (it) {
-                is BehaviorEvent -> it.timestamp
-                is HomeworkLog -> it.loggedAt
-                is QuizLog -> it.loggedAt
-                else -> 0
+        // BOLT: Pre-calculate dynamic homework keys once to avoid redundant O(N) scans in createSheet.
+        // Use HashSet with pre-defined capacity to avoid intermediate list allocations.
+        val knownHomeworkKeys = HashSet<String>(customHomeworkTypes.size + customHomeworkStatuses.size).apply {
+            customHomeworkTypes.forEach { add(it.name) }
+            customHomeworkStatuses.forEach { add(it.name) }
+        }
+        val dynamicHomeworkKeys = mutableSetOf<String>()
+        var lastKeysJson: String? = null
+        for (log in filteredHomeworkLogs) {
+            val json = log.marksData
+            if (json != null && json != lastKeysJson) {
+                dynamicHomeworkKeys.addAll(HomeworkScoreEngine.parseMarksData(json).keys)
+                lastKeysJson = json
             }
+        }
+        val sortedDynamicKeys = dynamicHomeworkKeys.filter { it !in knownHomeworkKeys }.sorted()
+
+        // BOLT: Optimize log list merging to avoid redundant intermediate lists.
+        val allLogs = ArrayList<Any>(filteredBehaviorEvents.size + filteredHomeworkLogs.size + filteredQuizLogs.size).apply {
+            addAll(filteredBehaviorEvents)
+            addAll(filteredHomeworkLogs)
+            addAll(filteredQuizLogs)
+        }
+        // BOLT: In-place sort to avoid intermediate list allocation.
+        allLogs.sortWith { a, b ->
+            val tA = when (a) {
+                is BehaviorEvent -> a.timestamp
+                is HomeworkLog -> a.loggedAt
+                is QuizLog -> a.loggedAt
+                else -> 0L
+            }
+            val tB = when (b) {
+                is BehaviorEvent -> b.timestamp
+                is HomeworkLog -> b.loggedAt
+                is QuizLog -> b.loggedAt
+                else -> 0L
+            }
+            tA.compareTo(tB)
         }
         val studentMap = students.associateBy { it.id }
         val studentGroupMap = studentGroups.associateBy { it.id }
@@ -172,27 +186,27 @@ class Exporter(
         // Create sheets
         if (options.separateSheets) {
             if (options.includeBehaviorLogs) {
-                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Behavior Log", filteredBehaviorEvents, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeQuizLogs) {
-                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Quiz Log", filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeHomeworkLogs) {
-                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Homework Log", filteredHomeworkLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
             if (options.includeMasterLog) {
-                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+                createSheet(workbook, "Master Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
             }
         } else {
-            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createSheet(workbook, "Combined Log", allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeSummarySheet) {
-            createSummarySheet(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createSummarySheet(workbook, filteredBehaviorEvents, filteredHomeworkLogs, filteredQuizLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext)
         }
 
         if (options.includeIndividualStudentSheets) {
-            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, formattingContext)
+            createIndividualStudentSheets(workbook, allLogs, studentMap, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, homeworkScoringContext, formattingContext, sortedDynamicKeys)
         }
 
         if (options.includeStudentInfoSheet) {
@@ -250,66 +264,57 @@ class Exporter(
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        context: FormattingContext
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
+        context: FormattingContext,
+        dynamicHomeworkKeys: List<String>,
+        precalculatedHeaders: List<String>? = null,
+        precalculatedHeaderIndices: Map<String, Int>? = null
     ) {
         val sheet = workbook.createSheet(sheetName)
 
         sheet.createFreezePane(0, 1)
 
+        val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log" ||
+                (sheetName != "Behavior Log" && sheetName != "Quiz Log" && sheetName != "Homework Log")
 
-        val headers = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
-        val isMasterLog = sheetName == "Master Log" || sheetName == "Combined Log"
+        val headers = precalculatedHeaders ?: run {
+            val h = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name")
 
-        if (isMasterLog) {
-            headers.add("Log Type")
-        }
+            if (isMasterLog) {
+                h.add("Log Type")
+            }
 
-        // Collect dynamic keys from Homework Logs if relevant
-        // BOLT: Avoid filterIsInstance loop and use a more efficient collection strategy
-        val dynamicHomeworkKeys = if (sheetName == "Homework Log" || isMasterLog) {
-            val knownHomeworkKeys = (customHomeworkTypes.map { it.name } + customHomeworkStatuses.map { it.name }).toSet()
-            val keys = mutableSetOf<String>()
-            for (item in data) {
-                if (item is HomeworkLog) {
-                    item.marksData?.let { json ->
-                        keys.addAll(parseMarksData(json).keys)
-                    }
+            when (sheetName) {
+                "Behavior Log" -> h.add("Behavior")
+                "Quiz Log" -> {
+                    h.add("Quiz Name")
+                    h.add("Num Questions")
+                    quizMarkTypes.forEach { h.add(it.name) }
+                    h.add("Quiz Score (%)")
+                }
+                "Homework Log" -> {
+                    h.add("Homework Type/Session Name")
+                    h.add("Num Items")
+                    customHomeworkTypes.forEach { h.add(it.name) }
+                    customHomeworkStatuses.forEach { h.add(it.name) }
+                    dynamicHomeworkKeys.forEach { h.add(it) }
+                    h.add("Homework Score (Total Pts)")
+                    h.add("Homework Effort")
+                }
+                else -> {
+                    h.add("Item Name")
+                    quizMarkTypes.forEach { h.add(it.name) }
+                    h.add("Quiz Score (%)")
+                    customHomeworkTypes.forEach { h.add(it.name) }
+                    customHomeworkStatuses.forEach { h.add(it.name) }
+                    dynamicHomeworkKeys.forEach { h.add(it) }
+                    h.add("Homework Score (Total Pts)")
+                    h.add("Homework Effort")
                 }
             }
-            keys.filter { it !in knownHomeworkKeys }.sorted()
-        } else {
-            emptyList()
+            h.add("Comment")
+            h
         }
-
-        when (sheetName) {
-            "Behavior Log" -> headers.add("Behavior")
-            "Quiz Log" -> {
-                headers.add("Quiz Name")
-                headers.add("Num Questions")
-                quizMarkTypes.forEach { headers.add(it.name) }
-                headers.add("Quiz Score (%)")
-            }
-            "Homework Log" -> {
-                headers.add("Homework Type/Session Name")
-                headers.add("Num Items")
-                customHomeworkTypes.forEach { headers.add(it.name) }
-                customHomeworkStatuses.forEach { headers.add(it.name) }
-                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
-                headers.add("Homework Score (Total Pts)")
-                headers.add("Homework Effort")
-            }
-            else -> { // Master Log or Combined Log
-                headers.add("Item Name")
-                quizMarkTypes.forEach { headers.add(it.name) }
-                headers.add("Quiz Score (%)")
-                customHomeworkTypes.forEach { headers.add(it.name) }
-                customHomeworkStatuses.forEach { headers.add(it.name) }
-                dynamicHomeworkKeys.forEach { headers.add(it) } // Add dynamic keys
-                headers.add("Homework Score (Total Pts)")
-                headers.add("Homework Effort")
-            }
-        }
-        headers.add("Comment")
 
         val headerRow = sheet.createRow(0)
         headers.forEachIndexed { index, header ->
@@ -319,7 +324,7 @@ class Exporter(
         }
 
         // Cache indices in a Map for O(1) lookup
-        val headerIndices = headers.withIndex().associate { it.value to it.index }
+        val headerIndices = precalculatedHeaderIndices ?: headers.withIndex().associate { it.value to it.index }
         val behaviorCol = headerIndices["Behavior"] ?: -1
         val quizNameCol = headerIndices["Quiz Name"] ?: -1
         val itemNameCol = headerIndices["Item Name"] ?: -1
@@ -330,6 +335,16 @@ class Exporter(
         val homeworkScoreCol = headerIndices["Homework Score (Total Pts)"] ?: -1
         val homeworkEffortCol = headerIndices["Homework Effort"] ?: -1
         val markTypeIndices = quizMarkTypes.associate { it.name to (headerIndices[it.name] ?: -1) }
+
+        // BOLT: Resolve scoring context once to utilize QuizScoreEngine's identity-based memoization.
+        val scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes)
+
+        // BOLT: Date/Time formatting cache to avoid redundant ZonedDateTime and format() allocations
+        var lastTimestamp = -1L
+        var lastFullDate = ""
+        var lastDate = ""
+        var lastTime = ""
+        var lastDay = ""
 
         data.forEachIndexed { index, item ->
             val row = sheet.createRow(index + 1)
@@ -348,20 +363,28 @@ class Exporter(
                 else -> 0L
             }
 
-            val zonedDateTime = Instant.ofEpochMilli(timestamp).atZone(context.zoneId)
+            if (timestamp != lastTimestamp) {
+                val zonedDateTime = Instant.ofEpochMilli(timestamp).atZone(context.zoneId)
+                lastFullDate = context.fullDateFormat.format(zonedDateTime)
+                lastDate = context.dateFormat.format(zonedDateTime)
+                lastTime = context.timeFormat.format(zonedDateTime)
+                lastDay = context.dayFormat.format(zonedDateTime)
+                lastTimestamp = timestamp
+            }
+
             var col = 0
-            row.createCell(col++).setCellValue(context.fullDateFormat.format(zonedDateTime))
+            row.createCell(col++).setCellValue(lastFullDate)
             row.createCell(col).apply {
-                setCellValue(context.dateFormat.format(zonedDateTime))
+                setCellValue(lastDate)
                 cellStyle = context.rightAlignmentStyle
             }
             col++
             row.createCell(col).apply {
-                setCellValue(context.timeFormat.format(zonedDateTime))
+                setCellValue(lastTime)
                 cellStyle = context.rightAlignmentStyle
             }
             col++
-            row.createCell(col++).setCellValue(context.dayFormat.format(zonedDateTime))
+            row.createCell(col++).setCellValue(lastDay)
             row.createCell(col++).setCellValue(sanitize(student?.firstName ?: "Unknown"))
             row.createCell(col++).setCellValue(sanitize(student?.lastName ?: ""))
 
@@ -401,27 +424,17 @@ class Exporter(
                         }
                     }
 
-                    val marksData = parseMarksData(item.marksData)
-
-                    var totalScore = 0.0
-                    var totalPossible = 0.0
-
+                    val marksDataMap = QuizScoreEngine.getMarksData(item)
                     quizMarkTypes.forEach { markType ->
-                        val rawValue = marksData[markType.name]
-                        val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
+                        val markCount = marksDataMap[markType.id.toString()] ?: marksDataMap[markType.name] ?: 0
                         val markIndex = markTypeIndices[markType.name] ?: -1
                         if (markIndex != -1) row.createCell(markIndex).apply {
                             setCellValue(markCount.toDouble())
                             cellStyle = context.rightAlignmentStyle
                         }
-
-                        if (markType.contributesToTotal) {
-                            totalPossible += item.numQuestions.toDouble() * markType.defaultPoints
-                        }
-                        totalScore += markCount.toDouble() * markType.defaultPoints
                     }
 
-                    val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
+                    val scorePercent = QuizScoreEngine.calculatePercentage(item, scoringContext) ?: 0.0
                     if (quizScoreCol != -1) {
                         row.createCell(quizScoreCol).apply {
                             setCellValue(scorePercent)
@@ -440,12 +453,11 @@ class Exporter(
                     if (targetCol != -1) {
                         row.createCell(targetCol).setCellValue(sanitize(item.assignmentName))
                     }
-                    val marksData = if (item.marksData != null) parseMarksData(item.marksData) else null
+                    val marksData = if (item.marksData != null) HomeworkScoreEngine.parseMarksData(item.marksData) else null
 
                     if (marksData != null && marksData.isNotEmpty()) {
-                        var totalPoints = 0.0
                         var effort = ""
-                        
+
                         // Populate values for all known headers (Custom Types, Statuses, and Dynamic Keys)
                         // We iterate the map entries to find matching headers
                         marksData.forEach { (key, value) ->
@@ -456,22 +468,14 @@ class Exporter(
                                     setCellValue(sanitize(stringValue))
                                     cellStyle = context.rightAlignmentStyle
                                 }
-                                val doubleValue = if (value is Number) value.toDouble() else stringValue.toDoubleOrNull()
-                                if (doubleValue != null) {
-                                    // Heuristic: only add to total points if it's likely a score? 
-                                    // Or maybe we should only count known "Types"?
-                                    // For now, let's include it if it's numeric and NOT in Statuses
-                                    if (customHomeworkStatuses.none { it.name == key }) {
-                                         totalPoints += doubleValue
-                                    }
-                                }
-                                if (key.lowercase(Locale.getDefault()).contains("effort") || 
-                                    customHomeworkStatuses.any { it.name == key && it.name.lowercase().contains("effort") }) {
+                                // BOLT: Simplified effort detection logic to avoid redundant O(N) status scans.
+                                if (key.contains("effort", ignoreCase = true)) {
                                     effort = stringValue
                                 }
                             }
                         }
 
+                        val totalPoints = HomeworkScoreEngine.calculateTotalPoints(item, homeworkScoringContext)
                         if (homeworkScoreCol != -1) {
                             row.createCell(homeworkScoreCol).apply {
                                 setCellValue(totalPoints)
@@ -512,7 +516,9 @@ class Exporter(
      * All summaries are sorted by student last name to ensure a professional report layout.
      *
      * @param workbook The Apache POI Workbook instance.
-     * @param data All log entries included in the export.
+     * @param behaviorLogs Filtered behavior incidents.
+     * @param homeworkLogs Filtered homework logs.
+     * @param quizLogs Filtered quiz logs.
      * @param students Map of students for name resolution.
      * @param quizMarkTypes Configuration for score calculation.
      * @param customHomeworkTypes Configuration for homework point aggregation.
@@ -521,18 +527,20 @@ class Exporter(
      */
     private suspend fun createSummarySheet(
         workbook: Workbook,
-        data: List<Any>,
+        behaviorLogs: List<BehaviorEvent>,
+        homeworkLogs: List<HomeworkLog>,
+        quizLogs: List<QuizLog>,
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
         context: FormattingContext
     ) {
         val sheet = workbook.createSheet("Summary")
         var currentRow = 0
 
         // Behavior Summary
-        val behaviorLogs = data.filterIsInstance<BehaviorEvent>()
         if (behaviorLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Behavior Summary by Student")
@@ -544,8 +552,12 @@ class Exporter(
                 headerRow.createCell(index).setCellValue(header)
             }
 
-            val behaviorCounts = behaviorLogs.groupBy { it.studentId }
-                .mapValues { entry -> entry.value.groupingBy { it.type }.eachCount() }
+            // BOLT: Manual single-pass aggregation to avoid functional object churn
+            val behaviorCounts = mutableMapOf<Long, MutableMap<String, Int>>()
+            for (event in behaviorLogs) {
+                val counts = behaviorCounts.getOrPut(event.studentId) { mutableMapOf() }
+                counts[event.type] = (counts[event.type] ?: 0) + 1
+            }
 
             behaviorCounts.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
                 val studentBehaviors = behaviorCounts[studentId]
@@ -561,7 +573,6 @@ class Exporter(
         }
 
         // Quiz Summary
-        val quizLogs = data.filterIsInstance<QuizLog>()
         if (quizLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Quiz Averages by Student")
@@ -573,43 +584,35 @@ class Exporter(
                 headerRow.createCell(index).setCellValue(header)
             }
 
-            val quizScores = mutableMapOf<Long, MutableMap<String, MutableList<Double>>>()
-            quizLogs.forEach { log ->
-                val studentScores = quizScores.getOrPut(log.studentId) { mutableMapOf() }
-                val quizScoresList = studentScores.getOrPut(log.quizName) { mutableListOf() }
-                // Simplified score calculation
-                val marksData = parseMarksData(log.marksData)
-                var totalScore = 0.0
-                var totalPossible = 0.0
-                quizMarkTypes.forEach { markType ->
-                    val rawValue = marksData[markType.name]
-                    val markCount = if (rawValue is Number) rawValue.toInt() else rawValue?.toString()?.toIntOrNull() ?: 0
-                    if (markType.contributesToTotal) {
-                        totalPossible += log.numQuestions * markType.defaultPoints
-                    }
-                    totalScore += markCount * markType.defaultPoints
-                }
-                val scorePercent = if (totalPossible > 0) (totalScore / totalPossible) * 100 else 0.0
-                quizScoresList.add(scorePercent)
+            // BOLT: Manual single-pass aggregation with [DoubleArray] for [sum, count] to avoid boxing
+            val quizMetrics = mutableMapOf<Long, MutableMap<String, DoubleArray>>()
+            val scoringContextSummary = QuizScoreEngine.getScoringContext(quizMarkTypes)
+
+            for (log in quizLogs) {
+                val studentMetrics = quizMetrics.getOrPut(log.studentId) { mutableMapOf() }
+                val metrics = studentMetrics.getOrPut(log.quizName) { DoubleArray(2) } // [0] = sum, [1] = count
+
+                val scorePercent = QuizScoreEngine.calculatePercentage(log, scoringContextSummary) ?: 0.0
+                metrics[0] += scorePercent
+                metrics[1] += 1.0
             }
 
-            quizScores.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
-                val studentQuizzes = quizScores[studentId]
+            quizMetrics.keys.sortedWith(compareBy { students[it]?.lastName }).forEach { studentId ->
+                val studentQuizzes = quizMetrics[studentId]
                 studentQuizzes?.keys?.sorted()?.forEach { quizName ->
-                    val scores = studentQuizzes[quizName]!!
+                    val metrics = studentQuizzes[quizName]!!
                     val row = sheet.createRow(currentRow++)
                     val student = students[studentId]
                     row.createCell(0).setCellValue(sanitize(if(student != null) "${student.firstName} ${student.lastName}" else "Unknown"))
                     row.createCell(1).setCellValue(sanitize(quizName))
-                    row.createCell(2).setCellValue(scores.average())
-                    row.createCell(3).setCellValue(scores.size.toDouble())
+                    row.createCell(2).setCellValue(if (metrics[1] > 0) metrics[0] / metrics[1] else 0.0)
+                    row.createCell(3).setCellValue(metrics[1])
                 }
             }
             currentRow++
         }
 
         // Homework Summary
-        val homeworkLogs = data.filterIsInstance<HomeworkLog>()
         if (homeworkLogs.isNotEmpty()) {
             val cell = sheet.createRow(currentRow++).createCell(0)
             cell.setCellValue("Homework Completion by Student")
@@ -625,14 +628,7 @@ class Exporter(
             homeworkLogs.forEach { log ->
                 val studentSummary = homeworkSummary.getOrPut(log.studentId) { mutableMapOf() }
                 val assignmentSummary = studentSummary.getOrPut(log.assignmentName) { Pair(0, 0.0) }
-                var points = 0.0
-                log.marksData?.let {
-                    val marks = parseMarksData(it)
-                    marks.values.forEach { value ->
-                         val doubleVal = if (value is Number) value.toDouble() else value.toString().toDoubleOrNull()
-                        doubleVal?.let { points += it }
-                    }
-                }
+                val points = HomeworkScoreEngine.calculateTotalPoints(log, homeworkScoringContext)
                 studentSummary[log.assignmentName] = Pair(assignmentSummary.first + 1, assignmentSummary.second + points)
             }
 
@@ -658,21 +654,23 @@ class Exporter(
     /**
      * Creates a separate worksheet for each student that has associated log entries.
      *
-     * This method is optimized for large classrooms by grouping all provided logs
-     * by student ID in a single pass before creating the worksheets. Sheet names
-     * are sanitized to comply with Excel's naming restrictions (max 31 characters,
-     * restricted special symbols).
+     * This method is optimized for large classrooms by grouping the pre-sorted master log
+     * by student ID in a single pass before creating the worksheets. This maintains
+     * chronological order within each student's sheet without redundant sorting.
      */
     private suspend fun createIndividualStudentSheets(
         workbook: Workbook,
-        data: List<Any>,
+        allLogs: List<Any>,
         students: Map<Long, Student>,
         quizMarkTypes: List<QuizMarkType>,
         customHomeworkTypes: List<CustomHomeworkType>,
         customHomeworkStatuses: List<CustomHomeworkStatus>,
-        context: FormattingContext
+        homeworkScoringContext: HomeworkScoreEngine.HomeworkScoringContext,
+        context: FormattingContext,
+        dynamicHomeworkKeys: List<String>
     ) {
-        val logsByStudent = data.groupBy {
+        // BOLT: Group by student on already-sorted list to maintain chronological order without re-sorting
+        val logsByStudent = allLogs.groupBy {
             when (it) {
                 is BehaviorEvent -> it.studentId
                 is HomeworkLog -> it.studentId
@@ -681,11 +679,37 @@ class Exporter(
             }
         }
 
+        // BOLT: Pre-calculate common headers and indices once for all student sheets.
+        val studentHeaders = mutableListOf("Timestamp", "Date", "Time", "Day", "First Name", "Last Name", "Log Type", "Item Name")
+        quizMarkTypes.forEach { studentHeaders.add(it.name) }
+        studentHeaders.add("Quiz Score (%)")
+        customHomeworkTypes.forEach { studentHeaders.add(it.name) }
+        customHomeworkStatuses.forEach { studentHeaders.add(it.name) }
+        dynamicHomeworkKeys.forEach { studentHeaders.add(it) }
+        studentHeaders.add("Homework Score (Total Pts)")
+        studentHeaders.add("Homework Effort")
+        studentHeaders.add("Comment")
+
+        val studentHeaderIndices = studentHeaders.withIndex().associate { it.value to it.index }
+
         logsByStudent.forEach { (studentId, studentLogs) ->
             val student = students[studentId]
             if (student != null) {
-                val studentSheetName = "${student.firstName}_${student.lastName}".replace(Regex("[^a-zA-Z0-9_]"), "_").take(31)
-                createSheet(workbook, studentSheetName, studentLogs, students, quizMarkTypes, customHomeworkTypes, customHomeworkStatuses, context)
+                val studentSheetName = SHEET_NAME_CLEANER.replace("${student.firstName}_${student.lastName}", "_").take(31)
+                createSheet(
+                    workbook = workbook,
+                    sheetName = studentSheetName,
+                    data = studentLogs,
+                    students = students,
+                    quizMarkTypes = quizMarkTypes,
+                    customHomeworkTypes = customHomeworkTypes,
+                    customHomeworkStatuses = customHomeworkStatuses,
+                    homeworkScoringContext = homeworkScoringContext,
+                    context = context,
+                    dynamicHomeworkKeys = dynamicHomeworkKeys,
+                    precalculatedHeaders = studentHeaders,
+                    precalculatedHeaderIndices = studentHeaderIndices
+                )
             }
         }
     }
@@ -734,11 +758,14 @@ class Exporter(
         val zoneId = context.zoneId
 
         // Determine date range from options or fallback to log boundaries.
-        val startMillis = options.startDate ?: listOfNotNull(
-            behaviorEvents.minOfOrNull { it.timestamp },
-            homeworkLogs.minOfOrNull { it.loggedAt },
-            quizLogs.minOfOrNull { it.loggedAt }
-        ).minOrNull() ?: System.currentTimeMillis()
+        // BOLT: Use firstOrNull() for O(1) start detection as logs are pre-sorted ASC in the export pipeline.
+        val startMillis = options.startDate ?: run {
+            val bStart = behaviorEvents.firstOrNull()?.timestamp ?: Long.MAX_VALUE
+            val hStart = homeworkLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val qStart = quizLogs.firstOrNull()?.loggedAt ?: Long.MAX_VALUE
+            val min = minOf(bStart, minOf(hStart, qStart))
+            if (min == Long.MAX_VALUE) System.currentTimeMillis() else min
+        }
         val endMillis = options.endDate ?: System.currentTimeMillis()
 
         val reportStartDay = Instant.ofEpochMilli(startMillis).atZone(zoneId).toLocalDate().toEpochDay()
@@ -751,21 +778,59 @@ class Exporter(
         val lastReportDay = reportStartDay + totalDaysInRange - 1
 
         // Track active days per student (optimized for O(1) presence checks using epoch day)
-        val studentActiveDays = mutableMapOf<Long, MutableSet<Long>>()
-        behaviorEvents.forEach { event ->
-            studentActiveDays.getOrPut(event.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(event.timestamp).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+        // BOLT: Replaced MutableMap<Long, MutableSet<Long>> with LongSparseArray<BitSet>
+        // to eliminate boxed Long allocations and reduce memory footprint.
+        val studentActiveDays = android.util.LongSparseArray<java.util.BitSet>()
+
+        // BOLT: Temporal cache for epoch day calculations to reduce object churn
+        var lastDayStartMs = Long.MIN_VALUE
+        var lastDayEndMs = Long.MIN_VALUE
+        var lastEpochDay = -1L
+
+        fun getEpochDay(ms: Long): Long {
+            if (ms in lastDayStartMs..lastDayEndMs) return lastEpochDay
+            val localDate = Instant.ofEpochMilli(ms).atZone(zoneId).toLocalDate()
+            lastEpochDay = localDate.toEpochDay()
+            lastDayStartMs = localDate.atStartOfDay(zoneId).toInstant().toEpochMilli()
+            lastDayEndMs = localDate.plusDays(1).atStartOfDay(zoneId).toInstant().toEpochMilli() - 1
+            return lastEpochDay
         }
-        homeworkLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+
+        for (i in behaviorEvents.indices) {
+            val event = behaviorEvents[i]
+            val day = getEpochDay(event.timestamp)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(event.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(event.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
         }
-        quizLogs.forEach { log ->
-            studentActiveDays.getOrPut(log.studentId) { mutableSetOf() }.add(
-                Instant.ofEpochMilli(log.loggedAt).atZone(zoneId).toLocalDate().toEpochDay()
-            )
+        for (i in homeworkLogs.indices) {
+            val log = homeworkLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
+        }
+        for (i in quizLogs.indices) {
+            val log = quizLogs[i]
+            val day = getEpochDay(log.loggedAt)
+            if (day in reportStartDay..lastReportDay) {
+                var bitSet = studentActiveDays.get(log.studentId)
+                if (bitSet == null) {
+                    bitSet = java.util.BitSet(totalDaysInRange)
+                    studentActiveDays.put(log.studentId, bitSet)
+                }
+                bitSet.set((day - reportStartDay).toInt())
+            }
         }
 
         val headers = mutableListOf("Student Name")
@@ -799,18 +864,18 @@ class Exporter(
             val row = sheet.createRow(rowIndex + 1)
             row.createCell(0).setCellValue(sanitize("${student.firstName} ${student.lastName}"))
 
-            var totalPresent = 0
-            val presentDays = studentActiveDays[student.id] ?: emptySet()
+            val bitSet = studentActiveDays.get(student.id)
+
+            // BOLT: Optimize nested loop by counting active days within the report range.
+            // Using bitSet.cardinality() provides an efficient O(1) population count.
+            val totalPresent = bitSet?.cardinality() ?: 0
 
             for (dayOffset in 0 until totalDaysInRange) {
-                val epochDay = reportStartDay + dayOffset
-                val isPresent = presentDays.contains(epochDay)
+                val isPresent = bitSet?.get(dayOffset) ?: false
 
                 val cell = row.createCell(dayOffset + 1)
                 cell.setCellValue(if (isPresent) "P" else "A")
                 cell.cellStyle = centerStyle
-
-                if (isPresent) totalPresent++
             }
 
             val totalAbsent = totalDaysInRange - totalPresent
@@ -832,13 +897,28 @@ class Exporter(
      *
      * This prevents Excel Formula Injection (CSV Injection) vulnerabilities.
      */
-    private fun sanitize(value: String?): String {
+    internal fun sanitize(value: String?): String {
         if (value.isNullOrBlank()) return ""
-        val triggers = charArrayOf('=', '+', '-', '@')
-        return if (value[0] in triggers) {
+
+        // BOLT: Avoid trim() string allocation by manually finding the first non-whitespace character
+        var firstNonSpace = -1
+        for (i in value.indices) {
+            if (!value[i].isWhitespace()) {
+                firstNonSpace = i
+                break
+            }
+        }
+
+        return if (firstNonSpace != -1 && value[firstNonSpace] in TRIGGERS) {
             "'$value"
         } else {
             value
         }
+    }
+
+    companion object {
+        /** BOLT: Pre-allocate triggers array and Regex to avoid object churn. */
+        private val TRIGGERS = charArrayOf('=', '+', '-', '@', '%')
+        private val SHEET_NAME_CLEANER = Regex("[^a-zA-Z0-9_]")
     }
 }

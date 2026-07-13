@@ -45,11 +45,20 @@ interface BehaviorEventDao {
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT 1")
     suspend fun getMostRecentBehaviorForStudent(studentId: Long): BehaviorEvent?
 
+    @Query("SELECT * FROM behavior_events ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLastBehaviorEvent(): BehaviorEvent?
+
+    @Query("SELECT * FROM behavior_events ORDER BY timestamp DESC LIMIT 1")
+    fun getLastBehaviorEventFlow(): kotlinx.coroutines.flow.Flow<BehaviorEvent?>
+
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentBehaviorEventsForStudent(studentId: Long, limit: Int): LiveData<List<BehaviorEvent>>
 
     @Query("SELECT * FROM behavior_events WHERE studentId = :studentId ORDER BY timestamp DESC LIMIT :limit")
     suspend fun getRecentBehaviorEventsForStudentList(studentId: Long, limit: Int): List<BehaviorEvent>
+
+    @Query("SELECT * FROM behavior_events WHERE studentId = :studentId")
+    suspend fun getBehaviorEventsForStudentNonLiveData(studentId: Long): List<BehaviorEvent>
 
     /**
      * Retrieves recent behavior events for UI display on student icons, applying

@@ -8,6 +8,15 @@ import kotlinx.serialization.Serializable
 
 /**
  * Represents a record of a student's performance on a quiz.
+ *
+ * This entity utilizes the "JSON-Backed Flexibility" strategy. To avoid frequent schema
+ * migrations when adding new scoring types (e.g., "Extra Credit", "Participation"),
+ * granular marks are stored in the [marksData] JSON field.
+ *
+ * ### Lifecycle:
+ * - **In-Progress**: During a live session, [isComplete] is `false`. Logs are held in the
+ *   ViewModel's session buffer.
+ * - **Finalized**: Once the session ends, logs are persisted to the database with [isComplete] set to `true`.
  */
 @Serializable
 @Entity(
@@ -38,7 +47,11 @@ data class QuizLog(
     /** The time the quiz was logged. */
     val loggedAt: Long,
     val comment: String?,
-    /** A JSON string representing a map of mark type names to their counts (e.g., '{"Correct": 8, "Incorrect": 2}'). */
+    /**
+     * A JSON string representing a map of mark type names to their counts.
+     * Example: `{"Correct": 8, "Incorrect": 2, "Partially Correct": 1}`.
+     * This allows for dynamic scoring metrics without modifying the SQLite schema.
+     */
     val marksData: String,
     /** Total number of questions in the quiz. */
     val numQuestions: Int,

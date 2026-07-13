@@ -3,6 +3,7 @@ package com.example.myapplication.util
 
 import android.util.Log
 import android.util.LruCache
+import java.util.concurrent.ConcurrentHashMap
 import com.example.myapplication.data.Student
 import com.example.myapplication.data.ConditionalFormattingRule
 import com.example.myapplication.data.BehaviorEvent
@@ -17,12 +18,18 @@ import kotlinx.serialization.InternalSerializationApi
 /**
  * Represents a time range and set of days when a conditional formatting rule is active.
  *
- * These objects are evaluated during the Stage 2 transformation in the seating chart update
- * pipeline. Using pre-formatted strings for time comparison allows for efficient temporal
- * filtering without expensive Calendar/Date object churn.
+ * ### Architectural Intent:
+ * These objects are evaluated during the **Stage 2: Transformation** phase of the seating chart update
+ * pipeline (see [com.example.myapplication.viewmodel.SeatingChartViewModel.updateStudentsForDisplay]).
  *
- * @property startTime The start time in "HH:mm" format (24-hour).
- * @property endTime The end time in "HH:mm" format (24-hour).
+ * ### Performance Strategy:
+ * Using pre-formatted "HH:mm" strings for time comparison allows the engine to perform temporal
+ * filtering using simple string range checks (`currentTimeString in start..end`). This avoids the
+ * significant object churn associated with repeatedly creating `Calendar`, `Date`, or `ZonedDateTime`
+ * objects for every student icon during high-frequency UI updates.
+ *
+ * @property startTime The start time in "HH:mm" format (24-hour, e.g., "08:30").
+ * @property endTime The end time in "HH:mm" format (24-hour, e.g., "15:45").
  * @property daysOfWeek List of integers representing days of the week (0=Monday, 6=Sunday).
  */
 @Serializable
@@ -34,37 +41,44 @@ data class ActiveTime(
 
 /**
  * Defines the criteria that must be met for a conditional formatting rule to be applied.
- * This class is serialized to JSON and stored in the [ConditionalFormattingRule] entity.
+ * This class is serialized to JSON and stored in the [ConditionalFormattingRule.conditionJson] column.
  *
  * ### Condition Type Schema:
- * Each `type` utilizes a specific subset of properties. Unused properties should be null.
+ * Each `type` utilizes a specific subset of properties. Unused properties should be null in the JSON.
  *
  * - **`group`**:
- *   - [groupId]: The ID of the student group to match.
+ *   - [groupId]: The database `Long` ID of the student group.
+ *   - *Example*: `{"type": "group", "group_id": 5}`
  * - **`behavior_count`**:
- *   - [behaviorNames]: Comma-separated list of behavior types to monitor (case-insensitive).
- *   - [countThreshold]: The minimum number of occurrences to trigger the rule.
- *   - [timeWindowHours]: The look-back period in hours (defaults to 24).
+ *   - [behaviorNames]: Comma-separated list of behavior types (e.g., "Participating, Helping").
+ *   - [countThreshold]: The integer threshold (e.g., 3).
+ *   - [timeWindowHours]: Hours to look back (e.g., 48).
+ *   - *Example*: `{"type": "behavior_count", "behavior_names": "Negative", "count_threshold": 2, "time_window_hours": 24}`
  * - **`quiz_score_threshold`**:
- *   - [quizNameContains]: Partial name filter for the quiz.
- *   - [scoreThresholdPercent]: Percentage value (0-100) to compare against.
- *   - [operator]: Comparison operator (`<=`, `>=`, `==`, `<`, `>`).
+ *   - [quizNameContains]: Substring to match quiz names.
+ *   - [scoreThresholdPercent]: Percentage value (0.0 to 100.0).
+ *   - [operator]: One of `<=`, `>=`, `==`, `<`, `>`.
+ *   - *Example*: `{"type": "quiz_score_threshold", "quiz_name_contains": "Midterm", "score_threshold_percent": 60.0, "operator": "<"}`
  * - **`live_quiz_response`**:
- *   - [quizResponse]: The exact string response to match (case-insensitive).
+ *   - [quizResponse]: String to match the latest response in a session.
+ *   - *Example*: `{"type": "live_quiz_response", "quiz_response": "Correct"}`
  * - **`live_homework_yes_no`**:
- *   - [homeworkTypeId]: The ID/name of the homework assignment.
- *   - [homeworkResponse]: The expected status (e.g., "Yes", "No").
+ *   - [homeworkTypeId]: The key for the specific homework step.
+ *   - [homeworkResponse]: The status string (e.g., "Done").
+ *   - *Example*: `{"type": "live_homework_yes_no", "homework_type_id": "Reading", "homework_response": "Done"}`
  * - **`live_homework_select`**:
- *   - [homeworkOptionName]: The specific multi-select option name to match.
+ *   - [homeworkOptionName]: The specific option in a multi-select step.
+ *   - *Example*: `{"type": "live_homework_select", "homework_option_name": "Signed"}`
  * - **`quiz_mark_count`**:
- *   - [markTypeId]: The ID of the specific quiz mark (e.g., "Correct").
- *   - [markCountThreshold]: The minimum count of that mark.
- *   - [markOperator]: Comparison operator for the count (`<=`, `>=`, `==`, etc.).
+ *   - [markTypeId]: The ID/Name of the mark (e.g., "Half Credit").
+ *   - [markCountThreshold]: The integer threshold.
+ *   - [markOperator]: One of `<=`, `>=`, `==`, `<`, `>`, `!=`.
+ *   - *Example*: `{"type": "quiz_mark_count", "mark_type_id": "Correct", "mark_count_threshold": 5, "mark_operator": ">="}`
  *
  * ### Global Filters:
- * These properties apply regardless of the [type]:
+ * These filters are evaluated before the specific condition type logic to allow for early-exit optimization.
  * - [activeModes]: List of UI modes (`behavior`, `quiz`, `homework`) where the rule is active.
- * - [activeTimes]: Specific time windows and days when the rule is evaluated.
+ * - [activeTimes]: Specific [ActiveTime] windows and days when the rule is evaluated.
  *
  * @property type The category of the condition.
  * @property groupId Used by `group` type.
@@ -117,23 +131,29 @@ data class Condition(
 @Serializable
 data class Format(
     val color: String? = null,
-    val outline: String? = null
+    val outline: String? = null,
+    @SerialName("application_style") val applicationStyle: String? = "stripe"
 )
 
 /**
  * A processed version of [ConditionalFormattingRule] where JSON strings have been
- * deserialized into [Condition] and [Format] objects.
+ * deserialized into domain objects.
  *
- * This class is a key component of the application's performance architecture. By
- * pre-decoding rules and pre-calculating sets (like [behaviorNamesSet]), the engine
- * avoids expensive JSON parsing and string splitting during high-frequency UI updates
- * (e.g., student dragging).
+ * ### Performance Context:
+ * This class is a key component of the application's **BOLT (Performance-Obsessed)** architecture.
+ * By pre-decoding rules into this format *before* the per-student rendering loop starts, the
+ * engine avoids:
+ * 1. **O(R * S)** JSON deserialization calls (where R = rules, S = students).
+ * 2. **O(R * S * B)** string splitting operations for behavior name lists (where B = behavior types).
+ *
+ * The pre-calculated [behaviorNamesSet] enables O(1) lookups during the behavioral analysis phase
+ * of rule evaluation.
  *
  * @property id The unique ID of the rule from the database.
  * @property priority The execution priority (lower numbers are processed first).
  * @property condition The deserialized condition criteria.
  * @property format The deserialized visual format.
- * @property behaviorNamesSet A pre-split set of lowercase behavior names derived from [Condition.behaviorNames] for O(1) matching.
+ * @property behaviorNamesSet A pre-split set of lowercase behavior names derived from [Condition.behaviorNames].
  */
 data class DecodedConditionalFormattingRule(
     val id: Int,
@@ -181,9 +201,28 @@ object ConditionalFormattingEngine {
 
     /**
      * Cache for decoded marks data JSON strings to avoid redundant deserialization.
-     * The key is the raw JSON string from [QuizLog.marksData].
+     *
+     * **Why**: [QuizLog.marksData] contains a JSON map of mark counts. Parsing this JSON
+     * for every rule evaluation for every student would create massive GC pressure.
+     * This cache ensures that identical JSON strings are parsed only once.
      */
     private val decodedMarksCache = LruCache<String, Map<String, Int>>(1000)
+
+    /**
+     * BOLT: Cache for lowercased behavior types.
+     *
+     * **Why**: Behavior comparisons are case-insensitive. Calling `.lowercase()` creates
+     * a new string allocation every time. In a loop of thousands of logs, this adds up.
+     * This cache memoizes the lowercase version of common behavior types.
+     *
+     * BOLT: Switched from LruCache to ConcurrentHashMap to eliminate lock contention
+     * in the high-frequency seating chart interaction path.
+     */
+    private val lowercaseCache = ConcurrentHashMap<String, String>()
+
+    private fun boltLowercase(input: String): String {
+        return lowercaseCache.get(input) ?: input.lowercase().also { lowercaseCache[input] = it }
+    }
 
     /**
      * Deserializes a list of [ConditionalFormattingRule] entities into [DecodedConditionalFormattingRule] objects.
@@ -197,7 +236,24 @@ object ConditionalFormattingEngine {
             try {
                 val condition = json.decodeFromString<Condition>(rule.conditionJson)
                 val format = json.decodeFromString<Format>(rule.formatJson)
-                val behaviorNamesSet = condition.behaviorNames?.split(',')?.map { it.trim().lowercase() }?.toSet() ?: emptySet()
+                val behaviorNamesSet = condition.behaviorNames?.let { input ->
+                    if (input.isBlank()) emptySet()
+                    else {
+                        val result = HashSet<String>()
+                        var start = 0
+                        val length = input.length
+                        while (start < length) {
+                            var end = input.indexOf(',', start)
+                            if (end == -1) end = length
+                            val part = input.substring(start, end).trim().lowercase()
+                            if (part.isNotEmpty()) {
+                                result.add(part)
+                            }
+                            start = end + 1
+                        }
+                        result
+                    }
+                } ?: emptySet()
                 DecodedConditionalFormattingRule(rule.id, rule.priority, condition, format, behaviorNamesSet)
             } catch (e: Exception) {
                 Log.e("ConditionalFormattingEngine", "Error decoding rule ${rule.id}: ${e.message}")
@@ -228,12 +284,13 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        quizMarkTypes: List<com.example.myapplication.data.QuizMarkType>,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
         liveHomeworkScores: Map<Long, Map<String, Any>>,
         currentMode: String
-    ): List<Pair<String?, String?>> {
+    ): List<DecodedConditionalFormattingRule> {
         val decodedRules = decodeRules(rules)
         val calendar = java.util.Calendar.getInstance()
         val dayOfWeek = when (calendar.get(java.util.Calendar.DAY_OF_WEEK)) {
@@ -256,6 +313,7 @@ object ConditionalFormattingEngine {
             behaviorLog = behaviorLog,
             quizLog = quizLog,
             homeworkLog = homeworkLog,
+            scoringContext = QuizScoreEngine.getScoringContext(quizMarkTypes),
             isLiveQuizActive = isLiveQuizActive,
             liveQuizScores = liveQuizScores,
             isLiveHomeworkActive = isLiveHomeworkActive,
@@ -275,6 +333,7 @@ object ConditionalFormattingEngine {
      * @param behaviorLog Complete list of behavior events for context.
      * @param quizLog Complete list of quiz logs for context.
      * @param homeworkLog Complete list of homework logs for context.
+     * @param scoringContext Optimized scoring metadata, resolved once per update cycle.
      * @param isLiveQuizActive Whether a live quiz session is currently in progress.
      * @param liveQuizScores Map of student ID to their current session data.
      * @param isLiveHomeworkActive Whether a live homework check is currently in progress.
@@ -290,6 +349,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        scoringContext: QuizScoreEngine.QuizScoringContext,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -297,16 +357,18 @@ object ConditionalFormattingEngine {
         currentMode: String,
         currentTimeMillis: Long,
         timeContext: FormattingTimeContext
-    ): List<Pair<String?, String?>> {
-        val matchingFormats = mutableListOf<Pair<String?, String?>>()
+    ): List<DecodedConditionalFormattingRule> {
+        var matchingRules: MutableList<DecodedConditionalFormattingRule>? = null
 
-        for (rule in rules) {
+        for (i in rules.indices) {
+            val rule = rules[i]
             if (checkCondition(
                     student,
                     rule,
                     behaviorLog,
                     quizLog,
                     homeworkLog,
+                    scoringContext,
                     isLiveQuizActive,
                     liveQuizScores,
                     isLiveHomeworkActive,
@@ -316,16 +378,47 @@ object ConditionalFormattingEngine {
                     timeContext
                 )
             ) {
-                matchingFormats.add(Pair(rule.format.color, rule.format.outline))
+                if (matchingRules == null) {
+                    matchingRules = mutableListOf()
+                }
+                matchingRules.add(rule)
             }
         }
 
-        return matchingFormats
+        return matchingRules ?: java.util.Collections.emptyList()
     }
 
     /**
      * Determines if a specific rule's condition is met for the given student and context.
      *
+     * This evaluation happens inside the Stage 2 transformation of the seating chart update
+     * pipeline. It is designed to be highly efficient, leveraging BOLT optimizations to
+     * avoid redundant computation.
+     *
+     * ### Evaluation Logic:
+     * 1. **Global Mode Filter**: Rules with [Condition.activeModes] only execute if the
+     *    current UI mode matches one of the specified modes.
+     * 2. **Global Time Filter**: Rules with [Condition.activeTimes] only execute if the
+     *    current system time falls within the specified ranges.
+     * 3. **Behavioral Analysis**: Rules using `behavior_count` leverage manual loops and early
+     *    returns to quickly count incidents within the sliding time window.
+     * 4. **Academic Analysis**: Rules using `quiz_score_threshold` or `quiz_mark_count`
+     *    evaluate historical data and use [decodedMarksCache] to minimize JSON overhead.
+     * 5. **Live Session Analysis**: Rules using `live_quiz_*` or `live_homework_*` check
+     *    real-time session state from the [liveQuizScores] and [liveHomeworkScores] maps.
+     *
+     * @param student The student UI data being rendered.
+     * @param rule The pre-decoded rule to evaluate.
+     * @param behaviorLog Complete list of behavior events for context.
+     * @param quizLog Complete list of quiz logs for context.
+     * @param homeworkLog Complete list of homework logs for context.
+     * @param isLiveQuizActive Whether a live quiz session is currently in progress.
+     * @param liveQuizScores Map of student ID to their current session data.
+     * @param isLiveHomeworkActive Whether a live homework check is currently in progress.
+     * @param liveHomeworkScores Map of student ID to their current session data.
+     * @param currentMode The current UI mode.
+     * @param currentTimeMillis The current system time (cached).
+     * @param timeContext Pre-calculated day and time strings.
      * @return True if the condition matches, false otherwise.
      */
     private fun checkCondition(
@@ -334,6 +427,7 @@ object ConditionalFormattingEngine {
         behaviorLog: List<BehaviorEvent>,
         quizLog: List<QuizLog>,
         homeworkLog: List<HomeworkLog>,
+        scoringContext: QuizScoreEngine.QuizScoringContext,
         isLiveQuizActive: Boolean,
         liveQuizScores: Map<Long, Map<String, Any>>,
         isLiveHomeworkActive: Boolean,
@@ -385,11 +479,26 @@ object ConditionalFormattingEngine {
                 val timeWindowHours = condition.timeWindowHours ?: 24
                 val cutoffTime = currentTimeMillis - timeWindowHours.toLong() * 3600000L
 
-                // BOLT: Manual count with early break since behaviorLog is sorted DESC
+                // BOLT: Manual count with early break since behaviorLog is sorted DESC.
+                // Optimization: Cache the last processed type to avoid redundant lowercase/set lookups for consecutive identical types.
                 var count = 0
-                for (event in behaviorLog) {
+                var lastType: String? = null
+                var lastMatch = false
+
+                for (i in behaviorLog.indices) {
+                    val event = behaviorLog[i]
                     if (event.timestamp < cutoffTime) break
-                    if (behaviorNames.contains(event.type.lowercase())) {
+
+                    val currentType = event.type
+                    val isMatch = if (currentType == lastType) {
+                        lastMatch
+                    } else {
+                        lastType = currentType
+                        lastMatch = behaviorNames.contains(boltLowercase(currentType))
+                        lastMatch
+                    }
+
+                    if (isMatch) {
                         count++
                         if (count >= countThreshold) return true // BOLT: Return early if threshold met
                     }
@@ -407,10 +516,8 @@ object ConditionalFormattingEngine {
                     // BOLT: Removed redundant studentId check as quizLog is already student-specific
                     if (quizNameContains.isNotEmpty() && !log.quizName.contains(quizNameContains, ignoreCase = true)) return@any false
 
-                    val score = log.markValue
-                    val maxScore = log.maxMarkValue
-                    if (score != null && maxScore != null && maxScore > 0) {
-                        val percentage = (score.toDouble() / maxScore.toDouble()) * 100 // Ensure floating-point division
+                    val percentage = QuizScoreEngine.calculatePercentage(log, scoringContext)
+                    if (percentage != null) {
                         when (operator) {
                             "<=" -> percentage <= scoreThresholdPercent
                             ">=" -> percentage >= scoreThresholdPercent
@@ -461,9 +568,7 @@ object ConditionalFormattingEngine {
                 quizLog.any { log ->
                     // BOLT: Removed redundant studentId check
                     try {
-                        val marksData = decodedMarksCache.get(log.marksData) ?: json.decodeFromString<Map<String, Int>>(log.marksData).also {
-                            decodedMarksCache.put(log.marksData, it)
-                        }
+                        val marksData = QuizScoreEngine.getMarksData(log)
                         val count = marksData[markTypeId] ?: 0
                         when (operator) {
                             ">=" -> count >= countThreshold

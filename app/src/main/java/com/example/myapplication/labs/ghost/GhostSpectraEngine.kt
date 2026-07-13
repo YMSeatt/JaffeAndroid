@@ -1,6 +1,7 @@
 package com.example.myapplication.labs.ghost
 
 import com.example.myapplication.data.BehaviorEvent
+import com.example.myapplication.util.maskStudentName
 import java.util.Locale
 import kotlin.math.sqrt
 
@@ -40,6 +41,8 @@ object GhostSpectraEngine {
      * Higher density occurs when there is a high variance in student performance
      * or behavior, representing a "diffraction" of the class into different groups.
      *
+     * BOLT: Optimized using a manual loop and HashSet to avoid intermediate list allocations.
+     *
      * @param behaviorLogs Historical behavioral events.
      * @return A normalized value (0.0 to 1.0) for the iDensity uniform.
      */
@@ -47,11 +50,14 @@ object GhostSpectraEngine {
         if (behaviorLogs.isEmpty()) return 0.2f
 
         // Count different types of behaviors to measure "spectral diversity"
-        val behaviorTypes = behaviorLogs.map { it.type }.distinct().size
+        val behaviorTypes = HashSet<String>()
+        for (log in behaviorLogs) {
+            behaviorTypes.add(log.type)
+        }
         val totalLogs = behaviorLogs.size
 
         // More behavior types = higher dispersion (more "colors" in the class)
-        val diversityRatio = (behaviorTypes.toFloat() / 10f).coerceAtMost(1.0f)
+        val diversityRatio = (behaviorTypes.size.toFloat() / 10f).coerceAtMost(1.0f)
 
         // Log volume also contributes to "mass" and thus refractive density
         val volumeFactor = (totalLogs.toFloat() / 100f).coerceAtMost(1.0f)
@@ -63,6 +69,9 @@ object GhostSpectraEngine {
      * Calculates the Classroom Agitation level.
      * Higher agitation occurs with recent negative behavioral events.
      *
+     * BOLT: Optimized using a manual loop with early break (DESC sorted logs) to reduce
+     * complexity from O(L) to O(Recent).
+     *
      * @param behaviorLogs Historical behavioral events.
      * @return A normalized value (0.0 to 1.0) for the iAgitation uniform.
      */
@@ -71,21 +80,27 @@ object GhostSpectraEngine {
 
         val now = System.currentTimeMillis()
         val recentWindow = 24 * 60 * 60 * 1000L // Last 24 hours
+        val cutoff = now - recentWindow
 
-        val recentNegativeLogs = behaviorLogs.filter {
-            it.timestamp > (now - recentWindow) && it.type.contains("Negative", ignoreCase = true)
+        var recentNegativeCount = 0
+        for (log in behaviorLogs) {
+            if (log.timestamp <= cutoff) break // BOLT: Optimization for DESC sorted logs
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                recentNegativeCount++
+            }
         }
 
-        if (recentNegativeLogs.isEmpty()) return 0.1f
+        if (recentNegativeCount == 0) return 0.1f
 
         // Agitation scales with the frequency of negative events in the recent window
-        val count = recentNegativeLogs.size
-        return (count.toFloat() / 10f).coerceIn(0.1f, 1.0f)
+        return (recentNegativeCount.toFloat() / 10f).coerceIn(0.1f, 1.0f)
     }
 
     /**
      * Performs spectroscopy analysis on a single student's behavioral history.
      * Parity-matched with the logic in `Python/ghost_spectra_analyzer.py`.
+     *
+     * BOLT: Optimized to use a manual loop instead of `filter` to reduce allocations.
      *
      * @param studentId The ID of the student.
      * @param studentLogs The list of logs associated with this student.
@@ -96,13 +111,18 @@ object GhostSpectraEngine {
             return StudentSpectra(studentId, 0f, 0f, SpectralState.STABLE)
         }
 
-        val negativeLogs = studentLogs.filter { it.type.contains("Negative", ignoreCase = true) }
+        var negativeCount = 0
+        for (log in studentLogs) {
+            if (log.type.contains("Negative", ignoreCase = true)) {
+                negativeCount++
+            }
+        }
 
         // Normalized intensity based on log volume (Threshold: 20 logs = 1.0)
         val intensity = (studentLogs.size.toFloat() / 20f).coerceAtMost(1.5f)
 
         // Spectral shift (ratio of negative logs)
-        val shift = negativeLogs.size.toFloat() / studentLogs.size.toFloat()
+        val shift = negativeCount.toFloat() / studentLogs.size.toFloat()
 
         val state = when {
             shift > 0.5f -> SpectralState.INFRARED
@@ -144,7 +164,9 @@ object GhostSpectraEngine {
 
         report.append("## [NODE SPECTROSCOPY]\n")
         studentSpectra.forEach { spectra ->
-            val name = studentNames[spectra.studentId] ?: "Student ${spectra.studentId}"
+            val rawName = studentNames[spectra.studentId] ?: "Student ${spectra.studentId}"
+            // PRIVACY: Mask the student name in the report content using the hardened standard
+            val name = maskStudentName(rawName)
             val status = when (spectra.state) {
                 SpectralState.INFRARED -> "INFRARED (At Risk)"
                 SpectralState.ULTRAVIOLET -> "ULTRAVIOLET (High Engagement)"

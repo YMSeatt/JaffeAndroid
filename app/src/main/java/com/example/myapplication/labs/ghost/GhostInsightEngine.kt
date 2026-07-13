@@ -49,19 +49,51 @@ object GhostInsightEngine {
         quizLogs: List<QuizLog>,
         homeworkLogs: List<HomeworkLog>
     ): GhostInsight {
-        // Simple analysis logic
-        val positiveBehavior = behaviorLogs.count { !it.type.contains("Negative", ignoreCase = true) }
-        val negativeBehavior = behaviorLogs.count { it.type.contains("Negative", ignoreCase = true) }
+        // BOLT: Optimized using manual index-based loops and single-pass analysis to eliminate
+        // iterator allocations and intermediate list creation (count/mapNotNull/average).
 
-        val quizScores = quizLogs.mapNotNull { it.markValue?.let { v -> it.maxMarkValue?.let { m -> v / m } } }
-        val avgQuiz = if (quizScores.isNotEmpty()) quizScores.average() else 0.5
+        var positiveBehavior = 0
+        var negativeBehavior = 0
+        for (i in 0 until behaviorLogs.size) {
+            if (behaviorLogs[i].type.contains("Negative", ignoreCase = true)) {
+                negativeBehavior++
+            } else {
+                positiveBehavior++
+            }
+        }
 
+        var quizSum = 0.0
+        var quizCount = 0
+        for (i in 0 until quizLogs.size) {
+            val log = quizLogs[i]
+            val v = log.markValue
+            val m = log.maxMarkValue
+            if (v != null && m != null && m > 0.0) {
+                quizSum += v / m
+                quizCount++
+            }
+        }
+        val avgQuiz = if (quizCount > 0) quizSum / quizCount else 0.5
+
+        var homeworkDoneCount = 0
+        for (i in 0 until homeworkLogs.size) {
+            if (homeworkLogs[i].status.contains("Done", ignoreCase = true)) {
+                homeworkDoneCount++
+            }
+        }
         val homeworkCompletion = if (homeworkLogs.isNotEmpty()) {
-            homeworkLogs.count { it.status.contains("Done", ignoreCase = true) }.toDouble() / homeworkLogs.size
+            homeworkDoneCount.toDouble() / homeworkLogs.size
         } else 1.0
 
-        return when {
-            avgQuiz > 0.8 && homeworkCompletion > 0.8 && negativeBehavior == 0 -> {
+        val status = calculateInsightStatus(
+            avgQuiz = avgQuiz,
+            homeworkCompletion = homeworkCompletion,
+            positiveBehavior = positiveBehavior,
+            negativeBehavior = negativeBehavior
+        )
+
+        return when (status) {
+            InsightStatus.OPTIMAL -> {
                 GhostInsight(
                     title = "Peak Performer",
                     summary = "$studentName is excelling across all metrics. Neural trends indicate high engagement and consistency.",
@@ -69,23 +101,24 @@ object GhostInsightEngine {
                     status = InsightStatus.OPTIMAL
                 )
             }
-            negativeBehavior > positiveBehavior -> {
-                GhostInsight(
-                    title = "Attention Required",
-                    summary = "Recent behavioral fluctuations detected. Data suggests a potential disconnect with classroom expectations.",
-                    recommendation = "Schedule a one-on-one check-in to identify underlying stressors.",
-                    status = InsightStatus.CONCERNING
-                )
+            InsightStatus.CONCERNING -> {
+                if (negativeBehavior > positiveBehavior) {
+                    GhostInsight(
+                        title = "Attention Required",
+                        summary = "Recent behavioral fluctuations detected. Data suggests a potential disconnect with classroom expectations.",
+                        recommendation = "Schedule a one-on-one check-in to identify underlying stressors.",
+                        status = InsightStatus.CONCERNING
+                    )
+                } else {
+                    GhostInsight(
+                        title = "Academic Support Needed",
+                        summary = "Downward trend in assessment outcomes. Homework consistency is below the class average.",
+                        recommendation = "Provide supplementary resources or a targeted revision plan.",
+                        status = InsightStatus.CONCERNING
+                    )
+                }
             }
-            avgQuiz < 0.6 || homeworkCompletion < 0.6 -> {
-                GhostInsight(
-                    title = "Academic Support Needed",
-                    summary = "Downward trend in assessment outcomes. Homework consistency is below the class average.",
-                    recommendation = "Provide supplementary resources or a targeted revision plan.",
-                    status = InsightStatus.CONCERNING
-                )
-            }
-            else -> {
+            InsightStatus.IMPROVING -> {
                 GhostInsight(
                     title = "Steady Progress",
                     summary = "Maintaining stable performance. Interactions are within expected neural parameters.",
@@ -93,6 +126,34 @@ object GhostInsightEngine {
                     status = InsightStatus.IMPROVING
                 )
             }
+            InsightStatus.UNKNOWN -> {
+                GhostInsight(
+                    title = "Data Incomplete",
+                    summary = "Insufficient neural data points to synthesize a comprehensive insight for $studentName.",
+                    recommendation = "Continue logging behavioral and academic interactions.",
+                    status = InsightStatus.UNKNOWN
+                )
+            }
+        }
+    }
+
+    /**
+     * BOLT: Lightweight insight status calculation.
+     *
+     * Determines the [InsightStatus] directly from pre-calculated metrics, avoiding
+     * list scans and full [GhostInsight] object allocations in the background update pipeline.
+     */
+    fun calculateInsightStatus(
+        avgQuiz: Double,
+        homeworkCompletion: Double,
+        positiveBehavior: Int,
+        negativeBehavior: Int
+    ): InsightStatus {
+        return when {
+            avgQuiz > 0.8 && homeworkCompletion > 0.8 && negativeBehavior == 0 -> InsightStatus.OPTIMAL
+            negativeBehavior > positiveBehavior -> InsightStatus.CONCERNING
+            avgQuiz < 0.6 || homeworkCompletion < 0.6 -> InsightStatus.CONCERNING
+            else -> InsightStatus.IMPROVING
         }
     }
 }

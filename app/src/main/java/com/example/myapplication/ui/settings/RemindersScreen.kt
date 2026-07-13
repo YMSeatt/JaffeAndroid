@@ -31,33 +31,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.myapplication.data.Reminder
 import com.example.myapplication.ui.dialogs.AddReminderDialog
 import com.example.myapplication.ui.dialogs.EditReminderDialog
-import com.example.myapplication.viewmodel.RemindersViewModel
+import com.example.myapplication.viewmodel.ReminderViewModel
 
 /**
- * RemindersScreen (Settings): A legacy user interface for managing reminders.
+ * RemindersScreen (Settings): A user interface for managing reminders within Settings.
  *
- * This version of the reminders screen is integrated into the Settings navigation
- * but uses a redundant implementation ([RemindersViewModel] and [AlarmScheduler]).
- *
- * ### ⚠️ Redundancy Note:
- * This component is considered **legacy**. Developers should refer to the primary
- * [com.example.myapplication.ui.screens.RemindersScreen] for the most up-to-date
- * implementation and features.
+ * This screen has been hardened to use the primary, secure [ReminderViewModel].
  */
-@Deprecated("Use the primary RemindersScreen in ui.screens instead.")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RemindersScreen(onDismiss: () -> Unit, remindersViewModel: RemindersViewModel = viewModel()) {
+fun RemindersScreen(onDismiss: () -> Unit, reminderViewModel: ReminderViewModel = viewModel()) {
     var showAddReminderDialog by remember { mutableStateOf(false) }
     var showEditReminderDialog by remember { mutableStateOf(false) }
     var selectedReminder by remember { mutableStateOf<Reminder?>(null) }
-    val reminders by remindersViewModel.allReminders.observeAsState(emptyList())
+    val reminders by reminderViewModel.allReminders.observeAsState(emptyList())
 
     if (showAddReminderDialog) {
         AddReminderDialog(
             onDismiss = { showAddReminderDialog = false },
             onAddReminder = { reminder ->
-                remindersViewModel.addReminder(reminder)
+                reminderViewModel.insert(reminder)
                 showAddReminderDialog = false
             }
         )
@@ -68,7 +61,7 @@ fun RemindersScreen(onDismiss: () -> Unit, remindersViewModel: RemindersViewMode
             reminder = selectedReminder!!,
             onDismiss = { showEditReminderDialog = false },
             onUpdateReminder = { reminder ->
-                remindersViewModel.updateReminder(reminder)
+                reminderViewModel.update(reminder)
                 showEditReminderDialog = false
             }
         )
@@ -107,7 +100,7 @@ fun RemindersScreen(onDismiss: () -> Unit, remindersViewModel: RemindersViewMode
                         }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edit Reminder")
                         }
-                        IconButton(onClick = { remindersViewModel.deleteReminder(reminder) }) {
+                        IconButton(onClick = { reminderViewModel.delete(reminder.id) }) {
                             Icon(Icons.Default.Delete, contentDescription = "Delete Reminder")
                         }
                     }

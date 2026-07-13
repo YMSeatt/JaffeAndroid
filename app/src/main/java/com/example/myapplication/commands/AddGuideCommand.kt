@@ -11,10 +11,10 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param guide The [Guide] entity to be added.
  */
 class AddGuideCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val guide: Guide
+    internal val viewModel: SeatingChartViewModel,
+    internal val guide: Guide
 ) : Command {
-    private var generatedId: Long = guide.id
+    internal var generatedId: Long = guide.id
 
     override suspend fun execute() {
         val guideToInsert = if (generatedId != 0L) guide.copy(id = generatedId) else guide

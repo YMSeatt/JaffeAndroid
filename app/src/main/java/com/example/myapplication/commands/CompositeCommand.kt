@@ -15,16 +15,21 @@ package com.example.myapplication.commands
  * @param description A human-readable description of the bulk action (e.g., "Align 5 Items").
  */
 class CompositeCommand(
-    private val commands: List<Command>,
-    private val description: String
+    internal val commands: List<Command>,
+    internal val description: String
 ) : Command {
     override suspend fun execute() {
-        commands.forEach { it.execute() }
+        for (i in commands.indices) {
+            commands[i].execute()
+        }
     }
 
     override suspend fun undo() {
         // Undo in reverse order to maintain state consistency
-        commands.reversed().forEach { it.undo() }
+        // BOLT: Manual reverse loop to avoid List allocation from .reversed()
+        for (i in commands.size - 1 downTo 0) {
+            commands[i].undo()
+        }
     }
 
     override fun getDescription(): String = description

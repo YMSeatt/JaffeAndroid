@@ -158,4 +158,151 @@ In 2027, teachers don't just record history; they simulate the future. **Ghost F
 - **Probabilistic Forecasting**: Using `GhostOracle` as a heuristic engine allows for a lightweight, on-device simulation that feels "intelligent" without requiring massive compute.
 
 ---
+
+## 🌅 Experiment: Ghost Horizon (Context-Aware Atmospheric Depth)
+**Date:** 2027-08-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, UIs won't just be static "Dark" or "Light" modes; they will adapt to the physical environment of the classroom. "Ghost Horizon" is a context-aware visualization layer that uses the device's physical sensors to drive a "Neural Day/Night" cycle.
+
+### 🛠️ The Tech
+- **Android Sensor APIs**: Utilizes `Sensor.TYPE_LIGHT` (Lux) and `Sensor.TYPE_PRESSURE` (hPa).
+- **AGSL Atmospheric Shader**: Implements a dynamic color-shifting gradient that moves between "Amber Ghost" (Low Light) and "Solarized Cyan" (Bright Light).
+- **Barometric Verticality**: Maps air pressure to the vertical offset of the horizon line, simulating a shift in perspective based on the teacher's physical elevation/standing height.
+
+### 🔦 The Discovery
+- **Sensor Fusion for UI**: We discovered that mapping raw physical environment data to shader uniforms creates a "calm" UI that feels naturally integrated into the room rather than being a disconnected digital surface.
+- **Low-Pass Filtering**: Aggressive filtering (0.9-0.95 alpha) is required for light and pressure sensors to avoid jarring visual shifts from small physical movements or light flickers.
+
+---
+
+## 💓 Experiment: Ghost Pulsar (Harmonic Synchronicity)
+**Date:** 2027-09-12
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, the "Rhythm of the Classroom" is a tangible metric. **Ghost Pulsar** visualizes the harmonic synchronicity between students. By analyzing the frequency and timing of behavioral events, it identifies "Neural Resonance" patterns — students whose classroom engagement peaks and troughs in sync. This helps teachers identify synchronized clusters that might indicate strong collaboration or shared distractions.
+
+### 🛠️ The Tech
+- **Harmonic Engine**: `GhostPulsarEngine` calculates individual student "Classroom Rhythms" (frequency/phase) from behavioral log density using a 10-minute sliding window.
+- **AGSL Wave Interference**: Implemented a sophisticated wave interference shader in `GhostPulsarShader`. Each student acts as a wave source, creating ripples that interfere with others to form "Harmonic Bonds."
+- **Python Rhythm Analysis**: `ghost_pulsar_analyzer.py` provides a Fourier-like analysis of exported JSON data to identify classroom-wide rhythms and synchronized pairs.
+
+### 🔦 The Discovery
+- **Wave Metaphor for Social Energy**: We discovered that visualizing social energy as waves is more intuitive than static lines for representing temporal synchronicity. The interference patterns naturally highlight students who are "out of phase" with the rest of the room.
+- **Phase as Timing**: Mapping the time-of-day and log frequency to phase allows for a dynamic visualization that changes even without new logs, maintaining a sense of a living ecosystem.
+
+---
+
+## 🧲 Experiment: Ghost Magnetar (Social Magnetic Field)
+**Date:** 2027-10-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, classroom dynamics are viewed as a complex electromagnetic field. **Ghost Magnetar** treats students as magnetic dipoles based on their behavioral "polarity" (Positive = North, Negative = South). By integrating the device's physical magnetometer, the social field orientation reacts to the teacher's physical movement in the room, making social dynamics tangible.
+
+### 🛠️ The Tech
+- **Android Magnetometer API**: Real-time integration of `Sensor.TYPE_MAGNETIC_FIELD`.
+- **AGSL Field Line Shader**: Renders flowing "streamlines" between North and South poles using vector field summation.
+- **Neural Polarity Engine**: Calculates dipole strength and field vectors from behavioral log density.
+- **Python Bridge**: `ghost_magnetar_analysis.py` for offline magnetic field mapping and parity.
+
+### 🔦 The Discovery
+- **Physical-Digital Binding**: Tying the field orientation to the physical magnetometer creates a powerful sense of presence, as the "Social North" shifts as the teacher turns.
+- **Visual Flux**: Using streamlines provides a macroscopic view of social "tension" (dense lines) vs "harmony" (balanced flow) that is more intuitive than discrete heatmaps.
+
+---
+
+## 🧠 Experiment: Ghost Cortex (Neural Intent & Somatic Exploration)
+**Date:** 2027-11-20
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, teachers don't just see data; they feel it. "Ghost Cortex" is a multi-sensory PoC that bridges the gap between digital metrics and physical sensation. By mapping classroom "Neural Tension" to high-fidelity haptic feedback, teachers can "touch" the classroom's vibe, allowing for an intuitive, eyes-free understanding of student engagement and academic entropy.
+
+### 🛠️ The Tech
+- **Android 15/16 Haptic Primitives:** Leverages `VibrationEffect.Composition` with advanced primitives like `PRIMITIVE_SPIN`, `PRIMITIVE_THUD`, and `PRIMITIVE_QUICK_FALL` to communicate data complexity.
+- **AGSL Somatic Shader:** Implements an organic, fractal-noise driven ripple effect that visualizes "Neural Intent" and correlates 1:1 with tactile pulses.
+- **Predictive Back Navigation:** Demonstrates the future of fluid UI transitions by integrating `OnBackInvokedCallback` (via Compose `BackHandler`) in the "Neural History" sandbox view.
+
+### 🔦 The Discovery
+- **Somatic Mapping:** We found that mapping the magnitude of behavioral turbulence and academic entropy to the *complexity* (not just intensity) of haptic patterns allows for much higher information density than simple vibrations.
+- **Visual-Tactile Resonance:** Synchronizing AGSL ripple frequency with haptic ticks creates a powerful "Somatic Field" effect that makes the UI feel physically present.
+- **NaN Resilience:** Discovered that generative neural metrics require strict default sanitization to prevent floating-point anomalies from disrupting the sensory experience.
+
+---
+
+## 🌟 Experiment: Ghost Quasar (High-Energy Student Nodes)
+**Date:** 2027-12-10
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, certain students become "Quasars" — focal points of intense behavioral or academic activity that outshine the surrounding classroom data. **Ghost Quasar** identifies these high-energy nodes and visualizes them as pulsing "Accretion Disks," allowing teachers to immediately see who is driving the classroom's momentum or turbulence.
+
+### 🛠️ The Tech
+- **GhostQuasarEngine**: A spatiotemporal analyzer that identifies students with high log density in short windows.
+- **AGSL Accretion Shader**: Implements a complex, swirling disk effect with procedural pulsing and core glow.
+- **Python High-Energy Bridge**: `ghost_quasar_analysis.py` provides a model for analyzing high-energy data clusters in exported JSON.
+
+### 🔦 The Discovery
+- **Momentum vs Status**: Unlike heatmaps, Quasars focus on "Energy" (rate of change), making them better at identifying emerging patterns before they become static problems.
+- **Polarity Mapping**: Using Cyan/Magenta to represent Positive/Negative energy within the same "Accretion" metaphor maintains visual consistency with the Ghost suite.
+
+---
+
+## 🧬 Experiment: Ghost Helix (Neural DNA Visualization)
+**Date:** 2028-01-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, student data is no longer just a collection of logs; it is a living genetic code. **Ghost Helix** visualizes the "Neural DNA" of a student as a pulsing, data-encoded double helix. Each "base pair" represents a behavioral or academic event, with the pitch, twist, and glow reflecting the student's classroom trajectory and "genetic" behavioral markers.
+
+### 🛠️ The Tech
+- **AGSL 3D Projection**: Simulating a rotating 3D double helix using 2D AGSL shaders with depth-aware shading.
+- **DNA Encoding Engine**: A logic engine that sequences behavior logs into "Neural Base Pairs" (Adenine/Positive, Thymine/Negative, etc.).
+- **Android 15/16 Graphics**: Utilizing high-precision shader uniforms for fluid, 60fps animation.
+- **Python Genomic Bridge**: `Python/ghost_helix_analysis.py` to demonstrate offline "sequencing" of classroom dynamics.
+
+### 🔦 The Discovery
+- **Visual Genomics**: We discovered that mapping "Stability" to procedural jitter creates a visceral sense of "genetic turbulence" for students with inconsistent behavioral patterns.
+- **Data Persistence**: Representing logs as "Base Pairs" in a helix provides a clear temporal order while maintaining a futuristic aesthetic.
+
+---
+
+## ⚙️ Experiment: Ghost Preferences (Modern Preference Engine)
+**Date:** 2028-02-15
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, "One Size Fits All" is a relic of the past. **Ghost Preferences** demonstrates a fluid, reactive approach to application settings. By utilizing Jetpack DataStore, we enable a robust, modern alternative to SharedPreferences, allowing for granular control over experimental UI polish and advanced sensor-driven features.
+
+### 🛠️ The Tech
+- **Jetpack DataStore (Preferences):** Implemented `GhostPreferencesStore` for reactive, coroutine-safe persistence of experimental flags.
+- **StateFlow Architecture:** Leverages `GhostPreferencesViewModel` to expose settings as lifecycle-aware streams.
+- **Futuristic Compose UI:** A dark-themed, glowing preferences screen utilizing Material 3 components for R&D customization.
+
+### 🔦 The Discovery
+- **Reactive Polish:** We discovered that exposing preferences as `StateFlow` allows for "Instant Feedback" UI — where changes to glow intensity or haptics are reflected immediately across the entire experiment suite without requiring restarts.
+- **Isolated R&D:** By keeping experimental preferences in a separate DataStore (`ghost_settings`), we maintain a clean boundary between production logic and high-velocity R&D experiments.
+
+---
+
+## 📻 Experiment: Ghost Stream (Neural Activity Ticker)
+**Date:** 2028-07-12
+**Status:** PROTOTYPE COMPLETE
+
+### 🌟 The Vision
+In 2027, classroom data is a continuous, high-velocity stream. "Ghost Stream" provides teachers with a "Neural Ticker"—a real-time activity feed that keeps them connected to every behavior log, quiz score, and homework status update without manual navigation.
+
+### 🛠️ The Tech
+- **Event Synthesis Engine**: Implemented `GhostStreamEngine` to perform a single-pass O(N) synthesis of the latest logs from disparate DAOs into a unified reactive stream.
+- **Glassmorphic UI**: Created a high-fidelity Compose overlay utilizing `GhostGlassmorphicSurface` and `AnimatedVisibility` for a non-intrusive "HUD-like" experience.
+- **AGSL Data Flow**: Integrated `GhostStreamShader` to provide a scrolling "Matrix-inspired" background that reflects the velocity of incoming data.
+
+### 🔦 The Discovery
+- **Cognitive Continuity**: We discovered that having a persistent, low-friction ticker reduces the mental overhead of "remembering" what was just logged, especially during fast-paced classroom sessions.
+- **Visual Weighting**: Using distinct colors for behavior types (Cyan for Positive, Magenta for Negative) in the ticker allowed for "peripheral pattern recognition" of the classroom mood.
+
+---
 *Ghost - Rapid Prototyping for the Classroom of 2027*

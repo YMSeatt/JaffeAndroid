@@ -102,8 +102,9 @@ class GhostSpectraEngineTest {
         assertTrue(report.contains("# 👻 GHOST SPECTRA: NEURAL ANALYSIS REPORT"))
         assertTrue(report.contains("Dispersion Index: 0.50"))
         assertTrue(report.contains("Agitation Level:  0.20"))
-        assertTrue(report.contains("Alice: ULTRAVIOLET (High Engagement)"))
-        assertTrue(report.contains("Bob: INFRARED (At Risk)"))
+        // PRIVACY: Verify names are masked in the report
+        assertTrue(report.contains("A****: ULTRAVIOLET (High Engagement)"))
+        assertTrue(report.contains("B****: INFRARED (At Risk)"))
         assertTrue(report.contains("(I:0.90, S:0.00)"))
         assertTrue(report.contains("(I:0.20, S:0.80)"))
     }

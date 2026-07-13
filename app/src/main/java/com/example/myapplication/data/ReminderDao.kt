@@ -19,6 +19,12 @@ interface ReminderDao {
     fun getAllReminders(): Flow<List<Reminder>>
 
     /**
+     * Retrieves a single reminder by its unique identifier.
+     */
+    @Query("SELECT * FROM reminders WHERE id = :id")
+    suspend fun getReminderById(id: Long): Reminder?
+
+    /**
      * Inserts a new reminder into the database.
      * @return The row ID of the newly inserted reminder.
      */

@@ -39,15 +39,24 @@ fun BehaviorLogViewerDialog(
 
     val sdf = remember { SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()) }
 
+    // BOLT: Refactor filtering into a remember block to avoid re-filtering on every recomposition.
+    val filteredEvents = remember(behaviorEvents, studentId) {
+        behaviorEvents.filter { it.studentId == studentId }
+    }
+
+    // BOLT: Hoist Date object to avoid O(N) allocations during scrolling
+    val date = remember { Date() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Behavior Log") },
         text = {
             LazyColumn {
-                items(behaviorEvents.filter { it.studentId == studentId }) { event ->
+                items(filteredEvents) { event ->
                     Row(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
+                        date.time = event.timestamp
                         Text(
-                            text = "${sdf.format(Date(event.timestamp))} - ${event.type}: ${event.comment ?: ""}",
+                            text = "${sdf.format(date)} - ${event.type}: ${event.comment ?: ""}",
                             modifier = Modifier.weight(1f)
                         )
                         Button(onClick = {

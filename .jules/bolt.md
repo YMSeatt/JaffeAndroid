@@ -35,3 +35,49 @@
     - Implemented a student ID-to-Item map (`associateBy`) in `GhostLatticeLayer` to transform O(E * S) lookups into O(E).
     - Optimized `StringSimilarity.levenshteinDistance` to reuse two `IntArray` rows, eliminating per-row allocations.
 - **Impact:** Significant reduction in object churn and GC pressure, ensuring 60fps performance even when multiple experimental visualizers are active.
+
+## High-Frequency Particle Physics and Allocation Optimization
+- **Discovery:** The `GhostSparkLayer` was allocating 8 `FloatArray`s and a `List` (`take(100)`) per frame, creating significant GC pressure. Additionally, `GhostSparkEngine` physics performed expensive `sqrt` calls and repeated `MutableState` reads in its $O(S \times N)$ nested loop.
+- **Fix:**
+    - Implemented a `Spark` object pool to eliminate per-event allocations.
+    - Pre-allocated and `remember`ed `FloatArray` buffers for shader uniforms.
+    - Replaced `SnapshotStateList` with `ArrayList` for physics-only state.
+    - Eliminated $O(S \times N)$ `sqrt` calls by refactoring force calculations to use squared distances.
+    - Pre-fetched `MutableState` student positions into local arrays for the physics loop.
+    - Collapsed multiple `filter`/`count` passes in `GhostAuroraEngine` into a single-pass loop.
+- **Impact:** Eliminated per-frame allocations in the particle system and significantly reduced CPU overhead for physics updates, enabling stable 60fps performance for experimental visualizations.
+
+## Ghost Lab Layer Drawing Optimizations
+- **Discovery:** Several experimental Ghost layers (`GhostHologramLayer`, `GhostTectonicLayer`, `GhostVisionLayer`) were performing expensive object allocations (like `RuntimeShader`, `ShaderBrush`, or `FloatArray`) directly inside their `Canvas` draw loops or on every recomposition. `GhostVisionLayer` also used iterator-based loops for student projections.
+- **Fix:**
+    - Hoisted `RuntimeShader` and `ShaderBrush` creation into `drawWithCache` or `remember` blocks.
+    - Pre-allocated and `remember`ed `FloatArray` buffers (e.g., `nodeData` in Tectonics) and ensured they are reset via `fill(0f)` to prevent stale data artifacts.
+    - Replaced `forEach` student loops with manual index-based `for` loops in high-frequency projection code.
+- **Impact:** Significant reduction in frame-time jitter and GC pressure during experimental mode activation, ensuring smooth 60fps interaction even with complex AGSL visualizers.
+
+## Ghost Adaptive UI Allocation and Redrawing Optimization
+- **Discovery:** `GhostAdaptiveEngine` was allocating a `neighbors` list and using `students.forEach` (iterator) for every student in its density calculation. `proposeAdaptiveLayout` was creating a `Map` with `Pair` keys for density lookups, leading to thousands of object allocations during pressure analysis. In the UI layer, `GhostAdaptiveLayer` was performing expensive sorting and uniform buffer population on every 60fps frame inside the `Canvas` draw pass.
+- **Fix:**
+    - Refactored `calculateDensityMetrics` to use manual index loops and direct bounds checking for cardinal neighbors, eliminating per-student list allocations.
+    - Optimized `proposeAdaptiveLayout` to use a flat `FloatArray` for O(1) primitive density lookups, removing `Pair` and `Map.Entry` overhead.
+    - Hoisted sorting and uniform buffer preparation in `GhostAdaptiveLayer` into a `remember(zones)` block to ensure they only run when data changes.
+- **Impact:** Eliminated per-frame and per-student allocations in the Adaptive UI engine and significantly reduced CPU/JNI overhead in the drawing pass, ensuring smooth 60fps performance even during heavy classroom activity.
+
+## Ghost Navigator and Singularity Allocation Optimization
+- **Discovery:**
+    - `GhostNavigatorLayer` was allocating an `Iterator` on every frame (60fps) by using `forEach` on the student list and performing redundant math inside the loop.
+    - `GhostSingularityLayer` was creating thousands of short-lived `Offset` objects in a high-frequency proximity-sensing loop.
+- **Fix:**
+    - Replaced `forEach` with manual index-based `for` loops in both components.
+    - Added a primitive-based `calculatePull` overload to `GhostSingularityEngine` to avoid `Offset` allocations.
+    - Hoisted constant calculations (colors, radii, and scaling factors) out of the student loops in `GhostNavigatorLayer`.
+- **Impact:** Significant reduction in object churn and CPU overhead in both the 60fps rendering path and the background interaction monitors.
+
+## Optimized Log Activity Analysis and Cache Pruning
+- **Discovery:**
+    - `GhostMossEngine.calculateDormancyScores` was iterating through entire log histories ($O(L)$) to find the latest activity timestamp, despite logs being pre-sorted descending.
+    - `SeatingChartViewModel` was using Kotlin's set subtraction operator (`-`) during cache pruning, which creates a new intermediate `Set` allocation on every update.
+- **Fix:**
+    - Refactored `GhostMossEngine` to use $O(1)$ lookups of the first element in sorted log lists.
+    - Replaced set subtraction with manual loops and $O(1)$ `.contains()` checks to avoid intermediate collection allocations.
+- **Impact:** Reduced background CPU overhead and GC pressure during high-frequency seating chart updates.

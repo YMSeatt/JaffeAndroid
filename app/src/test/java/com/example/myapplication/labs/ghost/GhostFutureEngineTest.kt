@@ -21,9 +21,10 @@ class GhostFutureEngineTest {
 
         val students = listOf(student1)
         val historicalLogs = emptyList<BehaviorEvent>()
+        val prophecies = emptyList<GhostOracle.Prophecy>()
 
         // Generate events for next 10 hours (to ensure we get some events)
-        val events = GhostFutureEngine.generateFutureEvents(students, historicalLogs, hoursIntoFuture = 10)
+        val events = GhostFutureEngine.generateFutureEvents(students, historicalLogs, prophecies, hoursIntoFuture = 10)
 
         // Verify some events were generated
         assertTrue("Should generate at least some simulated events for a 10 hour window", events.isNotEmpty())
@@ -49,8 +50,9 @@ class GhostFutureEngineTest {
         val historicalLogs = List(10) {
             BehaviorEvent(studentId = 1, type = "Negative", timestamp = System.currentTimeMillis() - it * 100000, comment = null)
         }
+        val prophecies = emptyList<GhostOracle.Prophecy>()
 
-        val events = GhostFutureEngine.generateFutureEvents(students, historicalLogs, hoursIntoFuture = 5)
+        val events = GhostFutureEngine.generateFutureEvents(students, historicalLogs, prophecies, hoursIntoFuture = 5)
 
         // Alice should have many simulated events due to negative bias
         assertTrue(events.any { it.studentId == 1L })

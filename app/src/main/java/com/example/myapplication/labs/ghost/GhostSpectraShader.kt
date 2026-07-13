@@ -66,4 +66,41 @@ object GhostSpectraShader {
             return float4(finalColor, alpha * 0.7);
         }
     """
+
+    @Language("AGSL")
+    const val SPECTROGRAPH = """
+        uniform float2 iResolution;
+        uniform float iTime;
+        uniform float iIntensity;   // Student-specific intensity
+        uniform float iShift;       // Student-specific spectral shift
+
+        float3 spectrum(float x) {
+            float3 c = float3(0.0);
+            c.r = smoothstep(0.4, 0.2, x) + smoothstep(0.6, 0.8, x);
+            c.g = smoothstep(0.2, 0.4, x) * smoothstep(0.8, 0.6, x);
+            c.b = smoothstep(0.4, 0.7, x) * smoothstep(1.0, 0.8, x);
+            return c;
+        }
+
+        float4 main(float2 fragCoord) {
+            float2 uv = fragCoord / iResolution.xy;
+
+            // Base wave driven by shift (frequency) and intensity (amplitude)
+            float freq = 10.0 + iShift * 20.0;
+            float wave = sin(uv.x * freq + iTime * 3.0) * 0.2 * iIntensity;
+
+            // Spectral color mapping based on Y position + wave offset
+            float3 color = spectrum(uv.y + wave);
+
+            // Add horizontal scan lines
+            float scan = sin(uv.y * 200.0 - iTime * 10.0) * 0.05 + 0.95;
+            color *= scan;
+
+            // Edge fading
+            float edge = smoothstep(0.0, 0.1, uv.x) * smoothstep(1.0, 0.9, uv.x);
+            edge *= smoothstep(0.0, 0.1, uv.y) * smoothstep(1.0, 0.9, uv.y);
+
+            return float4(color, edge * 0.8);
+        }
+    """
 }

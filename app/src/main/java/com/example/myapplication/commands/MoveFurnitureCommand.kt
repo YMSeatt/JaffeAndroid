@@ -14,12 +14,12 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param newY The vertical position after the move.
  */
 class MoveFurnitureCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val furnitureId: Int,
-    private val oldX: Float,
-    private val oldY: Float,
-    private val newX: Float,
-    private val newY: Float
+    internal val viewModel: SeatingChartViewModel,
+    internal val furnitureId: Int,
+    internal val oldX: Float,
+    internal val oldY: Float,
+    internal val newX: Float,
+    internal val newY: Float
 ) : Command {
     override suspend fun execute() {
         viewModel.internalUpdateFurniturePosition(furnitureId.toLong(), newX, newY)

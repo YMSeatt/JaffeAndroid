@@ -39,6 +39,29 @@ import com.github.skydoves.colorpicker.compose.ColorEnvelope
 import com.github.skydoves.colorpicker.compose.HsvColorPicker
 import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 
+/**
+ * A specialized modal screen for customizing the visual appearance of an individual student icon.
+ *
+ * This component handles per-student styling overrides, including colors, dimensions,
+ * typography, and border thickness. These styles are applied on top of the application-wide
+ * defaults and student group colors.
+ *
+ * ### Implementation Details:
+ * - **State Management**: Uses [StudentStyleViewModel] to manage the loading and validation of
+ *   student data, keeping the main [seatingChartViewModel] clean.
+ * - **Local Buffering**: Edits are stored in local `remember`ed state variables and only
+ *   committed to the database when the user clicks "Save".
+ * - **Undo/Redo Support**: Changes are committed via [SeatingChartViewModel.updateStudent],
+ *   which wraps the update in an `UpdateStudentCommand`. This allows the teacher to revert
+ *   complex styling changes from the main undo history.
+ * - **Interactive Color Picking**: Integrates with [ColorPickerDialog] to provide a visual
+ *   HSV-based interface for color selection.
+ *
+ * @param studentId The unique ID of the student being styled.
+ * @param viewModel Specialized ViewModel for handling style-specific logic.
+ * @param seatingChartViewModel The main coordinator ViewModel, used for final persistence and Command generation.
+ * @param onDismiss Callback to close the style editor.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentStyleScreen(

@@ -11,8 +11,8 @@ import com.example.myapplication.viewmodel.SeatingChartViewModel
  * @param furniture The [Furniture] entity to be deleted.
  */
 class DeleteFurnitureCommand(
-    private val viewModel: SeatingChartViewModel,
-    private val furniture: Furniture
+    internal val viewModel: SeatingChartViewModel,
+    internal val furniture: Furniture
 ) : Command {
     override suspend fun execute() {
         viewModel.internalDeleteFurniture(furniture)

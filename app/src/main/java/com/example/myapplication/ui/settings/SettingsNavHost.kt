@@ -44,6 +44,7 @@ fun SettingsNavHost(
                 onNavigateToQuizTemplates = { navController.navigate("quiz_templates") },
                 onNavigateToQuizMarkTypes = { navController.navigate("quiz_mark_types") },
                 onNavigateToHomeworkTemplates = { navController.navigate("homework_templates") },
+                onNavigateToHomeworkMarkTypes = { navController.navigate("homework_mark_types") },
                 onNavigateToManageInitials = { navController.navigate("manage_initials") },
                 onDismiss = onDismiss
             )
@@ -51,6 +52,11 @@ fun SettingsNavHost(
         composable("student_groups") {
             StudentGroupsScreen(
                 viewModel = studentGroupsViewModel,
+                onDismiss = { navController.popBackStack() }
+            )
+        }
+        composable("homework_mark_types") {
+            HomeworkMarkMetadataScreen(
                 onDismiss = { navController.popBackStack() }
             )
         }

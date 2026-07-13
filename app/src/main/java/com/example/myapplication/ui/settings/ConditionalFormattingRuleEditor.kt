@@ -43,6 +43,27 @@ import com.github.skydoves.colorpicker.compose.rememberColorPickerController
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
+/**
+ * A comprehensive editor for creating and modifying [ConditionalFormattingRule]s.
+ *
+ * This Composable provides a form-based interface for the Seating Chart's dynamic styling
+ * DSL. It allows teachers to define complex conditions (Group membership, Behavioral
+ * incidents, Academic performance) and map them to visual styles (Fill Color, Outline).
+ *
+ * ### State Management:
+ * The editor maintains an internal state for all editable fields, initialized from the
+ * provided [rule]. It leverages [remember(rule)] to ensure that the UI state is
+ * correctly reset if a different rule is passed in for editing.
+ *
+ * ### Data Serialization:
+ * Upon saving, the editor transforms the individual UI states into a serialized [Condition]
+ * and [Format] object. These are stored as JSON strings in the [ConditionalFormattingRule]
+ * table, which are later interpreted by the [com.example.myapplication.util.ConditionalFormattingEngine].
+ *
+ * @param rule The existing [ConditionalFormattingRule] to edit, or null to create a new one.
+ * @param viewModel The coordinator used to persist rule updates to the database.
+ * @param onDismiss Callback invoked when the user cancels or completes the editing process.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConditionalFormattingRuleEditor(
@@ -95,6 +116,8 @@ fun ConditionalFormattingRuleEditor(
     // Helper state for Active Time (Single range support for UI)
     var activeTimeStart by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.startTime ?: "") }
     var activeTimeEnd by remember(condition) { mutableStateOf(condition.activeTimes?.firstOrNull()?.endTime ?: "") }
+    var applicationStyle by remember(format) { mutableStateOf(format.applicationStyle ?: "stripe") }
+    var applicationStyleExpanded by remember { mutableStateOf(false) }
     var activeTimeDays by remember(condition) {
         mutableStateOf(
             condition.activeTimes?.firstOrNull()?.daysOfWeek?.map { dayInt ->
@@ -376,15 +399,42 @@ fun ConditionalFormattingRuleEditor(
                             showColorPicker.value = true
                         }
                     )
-                    // Application style is not in Format data class?
-                    // Let's check Format data class again.
-                    // It has color and outline. No application_style.
-                    // But the previous code had it.
-                    // Maybe I missed it in the Format class definition?
-                    // Step 177 showed: data class Format(val color: String? = null, val outline: String? = null)
-                    // So application_style is NOT supported by the engine currently?
-                    // Or maybe it's supported in Python but not fully in Android engine?
-                    // I'll omit it for now to match the data class.
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text("Application Style", style = MaterialTheme.typography.titleSmall)
+                    ExposedDropdownMenuBox(
+                        expanded = applicationStyleExpanded,
+                        onExpandedChange = { applicationStyleExpanded = !applicationStyleExpanded },
+                    ) {
+                        OutlinedTextField(
+                            value = applicationStyle.replaceFirstChar { it.uppercase() },
+                            onValueChange = { },
+                            label = { Text("Style") },
+                            readOnly = true,
+                            trailingIcon = {
+                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = applicationStyleExpanded)
+                            },
+                            modifier = Modifier
+                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = applicationStyleExpanded,
+                            onDismissRequest = { applicationStyleExpanded = false },
+                        ) {
+                            listOf("stripe", "override").forEach { style ->
+                                DropdownMenuItem(
+                                    text = { Text(style.replaceFirstChar { it.uppercase() }) },
+                                    onClick = {
+                                        applicationStyle = style
+                                        format = format.copy(applicationStyle = style)
+                                        applicationStyleExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
@@ -472,6 +522,17 @@ fun ConditionalFormattingRuleEditor(
 }
 
 
+/**
+ * A specialized color picker dialog used within the rule editor.
+ *
+ * Unlike the standard [com.example.myapplication.ui.dialogs.ColorPickerDialog], this
+ * version returns the selected color as a **Hex String** (e.g., "#FFFF0000") to
+ * facilitate direct serialization into the [Format] JSON structure.
+ *
+ * @param onColorSelected Callback receiving the chosen color as an 8-character Hex string.
+ * @param onDismiss Callback to close the dialog without making a selection.
+ * @param initialColor The color to display when the picker is first opened.
+ */
 @Composable
 fun ColorPickerDialog(
     onColorSelected: (String) -> Unit,

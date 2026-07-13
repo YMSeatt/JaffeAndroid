@@ -7,7 +7,7 @@ import org.junit.Test
 
 class GhostLatticeEngineTest {
 
-    private val engine = GhostLatticeEngine()
+    private val engine = GhostLatticeEngine
 
     @Test
     fun testFindSocialClusters_EmptyInput() {
