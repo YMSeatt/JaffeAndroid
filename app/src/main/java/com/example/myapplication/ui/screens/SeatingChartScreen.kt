@@ -182,6 +182,7 @@ import com.example.myapplication.labs.ghost.lasso.GhostLassoLayer
 import com.example.myapplication.labs.ghost.vortex.GhostVortexLayer
 import com.example.myapplication.labs.ghost.navigator.GhostNavigatorLayer
 import com.example.myapplication.labs.ghost.orbit.GhostOrbitLayer
+import com.example.myapplication.labs.ghost.stellar.GhostStellarLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectLayer
 import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.architect.GhostArchitectDialog
@@ -428,6 +429,7 @@ fun SeatingChartScreen(
     var isSupernovaActive by remember { mutableStateOf(false) }
     var isVortexActive by remember { mutableStateOf(false) }
     var isOrbitActive by remember { mutableStateOf(false) }
+    var isStellarActive by remember { mutableStateOf(false) }
     var isArchitectActive by remember { mutableStateOf(false) }
     var showArchitectReport by remember { mutableStateOf(false) }
     var isSnapshotTriggered by remember { mutableStateOf(false) }
@@ -615,7 +617,7 @@ fun SeatingChartScreen(
     val ghostMirrorEngine = remember { GhostMirrorEngine() }
     val mirrorPerspective by ghostMirrorEngine.perspective
 
-    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, isInkActive, shakeToRecenterEnabled) {
+    DisposableEffect(Unit, isPhantasmActive, isFutureActive, isVisionActive, isCortexActive, isHudActive, isArchitectActive, isInkActive, isStellarActive, shakeToRecenterEnabled) {
         val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as? SensorManager
         val shakeDetector = if (shakeToRecenterEnabled && sensorManager != null) {
             GhostShakeDetector {
@@ -641,7 +643,7 @@ fun SeatingChartScreen(
                                    isEntanglementActive || isIrisActive || isHelixActive || isGlyphActive ||
                                    isHaloActive || isTraceActive || isCarbonActive || isWeaverActive || isPrismActive ||
                                    isFrostActive || isRadarActive || isOrigamiActive || isSonarActive ||
-                                   isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive ||
+                                   isBeaconActive || isSpotlightActive || isStrategistActive || isDeckActive || isStellarActive ||
                                    isGhostListening || ghostCurrentText.isNotEmpty() || isStudentHubVisible || (activeGlanceStudentId != null) ||
                                    showGhostInsightDialog || showGhostSynapseDialog || showGhostSpectraDialog ||
                                    showGhostOracleDialog || showBehaviorDialog || showLogQuizScoreDialog ||
@@ -979,6 +981,8 @@ fun SeatingChartScreen(
                 onToggleVortex = { isVortexActive = !isVortexActive },
                 isOrbitActive = isOrbitActive,
                 onToggleOrbit = { isOrbitActive = !isOrbitActive },
+                isStellarActive = isStellarActive,
+                onToggleStellar = { isStellarActive = !isStellarActive },
                 isQuasarActive = isQuasarActive,
                 onToggleQuasar = { isQuasarActive = !isQuasarActive },
                 isSpotlightActive = isSpotlightActive,
@@ -1400,6 +1404,13 @@ fun SeatingChartScreen(
                 students = students,
                 behaviorLogs = allBehaviorEvents,
                 isActive = isOrbitActive
+            )
+            GhostStellarLayer(
+                students = students,
+                quizLogsByStudent = seatingChartViewModel.quizLogsByStudentCache,
+                isActive = isStellarActive,
+                canvasScale = scale,
+                canvasOffset = offset
             )
             GhostRayLayer(
                 engine = ghostRayEngine,
@@ -2512,6 +2523,10 @@ fun SeatingChartScreen(
                                 isScapeActive = !isScapeActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
+                            "STELLAR" -> {
+                                isStellarActive = !isStellarActive
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2843,6 +2858,8 @@ fun SeatingChartTopAppBar(
     onToggleVortex: () -> Unit,
     isOrbitActive: Boolean,
     onToggleOrbit: () -> Unit,
+    isStellarActive: Boolean,
+    onToggleStellar: () -> Unit,
     isSupernovaActive: Boolean,
     onToggleSupernova: () -> Unit,
     isQuasarActive: Boolean,
@@ -3357,6 +3374,16 @@ fun SeatingChartTopAppBar(
                                     showMoreMenu = false
                                 },
                                 leadingIcon = { Icon(Icons.Default.AutoFixHigh, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
+                            )
+                        }
+                        if (GhostConfig.STELLAR_MODE_ENABLED) {
+                            DropdownMenuItem(
+                                text = { Text(if (isStellarActive) "Stabilize Constellation 👻" else "Ghost Stellar 👻") },
+                                onClick = {
+                                    onToggleStellar()
+                                    showMoreMenu = false
+                                },
+                                leadingIcon = { Icon(Icons.Default.AutoAwesome, null, tint = androidx.compose.ui.graphics.Color.Cyan) }
                             )
                         }
                         if (GhostConfig.FUTURE_MODE_ENABLED) {

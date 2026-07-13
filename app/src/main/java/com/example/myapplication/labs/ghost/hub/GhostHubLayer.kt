@@ -157,6 +157,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.SCAPE_MODE_ENABLED) {
                 add(GhostAction("SCAPE", Icons.Default.MusicNote, "Ghost Scape"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.STELLAR_MODE_ENABLED) {
+                add(GhostAction("STELLAR", Icons.Default.AutoAwesome, "Neural Constellation"))
+            }
         }
     }
 

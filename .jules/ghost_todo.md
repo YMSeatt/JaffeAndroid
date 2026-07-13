@@ -1,8 +1,11 @@
 # 👻 Ghost Android Backlog
+- [ ] Idea: Ghost Pulse 2.0 - Multi-modal resonance haptics
+- [ ] Idea: Ghost Nebula 3D - Volumetric clouds using depth sensors
 
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-09-05: Ghost Stellar - Neural Constellation Mapping in `/labs/ghost/stellar/`
 - [DONE] 2028-09-04: Ghost Aurora - Procedural background aurora reflecting classroom behavioral climate in `/labs/ghost/aurora/`
 - [DONE] 2028-09-03: Ghost Scape - Neural Spatial Audio pings in `/labs/ghost/scape/`
 - [DONE] 2028-09-02: Ghost Prism - Dynamic Individual Student Themes in `/labs/ghost/prism/`

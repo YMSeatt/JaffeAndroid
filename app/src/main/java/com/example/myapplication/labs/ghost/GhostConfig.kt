@@ -282,4 +282,7 @@ object GhostConfig {
 
     /** Enables "Ghost Scape" neural spatial audio monitoring. */
     const val SCAPE_MODE_ENABLED = true
+
+    /** Enables "Ghost Stellar" neural constellation mapping. */
+    const val STELLAR_MODE_ENABLED = true
 }
