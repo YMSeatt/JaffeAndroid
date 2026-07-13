@@ -964,7 +964,12 @@ class SeatingChartViewModel @Inject constructor(
                         lastPositiveTimestampsCache.keys.retainAll(currentLogStudentIds)
                         behaviorTypeCountsCache.keys.retainAll(currentLogStudentIds)
                         behaviorScoreCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                        // BOLT: Manual loop instead of set subtraction to avoid intermediate allocations.
+                        for (oldKey in oldGrouped.keys) {
+                            if (!currentLogStudentIds.contains(oldKey)) {
+                                changedLogStudentIds.add(oldKey)
+                            }
+                        }
                     }
 
                     behaviorLogsByStudentCache = finalGrouped
@@ -1033,7 +1038,12 @@ class SeatingChartViewModel @Inject constructor(
                     if (finalGrouped.size < oldGrouped.size) {
                         val currentLogStudentIds = finalGrouped.keys
                         homeworkDoneCountCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                        // BOLT: Manual loop instead of set subtraction to avoid intermediate allocations.
+                        for (oldKey in oldGrouped.keys) {
+                            if (!currentLogStudentIds.contains(oldKey)) {
+                                changedLogStudentIds.add(oldKey)
+                            }
+                        }
                     }
 
                     homeworkLogsByStudentCache = finalGrouped
@@ -1089,7 +1099,12 @@ class SeatingChartViewModel @Inject constructor(
                         quizSumSqCache.keys.retainAll(currentLogStudentIds)
                         quizValidCountCache.keys.retainAll(currentLogStudentIds)
                         academicScoreCache.keys.retainAll(currentLogStudentIds)
-                        changedLogStudentIds.addAll(oldGrouped.keys - currentLogStudentIds)
+                        // BOLT: Manual loop instead of set subtraction to avoid intermediate allocations.
+                        for (oldKey in oldGrouped.keys) {
+                            if (!currentLogStudentIds.contains(oldKey)) {
+                                changedLogStudentIds.add(oldKey)
+                            }
+                        }
                     }
 
                     quizLogsByStudentCache = finalGrouped

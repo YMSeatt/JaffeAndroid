@@ -42,26 +42,19 @@ object GhostMossEngine {
 
             val bLogs = behaviorLogsByStudent[sid]
             if (!bLogs.isNullOrEmpty()) {
-                // Behavior logs are typically DESC or we can just find max
-                // BOLT: Check only the first log if they are sorted, or iterate once.
-                // Assuming they might not be perfectly sorted, we find the max.
-                for (j in bLogs.indices) {
-                    lastActivity = max(lastActivity, bLogs[j].timestamp)
-                }
+                // BOLT: Logs are sorted DESC by database/ViewModel.
+                // O(1) lookup of the first element instead of O(L) iteration.
+                lastActivity = max(lastActivity, bLogs[0].timestamp)
             }
 
             val qLogs = quizLogsByStudent[sid]
             if (!qLogs.isNullOrEmpty()) {
-                for (j in qLogs.indices) {
-                    lastActivity = max(lastActivity, qLogs[j].timestamp)
-                }
+                lastActivity = max(lastActivity, qLogs[0].timestamp)
             }
 
             val hLogs = homeworkLogsByStudent[sid]
             if (!hLogs.isNullOrEmpty()) {
-                for (j in hLogs.indices) {
-                    lastActivity = max(lastActivity, hLogs[j].loggedAt)
-                }
+                lastActivity = max(lastActivity, hLogs[0].loggedAt)
             }
 
             if (lastActivity == 0L) {

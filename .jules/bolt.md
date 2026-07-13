@@ -72,3 +72,12 @@
     - Added a primitive-based `calculatePull` overload to `GhostSingularityEngine` to avoid `Offset` allocations.
     - Hoisted constant calculations (colors, radii, and scaling factors) out of the student loops in `GhostNavigatorLayer`.
 - **Impact:** Significant reduction in object churn and CPU overhead in both the 60fps rendering path and the background interaction monitors.
+
+## Optimized Log Activity Analysis and Cache Pruning
+- **Discovery:**
+    - `GhostMossEngine.calculateDormancyScores` was iterating through entire log histories ($O(L)$) to find the latest activity timestamp, despite logs being pre-sorted descending.
+    - `SeatingChartViewModel` was using Kotlin's set subtraction operator (`-`) during cache pruning, which creates a new intermediate `Set` allocation on every update.
+- **Fix:**
+    - Refactored `GhostMossEngine` to use $O(1)$ lookups of the first element in sorted log lists.
+    - Replaced set subtraction with manual loops and $O(1)$ `.contains()` checks to avoid intermediate collection allocations.
+- **Impact:** Reduced background CPU overhead and GC pressure during high-frequency seating chart updates.
