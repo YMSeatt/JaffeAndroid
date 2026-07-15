@@ -89,7 +89,10 @@ fun ManageInitialsScreen(
                     )
                 }
                 1 -> {
-                    val allHomework = homeworkStatuses.map { it.name }.distinct()
+                    val systemHomework = listOf(
+                        "Done", "Not Done", "Partially Done", "Signed", "Returned", "Late", "Excellent Work"
+                    )
+                    val allHomework = (systemHomework + homeworkStatuses.map { it.name }).distinct()
                     InitialsList(
                         items = allHomework,
                         initialsMapStr = homeworkInitialsMapStr,
