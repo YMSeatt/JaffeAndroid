@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 import android.widget.Toast
+import kotlin.random.Random
 import androidx.core.content.FileProvider
 import java.io.File
 import androidx.activity.result.ActivityResultLauncher
@@ -188,6 +189,8 @@ import com.example.myapplication.labs.ghost.architect.GhostArchitectEngine
 import com.example.myapplication.labs.ghost.architect.GhostArchitectDialog
 import com.example.myapplication.labs.ghost.comet.GhostCometEngine
 import com.example.myapplication.labs.ghost.comet.GhostCometLayer
+import com.example.myapplication.labs.ghost.meteor.GhostMeteorEngine
+import com.example.myapplication.labs.ghost.meteor.GhostMeteorLayer
 import com.example.myapplication.labs.ghost.flare.GhostFlareEngine
 import com.example.myapplication.labs.ghost.flare.GhostFlareLayer
 import com.example.myapplication.labs.ghost.snapshot.GhostSnapshotEngine
@@ -447,6 +450,7 @@ fun SeatingChartScreen(
     var isTraceActive by remember { mutableStateOf(false) }
     var isFlareActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FLARE_MODE_ENABLED) }
     var isCometActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.COMET_MODE_ENABLED) }
+    var isMeteorActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.METEOR_MODE_ENABLED) }
     var isHaloActive by remember { mutableStateOf(GhostConfig.GHOST_MODE_ENABLED && GhostConfig.HALO_MODE_ENABLED) }
     var isDeckActive by remember { mutableStateOf(false) }
     var isVisionActive by remember { mutableStateOf(false) }
@@ -613,6 +617,7 @@ fun SeatingChartScreen(
     val ghostSupernovaEngine = remember { GhostSupernovaEngine() }
     val ghostRayEngine = remember { GhostRayEngine(context) }
     val ghostCometEngine = remember { GhostCometEngine() }
+    val ghostMeteorEngine = remember { GhostMeteorEngine() }
     val ghostFlareEngine = remember { GhostFlareEngine() }
     val ghostMirrorEngine = remember { GhostMirrorEngine() }
     val mirrorPerspective by ghostMirrorEngine.perspective
@@ -827,6 +832,18 @@ fun SeatingChartScreen(
                         BehaviorEvent(studentId = id, type = type, timestamp = System.currentTimeMillis(), comment = null)
                     }
                     seatingChartViewModel.addBehaviorEvents(behaviorEvents)
+                    if (isMeteorActive) {
+                        targets.forEach { id ->
+                            val s = students.find { it.id.toLong() == id }
+                            if (s != null) {
+                                // Behavioral Meteor: Emits from random edge to student
+                                val edgeX = if (Random.nextBoolean()) 0f else 4000f
+                                val edgeY = Random.nextFloat() * 4000f
+                                val colorType = if (type.contains("Negative", ignoreCase = true)) 2 else 1
+                                ghostMeteorEngine.emit(edgeX, edgeY, s.xPosition.value, s.yPosition.value, colorType, id)
+                            }
+                        }
+                    }
                     if (!selectMode) selectedStudentUiItemForAction = null
                     coroutineScope.launch { snackbarHostState.showSnackbar("Logged $type for ${targets.size} student(s)") }
                 },
@@ -1449,6 +1466,13 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isCometActive
+            )
+            GhostMeteorLayer(
+                engine = ghostMeteorEngine,
+                students = students,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isMeteorActive
             )
             GhostFlareLayer(
                 engine = ghostFlareEngine,
@@ -2110,6 +2134,27 @@ fun SeatingChartScreen(
                 val studentIds = if (selectMode) selectedItemIds.filter { it.type == ItemType.STUDENT }.map { it.id.toLong() } else listOfNotNull(selectedStudentUiItemForAction?.id?.toLong())
                 LogQuizScoreDialog(studentIds = studentIds, viewModel = seatingChartViewModel, settingsViewModel = settingsViewModel, onDismissRequest = { showLogQuizScoreDialog = false; selectedStudentUiItemForAction = null }, onSave = { quizLogs ->
                     if (sessionType == SessionType.QUIZ) quizLogs.forEach { seatingChartViewModel.addQuizLogToSession(it) } else quizLogs.forEach { seatingChartViewModel.saveQuizLog(it) }
+
+                    if (isMeteorActive) {
+                        quizLogs.forEach { log ->
+                            val student = students.find { it.id.toLong() == log.studentId }
+                            if (student != null) {
+                                val mark = log.markValue ?: 0.0
+                                val maxMark = log.maxMarkValue ?: 100.0
+                                if (mark / maxMark >= 0.8) {
+                                    // Academic Breakthrough Meteor (Type 0: Purple)
+                                    ghostMeteorEngine.emit(
+                                        startX = Random.nextFloat() * 4000f,
+                                        startY = 0f, // From Top
+                                        targetX = student.xPosition.value,
+                                        targetY = student.yPosition.value,
+                                        type = 0,
+                                        targetId = student.id.toLong()
+                                    )
+                                }
+                            }
+                        }
+                    }
                 })
             }
 
@@ -2408,6 +2453,7 @@ fun SeatingChartScreen(
                             }
                             "SYNC" -> isSyncActive = !isSyncActive
                             "COMET" -> isCometActive = !isCometActive
+                            "METEOR" -> isMeteorActive = !isMeteorActive
                             "FLARE" -> isFlareActive = !isFlareActive
                             "HALO" -> isHaloActive = !isHaloActive
                             "LASSO" -> isLassoActive = !isLassoActive
