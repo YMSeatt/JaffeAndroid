@@ -160,6 +160,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.STELLAR_MODE_ENABLED) {
                 add(GhostAction("STELLAR", Icons.Default.AutoAwesome, "Neural Constellation"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.METEOR_MODE_ENABLED) {
+                add(GhostAction("METEOR", Icons.Default.Speed, "Ghost Meteor"))
+            }
         }
     }
 
