@@ -2662,9 +2662,21 @@ class SeatingChartViewModel @Inject constructor(
 
     /**
      * Checks if a student with the given names already exists in the database.
+     *
+     * Due to PII encryption, this check is performed in-memory by the repository.
      */
     suspend fun studentExists(firstName: String, lastName: String): Boolean {
         return repository.studentExists(firstName, lastName)
+    }
+
+    /**
+     * Performs an in-memory search for students by name or nickname.
+     *
+     * This replaces the deprecated [StudentDao.searchStudents] logic because SQL-level
+     * queries are non-functional on encrypted PII.
+     */
+    fun searchStudents(query: String): LiveData<List<Student>> {
+        return repository.searchStudents(query)
     }
 
     fun updateStudentStyle(student: Student) {

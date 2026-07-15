@@ -63,6 +63,27 @@ class StudentRepository(
     }
 
     /**
+     * Performs an in-memory search for students by name or nickname.
+     *
+     * This replaces the deprecated [StudentDao.searchStudents] because SQL-level `LIKE`
+     * queries are non-functional on encrypted PII.
+     *
+     * @param searchQuery The search term to match against first name, last name, or nickname.
+     * @return A LiveData stream of matching student entities.
+     */
+    fun searchStudents(searchQuery: String): LiveData<List<Student>> {
+        return allStudents.map { students ->
+            if (searchQuery.isBlank()) return@map students
+            val query = searchQuery.lowercase()
+            students.filter { student ->
+                student.firstName.lowercase().contains(query) ||
+                        student.lastName.lowercase().contains(query) ||
+                        student.nickname?.lowercase()?.contains(query) == true
+            }
+        }
+    }
+
+    /**
      * Retrieves all homework logs for a specific student as a reactive [LiveData] stream.
      *
      * @param studentId The unique ID of the student.
@@ -178,12 +199,18 @@ class StudentRepository(
     /**
      * Checks if a student with the given names already exists (case-insensitive).
      *
+     * Due to PII encryption, this check is performed in-memory after decryption.
+     *
      * @param firstName The student's first name.
      * @param lastName The student's last name.
      * @return True if a match is found, false otherwise.
      */
     suspend fun studentExists(firstName: String, lastName: String): Boolean {
-        return studentDao.studentExists(firstName, lastName)
+        val allStudents = getAllStudentsNonLiveData()
+        return allStudents.any {
+            it.firstName.equals(firstName, ignoreCase = true) &&
+            it.lastName.equals(lastName, ignoreCase = true)
+        }
     }
 
     /**
@@ -412,12 +439,20 @@ class StudentRepository(
 
     private fun encryptStudent(student: Student): Student {
         return student.copy(
+            firstName = securityUtil.encrypt(student.firstName),
+            lastName = securityUtil.encrypt(student.lastName),
+            nickname = student.nickname?.let { securityUtil.encrypt(it) },
+            initials = student.initials?.let { securityUtil.encrypt(it) },
             temporaryTask = student.temporaryTask?.let { securityUtil.encrypt(it) }
         )
     }
 
     private fun decryptStudent(student: Student): Student {
         return student.copy(
+            firstName = securityUtil.decryptSafe(student.firstName),
+            lastName = securityUtil.decryptSafe(student.lastName),
+            nickname = student.nickname?.let { securityUtil.decryptSafe(it) },
+            initials = student.initials?.let { securityUtil.decryptSafe(it) },
             temporaryTask = student.temporaryTask?.let { securityUtil.decryptSafe(it) }
         )
     }
