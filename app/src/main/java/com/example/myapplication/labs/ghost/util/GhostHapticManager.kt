@@ -34,13 +34,16 @@ class GhostHapticManager(private val context: Context) {
         NEURAL_THINKING, // Circular momentum (Spin + Pulse)
         UI_CLICK,       // Sharp, clean interaction
         SPARK_POP,      // Sudden, light burst
-        NEURAL_FRICTION // High-frequency resistance (Low Ticks)
+        NEURAL_FRICTION, // High-frequency resistance (Low Ticks)
+        RESONANCE_POSITIVE, // Uplifting, rising pulse
+        RESONANCE_NEGATIVE, // Sharp, descending thud
+        RESONANCE_NEUTRAL   // Gentle, balanced ripple
     }
 
     /**
-     * Triggers the specified [Pattern].
+     * Triggers the specified [Pattern] with an optional [intensity] multiplier.
      */
-    fun perform(pattern: Pattern) {
+    fun perform(pattern: Pattern, intensity: Float = 1.0f) {
         if (vibrator == null || !vibrator.hasVibrator()) return
 
         when (pattern) {
@@ -50,6 +53,9 @@ class GhostHapticManager(private val context: Context) {
             Pattern.UI_CLICK -> playUiClick()
             Pattern.SPARK_POP -> playSparkPop()
             Pattern.NEURAL_FRICTION -> playNeuralFriction()
+            Pattern.RESONANCE_POSITIVE -> playResonancePositive(intensity)
+            Pattern.RESONANCE_NEGATIVE -> playResonanceNegative(intensity)
+            Pattern.RESONANCE_NEUTRAL -> playResonanceNeutral(intensity)
         }
     }
 
@@ -129,6 +135,42 @@ class GhostHapticManager(private val context: Context) {
         } else {
             @Suppress("DEPRECATION")
             vibrator?.vibrate(100)
+        }
+    }
+
+    private fun playResonancePositive(intensity: Float) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val effect = VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.5f * intensity)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_QUICK_RISE, 1.0f * intensity, 50)
+                .compose()
+            vibrator?.vibrate(effect)
+        } else {
+            playUiClick()
+        }
+    }
+
+    private fun playResonanceNegative(intensity: Float) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val effect = VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_THUD, 1.0f * intensity)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_TICK, 0.7f * intensity, 100)
+                .compose()
+            vibrator?.vibrate(effect)
+        } else {
+            playError()
+        }
+    }
+
+    private fun playResonanceNeutral(intensity: Float) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val effect = VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.6f * intensity)
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_LOW_TICK, 0.6f * intensity, 150)
+                .compose()
+            vibrator?.vibrate(effect)
+        } else {
+            playUiClick()
         }
     }
 }
