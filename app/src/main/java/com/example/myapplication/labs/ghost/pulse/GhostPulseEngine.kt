@@ -23,6 +23,15 @@ import com.example.myapplication.data.BehaviorEvent
 object GhostPulseEngine {
 
     /**
+     * Categorizes the nature of the behavioral resonance.
+     */
+    enum class ResonanceType {
+        POSITIVE,
+        NEGATIVE,
+        NEUTRAL
+    }
+
+    /**
      * Represents a detected behavioral resonance for a specific student.
      */
     data class ResonancePulse(
@@ -31,7 +40,8 @@ object GhostPulseEngine {
         val r: Float,
         val g: Float,
         val b: Float,
-        val startTime: Long
+        val startTime: Long,
+        val type: ResonanceType
     )
 
     /**
@@ -71,16 +81,24 @@ object GhostPulseEngine {
 
             if (age in 0 until windowMillis) {
                 if (pulses.size < 20) {
-                    // Determine color based on behavior type
-                    val (r, g, b) = when {
+                    // Determine color and resonance type based on behavior type
+                    var r = 0.2f
+                    var g = 0.6f
+                    var b = 1.0f
+                    var resType = ResonanceType.NEUTRAL
+
+                    when {
                         event.type.contains("Positive", ignoreCase = true) -> {
-                            Triple(0.2f, 1.0f, 0.4f)
+                            r = 0.2f
+                            g = 1.0f
+                            b = 0.4f
+                            resType = ResonanceType.POSITIVE
                         }
                         event.type.contains("Negative", ignoreCase = true) -> {
-                            Triple(1.0f, 0.2f, 0.2f)
-                        }
-                        else -> {
-                            Triple(0.2f, 0.6f, 1.0f)
+                            r = 1.0f
+                            g = 0.2f
+                            b = 0.2f
+                            resType = ResonanceType.NEGATIVE
                         }
                     }
 
@@ -93,7 +111,8 @@ object GhostPulseEngine {
                         r = r,
                         g = g,
                         b = b,
-                        startTime = event.timestamp
+                        startTime = event.timestamp,
+                        type = resType
                     ))
                 }
             } else if (event.timestamp < currentTime - windowMillis) {

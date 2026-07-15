@@ -70,7 +70,13 @@ fun GhostPulseLayer(
         if (resonances.isNotEmpty()) {
             val mostRecent = resonances.maxByOrNull { it.startTime }
             if (mostRecent != null && mostRecent.startTime > lastPulseTime && mostRecent.intensity > 0.8f) {
-                hapticManager.perform(GhostHapticManager.Pattern.SPARK_POP)
+                // Ghost Pulse 2.0: Trigger multi-modal haptics based on resonance type
+                val pattern = when (mostRecent.type) {
+                    GhostPulseEngine.ResonanceType.POSITIVE -> GhostHapticManager.Pattern.RESONANCE_POSITIVE
+                    GhostPulseEngine.ResonanceType.NEGATIVE -> GhostHapticManager.Pattern.RESONANCE_NEGATIVE
+                    GhostPulseEngine.ResonanceType.NEUTRAL -> GhostHapticManager.Pattern.RESONANCE_NEUTRAL
+                }
+                hapticManager.perform(pattern, intensity = mostRecent.intensity)
                 lastPulseTime = mostRecent.startTime
             }
         }

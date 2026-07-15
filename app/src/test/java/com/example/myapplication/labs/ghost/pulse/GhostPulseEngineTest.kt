@@ -28,6 +28,35 @@ class GhostPulseEngineTest {
         assertEquals(0.2f, pulses[0].r, 0.01f) // Green
         assertEquals(1.0f, pulses[0].g, 0.01f)
         assertEquals(0.4f, pulses[0].b, 0.01f)
+        assertEquals(GhostPulseEngine.ResonanceType.POSITIVE, pulses[0].type)
+    }
+
+    @Test
+    fun testCalculateResonance_NegativeEvent() {
+        val currentTime = System.currentTimeMillis()
+        val events = listOf(
+            BehaviorEvent(id = 1, studentId = 1, type = "Negative", timestamp = currentTime - 1000, comment = null)
+        )
+
+        val pulses = GhostPulseEngine.calculateResonance(events, currentTime)
+
+        assertEquals(1, pulses.size)
+        assertEquals(GhostPulseEngine.ResonanceType.NEGATIVE, pulses[0].type)
+        assertEquals(1.0f, pulses[0].r, 0.01f) // Red
+    }
+
+    @Test
+    fun testCalculateResonance_NeutralEvent() {
+        val currentTime = System.currentTimeMillis()
+        val events = listOf(
+            BehaviorEvent(id = 1, studentId = 1, type = "Neutral", timestamp = currentTime - 1000, comment = null)
+        )
+
+        val pulses = GhostPulseEngine.calculateResonance(events, currentTime)
+
+        assertEquals(1, pulses.size)
+        assertEquals(GhostPulseEngine.ResonanceType.NEUTRAL, pulses[0].type)
+        assertEquals(0.2f, pulses[0].r, 0.01f) // Blue-ish
     }
 
     @Test
