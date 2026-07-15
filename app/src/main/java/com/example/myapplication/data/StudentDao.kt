@@ -48,7 +48,14 @@ interface StudentDao {
     @Query("SELECT * FROM students")
     suspend fun getAllStudentsNonLiveData(): List<Student>
 
-    /** Searches for students by first name, last name, or nickname. */
+    /**
+     * Searches for students by first name, last name, or nickname.
+     *
+     * @deprecated This method is non-functional because student PII (names) is encrypted
+     * in the database. Room cannot perform `LIKE` queries on encrypted blobs.
+     * Searches must be performed in-memory after decryption.
+     */
+    @Deprecated("PII encryption prevents SQL-level searching. Perform search in-memory.")
     @Query("SELECT * FROM students WHERE firstName LIKE :searchQuery OR lastName LIKE :searchQuery OR nickname LIKE :searchQuery")
     fun searchStudents(searchQuery: String): LiveData<List<Student>>
 
@@ -101,7 +108,12 @@ interface StudentDao {
     /**
      * Checks if a student with the given first and last name already exists.
      * Case-insensitive. Used to prevent duplicates during manual addition or import.
+     *
+     * @deprecated This method is non-functional because student PII (names) is encrypted
+     * in the database. Room cannot perform `LOWER()` or comparison on encrypted blobs.
+     * Existence checks must be performed in-memory after decryption in the Repository.
      */
+    @Deprecated("PII encryption prevents SQL-level existence checks. Use StudentRepository.studentExists.")
     @Query("SELECT EXISTS(SELECT 1 FROM students WHERE LOWER(firstName) = LOWER(:firstName) AND LOWER(lastName) = LOWER(:lastName) LIMIT 1)")
     suspend fun studentExists(firstName: String, lastName: String): Boolean
 }
