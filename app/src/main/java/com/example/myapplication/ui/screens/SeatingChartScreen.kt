@@ -1927,8 +1927,11 @@ fun SeatingChartScreen(
 
                 if (showGhostSpectraDialog) {
                     selectedStudentUiItemForAction?.let { student ->
-                        val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
-                        val spectra = GhostSpectraEngine.analyzeStudentSpectra(student.id.toLong(), behavior)
+                        // BOLT: Memoize spectra analysis to avoid O(L) re-processing on every recomposition.
+                        val spectra = remember(student.id, seatingChartViewModel.behaviorLogsByStudentCache) {
+                            val behavior = seatingChartViewModel.behaviorLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                            GhostSpectraEngine.analyzeStudentSpectra(student.id.toLong(), behavior)
+                        }
                         GhostSpectraDialog(
                             studentName = student.fullName.value,
                             spectra = spectra,
@@ -1956,15 +1959,19 @@ fun SeatingChartScreen(
 
             if (showGhostSynapseDialog) {
                 selectedStudentUiItemForAction?.let { student ->
-                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
-                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
-                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+                    // BOLT: Memoize synapse data aggregation to avoid redundant object churn.
+                    val synapseData = remember(student.id, seatingChartViewModel.behaviorLogsByStudentCache, seatingChartViewModel.quizLogsByStudentCache, seatingChartViewModel.homeworkLogsByStudentCache) {
+                        val behavior = seatingChartViewModel.behaviorLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                        val quiz = seatingChartViewModel.quizLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                        val homework = seatingChartViewModel.homeworkLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                        Triple(behavior, quiz, homework)
+                    }
 
                     GhostSynapseDialog(
                         studentName = student.fullName.value,
-                        behaviorLogs = behavior,
-                        quizLogs = quiz,
-                        homeworkLogs = homework,
+                        behaviorLogs = synapseData.first,
+                        quizLogs = synapseData.second,
+                        homeworkLogs = synapseData.third,
                         onDismiss = { showGhostSynapseDialog = false }
                     )
                 }
@@ -1993,10 +2000,12 @@ fun SeatingChartScreen(
                             DropdownMenuItem(
                                 text = { Text("Neural Insight 👻") },
                                 onClick = {
-                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
-                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
-                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+                                    val behavior = seatingChartViewModel.behaviorLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                                    val quiz = seatingChartViewModel.quizLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                                    val homework = seatingChartViewModel.homeworkLogsByStudentCache[student.id.toLong()] ?: emptyList()
 
+                                    // BOLT: Insights involve complex synthesis logic. Since this is triggered
+                                    // inside an onClick lambda, it only runs once per click.
                                     currentGhostInsight = GhostInsightEngine.generateInsight(
                                         student.fullName.value, behavior, quiz, homework
                                     )
@@ -2380,9 +2389,9 @@ fun SeatingChartScreen(
                             "LOG_BEHAVIOR" -> showBehaviorDialog = true
                             "NEURAL_INSIGHT" -> {
                                 selectedStudentUiItemForAction?.let { student ->
-                                    val behavior = allBehaviorEvents.filter { it.studentId == student.id.toLong() }
-                                    val quiz = allQuizLogs.filter { it.studentId == student.id.toLong() }
-                                    val homework = allHomeworkLogs.filter { it.studentId == student.id.toLong() }
+                                    val behavior = seatingChartViewModel.behaviorLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                                    val quiz = seatingChartViewModel.quizLogsByStudentCache[student.id.toLong()] ?: emptyList()
+                                    val homework = seatingChartViewModel.homeworkLogsByStudentCache[student.id.toLong()] ?: emptyList()
 
                                     currentGhostInsight = GhostInsightEngine.generateInsight(
                                         student.fullName.value, behavior, quiz, homework
