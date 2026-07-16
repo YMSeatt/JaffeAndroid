@@ -380,6 +380,13 @@ Real-time biometric visualization of student biological rhythms.
 - **AGSL Waveform**: Renders a glowing, high-fidelity signal line with a CRT grid background.
 - **BOLT Optimization**: Zero-allocation synthesis loop and pre-calculated interaction spikes.
 
+### 90. Ghost Focus (GhostFocusLayer.kt, GhostFocusEngine.kt, GhostFocusShader.kt)
+Neural classroom focus timer and concentration visualization.
+- **Focus Timer**: Implements a customizable focus window (e.g., 25-minute Pomodoro) to track classroom-wide concentration.
+- **Concentration Metrics**: Calculates individual student focus scores based on behavioral feedback within the focus window.
+- **Neural Focus Field**: Renders a glowing AGSL field with calming waves for high focus and chaotic "interference" at distraction hotspots.
+- **BOLT Optimization**: Pre-allocated uniform arrays and single-pass synthesis for zero-allocation 60fps rendering.
+
 ## 🚧 Status: Experimental
 These features require `GhostConfig.GHOST_MODE_ENABLED = true` and target **API 33+** (for `RuntimeShader` support), with some features requiring **API 35+** (Android 15). They are intended for research and development and may be subject to rapid changes.
 

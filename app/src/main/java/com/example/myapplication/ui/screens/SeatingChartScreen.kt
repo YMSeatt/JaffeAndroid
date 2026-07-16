@@ -140,6 +140,7 @@ import com.example.myapplication.labs.ghost.GhostSparkEngine
 import com.example.myapplication.labs.ghost.GhostSparkLayer
 import com.example.myapplication.labs.ghost.GhostFutureLayer
 import com.example.myapplication.labs.ghost.GhostNebulaLayer
+import com.example.myapplication.labs.ghost.GhostFocusLayer
 import com.example.myapplication.labs.ghost.pulse.GhostPulseLayer
 import com.example.myapplication.labs.ghost.pulsar.GhostPulsarLayer
 import com.example.myapplication.labs.ghost.magnetar.GhostMagnetarLayer
@@ -371,6 +372,9 @@ fun SeatingChartScreen(
     val classroomHarmony by seatingChartViewModel.classroomHarmony.collectAsState()
     val kaleidoscopeFragments by seatingChartViewModel.kaleidoscopeFragments.collectAsState()
     val harmonyIndex by seatingChartViewModel.harmonyIndex.collectAsState()
+    val isFocusActive by seatingChartViewModel.isFocusActive.collectAsState()
+    val focusStartTime by seatingChartViewModel.focusStartTime.collectAsState()
+    val focusRemainingSeconds by seatingChartViewModel.focusRemainingSeconds.collectAsState()
     val magnetarAnalysis by seatingChartViewModel.magnetarAnalysis.collectAsState()
     val warpAnalysis by seatingChartViewModel.warpAnalysis.collectAsState()
     val mossScores by seatingChartViewModel.mossScores.collectAsState()
@@ -1345,6 +1349,14 @@ fun SeatingChartScreen(
                 canvasScale = scale,
                 canvasOffset = offset,
                 isActive = isKaleidoscopeActive
+            )
+            GhostFocusLayer(
+                students = students,
+                behaviorLogsByStudent = seatingChartViewModel.behaviorLogsByStudentCache,
+                focusStartTime = focusStartTime,
+                canvasScale = scale,
+                canvasOffset = offset,
+                isActive = isFocusActive
             )
             Box(
                 modifier = Modifier
@@ -2573,6 +2585,14 @@ fun SeatingChartScreen(
                                 isStellarActive = !isStellarActive
                                 hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
                             }
+                            "FOCUS" -> {
+                                if (isFocusActive) {
+                                    seatingChartViewModel.stopFocus()
+                                } else {
+                                    seatingChartViewModel.startFocus(25) // Default 25 min Pomodoro
+                                }
+                                hapticManager.perform(GhostHapticManager.Pattern.HEAVY_CLICK)
+                            }
                         }
                     },
                     onDismiss = { isGhostHubVisible = false }
@@ -2603,6 +2623,37 @@ fun SeatingChartScreen(
                     onTeleport = { newOffset -> offset = newOffset },
                     isActive = isNavigatorActive
                 )
+            }
+
+            // Ghost Focus HUD
+            if (isFocusActive) {
+                Surface(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .align(Alignment.BottomStart),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Timer,
+                            contentDescription = null,
+                            tint = Color.Cyan,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        val minutes = focusRemainingSeconds / 60
+                        val seconds = focusRemainingSeconds % 60
+                        Text(
+                            text = String.format("%02d:%02d", minutes, seconds),
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Color.Cyan
+                        )
+                    }
+                }
             }
 
             // Ghost Glance Overlay

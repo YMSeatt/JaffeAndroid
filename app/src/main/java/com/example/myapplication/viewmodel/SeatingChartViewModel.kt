@@ -382,6 +382,24 @@ class SeatingChartViewModel @Inject constructor(
     private val _userPreferences = MutableStateFlow<UserPreferences?>(null)
     val userPreferences: StateFlow<UserPreferences?> = _userPreferences.asStateFlow()
 
+    private val _isFocusActive = MutableStateFlow(false)
+    /** Indicates if the Ghost Focus timer is currently active. */
+    val isFocusActive: StateFlow<Boolean> = _isFocusActive.asStateFlow()
+
+    private val _focusStartTime = MutableStateFlow(0L)
+    /** The timestamp (ms) when the current focus session started. */
+    val focusStartTime: StateFlow<Long> = _focusStartTime.asStateFlow()
+
+    private val _focusEndTime = MutableStateFlow(0L)
+    /** The timestamp (ms) when the current focus session will end. */
+    val focusEndTime: StateFlow<Long> = _focusEndTime.asStateFlow()
+
+    private val _focusRemainingSeconds = MutableStateFlow(0)
+    /** Remaining seconds in the current focus session. */
+    val focusRemainingSeconds: StateFlow<Int> = _focusRemainingSeconds.asStateFlow()
+
+    private var focusTimerJob: Job? = null
+
     /**
      * A coordination trigger used to synchronize UI updates.
      * Multiple data sources (Room DAOs, DataStore preferences, and in-memory session changes)
@@ -3530,6 +3548,39 @@ class SeatingChartViewModel @Inject constructor(
             val command = UpdateStudentCommand(this@SeatingChartViewModel, student, updatedStudent)
             executeCommand(command)
         }
+    }
+
+    /**
+     * Starts a new Ghost Focus session for the specified duration.
+     * @param minutes The duration of the focus session in minutes.
+     */
+    fun startFocus(minutes: Int) {
+        focusTimerJob?.cancel()
+        val durationMs = minutes * 60 * 1000L
+        val now = System.currentTimeMillis()
+        val endTime = now + durationMs
+        _focusStartTime.value = now
+        _focusEndTime.value = endTime
+        _isFocusActive.value = true
+        _focusRemainingSeconds.value = minutes * 60
+
+        focusTimerJob = viewModelScope.launch {
+            while (System.currentTimeMillis() < endTime) {
+                val remaining = ((endTime - System.currentTimeMillis()) / 1000).toInt()
+                _focusRemainingSeconds.value = remaining.coerceAtLeast(0)
+                delay(1000)
+            }
+            stopFocus()
+        }
+    }
+
+    /**
+     * Terminates the current Ghost Focus session.
+     */
+    fun stopFocus() {
+        focusTimerJob?.cancel()
+        _isFocusActive.value = false
+        _focusRemainingSeconds.value = 0
     }
 
     companion object {
