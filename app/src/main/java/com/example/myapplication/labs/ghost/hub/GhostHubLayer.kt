@@ -163,6 +163,9 @@ fun GhostHubLayer(
             if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.METEOR_MODE_ENABLED) {
                 add(GhostAction("METEOR", Icons.Default.Speed, "Ghost Meteor"))
             }
+            if (GhostConfig.GHOST_MODE_ENABLED && GhostConfig.FOCUS_MODE_ENABLED) {
+                add(GhostAction("FOCUS", Icons.Default.Timer, "Ghost Focus"))
+            }
         }
     }
 

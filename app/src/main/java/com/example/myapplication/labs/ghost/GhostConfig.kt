@@ -288,4 +288,7 @@ object GhostConfig {
 
     /** Enables "Ghost Meteor" data-driven neural projectile visualization. */
     const val METEOR_MODE_ENABLED = true
+
+    /** Enables "Ghost Focus" neural classroom focus timer and concentration visualization. */
+    const val FOCUS_MODE_ENABLED = true
 }
