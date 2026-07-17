@@ -119,7 +119,11 @@ object HomeworkScoreEngine {
 
         // 1. Numeric accumulation from marksData
         marksData.values.forEach { value ->
-            val doubleVal = if (value is Number) value.toDouble() else value.toString().toDoubleOrNull()
+            val doubleVal = when (value) {
+                is Number -> value.toDouble()
+                is Boolean -> if (value) 1.0 else 0.0
+                else -> value.toString().toDoubleOrNull()
+            }
             doubleVal?.let { totalPoints += it }
         }
 
@@ -143,10 +147,15 @@ object HomeworkScoreEngine {
         // Python: for opt_name in selected_options: if opt_mark_type: total_points += opt_mark_type.default_points
         // In Android, selected options are often stored as keys in marksData with value 1.0 or similar.
         marksData.forEach { (key, value) ->
-            // If the value is a boolean true or a 1.0, and the key matches a metadata name,
+            // If the value is a boolean true/false or numeric, and the key matches a metadata name,
             // we might be double-counting if we already summed it as numeric.
             // But if it's NOT a number (e.g. "Done": "Yes"), we should handle it.
-            if (value !is Number && value.toString().toDoubleOrNull() == null) {
+            val isNumeric = when (value) {
+                is Number -> true
+                is Boolean -> true
+                else -> value.toString().toDoubleOrNull() != null
+            }
+            if (!isNumeric) {
                 // BOLT: O(1) lookup for metadata names
                 metadataMap[key.lowercase()]?.let {
                     totalPoints += it.defaultPoints
