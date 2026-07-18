@@ -4,6 +4,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-09-09: Ghost Nebula 3D - Volumetric clouds using depth sensors in `/labs/ghost/`
 - [DONE] 2028-09-08: Ghost Focus - Neural Classroom Focus Timer & Concentration Visualization in `/labs/ghost/`
 - [DONE] 2028-09-07: Ghost Pulse 2.0 - Multi-modal resonance haptics in `/labs/ghost/pulse/`
 - [DONE] 2028-09-06: Ghost Meteor - Neural High-Momentum Projectiles in `/labs/ghost/meteor/`
