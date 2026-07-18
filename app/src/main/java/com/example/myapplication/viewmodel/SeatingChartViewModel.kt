@@ -38,6 +38,8 @@ import com.example.myapplication.commands.ItemType
 import com.example.myapplication.commands.MoveStudentCommand
 import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
+import com.example.myapplication.commands.MarkLiveQuizQuestionCommand
+import com.example.myapplication.commands.MarkLiveHomeworkCommand
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.BehaviorEventDao
@@ -753,6 +755,40 @@ class SeatingChartViewModel @Inject constructor(
     val currentMode = MutableLiveData<String>("behavior")
     val liveQuizScores = MutableLiveData<Map<Long, Map<String, Any>>>(emptyMap())
     val liveHomeworkScores = MutableLiveData<Map<Long, Map<String, Any>>>(emptyMap())
+
+    fun getSessionQuizLogs(): List<QuizLog> = sessionQuizLogs.value.orEmpty()
+    fun setSessionQuizLogs(logs: List<QuizLog>) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            sessionQuizLogs.value = logs
+        } else {
+            sessionQuizLogs.postValue(logs)
+        }
+    }
+
+    fun getSessionHomeworkLogs(): List<HomeworkLog> = sessionHomeworkLogs.value.orEmpty()
+    fun setSessionHomeworkLogs(logs: List<HomeworkLog>) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            sessionHomeworkLogs.value = logs
+        } else {
+            sessionHomeworkLogs.postValue(logs)
+        }
+    }
+
+    fun setLiveQuizScores(scores: Map<Long, Map<String, Any>>) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            liveQuizScores.value = scores
+        } else {
+            liveQuizScores.postValue(scores)
+        }
+    }
+
+    fun setLiveHomeworkScores(scores: Map<Long, Map<String, Any>>) {
+        if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+            liveHomeworkScores.value = scores
+        } else {
+            liveHomeworkScores.postValue(scores)
+        }
+    }
 
     val selectedItemIds = MutableLiveData<Set<ChartItemId>>(emptySet())
     var canvasHeight by mutableStateOf(0)
@@ -3436,43 +3472,9 @@ class SeatingChartViewModel @Inject constructor(
      * @param quizLog The individual question mark log.
      */
     fun addQuizLogToSession(quizLog: QuizLog) {
-        if (isSessionActive.value == true) {
-            val currentLogs = sessionQuizLogs.value.orEmpty().toMutableList()
-            // In a session, we usually want to KEEP all marks, but for simple progress tracking
-            // we treat marks for the SAME quiz name as updates if they are from the same "session".
-            // However, to match Python keypad behavior, we append.
-            currentLogs.add(quizLog)
-            sessionQuizLogs.postValue(currentLogs)
-
-            // Update live scores for immediate UI feedback
-            val studentScores = liveQuizScores.value?.get(quizLog.studentId)?.toMutableMap() ?: mutableMapOf()
-            studentScores["last_response"] = quizLog.comment ?: ""
-            studentScores["mark_value"] = quizLog.markValue ?: 0
-            studentScores["max_mark_value"] = quizLog.maxMarkValue ?: 0
-            studentScores["marks_data"] = quizLog.marksData
-
-            // Aggregate session progress (Ported from Python)
-            if (quizLog.numQuestions > 0) {
-                val totalAsked = (studentScores["total_asked"] as? Int ?: 0) + 1
-                studentScores["total_asked"] = totalAsked
-            }
-
-            if (quizLog.comment.equals("Correct", ignoreCase = true)) {
-                val correctCount = (studentScores["correct"] as? Int ?: 0) + 1
-                studentScores["correct"] = correctCount
-            }
-
-            val allScores = liveQuizScores.value?.toMutableMap() ?: mutableMapOf()
-            allScores[quizLog.studentId] = studentScores
-            liveQuizScores.postValue(allScores)
-
-            Log.d(
-                "SeatingChartViewModel",
-                "Quiz log added/updated in session for student_${quizLog.studentId.toString().hashCode()}. Progress: ${studentScores["correct_count"] ?: 0}/${studentScores["total_asked"]}"
-            )
-        } else {
-            // If not in a session, save directly to the database
-            saveQuizLog(quizLog)
+        viewModelScope.launch {
+            val command = MarkLiveQuizQuestionCommand(this@SeatingChartViewModel, quizLog)
+            executeCommand(command)
         }
     }
 
@@ -3481,43 +3483,9 @@ class SeatingChartViewModel @Inject constructor(
      * from the enhanced LiveHomeworkMarkDialog.
      */
     fun addHomeworkLogsToSession(logs: List<HomeworkLog>) {
-        if (isSessionActive.value == true) {
-            val currentLogs = sessionHomeworkLogs.value.orEmpty().toMutableList()
-            val allLiveScores = liveHomeworkScores.value?.toMutableMap() ?: mutableMapOf()
-
-            logs.forEach { homeworkLog ->
-                // 1. Update session logs list (for persistence)
-                // We keep all logs in the session unless they are identical updates.
-                currentLogs.add(homeworkLog)
-
-                // 2. Update live scores map (for UI/Conditional Formatting)
-                val studentScores = allLiveScores[homeworkLog.studentId]?.toMutableMap() ?: mutableMapOf()
-
-                val marksData = HomeworkScoreEngine.parseMarksData(homeworkLog.marksData)
-                if (marksData.containsKey("selected_options")) {
-                    // "Select" mode aggregation
-                    studentScores["selected_options"] = marksData["selected_options"] ?: emptyList<String>()
-                } else if (homeworkLog.assignmentName == "Yes/No Update") {
-                    // "Yes/No" mode aggregation
-                    marksData.forEach { (key, value) ->
-                        studentScores[key] = value
-                    }
-                } else {
-                    // Individual assignment or Template
-                    studentScores[homeworkLog.assignmentName] = homeworkLog.status
-                }
-                allLiveScores[homeworkLog.studentId] = studentScores
-            }
-
-            sessionHomeworkLogs.postValue(currentLogs)
-            liveHomeworkScores.postValue(allLiveScores)
-
-            Log.d(
-                "SeatingChartViewModel",
-                "Added ${logs.size} homework log(s) to session."
-            )
-        } else {
-            logs.forEach { addHomeworkLog(it) }
+        viewModelScope.launch {
+            val command = MarkLiveHomeworkCommand(this@SeatingChartViewModel, logs)
+            executeCommand(command)
         }
     }
 
