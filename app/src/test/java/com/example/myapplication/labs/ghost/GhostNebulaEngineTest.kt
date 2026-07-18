@@ -7,11 +7,15 @@ import androidx.compose.ui.unit.dp
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.Mockito
 
 class GhostNebulaEngineTest {
 
     @Test
     fun `calculateNebula identifies clusters from logs`() {
+        val context = Mockito.mock(android.content.Context::class.java)
+        val engine = GhostNebulaEngine(context)
+
         val students = listOf(
             createMockStudent(1, 100f, 100f),
             createMockStudent(2, 500f, 500f)
@@ -24,12 +28,10 @@ class GhostNebulaEngineTest {
             BehaviorEvent(3, 2L, "Negative Disruption", now, null)
         )
 
-        val (intensity, clusters) = GhostNebulaEngine.calculateNebula(students, logs)
+        val (intensity, clusters) = engine.calculateNebula(students, logs)
 
         assertEquals(2, clusters.size)
 
-        // Cluster 1 (Student 2) should be first (more logs) or sorted somehow?
-        // Current implementation groups and sorts by log count.
         val clusterStudent2 = clusters.find { it.x == 500f }
         val clusterStudent1 = clusters.find { it.x == 100f }
 
@@ -44,13 +46,16 @@ class GhostNebulaEngineTest {
 
     @Test
     fun `calculateNebula respects time window`() {
+        val context = Mockito.mock(android.content.Context::class.java)
+        val engine = GhostNebulaEngine(context)
+
         val students = listOf(createMockStudent(1, 100f, 100f))
         val now = System.currentTimeMillis()
         val oldLogs = listOf(
             BehaviorEvent(1, 1L, "Positive", now - 20 * 60 * 1000L, null) // 20 mins ago
         )
 
-        val (intensity, clusters) = GhostNebulaEngine.calculateNebula(students, oldLogs, timeWindowMs = 15 * 60 * 1000L)
+        val (intensity, clusters) = engine.calculateNebula(students, oldLogs, timeWindowMs = 15 * 60 * 1000L)
 
         assertEquals(0, clusters.size)
         assertEquals(0.3f, intensity)
