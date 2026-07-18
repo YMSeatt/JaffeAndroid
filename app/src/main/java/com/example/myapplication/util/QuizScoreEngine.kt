@@ -147,7 +147,10 @@ object QuizScoreEngine {
      */
     internal fun calculatePercentage(log: QuizLog, context: QuizScoringContext): Double? {
         // BOLT: Result memoization using bit-packed Long key to avoid String allocation.
-        val cacheKey = (System.identityHashCode(log).toLong() shl 32) or (System.identityHashCode(context).toLong() and 0xFFFFFFFFL)
+        // We use log.hashCode() instead of System.identityHashCode(log) to ensure cache persistence
+        // across Room database flow emissions and ViewModel updates where content is identical but references change.
+        val logHash = log.hashCode().toLong()
+        val cacheKey = ((logHash and 0xFFFFFFFFL) shl 32) or (System.identityHashCode(context).toLong() and 0xFFFFFFFFL)
         val cached = scoreResultCache.get(cacheKey)
         if (cached != null) return cached
 
