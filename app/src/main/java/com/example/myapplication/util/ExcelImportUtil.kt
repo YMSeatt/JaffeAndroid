@@ -93,6 +93,11 @@ object ExcelImportUtil {
         try {
             val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
 
+            // HARDEN: Protect against Zip Bomb and XML Entity Expansion attacks by setting POI's ZipSecureFile limits
+            org.apache.poi.openxml4j.util.ZipSecureFile.setMinInflateRatio(0.01)
+            org.apache.poi.openxml4j.util.ZipSecureFile.setMaxEntrySize(maxSizeBytes)
+            org.apache.poi.openxml4j.util.ZipSecureFile.setMaxTextSize(maxSizeBytes)
+
             val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
             inputStream.use { stream ->
                 if (stream == null) return@withContext Result.success(0)
