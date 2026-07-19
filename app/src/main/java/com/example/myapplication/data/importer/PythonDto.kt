@@ -44,7 +44,9 @@ data class PythonStudent(
     @SerialName("style_overrides")
     val styleOverrides: PythonStyleOverrides,
     @SerialName("group_id")
-    val groupId: String
+    val groupId: String,
+    @SerialName("temporary_task")
+    val temporaryTask: String? = null
 )
 
 @Serializable

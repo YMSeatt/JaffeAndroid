@@ -198,9 +198,9 @@ class Importer(
             val studentsToInsert = studentList.map { studentDto ->
                 Student(
                     stringId = studentDto.id,
-                    firstName = studentDto.firstName,
-                    lastName = studentDto.lastName,
-                    nickname = studentDto.nickname,
+                    firstName = securityUtil.encrypt(studentDto.firstName),
+                    lastName = securityUtil.encrypt(studentDto.lastName),
+                    nickname = studentDto.nickname?.let { securityUtil.encrypt(it) },
                     gender = studentDto.gender,
                     xPosition = studentDto.x.toFloat(),
                     yPosition = studentDto.y.toFloat(),
