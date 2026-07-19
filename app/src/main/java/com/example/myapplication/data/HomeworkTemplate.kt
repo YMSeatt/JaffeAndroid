@@ -70,8 +70,7 @@ data class HomeworkTemplate(
      */
     fun getSteps(): List<HomeworkMarkStep> {
         return try {
-            val type = object : TypeToken<List<HomeworkMarkStep>>() {}.type
-            Gson().fromJson(marksData, type) ?: emptyList()
+            gson.fromJson(marksData, stepsType) ?: emptyList()
         } catch (e: Exception) {
             emptyList()
         }
@@ -79,13 +78,20 @@ data class HomeworkTemplate(
 
     companion object {
         /**
+         * BOLT: Cache static Gson and TypeToken instances to completely eliminate redundant
+         * dynamic class generation and Gson object allocation inside template helper functions.
+         */
+        private val gson = Gson()
+        private val stepsType = object : TypeToken<List<HomeworkMarkStep>>() {}.type
+
+        /**
          * Helper to create a [HomeworkTemplate] from a list of steps.
          */
         fun fromSteps(name: String, steps: List<HomeworkMarkStep>, id: Long = 0): HomeworkTemplate {
             return HomeworkTemplate(
                 id = id,
                 name = name,
-                marksData = Gson().toJson(steps)
+                marksData = gson.toJson(steps)
             )
         }
     }

@@ -32,14 +32,22 @@ class Converters {
         return set.joinToString(",")
     }
 
+    companion object {
+        /**
+         * BOLT: Cache static Gson and TypeToken instances to completely eliminate redundant
+         * per-query dynamic class generation and Gson object allocation.
+         */
+        private val gson = Gson()
+        private val mapType = object : TypeToken<Map<String, Int>>() {}.type
+    }
+
     /**
      * Deserializes a JSON string into a [Map] of string keys to integer values.
      * Primarily used for [QuizLog.marksData] to retrieve the count of each mark type.
      */
     @TypeConverter
     fun fromStringMap(value: String): Map<String, Int> {
-        val mapType = object : TypeToken<Map<String, Int>>() {}.type
-        return Gson().fromJson(value, mapType)
+        return gson.fromJson(value, mapType)
     }
 
     /**
@@ -47,6 +55,6 @@ class Converters {
      */
     @TypeConverter
     fun fromMap(map: Map<String, Int>): String {
-        return Gson().toJson(map)
+        return gson.toJson(map)
     }
 }
