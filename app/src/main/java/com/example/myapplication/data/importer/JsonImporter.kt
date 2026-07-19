@@ -82,11 +82,12 @@ class JsonImporter @Inject constructor(
     /**
      * Executes a coordinated bulk import from multiple source URIs.
      *
-     * The ingestion order is critical to maintaining relational integrity:
-     * 1. **Student Groups**: Must exist so students can be assigned to them.
-     * 2. **Classroom Data**: Ingests students and furniture.
-     * 3. **Custom Categories**: Populates dropdown menus for behaviors and homework.
-     * 4. **Templates**: (Optional) Ingests reusable assignment structures.
+     * ### Order of Execution Heuristics:
+     * Ingestion order is strictly structured to preserve relational/foreign-key integrity in SQLite:
+     * 1. **Student Groups**: Must be imported first, enabling child Student records to link to valid group primary keys.
+     * 2. **Classroom Data**: Ingests students and furniture items.
+     * 3. **Custom Categories**: Populates dropdown menus for behaviors, homework types, and homework statuses.
+     * 4. **Templates**: (Optional) Ingests reusable template structures for assignments.
      */
     suspend fun importData(
         classroomDataUri: Uri,
@@ -106,6 +107,20 @@ class JsonImporter @Inject constructor(
         }
     }
 
+    /**
+     * Ingests homework template definitions from a JSON file.
+     *
+     * ### Paradigm & Structural Parity:
+     * While Python templates are simpler (containing a flat checklist of items), Android homework templates
+     * are relational and represent a multi-step workflow. This method normalizes Python's checklist models
+     * into native [HomeworkMarkStep] elements with mapped [HomeworkMarkType]s:
+     * - "checkbutton" / "checkbox" mapped to [HomeworkMarkType.CHECKBOX]
+     * - "scale" / "slider" / "score" mapped to [HomeworkMarkType.SCORE]
+     * - "entry" / "text" / "comment" mapped to [HomeworkMarkType.COMMENT]
+     *
+     * This translation guarantees that teachers maintain their custom grading criteria (e.g. effort, completeness)
+     * when synchronizing files from the desktop workspace.
+     */
     private suspend fun importHomeworkTemplates(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<List<PythonHomeworkTemplate>>(content)
@@ -131,10 +146,14 @@ class JsonImporter @Inject constructor(
     }
 
     /**
-     * Reads the content of a file from a [Uri] with a strict size limit.
+     * Reads raw text data from an Android content URI, enforcing security limits.
      *
-     * **Security Hardening**: Enforces a 50MB limit to prevent Out-of-Memory (OOM)
-     * Denial-of-Service attacks when ingesting large, malicious, or malformed JSON files.
+     * ### Shield Hardening & DoS Prevention:
+     * Parsing massive nested JSON arrays can trigger rapid memory escalation and Out-of-Memory (OOM) failures.
+     * To protect the application's memory boundary, this method strictly wraps file streaming with a 50MB
+     * security limit, aborting immediately if a file exceeds this cap.
+     *
+     * @throws SecurityException If the file exceeds the 50MB safety limit.
      */
     private fun readFileContent(uri: Uri): String {
         val maxSizeBytes = 50 * 1024 * 1024L // 50MB limit
@@ -159,6 +178,24 @@ class JsonImporter @Inject constructor(
         }
     }
 
+    /**
+     * Processes individual student, furniture, and timeline logs from a classroom export.
+     *
+     * ### Multi-Pass Transaction & Referential Integrity:
+     * Room requires rigid relational mappings. If logs were inserted before students, foreign key constraints
+     * would fail, resulting in database corruption or runtime crashes. To ensure absolute data safety, this
+     * method coordinates a **4-Pass Ingestion pipeline** inside a single database transaction:
+     * 1. **Pass 1: Students**: Student profiles are imported first. We pre-fetch [StudentGroup]s into an
+     *    in-memory cache to resolve group IDs in $O(1)$ time, eliminating the N+1 query problem. After insertion,
+     *    we build a mapping of Python string UUIDs to Android auto-incremented primary keys.
+     * 2. **Pass 2: Furniture**: Physical classroom boundaries and desks are loaded.
+     * 3. **Pass 3: Behavior Logs**: Historical events are loaded, linking student references back to their Android IDs.
+     * 4. **Pass 4: Homework Logs**: Longitudinal homework completion records are populated, converting Python-style
+     *    detail maps into encrypted JSON strings.
+     *
+     * All operations use Room transactions (`db.withTransaction`) to ensure that either the entire import succeeds
+     * or the database is rolled back, preventing orphaned or half-imported database records.
+     */
     private suspend fun importClassroomData(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<PythonClassroomData>(content)
@@ -239,6 +276,11 @@ class JsonImporter @Inject constructor(
         }
     }
 
+    /**
+     * Imports custom student groups and registers them.
+     *
+     * Maps Python group configurations (name and visual hex color mapping) into native [StudentGroup] entities.
+     */
     private suspend fun importStudentGroups(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<Map<String, PythonStudentGroup>>(content)
@@ -251,6 +293,9 @@ class JsonImporter @Inject constructor(
         studentGroupDao.insertAll(groupsToInsert)
     }
 
+    /**
+     * Imports user-defined custom behavior categories to populate the quick-logging selection menus.
+     */
     private suspend fun importCustomBehaviors(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<List<PythonCustomBehavior>>(content)
@@ -262,6 +307,10 @@ class JsonImporter @Inject constructor(
         customBehaviorDao.insertAll(behaviorsToInsert)
     }
 
+    /**
+     * Imports custom homework completion statuses (such as "Incomplete", "Excellent", or "Redo") to ensure
+     * customized classroom schemas are faithfully preserved.
+     */
     private suspend fun importCustomHomeworkStatuses(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<List<PythonCustomHomeworkStatus>>(content)
@@ -273,6 +322,10 @@ class JsonImporter @Inject constructor(
         customHomeworkStatusDao.insertAll(statusesToInsert)
     }
 
+    /**
+     * Ingests custom homework assignment categories (e.g. "Worksheets", "Labs", "Projects") to maintain
+     * assignment filtering parity across platforms.
+     */
     private suspend fun importCustomHomeworkTypes(uri: Uri) {
         val content = readFileContent(uri)
         val pythonData = json.decodeFromString<List<PythonCustomHomeworkType>>(content)
