@@ -209,9 +209,9 @@ class JsonImporter @Inject constructor(
             val studentsToInsert = studentEntries.map { (stringId, pythonStudent) ->
                 Student(
                     stringId = stringId,
-                    firstName = pythonStudent.firstName,
-                    lastName = pythonStudent.lastName,
-                    nickname = pythonStudent.nickname,
+                    firstName = securityUtil.encrypt(pythonStudent.firstName),
+                    lastName = securityUtil.encrypt(pythonStudent.lastName),
+                    nickname = if (pythonStudent.nickname.isBlank()) null else securityUtil.encrypt(pythonStudent.nickname),
                     gender = pythonStudent.gender,
                     xPosition = pythonStudent.x.toFloat(),
                     yPosition = pythonStudent.y.toFloat(),
