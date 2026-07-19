@@ -4,6 +4,7 @@
 ## 🚧 Active Construction
 
 ## ✅ Completed Enhancements
+- [DONE] 2028-09-10: Ghost Audit & Verification - Audited, verified, and formally registered 18 native R&D experiments in `.jules/ghost_todo.md`
 - [DONE] 2028-09-09: Ghost Nebula 3D - Volumetric clouds using depth sensors in `/labs/ghost/`
 - [DONE] 2028-09-08: Ghost Focus - Neural Classroom Focus Timer & Concentration Visualization in `/labs/ghost/`
 - [DONE] 2028-09-07: Ghost Pulse 2.0 - Multi-modal resonance haptics in `/labs/ghost/pulse/`
@@ -59,12 +60,21 @@
 - [DONE] 2028-06-05: Ghost Tiles - Native Quick Settings integration (HUD & Quick Log) in `/labs/ghost/tiles/`
 - [DONE] 2028-06-02: Ghost Sync - Real-time collaboration visualizer in `/labs/ghost/sync/`
 - [DONE] 2028-05-30: Ghost Kinetic - Physics-based momentum for student icons in `/labs/ghost/kinetic/`
+- [DONE] 2028-05-28: Ghost Singularity - Gravitational lensing data sink & tactile collapse in `/labs/ghost/`
+- [DONE] 2028-05-25: Ghost Orbit - Celestial student orbits & social sun attractions in `/labs/ghost/orbit/`
 - [DONE] 2028-05-20: Ghost Glitch - Neural spatial feedback in `/labs/ghost/glitch/`
+- [DONE] 2028-05-18: Ghost Ray - Sensor-driven directional projection & haptic intersection in `/labs/ghost/ray/`
 - [DONE] 2028-05-15: Ghost Lasso - Neural gesture-based multi-selection tool in `/labs/ghost/lasso/`
 - [DONE] 2028-05-10: Ghost Strategist - Integrated Generative AI Tactical Co-Pilot into Seating Chart & ViewModel
+- [DONE] 2028-05-05: Ghost Vortex - Rotational social momentum & synergy whirlpools in `/labs/ghost/vortex/`
+- [DONE] 2028-05-02: Ghost Phasing - Multi-layered neural backstage & layers shifting in `/labs/ghost/phasing/`
+- [DONE] 2028-04-28: Ghost Entropy - Neural turbulence & Shannon behavior uncertainty in `/labs/ghost/entropy/`
 - [DONE] 2028-04-25: Ghost Shake - Accelerometer-based canvas recenter gesture in `SeatingChartScreen.kt` and `/labs/ghost/util/GhostShakeDetector.kt`
 - [DONE] 2028-04-22: Ghost Morph - Shared Element Neural Transitions in `/labs/ghost/morph/`
 - [DONE] 2028-04-19: Ghost Silhouette - AGSL drag-and-drop placeholders in `/labs/ghost/silhouette/`
+- [DONE] 2028-04-15: Ghost Ion - Electrostatic potential & ionized gas mapping in `/labs/ghost/ion/`
+- [DONE] 2028-04-12: Ghost Entanglement - Quantum classroom synchronicity & coherence in `/labs/ghost/entanglement/`
+- [DONE] 2028-04-10: Ghost Osmosis - Proximity-based neural diffusion & potential gradients in `/labs/ghost/osmosis/`
 - [DONE] 2028-04-09: Ghost Memento - Persistent state engine for undo/redo history in `/labs/ghost/memento/`
 - [DONE] 2028-04-06: Ghost Relay - Integrated Android Share Sheet for Neural Dossiers in `SeatingChartScreen.kt`
 - [DONE] 2028-04-05: Ghost Student Hub - Per-student radial quick-action menu in `/labs/ghost/hub/GhostStudentHubLayer.kt`
@@ -75,10 +85,20 @@
 - [DONE] 2028-03-18: Ghost Hub - Futuristic Radial Quick-Action Menu in `/labs/ghost/hub`
 - [DONE] 2028-03-15: Ghost Spotlight - High-performance focus tool for individual student assessment in `/labs/ghost/spotlight`
 - [DONE] 2028-03-12: Ghost Glance - High-fidelity student preview overlay in `/labs/ghost/glance`
+- [DONE] 2028-03-10: Ghost Flora - Neural botanical classroom ecosystem visualization in `/labs/ghost/flora/`
 - [DONE] 2028-03-08: Ghost Neural Glow - High-performance, shader-backed glow modifier for student icons in `/labs/ghost/util`
+- [DONE] 2028-03-06: Ghost Emergence - Cellular automata simulation of behavior diffusion in `/labs/ghost/emergence/`
 - [DONE] 2028-03-05: Ghost UI Polish - Reusable Shimmer & Glassmorphic Surface in `/labs/ghost/util`
+- [DONE] 2028-03-02: Ghost Zenith - Spatial depth, altitude, and 3D parallax mapping in `/labs/ghost/zenith/`
 - [DONE] 2028-03-01: Ghost Filter - Optimized Student List Filtering in `/labs/ghost/filtering`
 - [DONE] 2028-02-28: Ghost Haptics - High-Fidelity Haptic Manager in `/labs/ghost/util`
-- [DONE] 2027-12-10: Ghost Quasar - High-Energy Student Nodes in `/labs/ghost/quasar`
+- [DONE] 2028-01-30: Ghost Supernova - Classroom-wide friction criticality index and core contraction in `/labs/ghost/supernova/`
 - [DONE] 2028-01-15: Ghost Helix - Neural DNA Visualization in `/labs/ghost/helix`
+- [DONE] 2027-12-10: Ghost Quasar - High-Energy Student Nodes in `/labs/ghost/quasar`
+- [DONE] 2027-11-20: Ghost Cortex - Somatic neural tension & tactile haptic integration in `/labs/ghost/cortex/`
+- [DONE] 2027-09-12: Ghost Pulsar - Temporal harmonic synchronicity & wave interference in `/labs/ghost/pulsar/`
+- [DONE] 2027-07-05: Ghost Future - Stochastic classroom trajectory simulation in `/labs/ghost/`
+- [DONE] 2027-04-10: Ghost Iris - Personalized procedural neural signature rendering in `/labs/ghost/`
+- [DONE] 2026-08-10: Ghost Vector - Physics-based social gravity & force vector mapping in `/labs/ghost/vector/`
+- [DONE] 2026-05-20: Ghost Lattice - Real-time social dynamics & neural networking in `/labs/ghost/lattice/`
 - [DONE] 2028-02-15: Ghost Preferences - Modern DataStore Preference Engine in `/labs/ghost/preferences`
