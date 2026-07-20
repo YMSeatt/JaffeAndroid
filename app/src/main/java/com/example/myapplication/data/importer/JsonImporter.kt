@@ -24,11 +24,9 @@ import com.example.myapplication.data.Student
 import com.example.myapplication.data.StudentDao
 import com.example.myapplication.data.StudentGroup
 import com.example.myapplication.data.StudentGroupDao
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.BufferedReader
-import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.InputStreamReader
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import javax.inject.Inject
@@ -183,8 +181,7 @@ class JsonImporter @Inject constructor(
                     customBackgroundColor = pythonStudent.styleOverrides.fillColor,
                     customOutlineColor = pythonStudent.styleOverrides.outlineColor,
                     customTextColor = pythonStudent.styleOverrides.textColor,
-                    groupId = studentGroups[pythonStudent.groupId]?.id,
-                    temporaryTask = pythonStudent.temporaryTask?.let { securityUtil.encrypt(it) }
+                    groupId = studentGroups[pythonStudent.groupId]?.id
                 )
             }
             val insertedStudentIds = studentDao.insertAll(studentsToInsert)

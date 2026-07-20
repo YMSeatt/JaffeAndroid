@@ -3,11 +3,8 @@ package com.example.myapplication.ui.dialogs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -15,7 +12,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -63,7 +59,7 @@ fun LiveHomeworkMarkDialog(
     var student by remember { mutableStateOf<Student?>(null) }
     val liveHomeworkSessionMode by settingsViewModel.liveHomeworkSessionMode.collectAsState()
     val liveHomeworkSelectOptions by settingsViewModel.liveHomeworkSelectOptions.collectAsState()
-    val allTemplates by viewModel.allHomeworkTemplates.observeAsState(emptyList())
+    val allTemplates by viewModel.allHomeworkTemplates.observeAsState(initial = emptyList<HomeworkTemplate>())
     val customHomeworkTypes by settingsViewModel.customHomeworkTypes.observeAsState(initial = emptyList())
     
     // State for session tracking
@@ -76,7 +72,7 @@ fun LiveHomeworkMarkDialog(
         val currentScores = viewModel.liveHomeworkScores.value?.get(studentId) ?: emptyMap()
 
         if (liveHomeworkSessionMode == "Select") {
-            val selected = currentScores["selected_options"] as? List<*> ?: emptyList()
+            val selected = currentScores["selected_options"] as? List<*> ?: emptyList<Any?>()
             liveHomeworkSelectOptions.split(",").forEach { option ->
                 selectStates[option.trim()] = selected.contains(option.trim())
             }

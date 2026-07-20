@@ -28,7 +28,7 @@ object HomeworkScoreEngine {
      *
      * @property markMetadataRef The source list of metadata used to build this context.
      */
-    internal class HomeworkScoringContext(val markMetadataRef: List<HomeworkMarkMetadata>) {
+    class HomeworkScoringContext(val markMetadataRef: List<HomeworkMarkMetadata>) {
         /** Fast lookup by Name (case-insensitive keys). */
         val markMetadataMapByName = markMetadataRef.associateBy { it.name.lowercase() }
 

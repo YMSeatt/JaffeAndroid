@@ -3,7 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    id("kotlin-kapt")
+    kotlin("kapt")
     alias(libs.plugins.hilt.android)
 }
 
@@ -14,7 +14,7 @@ android {
     defaultConfig {
         applicationId = "com.example.myapplication"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 2
         versionName = "1.1"
 
@@ -35,21 +35,24 @@ android {
         sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_21
     }
-    kotlin {
-        jvmToolchain(21)
-    }
     buildFeatures {
         compose = true
         viewBinding = true
     }
-    packagingOptions {
+    packaging {
+        resources {
+            pickFirsts.add("META-INF/LICENSE.txt")
+            pickFirsts.add("META-INF/LICENSE.md")
+            pickFirsts.add("META-INF/NOTICE.md")
+        }
         jniLibs {
             useLegacyPackaging = false
         }
-        resources {
-            pickFirsts += setOf("META-INF/LICENSE.txt")
-        }
     }
+}
+
+kotlin {
+    jvmToolchain(21)
 }
 
 kapt {
@@ -86,7 +89,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.games.activity)
     kapt(libs.hilt.android.compiler)
-    
+
     // Hilt Testing
     testImplementation(libs.dagger.hilt.android.testing)
     kaptTest(libs.hilt.android.compiler)
@@ -98,8 +101,7 @@ dependencies {
     kapt(libs.androidx.room.compiler)
     implementation(libs.androidx.room.ktx)
 
-    // ViewModel and LiveData
-    implementation(libs.androidx.lifecycle.viewmodel.ktx.v283)
+    // ViewModel and Logic
     implementation(libs.androidx.lifecycle.livedata.ktx)
 
     // Apache POI for Excel

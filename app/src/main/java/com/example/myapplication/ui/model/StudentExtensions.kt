@@ -18,17 +18,6 @@ import com.example.myapplication.util.safeParseColor
 
 /**
  * Creates a new [StudentUiItem] from a [Student] entity and associated context data.
- *
- * This function initializes all [MutableState] fields of the UI item.
- *
- * @param recentBehaviorDescription Formatted list of recent behavior events.
- * @param recentHomeworkDescription Formatted list of recent homework logs.
- * @param recentQuizDescription Formatted list of recent quiz logs.
- * @param sessionLogText Combined history of events for the current session.
- * @param groupColor The color of the student's group, if any.
- * @param defaultFontFamily Global default font family from user preferences.
- * @param defaultFontSize Global default font size from user preferences.
- * @param defaultFontColor Global default font color from user preferences.
  */
 fun Student.toStudentUiItem(
     fullName: String,
@@ -47,22 +36,7 @@ fun Student.toStudentUiItem(
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int,
-    irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
-    altitude: Float,
-    behaviorEntropy: Float,
-    tectonicStress: Float,
-    quasarEnergy: Float,
-    quasarPolarity: Float,
-    ionCharge: Float,
-    ionDensity: Float,
-    magneticStrength: Float,
-    magneticRadius: Float,
-    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
-    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
-    moodIntensity: Float,
-    moodValence: Float
+    defaultFontSize: Int
 ): StudentUiItem {
     return StudentUiItem(
         id = this.id.toInt(),
@@ -88,36 +62,12 @@ fun Student.toStudentUiItem(
         fontFamily = mutableStateOf(customFontFamily ?: defaultFontFamily),
         fontSize = mutableStateOf(customFontSize ?: defaultFontSize),
         fontColor = mutableStateOf(fontColor),
-        temporaryTask = mutableStateOf(temporaryTask),
-        irisParams = mutableStateOf(irisParams),
-        osmoticNode = mutableStateOf(osmoticNode),
-        altitude = mutableStateOf(altitude),
-        behaviorEntropy = mutableStateOf(behaviorEntropy),
-        tectonicStress = mutableStateOf(tectonicStress),
-        quasarEnergy = mutableStateOf(quasarEnergy),
-        quasarPolarity = mutableStateOf(quasarPolarity),
-        ionCharge = mutableStateOf(ionCharge),
-        ionDensity = mutableStateOf(ionDensity),
-        magneticStrength = mutableStateOf(magneticStrength),
-        magneticRadius = mutableStateOf(magneticRadius),
-        isPinned = mutableStateOf(this.isPinned),
-        insightStatus = mutableStateOf(insightStatus),
-        moodState = mutableStateOf(moodState),
-        moodIntensity = mutableStateOf(moodIntensity),
-        moodValence = mutableStateOf(moodValence)
+        isPinned = mutableStateOf(this.isPinned)
     )
 }
 
 /**
  * Updates an existing [StudentUiItem] with fresh data from a [Student] entity.
- *
- * This method is the "Sync" stage of the performance pipeline. It uses [updateIfChanged]
- * to perform differential updates on the [MutableState] fields.
- *
- * **Performance Note:** By updating the *existing* fields of a cached item instead of
- * creating a new [StudentUiItem] instance, we maintain object identity across the
- * seating chart. This allows Jetpack Compose to use its internal slot table optimizations
- * to only recompose the specific UI nodes that depend on the modified fields.
  */
 fun Student.updateStudentUiItem(
     item: StudentUiItem,
@@ -137,22 +87,7 @@ fun Student.updateStudentUiItem(
     defaultCornerRadius: Int = DEFAULT_STUDENT_BOX_CORNER_RADIUS_DP,
     defaultPadding: Int = DEFAULT_STUDENT_BOX_PADDING_DP,
     defaultFontFamily: String,
-    defaultFontSize: Int,
-    irisParams: com.example.myapplication.labs.ghost.GhostIrisEngine.IrisParameters?,
-    osmoticNode: com.example.myapplication.labs.ghost.osmosis.GhostOsmosisEngine.OsmoticNode?,
-    altitude: Float,
-    behaviorEntropy: Float,
-    tectonicStress: Float,
-    quasarEnergy: Float,
-    quasarPolarity: Float,
-    ionCharge: Float,
-    ionDensity: Float,
-    magneticStrength: Float,
-    magneticRadius: Float,
-    insightStatus: com.example.myapplication.labs.ghost.InsightStatus,
-    moodState: com.example.myapplication.labs.ghost.mood.GhostMoodEngine.MoodState,
-    moodIntensity: Float,
-    moodValence: Float
+    defaultFontSize: Int
 ) {
     updateIfChanged(item.fullName, fullName)
     updateIfChanged(item.nickname, nickname)
@@ -176,43 +111,15 @@ fun Student.updateStudentUiItem(
     updateIfChanged(item.fontFamily, customFontFamily ?: defaultFontFamily)
     updateIfChanged(item.fontSize, customFontSize ?: defaultFontSize)
     updateIfChanged(item.fontColor, fontColor)
-    updateIfChanged(item.temporaryTask, temporaryTask)
-    updateIfChanged(item.irisParams, irisParams)
-    updateIfChanged(item.osmoticNode, osmoticNode)
-    updateIfChanged(item.altitude, altitude)
-    updateIfChanged(item.behaviorEntropy, behaviorEntropy)
-    updateIfChanged(item.tectonicStress, tectonicStress)
-    updateIfChanged(item.quasarEnergy, quasarEnergy)
-    updateIfChanged(item.quasarPolarity, quasarPolarity)
-    updateIfChanged(item.ionCharge, ionCharge)
-    updateIfChanged(item.ionDensity, ionDensity)
-    updateIfChanged(item.magneticStrength, magneticStrength)
-    updateIfChanged(item.magneticRadius, magneticRadius)
     updateIfChanged(item.isPinned, this.isPinned)
-    updateIfChanged(item.insightStatus, insightStatus)
-    updateIfChanged(item.moodState, moodState)
-    updateIfChanged(item.moodIntensity, moodIntensity)
-    updateIfChanged(item.moodValence, moodValence)
 }
 
-/**
- * Helper to update a [MutableState] only if the new value differs from the current one.
- *
- * This is a critical optimization for the Fluid Interaction model. If the value hasn't
- * changed (e.g., the student's name remains the same), setting the `state.value` would
- * still trigger a potential recomposition cycle in Compose. This check prevents that
- * overhead.
- */
 private fun <T> updateIfChanged(state: MutableState<T>, newValue: T) {
     if (state.value != newValue) {
         state.value = newValue
     }
 }
 
-/**
- * BOLT: Data class to hold resolved styles, exported for use in SeatingChartViewModel's
- * memoized transformation Stage 2.
- */
 data class StudentStyles(
     val backgroundColors: List<Color>,
     val outlineColors: List<Color>,
@@ -220,40 +127,12 @@ data class StudentStyles(
     val fontColor: Color
 )
 
-/**
- * Resolves the visual styling for a student based on a hierarchy of priorities.
- *
- * The styling precedence is as follows (highest to lowest):
- * 1. **Conditional Formatting**: Dynamic rules (e.g., "Score < 50%") override all other styles.
- *    Multiple matching rules result in a list of colors (often rendered as a gradient or border).
- * 2. **User Overrides**: Manual customizations set by the teacher on an individual student.
- * 3. **Group Settings**: Styles inherited from the student's assigned group (e.g., "Blue Group").
- * 4. **Defaults**: Global application defaults for students.
- *
- * @return A [StudentStyles] object containing the resolved colors.
- */
 private val singletonColorListCache = java.util.concurrent.ConcurrentHashMap<Color, List<Color>>()
 
-/**
- * BOLT: Optimized helper to get a single-item list of colors without redundant allocations.
- * Reuses a cached list for the given color to avoid thousands of small O(1) list objects.
- */
 private fun getSingletonColorList(color: Color): List<Color> {
     return singletonColorListCache.getOrPut(color) { java.util.Collections.singletonList(color) }
 }
 
-/**
- * Resolves the visual styling for a student based on a hierarchy of priorities.
- *
- * The styling precedence is as follows (highest to lowest):
- * 1. **Conditional Formatting**: Dynamic rules (e.g., "Score < 50%") override all other styles.
- *    Multiple matching rules result in a list of colors (often rendered as a gradient or border).
- * 2. **User Overrides**: Manual customizations set by the teacher on an individual student.
- * 3. **Group Settings**: Styles inherited from the student's assigned group (e.g., "Blue Group").
- * 4. **Defaults**: Global application defaults for students.
- *
- * @return A [StudentStyles] object containing the resolved colors.
- */
 fun Student.calculateStyles(
     groupColor: Color?,
     matchingRules: List<DecodedConditionalFormattingRule>,
@@ -269,8 +148,6 @@ fun Student.calculateStyles(
     val baseBackgroundColor = (customBackgroundColor?.let { safeParseColor(it) } ?: defaultBackgroundColor).copy(alpha = 1f)
     val baseOutlineColor = liveQuizProgressColor ?: customOutlineColor ?: groupColor ?: defaultOutlineColor
 
-    // BOLT: Priority-based style resolution. "Override" rules take absolute precedence,
-    // setting the base colors and suppressing all subsequent "stripe" rules.
     val overrideRule = matchingRules.find { it.format.applicationStyle == "override" }
 
     val backgroundColors: List<Color>
@@ -293,7 +170,6 @@ fun Student.calculateStyles(
             emptyList()
         }
 
-        // BOLT: Use cached singleton lists to avoid object churn during high-frequency updates.
         backgroundColors = if (formattedColors.isNotEmpty()) {
             formattedColors
         } else {

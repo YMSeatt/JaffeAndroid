@@ -8,17 +8,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.myapplication.labs.ghost.preferences.GhostPreferencesViewModel
-import com.example.myapplication.util.findActivity
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -28,9 +22,6 @@ fun PasswordScreen(
     settingsViewModel: SettingsViewModel,
     onUnlocked: () -> Unit
 ) {
-    val ghostPrefsViewModel: GhostPreferencesViewModel = viewModel()
-    val biometricEnabled by ghostPrefsViewModel.biometricEnabled.collectAsStateWithLifecycle()
-
     val view = LocalView.current
     DisposableEffect(Unit) {
         val window = (view.context as? Activity)?.window
@@ -46,20 +37,6 @@ fun PasswordScreen(
 
     val lockoutUntil by settingsViewModel.authLockoutUntil.collectAsState()
     var remainingSeconds by remember { mutableStateOf(0L) }
-
-    val context = view.context
-    LaunchedEffect(biometricEnabled) {
-        if (biometricEnabled && !remainingSeconds.let { it > 0 }) {
-            val activity = context.findActivity() as? FragmentActivity
-            if (activity != null && settingsViewModel.biometricEngine.canAuthenticate()) {
-                settingsViewModel.biometricEngine.authenticate(activity) { success ->
-                    if (success) {
-                        onUnlocked()
-                    }
-                }
-            }
-        }
-    }
 
     LaunchedEffect(lockoutUntil) {
         while (true) {
@@ -86,7 +63,7 @@ fun PasswordScreen(
             value = passwordAttempt,
             onValueChange = {
                 passwordAttempt = it
-                showError = false // Clear error when user types
+                showError = false
             },
             label = { Text("Password") },
             singleLine = true,

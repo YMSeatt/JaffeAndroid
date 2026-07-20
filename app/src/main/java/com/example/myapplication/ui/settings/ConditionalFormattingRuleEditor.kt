@@ -12,10 +12,10 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -190,8 +190,7 @@ fun ConditionalFormattingRuleEditor(
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                             },
                             modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
-                                .fillMaxWidth()
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
                         )
                         ExposedDropdownMenu(
                             expanded = expanded,
@@ -227,7 +226,7 @@ fun ConditionalFormattingRuleEditor(
                                     trailingIcon = {
                                         ExposedDropdownMenuDefaults.TrailingIcon(expanded = groupDropdownExpanded)
                                     },
-                                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable, true).fillMaxWidth()
+                                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true).fillMaxWidth()
                                 )
                                 ExposedDropdownMenu(
                                     expanded = groupDropdownExpanded,
@@ -416,7 +415,7 @@ fun ConditionalFormattingRuleEditor(
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = applicationStyleExpanded)
                             },
                             modifier = Modifier
-                                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
                                 .fillMaxWidth()
                         )
                         ExposedDropdownMenu(

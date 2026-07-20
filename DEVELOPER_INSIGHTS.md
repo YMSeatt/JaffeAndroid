@@ -2,37 +2,6 @@
 
 This document consolidates the critical "Tribal Knowledge" and technical secrets that drive the Seating Chart & Behavior Logger ecosystem. These insights are essential for maintainers looking to modify core engines or ensure cross-platform compatibility.
 
-## 🌌 Ghost Cognitive Engine Physics
-
-The `GhostCognitiveEngine` (Android) utilizes a force-directed graph algorithm to optimize classroom layouts.
-
-- **Repulsion Constant**: The `REPULSION_CONSTANT` (500,000f) is precisely calibrated for a **4000x4000** logical canvas.
-    - *Warning*: If the canvas size changes, this constant may require exponential scaling to maintain stability.
-- **Social Distancing Multiplier**: Negative behavior logs exert a physical repulsion force. A student with 2 or more negative marks "pushes" others away **2.5x harder** than a neutral student.
-- **Equilibrium Sweet Spot**: Through testing, **50 iterations** with **0.9 damping** was identified as the ideal configuration to achieve layout stability without excessive jitter or calculation overhead.
-
-## 🎨 AGSL Shader Coordinate Mapping
-
-The application's futuristic visualizations rely on high-performance AGSL shaders, which require careful coordinate translation.
-
-- **The "Flip"**: Android's `Canvas` (Compose) uses (0,0) at the top-left. Many shaders expect normalized UVs (0 to 1) or centered coordinates (-1 to 1).
-- **Aura Centering**: In the `COGNITIVE_AURA` shader, the `iCenter` uniform must be passed in **absolute pixel coordinates** (calculated during the Compose `layout` or `onSizeChanged` phase). The shader then normalizes this internally using the `iResolution` uniform.
-
-## 🎙️ Voice Assistant Parsing Logic
-
-The `GhostVoiceAssistant` provides hands-free management but has specific behavioral quirks.
-
-- **Student Matching**: The parser scans for both student **Full Names** and **Nicknames**.
-    - *Prioritization*: While the code matches based on first-found in the student list, nicknames are often more reliable for speech recognition as they are typically shorter and less prone to phonetic misinterpretation.
-- **Keyword Collision Risk**: The behavior type parser uses simple substring matching (`contains()`).
-    - *Example*: If a teacher says "Log a quick note: student was NOT bad", the word **"bad"** might accidentally trigger a "Negative behavior" log.
-    - *Mitigation*: Teachers are encouraged to use specific trigger phrases like "Positive Participation" or "Asked Question" and keep comments concise.
-
-## 🕸️ Neural Map Connections
-
-To maintain visual clarity in the `NeuralMapLayer`:
-- **The Star Pattern**: Instead of drawing a "complete graph" ($O(N^2)$ lines) connecting every group member to every other member, the engine connects everyone to the **first member** of the group in a "star pattern". This visually conveys group cohesion while minimizing UI clutter.
-
 ## 🔐 Cross-Platform Security Bridge
 
 Ensuring data sync between the Python desktop app and the Android mobile app requires cryptographic parity.
@@ -79,7 +48,7 @@ Maintaining data portability between the Python desktop application and the Andr
 - **Coordinate Transformation**: Both apps use logical coordinates to remain resolution-independent.
     - **Python**: 2000x1500 logical space.
     - **Android**: 4000x4000 logical space.
-    - **Mapping**: Data is mapped 1:1 into the top-left quadrant during standard ingestion. The Ghost Blueprint Engine further normalizes these into a 1200x800 SVG frame using a `/ 4` scaling factor.
+    - **Mapping**: Data is mapped 1:1 into the top-left quadrant during standard ingestion.
 - **Multi-Pass Integrity**: Relational integrity is ensured by a multi-pass strategy (Foundational -> Spatial -> Logs) which builds in-memory ID maps to bridge Python's UUID strings and Android's `Long` primary keys.
 
 For detailed architecture, see the [Importer Package README](app/src/main/java/com/example/myapplication/data/importer/README.md).
@@ -94,26 +63,6 @@ The ViewModel layer manages the application's UI state and coordinates between t
     - **Identity Preservation**: Persistent caches of UI items (e.g., `StudentUiItem`) allow Compose to perform property-level "diff-and-patch" updates, maintaining 60fps even during complex drag gestures.
     - **Memoized Pipelines**: Stage 2 of the student update cycle utilizes identity-based caching to avoid redundant re-calculations of formatting or log descriptions when irrelevant data (like item positions) changes.
     - **Optimistic UI**: The icon components update their local `MutableState` immediately during gestures, while the ViewModel handles the asynchronous database synchronization in the background.
-
-## 🪐 Ghost Orbit Dynamics
-
-The `GhostOrbitEngine` implements a celestial metaphor for classroom social structures.
-
-- **The Social Sun Threshold**: A student is promoted to a "Social Sun" (gravitational attractor) if they possess more than **5 positive behavior logs**. This threshold prevents the galaxy from having too many conflicting centers of gravity.
-- **Canvas Centering**: If no "Social Suns" are detected, the system defaults the orbital center to **(2000, 2000)**, which is the geometric center of the 4000x4000 logical canvas.
-- **Engagement Scaling**: Angular velocity is calculated as `recentLogs / 5f`, capped at **2.0 radians/frame**. This ensures that even hyper-active students don't rotate so fast that they become a visual distraction.
-- **Stability and Radius**: The orbital radius is calculated as `150f + (1.0 - stability) * 300f`. This means a perfectly stable student (stability=1.0) stays at a tight **150-unit** radius, while an unstable student can drift up to **450 units** away.
-
-## 🚨 Ghost Beacon Selection Heuristics
-
-The `GhostBeaconEngine` utilizes a weighted random selection model to identify students in need of interaction (NFI).
-
-- **NFI Weight Factors**:
-    - **Base Probability**: Every student starts with a weight of **1.0**.
-    - **Behavioral Penalty**: Each negative behavior log adds **+2.0** to the student's weight.
-    - **The "Silence" Penalty**: Interaction starvation is modeled as a time-decay weight. For every hour since the last positive log, **+0.5** is added to the weight (capped at **+5.0**).
-    - **Academic Struggle**: Students with lower quiz/homework averages receive a weight boost of up to **+3.0** (calculated as `(1.0 - average) * 3.0`).
-- **BOLT Execution**: To maintain 60fps responsiveness, the engine performs a **single-pass aggregation** of all historical logs to build the probability map, ensuring the selection process is instantaneous regardless of classroom history size.
 
 ---
 *Documentation love letter from Scribe 📜*

@@ -411,15 +411,11 @@ class StudentRepository(
     }
 
     private fun encryptStudent(student: Student): Student {
-        return student.copy(
-            temporaryTask = student.temporaryTask?.let { securityUtil.encrypt(it) }
-        )
+        return student
     }
 
     private fun decryptStudent(student: Student): Student {
-        return student.copy(
-            temporaryTask = student.temporaryTask?.let { securityUtil.decryptSafe(it) }
-        )
+        return student
     }
 
     private fun encryptBehaviorEvent(event: BehaviorEvent): BehaviorEvent {

@@ -3,75 +3,70 @@ package com.example.myapplication.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.AppDatabase
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.StudentRepository
+import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.launch
 
-class HomeworkLogViewModel(application: Application, private val studentId: Long) : AndroidViewModel(application) {
+class HomeworkLogViewModel(
+    application: Application,
+    private val studentId: Long,
+    securityUtil: SecurityUtil
+) : AndroidViewModel(application) {
 
-        private val studentRepository: StudentRepository
+    private val studentRepository: StudentRepository
 
-        // LiveData to hold the list of homework logs for the current studentId
-        val homeworkLogsForStudent: LiveData<List<HomeworkLog>>
+    val homeworkLogsForStudent: LiveData<List<HomeworkLog>>
 
-        init {
-            val studentDao = AppDatabase.getDatabase(application).studentDao()
-            val furnitureDao = AppDatabase.getDatabase(application).furnitureDao()
-            val quizLogDao = AppDatabase.getDatabase(application).quizLogDao()
-            val layoutTemplateDao = AppDatabase.getDatabase(application).layoutTemplateDao()
-            val quizMarkTypeDao = AppDatabase.getDatabase(application).quizMarkTypeDao()
-            val behaviorEventDao = AppDatabase.getDatabase(application).behaviorEventDao()
-            val homeworkLogDao = AppDatabase.getDatabase(application).homeworkLogDao()
+    init {
+        val db = AppDatabase.getDatabase(application)
+        studentRepository = StudentRepository(
+            db.studentDao(),
+            db.behaviorEventDao(),
+            db.homeworkLogDao(),
+            db.quizLogDao(),
+            db.furnitureDao(),
+            db.layoutTemplateDao(),
+            db.quizMarkTypeDao(),
+            application,
+            securityUtil
+        )
 
-            studentRepository = StudentRepository(
-                studentDao,
-                behaviorEventDao,
-                homeworkLogDao,
-                quizLogDao,
-                furnitureDao,
-                layoutTemplateDao,
-                quizMarkTypeDao,
-                application
+        homeworkLogsForStudent = studentRepository.getHomeworkLogsForStudent(studentId)
+    }
+
+    fun addHomeworkLog(assignmentName: String, status: String, comment: String?) {
+        viewModelScope.launch {
+            val newLog = HomeworkLog(
+                studentId = studentId,
+                assignmentName = assignmentName,
+                status = status,
+                comment = comment,
+                loggedAt = System.currentTimeMillis()
             )
-
-            homeworkLogsForStudent = studentRepository.getHomeworkLogsForStudent(studentId)
+            studentRepository.insertHomeworkLog(newLog)
         }
+    }
 
-        /**
-         * Adds a new homework log for the current student.
-         */
-        fun addHomeworkLog(assignmentName: String, status: String, comment: String?) {
-            viewModelScope.launch {
-                val newLog = HomeworkLog(
-                    studentId = studentId,
-                    assignmentName = assignmentName,
-                    status = status,
-                    comment = comment,
-                    loggedAt = System.currentTimeMillis()
-                )
-                studentRepository.insertHomeworkLog(newLog)
-            }
+    fun deleteHomeworkLog(logId: Long) {
+        viewModelScope.launch {
+            studentRepository.deleteHomeworkLogById(logId)
         }
-
-        /**
-         * Deletes a specific homework log.
-         */
-        fun deleteHomeworkLog(logId: Long) {
-            viewModelScope.launch {
-                studentRepository.deleteHomeworkLogById(logId)
-            }
-        }
+    }
 
     class HomeworkLogViewModelFactory(
         private val application: Application,
-        private val studentId: Long
-    ) : androidx.lifecycle.ViewModelProvider.Factory {
-        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+        private val studentId: Long,
+        private val securityUtil: SecurityUtil
+    ) : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(HomeworkLogViewModel::class.java)) {
                 @Suppress("UNCHECKED_CAST")
-                return HomeworkLogViewModel(application, studentId) as T
+                return HomeworkLogViewModel(application, studentId, securityUtil) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }

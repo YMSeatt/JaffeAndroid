@@ -1,6 +1,7 @@
 package com.example.myapplication.util
 
 import android.content.Context
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -10,17 +11,15 @@ import com.example.myapplication.data.SmtpSettings
 import com.example.myapplication.data.exporter.ExportOptions
 import com.example.myapplication.data.exporter.Exporter
 import com.example.myapplication.preferences.AppPreferencesRepository
-import com.example.myapplication.util.SecurityUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 import java.io.File
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 
 /**
  * EmailWorker: A high-performance background task handler for classroom reporting.

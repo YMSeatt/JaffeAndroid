@@ -60,16 +60,6 @@ import javax.inject.Inject
 
 /**
  * SettingsViewModel: Manages application configuration, data migration, and archival.
- *
- * This ViewModel handles:
- * 1. **User Preferences**: Synchronizing local settings (e.g., UI timeouts, theme, font styles)
- *    with the [AppPreferencesRepository].
- * 2. **Database Lifecycle**: Managing the archival of historical data into dedicated `archives/`
- *    directories and restoring from backups.
- * 3. **Data Ingestion**: Coordinating the import of classroom data from cross-platform JSON
- *    exports using the [JsonImporter].
- * 4. **System Category Management**: Providing interfaces to manage custom behaviors,
- *    homework types, and quiz mark templates.
  */
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -91,53 +81,29 @@ class SettingsViewModel @Inject constructor(
     private val systemBehaviorDao: com.example.myapplication.data.SystemBehaviorDao,
     private val behaviorEventDao: BehaviorEventDao,
     private val homeworkLogDao: HomeworkLogDao,
-    private val securityUtil: SecurityUtil,
-    val biometricEngine: com.example.myapplication.labs.ghost.biometric.GhostBiometricEngine
+    private val securityUtil: SecurityUtil
 ) : ViewModel() {
 
     companion object {
-        /**
-         * Mandatory security boundary for database file operations.
-         * Enforcing a 50MB limit prevents Out-of-Memory (OOM) attacks during decryption
-         * and Denial-of-Service (DoS) via storage exhaustion.
-         */
         private const val MAX_DB_SIZE_BYTES = 50 * 1024 * 1024L
     }
 
     private val _restoreComplete = MutableLiveData<Boolean>()
     val restoreComplete: LiveData<Boolean> = _restoreComplete
 
-    /**
-     * Creates a point-in-time backup of the current database.
-     *
-     * **Hardening Strategy**: Archives are stored in a dedicated 'archives' subdirectory
-     * within the app's private internal storage. This allows for easier exclusion from
-     * standard Android cloud backups if desired and protects student PII.
-     */
     fun archiveCurrentYear() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
             internalArchiveDatabase(context, "archive")
-            // The database remains active for continued use after archival
             _restoreComplete.postValue(true)
         }
     }
 
-    /**
-     * Scans the app's internal storage for archived database files.
-     *
-     * **Privacy Fix**: Includes a one-time migration to move legacy archives from
-     * the root internal directory into the hardened `archives/` subdirectory.
-     *
-     * @return A list of archive filenames (e.g., "archive_2024-05-01.db").
-     */
     fun listArchivedDatabases(): List<String> {
         val context = application
         val archiveDir = File(context.filesDir, "archives")
         if (!archiveDir.exists()) archiveDir.mkdirs()
 
-        // PRIVACY: One-time migration of legacy archives from the root files directory
-        // to the hardened archives subdirectory.
         context.filesDir.listFiles { _, name -> name.startsWith("archive_") && name.endsWith(".db") }?.forEach { legacyFile ->
             try {
                 val targetFile = File(archiveDir, legacyFile.name)
@@ -147,7 +113,6 @@ class SettingsViewModel @Inject constructor(
                     legacyFile.delete()
                 }
             } catch (e: Exception) {
-                // Ignore migration errors for individual files
             }
         }
 
@@ -156,12 +121,6 @@ class SettingsViewModel @Inject constructor(
         }?.map { it.name } ?: emptyList()
     }
 
-    /**
-     * Switches the application's active database to a specific archive.
-     * This is used for viewing historical data without overwriting the live classroom state.
-     *
-     * **Security Hardening**: Validates the filename to prevent path traversal attacks.
-     */
     fun loadArchivedDatabase(fileName: String) {
         if (!isSafeFileName(fileName)) {
             Log.e("SettingsViewModel", "Blocked suspicious archive filename: $fileName")
@@ -174,9 +133,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Resets the application to use the primary production database.
-     */
     fun restoreLiveDatabase() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
@@ -185,12 +141,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Imports a complete classroom snapshot from fragmented JSON files.
-     *
-     * This method orchestrates the [JsonImporter] to process students, groups, behaviors,
-     * and templates exported from the Python desktop application.
-     */
     suspend fun importFromJson(uri: Uri) {
         val directory = DocumentFile.fromTreeUri(application, uri)
 
@@ -215,7 +165,7 @@ class SettingsViewModel @Inject constructor(
 
 
     val recentLogsLimit: StateFlow<Int> = preferencesRepository.recentLogsLimitFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for homework logs
+        .stateIn(viewModelScope, SharingStarted.Lazily, 3)
 
     fun updateRecentLogsLimit(limit: Int) {
         viewModelScope.launch {
@@ -232,9 +182,8 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // New setting for recent behavior incidents
     val recentBehaviorIncidentsLimit: StateFlow<Int> = preferencesRepository.recentBehaviorIncidentsLimitFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, 3) // Default for behavior incidents
+        .stateIn(viewModelScope, SharingStarted.Lazily, 3)
 
     fun updateRecentBehaviorIncidentsLimit(limit: Int) {
         viewModelScope.launch {
@@ -470,7 +419,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // StateFlows for default student box appearance
     val defaultStudentBoxWidth: StateFlow<Int> = preferencesRepository.defaultStudentBoxWidthFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, DEFAULT_STUDENT_BOX_WIDTH_DP)
 
@@ -516,7 +464,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    // New StateFlow for default student box outline thickness
     val defaultStudentBoxOutlineThickness: StateFlow<Int> = preferencesRepository.defaultStudentBoxOutlineThicknessFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, DEFAULT_STUDENT_BOX_OUTLINE_THICKNESS_DP)
 
@@ -580,16 +527,6 @@ class SettingsViewModel @Inject constructor(
     val authLockoutUntil: StateFlow<Long> = preferencesRepository.authLockoutUntilFlow
         .stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
-    /**
-     * Verifies the provided password against the stored hash.
-     *
-     * **Security Hardening**:
-     * 1. Performs verification on [Dispatchers.Default] to avoid blocking the UI thread.
-     * 2. Automatically upgrades the stored hash if [SecurityUtil.needsUpgrade] returns true
-     *    (e.g., if the iteration count is outdated or a legacy algorithm is used).
-     * 3. **Throttling & Lockout**: Implements exponential backoff for failed attempts to
-     *    mitigate brute-force attacks.
-     */
     suspend fun checkPassword(password: String): Boolean = withContext(Dispatchers.Default) {
         val lockoutUntil = preferencesRepository.authLockoutUntilFlow.first()
         if (System.currentTimeMillis() < lockoutUntil) {
@@ -602,25 +539,20 @@ class SettingsViewModel @Inject constructor(
         }
 
         if (SecurityUtil.verifyPassword(password, storedHash)) {
-            // Success: Reset rate limiting state
             preferencesRepository.updateAuthFailedAttempts(0)
             preferencesRepository.updateAuthLockoutUntil(0)
 
-            // If it matches but needs an upgrade, re-hash it transparently using current standards.
             if (SecurityUtil.needsUpgrade(storedHash)) {
                 preferencesRepository.updatePasswordHash(SecurityUtil.hashPassword(password))
             }
             return@withContext true
         } else {
-            // Failure: Increment attempts and calculate backoff
             val failedAttempts = preferencesRepository.authFailedAttemptsFlow.first() + 1
             preferencesRepository.updateAuthFailedAttempts(failedAttempts)
 
-            // Exponential backoff: Start throttling after 3 failed attempts
             if (failedAttempts >= 3) {
-                // 3: 15s, 4: 30s, 5: 60s, 6: 120s...
                 val delaySeconds = (Math.pow(2.0, (failedAttempts - 3).toDouble()) * 15).toLong()
-                val maxDelay = 24 * 60 * 60L // Max 24 hour lockout
+                val maxDelay = 24 * 60 * 60L
                 val finalDelay = delaySeconds.coerceAtMost(maxDelay)
                 preferencesRepository.updateAuthLockoutUntil(System.currentTimeMillis() + (finalDelay * 1000))
             }
@@ -629,10 +561,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Sets a new application password.
-     * Hashing is performed on [Dispatchers.Default] for performance and security.
-     */
     fun setPassword(password: String) {
         viewModelScope.launch {
             if (password.isNotBlank()) {
@@ -648,17 +576,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Copies the active database file to an external location.
-     *
-     * **Security Hardening**: Uses streaming for unencrypted backups to avoid OOM
-     * and limits resource consumption.
-     */
     suspend fun backupDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         if (!dbFile.exists()) return@withContext
 
-        // HARDEN: Universal limit to prevent DoS/OOM regardless of encryption status
         if (dbFile.length() > MAX_DB_SIZE_BYTES) {
             Log.e("SettingsViewModel", "Backup failed: Database exceeds 50MB limit.")
             return@withContext
@@ -667,7 +588,6 @@ class SettingsViewModel @Inject constructor(
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
         application.contentResolver.openOutputStream(uri)?.use { outputStream ->
             if (encrypt) {
-                // Encryption requires the full payload for the Fernet token
                 val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
                 try {
                     val encryptedToken = securityUtil.encrypt(dbBytes)
@@ -676,7 +596,6 @@ class SettingsViewModel @Inject constructor(
                     dbBytes.fill(0.toByte())
                 }
             } else {
-                // Stream the file directly to avoid OOM for large databases
                 FileInputStream(dbFile).use { inputStream ->
                     inputStream.copyTo(outputStream)
                 }
@@ -684,19 +603,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Overwrites the active database with a file from an external source.
-     * Triggers a [restoreComplete] event upon success.
-     *
-     * **Security Hardening & Reliability**:
-     * 1. Implements streaming restoration with size limits (50MB) to prevent OOM/DoS.
-     * 2. Clears SQLite journal files (-wal, -shm) to ensure database integrity.
-     * 3. Only signals success to the UI if the restoration truly succeeds.
-     */
     suspend fun restoreDatabase(uri: Uri) = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
 
-        // Close existing connections and clear temporary journal files before overwriting
         AppDatabase.getDatabase(application).close()
         val walFile = File(dbFile.path + "-wal")
         val shmFile = File(dbFile.path + "-shm")
@@ -707,7 +616,6 @@ class SettingsViewModel @Inject constructor(
 
         try {
             application.contentResolver.openInputStream(uri)?.use { inputStream ->
-                // Check for Fernet encryption prefix ('gAAAAA')
                 val prefix = ByteArray(6)
                 val prefixRead = inputStream.read(prefix)
 
@@ -715,7 +623,6 @@ class SettingsViewModel @Inject constructor(
                     prefix[0] == 'g'.toByte() && prefix[1] == 'A'.toByte() && prefix[2] == 'A'.toByte() &&
                     prefix[3] == 'A'.toByte() && prefix[4] == 'A'.toByte() && prefix[5] == 'A'.toByte()) {
 
-                    // Encrypted Path: Read fully into memory BUT with strict size enforcement to prevent OOM
                     val bos = java.io.ByteArrayOutputStream()
                     bos.write(prefix)
 
@@ -743,7 +650,6 @@ class SettingsViewModel @Inject constructor(
                         Log.e("SettingsViewModel", "Decryption failed during restoration", e)
                     }
                 } else {
-                    // Plaintext Path: Stream directly to disk with size enforcement
                     FileOutputStream(dbFile, false).use { outputStream ->
                         if (prefixRead > 0) outputStream.write(prefix, 0, prefixRead)
 
@@ -773,11 +679,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Force-restarts the application.
-     * Used after a database restoration to ensure all components are re-initialized
-     * with the new data source.
-     */
     fun triggerRebirth() {
         val packageManager = application.packageManager
         val intent = packageManager.getLaunchIntentForPackage(application.packageName)
@@ -787,45 +688,24 @@ class SettingsViewModel @Inject constructor(
         Runtime.getRuntime().exit(0)
     }
 
-    /**
-     * Resets the entire application to a factory-fresh state.
-     *
-     * This method:
-     * 1. Creates a safety archive of the current database (Force Backup).
-     * 2. Wipes all classroom data (Students, Logs, Templates, Groups).
-     * 3. Wipes all user preferences and encryption metadata.
-     * 4. Restarts the application process to ensure all caches are cleared.
-     *
-     * **Logical Parity**: Matches the `_perform_reset` logic in the Python blueprint.
-     */
     fun resetApplication() {
         viewModelScope.launch(Dispatchers.IO) {
             val context = application
 
-            // 1. Safety Archive (Force Backup)
             internalArchiveDatabase(context, "safety_backup")
 
-            // 2. Wipe Classroom Data - CLOSE CONNECTION FIRST
             AppDatabase.closeDatabase()
             val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
             internalDeleteDatabaseFiles(dbFile)
 
-            // 3. Wipe User Preferences
             preferencesRepository.clearAllPreferences()
 
-            // 4. Force Restart
             withContext(Dispatchers.Main) {
                 triggerRebirth()
             }
         }
     }
 
-    /**
-     * Creates a timestamped archive of the database file.
-     * Encapsulates the shared logic between manual archival and application reset.
-     *
-     * @param prefix The prefix for the archive filename (e.g., "archive" or "safety_backup").
-     */
     private fun internalArchiveDatabase(context: android.content.Context, prefix: String) {
         val dbFile = context.getDatabasePath(AppDatabase.DATABASE_NAME)
         if (!dbFile.exists()) return
@@ -838,10 +718,6 @@ class SettingsViewModel @Inject constructor(
         dbFile.copyTo(archiveFile, overwrite = true)
     }
 
-    /**
-     * Deletes a database file and its associated sidecars (WAL, SHM).
-     * This ensures the SQLite engine doesn't attempt to recover from stale journals.
-     */
     private fun internalDeleteDatabaseFiles(dbFile: File) {
         if (dbFile.exists()) dbFile.delete()
         val walFile = File(dbFile.path + "-wal")
@@ -991,15 +867,10 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    /**
-     * Prepares the database file for sharing via system intents.
-     * Copies the DB to the hardened shared cache directory and provides a content URI.
-     */
     suspend fun shareDatabase(): Uri? = withContext(Dispatchers.IO) {
         val dbFile = application.getDatabasePath(AppDatabase.DATABASE_NAME)
         if (!dbFile.exists()) return@withContext null
 
-        // HARDEN: Universal limit to prevent DoS/OOM regardless of encryption status
         if (dbFile.length() > MAX_DB_SIZE_BYTES) {
             Log.e("SettingsViewModel", "Share failed: Database exceeds 50MB limit.")
             return@withContext null
@@ -1008,18 +879,15 @@ class SettingsViewModel @Inject constructor(
         val sharedDir = java.io.File(application.cacheDir, "shared")
         if (!sharedDir.exists()) sharedDir.mkdirs()
 
-        // HARDEN: Clean up previous database shares to prevent storage leaks in cache
         sharedDir.listFiles { _, name -> name.startsWith("seating_chart_database_") && name.endsWith(".db") }
             ?.forEach { it.delete() }
 
-        // HARDEN: Use unique filenames to prevent collisions and potential data corruption
         val filename = "seating_chart_database_${System.currentTimeMillis()}.db"
         val sharedDbFile = java.io.File(sharedDir, filename)
 
         val encrypt = preferencesRepository.encryptDataFilesFlow.first()
 
         if (encrypt) {
-            // Encryption requires the full payload for the Fernet token
             val dbBytes = FileInputStream(dbFile).use { it.readBytes() }
             try {
                 val encryptedToken = securityUtil.encrypt(dbBytes)
@@ -1028,7 +896,6 @@ class SettingsViewModel @Inject constructor(
                 dbBytes.fill(0.toByte())
             }
         } else {
-            // HARDEN: Stream the file directly to avoid OOM for large databases
             FileInputStream(dbFile).use { inputStream ->
                 FileOutputStream(sharedDbFile).use { outputStream ->
                     inputStream.copyTo(outputStream)
@@ -1043,10 +910,6 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Persists a seating chart screenshot to the app's hardened shared cache.
-     * @return A content URI for sharing the image.
-     */
     suspend fun saveScreenshot(bitmap: android.graphics.Bitmap): Uri? = withContext(Dispatchers.IO) {
         val context = application
         val filename = "screenshot_${System.currentTimeMillis()}.png"
@@ -1065,28 +928,6 @@ class SettingsViewModel @Inject constructor(
             )
         } catch (e: Exception) {
             Log.e("SettingsViewModel", "Failed to save screenshot", e)
-            null
-        }
-    }
-
-    suspend fun saveBlueprint(svgContent: String): Uri? = withContext(Dispatchers.IO) {
-        val context = application
-        val filename = "blueprint_${System.currentTimeMillis()}.svg"
-        val sharedDir = File(context.cacheDir, "shared")
-        if (!sharedDir.exists()) sharedDir.mkdirs()
-        val blueprintFile = File(sharedDir, filename)
-
-        try {
-            FileOutputStream(blueprintFile).use { outputStream ->
-                outputStream.write(svgContent.toByteArray())
-            }
-            return@withContext androidx.core.content.FileProvider.getUriForFile(
-                context,
-                "com.example.myapplication.fileprovider",
-                blueprintFile
-            )
-        } catch (e: Exception) {
-            Log.e("SettingsViewModel", "Failed to save blueprint SVG", e)
             null
         }
     }
@@ -1140,7 +981,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     val canvasBackgroundColor: StateFlow<String> = preferencesRepository.canvasBackgroundColorFlow
-        .stateIn(viewModelScope, SharingStarted.Lazily, "#FFFFFF") // Default white color
+        .stateIn(viewModelScope, SharingStarted.Lazily, "#FFFFFF")
 
     fun updateCanvasBackgroundColor(colorHex: String) {
         viewModelScope.launch {
@@ -1262,14 +1103,8 @@ class SettingsViewModel @Inject constructor(
         )
     }
 
-    /**
-     * Validates that a filename is safe to use in internal storage paths.
-     * Prevents path traversal attacks (e.g., "../../data.db").
-     */
     private fun isSafeFileName(fileName: String): Boolean {
         if (fileName.isBlank()) return false
-        // Strictly allow only alphanumeric characters, underscores, dashes, and dots.
-        // Reject any path separators (/, \) or traversal sequences (..).
         return fileName.matches(Regex("^[a-zA-Z0-9_\\-\\.]+$")) && !fileName.contains("..")
     }
 }

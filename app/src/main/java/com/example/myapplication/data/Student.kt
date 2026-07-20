@@ -1,5 +1,6 @@
 package com.example.myapplication.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
@@ -63,11 +64,10 @@ data class Student(
     var customFontSize: Int? = null,
     /** Custom color for all text elements (Hex string). */
     var customFontColor: String? = null,
-    /** A temporary instruction or task assigned to the student, displayed on their icon. */
-    var temporaryTask: String? = null,
     /** Whether to show recent behavior/homework logs on the student's chart icon. */
     var showLogs: Boolean = true,
     /** Whether the student is pinned (anchored) to their current position. */
+    @ColumnInfo(defaultValue = "0")
     var isPinned: Boolean = false
 ) {
     // Secondary constructor or init block could be used for auto-generation

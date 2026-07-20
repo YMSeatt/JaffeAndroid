@@ -1,0 +1,5 @@
+- [x] Update `Student.kt` to include `DEFAULT 0` for `isPinned`
+- [x] Add `MIGRATION_35_36` to `AppDatabase.kt` to remove `temporaryTask`
+- [x] Increment database version to 36
+- [x] Register the new migration in `AppDatabase.getDatabase()`
+- [x] Verify build succeeds

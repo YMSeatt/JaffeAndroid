@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.myapplication
 
 import android.os.Bundle
@@ -30,7 +31,6 @@ import com.example.myapplication.ui.theme.MyApplicationTheme
  * and data management without leaving the app.
  */
 class HelpActivity : ComponentActivity() {
-    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {

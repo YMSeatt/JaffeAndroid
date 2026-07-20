@@ -28,7 +28,6 @@ A comprehensive tool for teachers to manage seating charts and track student beh
 *   **UI**: Tkinter with `sv_ttk` (Sun-Valley Theme)
 *   **Reporting**: `openpyxl`
 *   **Encryption**: `cryptography` (Fernet)
-*   **Experimental**: "Ghost Lab" analysis suite for advanced neural metrics and social gravity modeling.
 
 ## 📂 Project Structure
 
@@ -76,9 +75,9 @@ This project maintains strict data parity between the Android and Python applica
 ### 📐 Coordinate Systems
 Both applications use a **logical coordinate system** for the seating chart canvas, which is independent of the physical screen resolution:
 *   **Python App**: Uses a **2000x1500** logical canvas.
-*   **Android App**: Uses a **4000x4000** logical canvas to support higher-density student arrangements and futuristic experimental layers.
+*   **Android App**: Uses a **4000x4000** logical canvas to support higher-density student arrangements.
 
-**Cross-Platform Mapping**: When importing Python data into Android, the coordinates are currently mapped 1:1, meaning Python layouts will appear in the top-left quadrant of the Android canvas. The "Ghost Lab" features (like the Blueprint Engine) apply a scaling factor of `/ 4` and a fixed offset to normalize these coordinates into a unified 1200x800 SVG space.
+**Cross-Platform Mapping**: When importing Python data into Android, the coordinates are currently mapped 1:1, meaning Python layouts will appear in the top-left quadrant of the Android canvas.
 
 ### 🔄 Data Versioning
 The application uses a versioned JSON schema (currently **v10**).

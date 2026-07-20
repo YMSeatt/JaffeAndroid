@@ -20,7 +20,6 @@
         android:allowBackup="false"
         android:fullBackupContent="@xml/backup_rules"
         android:dataExtractionRules="@xml/data_extraction_rules"
-        android:extractNativeLibs="false"
         android:networkSecurityConfig="@xml/network_security_config"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
@@ -49,77 +48,6 @@
             android:exported="false"
             android:label="Help"
             android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.cortex.GhostCortexActivity"
-            android:exported="false"
-            android:label="Neural History"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.ray.GhostRayActivity"
-            android:exported="false"
-            android:label="Ghost Ray Calibration"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.vision.GhostVisionActivity"
-            android:exported="false"
-            android:label="Ghost Vision AR"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.strategist.GhostStrategistActivity"
-            android:exported="false"
-            android:label="Ghost Strategist"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.preferences.GhostPreferencesActivity"
-            android:exported="false"
-            android:label="Ghost Preferences"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.filtering.GhostFilterActivity"
-            android:exported="false"
-            android:label="Ghost Filter"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.morph.GhostMorphActivity"
-            android:exported="false"
-            android:label="Ghost Morph"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.palette.GhostPaletteActivity"
-            android:exported="false"
-            android:label="Ghost Palette"
-            android:theme="@style/Theme.MyApplication" />
-        <activity
-            android:name=".labs.ghost.pip.GhostPipActivity"
-            android:exported="false"
-            android:label="Ghost Neural PiP"
-            android:supportsPictureInPicture="true"
-            android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation"
-            android:theme="@style/Theme.MyApplication" />
-
-        <!-- Ghost Quick Settings Tiles -->
-        <service
-            android:name=".labs.ghost.tiles.GhostHudTileService"
-            android:exported="true"
-            android:label="Ghost HUD"
-            android:icon="@mipmap/ic_launcher"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
-
-        <service
-            android:name=".labs.ghost.tiles.GhostQuickLogTileService"
-            android:exported="true"
-            android:label="Quick Log"
-            android:icon="@mipmap/ic_launcher"
-            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
-            <intent-filter>
-                <action android:name="android.service.quicksettings.action.QS_TILE" />
-            </intent-filter>
-        </service>
-
         <receiver
             android:name=".util.ReminderReceiver"
             android:exported="false" />

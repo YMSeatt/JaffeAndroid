@@ -29,21 +29,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.ui.model.FurnitureUiItem
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import kotlin.math.roundToInt
 
 /**
  * A draggable and interactive UI component representing furniture on the seating chart.
- *
- * This component utilizes the "Fluid Interaction" model:
- * 1. **Direct State Observation**: Binds UI properties directly to [MutableState] fields
- *    in the cached [FurnitureUiItem], ensuring high-performance updates.
- * 2. **Optimistic Feedback**: Updates position and size states immediately during gestures
- *    for 60fps responsiveness, while deferring database synchronization until the gesture ends.
- * 3. **Minimal Recomposition**: Using [key] with the item ID and [MutableState] properties
- *    allows Compose to update only the modified parts of the UI.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -59,8 +50,7 @@ fun FurnitureDraggableIcon(
     noAnimations: Boolean,
     editModeEnabled: Boolean,
     gridSnapEnabled: Boolean,
-    gridSize: Int,
-    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
+    gridSize: Int
 ) {
     key(furnitureUiItem.id) {
         Box(
@@ -74,9 +64,8 @@ fun FurnitureDraggableIcon(
                 .width(furnitureUiItem.displayWidth.value)
                 .height(furnitureUiItem.displayHeight.value)
                 .graphicsLayer {
-                    // Counter-transformation for Mirror/Perspective
-                    rotationZ = -mirrorPerspective.rotationZ
-                    scaleX = mirrorPerspective.scaleX
+                    scaleX = 1f
+                    scaleY = 1f
                 }
         ) {
             Card(
@@ -86,7 +75,6 @@ fun FurnitureDraggableIcon(
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                // Update MutableState directly for optimistic feedback
                                 furnitureUiItem.xPosition.value += dragAmount.x / scale
                                 furnitureUiItem.yPosition.value += dragAmount.y / scale
                             },

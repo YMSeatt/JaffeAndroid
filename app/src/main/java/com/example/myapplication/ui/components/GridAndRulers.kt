@@ -22,7 +22,6 @@ import android.util.LongSparseArray
 import androidx.compose.ui.graphics.graphicsLayer
 import com.example.myapplication.data.Guide
 import com.example.myapplication.data.GuideType
-import com.example.myapplication.labs.ghost.mirror.GhostMirrorEngine
 import com.example.myapplication.viewmodel.SeatingChartViewModel
 import com.example.myapplication.viewmodel.SettingsViewModel
 import kotlin.math.ceil
@@ -30,23 +29,6 @@ import kotlin.math.floor
 
 /**
  * Renders the background grid, coordinate rulers, and draggable alignment guides.
- *
- * This component performs complex coordinate transformations to ensure that the
- * grid and rulers remain accurate across all pan and zoom levels.
- *
- * ### Coordinate Transformation Strategy:
- * 1. **Grid & Guides**: These are drawn within a `withTransform` block, mapping them directly
- *    to the logical "World Space" (0-4000).
- * 2. **Rulers**: These are drawn in "Screen Space" (pixels) so they remain fixed to the
- *    edges of the device, but their labels are calculated by reverse-mapping the screen
- *    pixels back to logical world coordinates based on the current [scale] and [offset].
- *
- * ### ⚡ BOLT Performance Optimizations:
- * - **Allocation Hoisting**: Instantiation of `android.graphics.Paint`, color parsing, and
- *   DP-to-Px conversions are hoisted into `remember` blocks. This prevents thousands
- *   of object allocations during high-frequency pan/zoom gestures.
- * - **Index-Based Loops**: Replaces `forEach` iterators with manual index loops to
- *   further reduce object churn in the 60fps draw path.
  */
 @Composable
 fun GridAndRulers(
@@ -54,8 +36,7 @@ fun GridAndRulers(
     seatingChartViewModel: SeatingChartViewModel,
     scale: Float,
     offset: Offset,
-    canvasSize: androidx.compose.ui.geometry.Size,
-    mirrorPerspective: GhostMirrorEngine.Perspective = GhostMirrorEngine.Perspective.NORMAL
+    canvasSize: androidx.compose.ui.geometry.Size
 ) {
     val showGrid by settingsViewModel.showGrid.collectAsState()
     val gridSize by settingsViewModel.gridSize.collectAsState()
@@ -67,7 +48,6 @@ fun GridAndRulers(
     val guidesStayWhenRulersHidden by settingsViewModel.guidesStayWhenRulersHidden.collectAsState()
 
     val density = LocalDensity.current
-    // BOLT: Hoist constants and pre-parse colors to avoid redundant allocations in 60fps draw path.
     val gridSizePx = remember(gridSize, density) { with(density) { gridSize.dp.toPx() } }
     val rulerThickness = remember(density) { with(density) { 30.dp.toPx() } }
     val textSize = remember(density) { with(density) { 12.dp.toPx() } }
@@ -81,10 +61,8 @@ fun GridAndRulers(
             this.textSize = textSize
         }
     }
-    // BOLT: Label cache to avoid per-frame toString() allocations.
     val labelCache = remember { LongSparseArray<String>() }
 
-    // BOLT: Pre-allocate paints to avoid per-frame allocations during Canvas draw.
     val gridPaint = remember {
         android.graphics.Paint().apply {
             color = android.graphics.Color.LTGRAY
@@ -109,12 +87,7 @@ fun GridAndRulers(
 
     Canvas(modifier = Modifier
         .fillMaxSize()
-        .graphicsLayer {
-            // BOLT: Synchronize grid/ruler transformations with the main seating chart perspective.
-            rotationZ = mirrorPerspective.rotationZ
-            scaleX = mirrorPerspective.scaleX
-        }
-        .pointerInput(guides, scale, offset, mirrorPerspective) {
+        .pointerInput(guides, scale, offset) {
             detectDragGestures(
                 onDragStart = { startOffset ->
                     val worldStartOffset = (startOffset - offset) / scale
@@ -146,7 +119,6 @@ fun GridAndRulers(
                 },
                 onDragEnd = {
                     draggedGuide?.let {
-                        // Find the original guide to get its old position for the command
                         val originalGuide = guides.find { g -> g.id == it.id }
                         if (originalGuide != null) {
                             seatingChartViewModel.updateGuidePosition(originalGuide, it.position)
@@ -156,22 +128,18 @@ fun GridAndRulers(
                 }
             )
         }) {
-        // Draw Background
         drawRect(color = parsedBackgroundColor)
 
-        // Grid (drawn within the transformed canvas)
         withTransform({
             translate(left = offset.x, top = offset.y)
             scale(scale, scale)
         }) {
             if (showGrid && gridSizePx > 0) {
-                // Calculate visible world coordinates
                 val worldXStart = -offset.x / scale
                 val worldYStart = -offset.y / scale
                 val worldXEnd = worldXStart + canvasSize.width / scale
                 val worldYEnd = worldYStart + canvasSize.height / scale
 
-                // BOLT: Optimized grid drawing using native Canvas to avoid Offset allocations.
                 drawIntoCanvas { canvas ->
                     gridPaint.strokeWidth = 1f / scale
                     val firstLineX = floor(worldXStart / gridSizePx) * gridSizePx
@@ -190,20 +158,18 @@ fun GridAndRulers(
                 }
             }
 
-            // Draw guides
             if (showRulers || guidesStayWhenRulersHidden) {
                 val worldXStart = -offset.x / scale
                 val worldYStart = -offset.y / scale
                 val worldXEnd = worldXStart + canvasSize.width / scale
                 val worldYEnd = worldYStart + canvasSize.height / scale
-                // BOLT: Optimized guide drawing using native Canvas and manual loop.
                 drawIntoCanvas { canvas ->
                     guidePaint.strokeWidth = 2f / scale
                     for (i in guides.indices) {
                         val guide = guides[i]
                         if (guide.type == GuideType.HORIZONTAL) {
                             canvas.nativeCanvas.drawLine(worldXStart, guide.position, worldXEnd, guide.position, guidePaint)
-                        } else { // vertical
+                        } else {
                             canvas.nativeCanvas.drawLine(guide.position, worldYStart, guide.position, worldYEnd, guidePaint)
                         }
                     }
@@ -211,10 +177,8 @@ fun GridAndRulers(
             }
         }
 
-        // Rulers (drawn outside the transform, in screen space)
         if (showRulers && gridSizePx > 0) {
             drawIntoCanvas { canvas ->
-                // Horizontal Ruler
                 val worldXStart = -offset.x / scale
                 val worldXEnd = (size.width - offset.x) / scale
                 val firstTickX = ceil(worldXStart / gridSizePx).toInt()
@@ -224,27 +188,18 @@ fun GridAndRulers(
                     val worldX = i * gridSizePx
                     val screenX = (worldX * scale) + offset.x
                     if (screenX >= 0 && screenX <= size.width) {
-                        // BOLT: Use native canvas to avoid Offset object churn.
                         canvas.nativeCanvas.drawLine(screenX, 0f, screenX, rulerThickness / 2, tickPaint)
 
-                        // BOLT: Retrieve label from cache to avoid toString() allocations.
                         val worldLong = worldX.toLong()
                         val label = labelCache.get(worldLong) ?: worldLong.toString().also { labelCache.put(worldLong, it) }
 
-                        // BOLT: Counter-transform ruler text for legibility.
-                        canvas.nativeCanvas.save()
-                        canvas.nativeCanvas.translate(screenX, rulerThickness)
-                        canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
-                        canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.drawText(
                             label,
-                            0f, 0f, rulerPaint
+                            screenX, rulerThickness, rulerPaint
                         )
-                        canvas.nativeCanvas.restore()
                     }
                 }
 
-                // Vertical Ruler
                 val worldYStart = -offset.y / scale
                 val worldYEnd = (size.height - offset.y) / scale
                 val firstTickY = ceil(worldYStart / gridSizePx).toInt()
@@ -254,18 +209,13 @@ fun GridAndRulers(
                     val worldY = i * gridSizePx
                     val screenY = (worldY * scale) + offset.y
                     if (screenY >= 0 && screenY <= size.height) {
-                        // BOLT: Use native canvas to avoid Offset object churn.
                         canvas.nativeCanvas.drawLine(0f, screenY, rulerThickness / 2, screenY, tickPaint)
 
-                        // BOLT: Retrieve label from cache to avoid toString() allocations.
                         val worldLong = worldY.toLong()
                         val label = labelCache.get(worldLong) ?: worldLong.toString().also { labelCache.put(worldLong, it) }
 
-                        // BOLT: Counter-transform ruler text for legibility.
                         canvas.nativeCanvas.save()
                         canvas.nativeCanvas.translate(rulerThickness, screenY)
-                        canvas.nativeCanvas.scale(mirrorPerspective.scaleX, 1f)
-                        canvas.nativeCanvas.rotate(-mirrorPerspective.rotationZ)
                         canvas.nativeCanvas.rotate(-90f)
                         canvas.nativeCanvas.drawText(
                             label,

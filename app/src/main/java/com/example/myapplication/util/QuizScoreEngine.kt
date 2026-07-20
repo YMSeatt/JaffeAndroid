@@ -46,7 +46,7 @@ object QuizScoreEngine {
      *
      * @property markTypesRef The source list of mark types used to build this context.
      */
-    internal class QuizScoringContext(val markTypesRef: List<QuizMarkType>) {
+    class QuizScoringContext(val markTypesRef: List<QuizMarkType>) {
         /**
          * The heuristic used to find the "standard" mark type for the denominator.
          * Priority:

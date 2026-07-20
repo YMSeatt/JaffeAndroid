@@ -20,7 +20,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * of architectural eras (including the transition to JSON-backed storage and
  * relational hardening), refer to [MIGRATIONS.md](MIGRATIONS.md).
  */
-@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class, HomeworkMarkMetadata::class], version = 35, exportSchema = false)
+@Database(entities = [Student::class, BehaviorEvent::class, HomeworkLog::class, Furniture::class, QuizLog::class, StudentGroup::class, LayoutTemplate::class, ConditionalFormattingRule::class, CustomBehavior::class, CustomHomeworkType::class, CustomHomeworkStatus::class, QuizTemplate::class, HomeworkTemplate::class, QuizMarkType::class, Guide::class, SystemBehavior::class, Reminder::class, EmailSchedule::class, PendingEmail::class, Quiz::class, Homework::class, HomeworkMarkMetadata::class], version = 36, exportSchema = false)
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
 
@@ -822,6 +822,67 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * Migration from version 35 to 36: Cleans up the [Student] table.
+         * Removes the legacy `temporaryTask` column and ensures schema alignment.
+         */
+        val MIGRATION_35_36 = object : Migration(35, 36) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Create a new table without the temporaryTask column
+                db.execSQL("""
+                    CREATE TABLE `students_new` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `stringId` TEXT,
+                        `firstName` TEXT NOT NULL,
+                        `lastName` TEXT NOT NULL,
+                        `nickname` TEXT,
+                        `gender` TEXT NOT NULL,
+                        `groupId` INTEGER,
+                        `initials` TEXT,
+                        `xPosition` REAL NOT NULL,
+                        `yPosition` REAL NOT NULL,
+                        `customWidth` INTEGER,
+                        `customHeight` INTEGER,
+                        `customBackgroundColor` TEXT,
+                        `customOutlineColor` TEXT,
+                        `customTextColor` TEXT,
+                        `customOutlineThickness` INTEGER,
+                        `customFontFamily` TEXT,
+                        `customFontSize` INTEGER,
+                        `customFontColor` TEXT,
+                        `customCornerRadius` INTEGER,
+                        `customPadding` INTEGER,
+                        `showLogs` INTEGER NOT NULL,
+                        `isPinned` INTEGER NOT NULL DEFAULT 0
+                    )
+                """.trimIndent())
+
+                // Copy data from the old table to the new one
+                db.execSQL("""
+                    INSERT INTO `students_new` (
+                        id, stringId, firstName, lastName, nickname, gender, groupId, initials, 
+                        xPosition, yPosition, customWidth, customHeight, customBackgroundColor, 
+                        customOutlineColor, customTextColor, customOutlineThickness, 
+                        customFontFamily, customFontSize, customFontColor, customCornerRadius, 
+                        customPadding, showLogs, isPinned
+                    )
+                    SELECT 
+                        id, stringId, firstName, lastName, nickname, gender, groupId, initials, 
+                        xPosition, yPosition, customWidth, customHeight, customBackgroundColor, 
+                        customOutlineColor, customTextColor, customOutlineThickness, 
+                        customFontFamily, customFontSize, customFontColor, customCornerRadius, 
+                        customPadding, showLogs, isPinned
+                    FROM students
+                """.trimIndent())
+
+                // Drop the old table
+                db.execSQL("DROP TABLE students")
+
+                // Rename the new table
+                db.execSQL("ALTER TABLE `students_new` RENAME TO `students`")
+            }
+        }
+
 
         fun getDatabase(context: Context, dbName: String = DATABASE_NAME): AppDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -845,7 +906,7 @@ abstract class AppDatabase : RoomDatabase() {
                     ).createFromFile(archiveFile)
                 }
 
-                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35)
+                val instance = builder.addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25, MIGRATION_25_26, MIGRATION_26_27, MIGRATION_27_28, MIGRATION_28_29, MIGRATION_29_30, MIGRATION_30_31, MIGRATION_31_32, MIGRATION_32_33, MIGRATION_33_34, MIGRATION_34_35, MIGRATION_35_36)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
