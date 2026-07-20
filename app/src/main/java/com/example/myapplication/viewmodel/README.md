@@ -18,6 +18,10 @@ The `SeatingChartViewModel` is the "brain" of the seating chart experience. It c
 - **`StatsViewModel`**: Synthesizes historical log data into high-level classroom analytics.
 - **`StudentGroupsViewModel`**: Handles the management of relational student groupings.
 - **`ReminderViewModel`**: Orchestrates teacher tasks and system-level alarms.
+- **`StudentStyleViewModel`**: Coordinates custom card appearances (background, text color, outlines, fonts) and applies fallback/default styles from Datastore.
+- **`HomeworkTemplateViewModel`**: Manages multi-step homework grading templates (Checkboxes, Slider ranges, text comments) serialized to SQLite.
+- **`QuizTemplateViewModel`**: Orchestrates the quiz builder interface, linking quiz questions to point-weighted grading metrics.
+- **`QuizMarkTypeViewModel`**: Coordinates customized grading criteria (e.g., Correct, Partial Credit, Bonus), allowing teachers to modify point scales and restore defaults safely.
 
 ## ⚡ Performance Patterns
 
