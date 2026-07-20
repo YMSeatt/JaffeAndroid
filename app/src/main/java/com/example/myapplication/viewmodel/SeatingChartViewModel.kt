@@ -2005,7 +2005,7 @@ class SeatingChartViewModel @Inject constructor(
                         val student = pair.first
                         if (matchedStudentIds.contains(student.id)) continue
 
-                        val similarity = StringSimilarity.nameSimilarityRatio(templateFullName, pair.second)
+                        val similarity = StringSimilarity.nameSimilarityRatioWithThreshold(templateFullName, pair.second, bestSimilarity)
                         if (similarity > bestSimilarity) {
                             bestSimilarity = similarity
                             fuzzyMatch = student
