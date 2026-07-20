@@ -87,6 +87,7 @@ import com.example.myapplication.MainActivity
 import com.example.myapplication.data.BehaviorEvent
 import com.example.myapplication.data.GuideType
 import com.example.myapplication.preferences.AppTheme
+import com.example.myapplication.ui.components.CustomDropdownMenu
 import com.example.myapplication.ui.components.FurnitureDraggableIcon
 import com.example.myapplication.ui.components.GridAndRulers
 import com.example.myapplication.ui.components.StudentDraggableIcon
@@ -175,6 +176,7 @@ fun SeatingChartScreen(
 
     val context = LocalContext.current
 
+    val noAnimations = userPreferences?.noAnimations ?: false
     val showRecentBehavior by settingsViewModel.showRecentBehavior.collectAsState(initial = false)
     val quizLogFontColorStr by settingsViewModel.quizLogFontColor.collectAsState()
     val homeworkLogFontColorStr by settingsViewModel.homeworkLogFontColor.collectAsState()
@@ -421,10 +423,11 @@ fun SeatingChartScreen(
                     val groups by studentGroupsViewModel.allStudentGroups.collectAsState(initial = emptyList())
                     var showGroupMenu by remember { mutableStateOf(false) }
 
-                    DropdownMenu(
+                    CustomDropdownMenu(
                         expanded = true,
                         onDismissRequest = { showStudentActionMenu = false },
-                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp)
+                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp),
+                        noAnimations = noAnimations
                     ) {
                         DropdownMenuItem(text = { Text("Edit Student") }, onClick = {
                             coroutineScope.launch {
@@ -498,9 +501,12 @@ fun SeatingChartScreen(
                             })
                         }
                     }
-                    DropdownMenu(
+                    CustomDropdownMenu(
                         expanded = showGroupMenu,
-                        onDismissRequest = { showGroupMenu = false }) {
+                        onDismissRequest = { showGroupMenu = false },
+                        offset = DpOffset(longPressPosition.x.dp, longPressPosition.y.dp),
+                        noAnimations = noAnimations
+                    ) {
                         groups.forEach { group ->
                             DropdownMenuItem(text = { Text(group.name) }, onClick = {
                                 seatingChartViewModel.assignStudentToGroup(

@@ -8,12 +8,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -75,124 +80,140 @@ fun ScheduleEditorDialog(
     )
 
     Dialog(onDismissRequest = onDismiss) {
-        Surface {
+        Surface(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .heightIn(max = 600.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Button(onClick = { timePickerDialog.show() }) {
-                    Text(text = String.format("%02d:%02d", hour, minute))
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Days of the week:")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-                    days.forEachIndexed { index, day ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(day)
-                            Checkbox(
-                                checked = (daysOfWeek and (1 shl index)) != 0,
-                                onCheckedChange = {
-                                    daysOfWeek = if (it) {
-                                        daysOfWeek or (1 shl index)
-                                    } else {
-                                        daysOfWeek and (1 shl index).inv()
-                                    }
-                                }
-                            )
-                        }
+                    Button(onClick = { timePickerDialog.show() }) {
+                        Text(text = String.format("%02d:%02d", hour, minute))
                     }
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                TextField(
-                    value = recipientEmail,
-                    onValueChange = { recipientEmail = it },
-                    label = { Text("Recipient Email") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = subject,
-                    onValueChange = { subject = it },
-                    label = { Text("Subject") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                TextField(
-                    value = body,
-                    onValueChange = { body = it },
-                    label = { Text("Body") }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Export Options
-                Text("Export Options")
-                Spacer(modifier = Modifier.height(8.dp))
-
-                var expanded by remember { mutableStateOf(false) }
-                val dateRanges = listOf("None", "Past 24 hours", "Past 7 days", "Past 30 days")
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    TextField(
-                        value = relativeDateRange,
-                        onValueChange = {},
-                        label = { Text("Date Range") },
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                        modifier = Modifier.menuAnchor()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Days of the week:")
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        dateRanges.forEach { range ->
-                            DropdownMenuItem(
-                                text = { Text(range) },
-                                onClick = {
-                                    relativeDateRange = range
-                                    expanded = false
-                                }
-                            )
+                        val days = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+                        days.forEachIndexed { index, day ->
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(day)
+                                Checkbox(
+                                    checked = (daysOfWeek and (1 shl index)) != 0,
+                                    onCheckedChange = {
+                                        daysOfWeek = if (it) {
+                                            daysOfWeek or (1 shl index)
+                                        } else {
+                                            daysOfWeek and (1 shl index).inv()
+                                        }
+                                    }
+                                )
+                            }
                         }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    TextField(
+                        value = recipientEmail,
+                        onValueChange = { recipientEmail = it },
+                        label = { Text("Recipient Email") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = subject,
+                        onValueChange = { subject = it },
+                        label = { Text("Subject") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextField(
+                        value = body,
+                        onValueChange = { body = it },
+                        label = { Text("Body") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Export Options
+                    Text("Export Options", style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    var expanded by remember { mutableStateOf(false) }
+                    val dateRanges = listOf("None", "Past 24 hours", "Past 7 days", "Past 30 days")
+                    ExposedDropdownMenuBox(
+                        expanded = expanded,
+                        onExpandedChange = { expanded = !expanded }
+                    ) {
+                        TextField(
+                            value = relativeDateRange,
+                            onValueChange = {},
+                            label = { Text("Date Range") },
+                            readOnly = true,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                            modifier = Modifier
+                                .menuAnchor()
+                                .fillMaxWidth()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expanded,
+                            onDismissRequest = { expanded = false }
+                        ) {
+                            dateRanges.forEach { range ->
+                                DropdownMenuItem(
+                                    text = { Text(range) },
+                                    onClick = {
+                                        relativeDateRange = range
+                                        expanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeBehaviorLogs, onCheckedChange = { includeBehaviorLogs = it })
+                        Text("Behavior Logs")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeHomeworkLogs, onCheckedChange = { includeHomeworkLogs = it })
+                        Text("Homework Logs")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeQuizLogs, onCheckedChange = { includeQuizLogs = it })
+                        Text("Quiz Logs")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = separateSheets, onCheckedChange = { separateSheets = it })
+                        Text("Separate Sheets")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it })
+                        Text("Master Log")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeSummarySheet, onCheckedChange = { includeSummarySheet = it })
+                        Text("Summary Sheet")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
+                        Text("Individual Student Sheets")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = includeStudentInfoSheet, onCheckedChange = { includeStudentInfoSheet = it })
+                        Text("Student Info Sheet")
                     }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeBehaviorLogs, onCheckedChange = { includeBehaviorLogs = it })
-                    Text("Behavior Logs")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeHomeworkLogs, onCheckedChange = { includeHomeworkLogs = it })
-                    Text("Homework Logs")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeQuizLogs, onCheckedChange = { includeQuizLogs = it })
-                    Text("Quiz Logs")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = separateSheets, onCheckedChange = { separateSheets = it })
-                    Text("Separate Sheets")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeMasterLog, onCheckedChange = { includeMasterLog = it })
-                    Text("Master Log")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeSummarySheet, onCheckedChange = { includeSummarySheet = it })
-                    Text("Summary Sheet")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeIndividualStudentSheets, onCheckedChange = { includeIndividualStudentSheets = it })
-                    Text("Individual Student Sheets")
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(checked = includeStudentInfoSheet, onCheckedChange = { includeStudentInfoSheet = it })
-                    Text("Student Info Sheet")
-                }
-
-
                 Spacer(modifier = Modifier.height(16.dp))
-                Row {
+                Row(modifier = Modifier.fillMaxWidth()) {
                     Button(onClick = onDismiss) {
                         Text("Cancel")
                     }

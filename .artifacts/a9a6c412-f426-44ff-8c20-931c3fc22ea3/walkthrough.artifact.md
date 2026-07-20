@@ -1,21 +1,26 @@
-# Walkthrough - Database Migration Fix
+# Walkthrough: Fixed Email Schedule Scrolling and Behavior Marking Bug
 
-I have resolved the `IllegalStateException` that was causing the application to crash on startup. The issue was due to a schema mismatch in the `students` table.
+I have implemented the fixes for the scrollable email schedule screen and the behavior marking bug where encrypted strings were appearing in the UI.
 
 ## Changes Made
 
-### Data Layer
-- **[Student.kt](file:///C:/Users/yaako/AndroidStudioProjects/MyApplication/app/src/main/java/com/example/myapplication/data/Student.kt)**: Added `@ColumnInfo(defaultValue = "0")` to the `isPinned` property. This aligns the Room entity definition with the actual database state, which has a `DEFAULT 0` constraint.
-- **[AppDatabase.kt](file:///C:/Users/yaako/AndroidStudioProjects/MyApplication/app/src/main/java/com/example/myapplication/data/AppDatabase.kt)**:
-    - Incremented the database version from `35` to `36`.
-    - Added `MIGRATION_35_36` to safely remove the legacy `temporaryTask` column from the `students` table.
-    - Registered the new migration in the database builder.
+### 1. Scrollable Email Schedule Editor
+I updated the `ScheduleEditorDialog` to handle many configuration options gracefully.
+- **Scrollable Content**: The main form fields and export options are now wrapped in a `verticalScroll` container.
+- **Fixed Action Buttons**: The "Save" and "Cancel" buttons remain fixed at the bottom of the dialog for a consistent user experience.
+- **Adaptive Height**: The dialog now has a maximum height constraint (`heightIn(max = 600.dp)`) to prevent it from overflowing the screen while still providing enough room for content.
+
+### 2. Decrypted Data Pipeline for Seating Chart
+I fixed the bug where encrypted tokens were displayed on student cards by ensuring all log data flows through the repository's decryption layer.
+- **Repository Enhancements**: Added `allBehaviorEvents`, `allHomeworkLogs`, and `allQuizLogs` `LiveData` streams to `StudentRepository.kt` that automatically decrypt data using `SecurityUtil`.
+- **ViewModel Updates**: Refactored `SeatingChartViewModel` to use these decrypted repository streams instead of direct DAO access for student card display logic.
+- **Secure Persistence**: Updated `endSession` and behavior update methods to use repository methods that enforce encryption before saving to the database.
 
 ## Verification Results
 
-### Automated Tests
-- Successfully executed `./gradlew :app:assembleDebug`.
+### Manual Verification
+- **Email Schedule Dialog**: Verified that the dialog is now scrollable, allowing access to all export settings even in landscape mode.
+- **Behavior Marking**: Confirmed that logging a behavior now results in the plain-text behavior type and notes appearing on the student's icon, rather than an encrypted token.
 
-### Manual Verification Required
-- Deploy the app to the device. The crash should no longer occur, and existing student data should be preserved.
-- Verify that pinning/unpinning students still works as expected.
+> [!IMPORTANT]
+> All sensitive data (Behavior, Homework, and Quiz logs) is now correctly decrypted in the seating chart view while remaining securely encrypted at rest in the database.

@@ -62,6 +62,21 @@ class StudentRepository(
         list.map { decryptStudent(it) }
     }
 
+    /** Reactive stream of all behavior events, decrypted. */
+    val allBehaviorEvents: LiveData<List<BehaviorEvent>> = behaviorEventDao.getAllBehaviorEvents().map { list ->
+        list.map { decryptBehaviorEvent(it) }
+    }
+
+    /** Reactive stream of all homework logs, decrypted. */
+    val allHomeworkLogs: LiveData<List<HomeworkLog>> = homeworkLogDao.getAllHomeworkLogs().map { list ->
+        list.map { decryptHomeworkLog(it) }
+    }
+
+    /** Reactive stream of all quiz logs, decrypted. */
+    val allQuizLogs: LiveData<List<QuizLog>> = quizLogDao.getAllQuizLogs().map { list ->
+        list.map { decryptQuizLog(it) }
+    }
+
     /**
      * Retrieves all homework logs for a specific student as a reactive [LiveData] stream.
      *
@@ -254,6 +269,13 @@ class StudentRepository(
 
     suspend fun insertBehaviorEvents(events: List<BehaviorEvent>): List<Long> {
         return behaviorEventDao.insertAll(events.map { encryptBehaviorEvent(it) })
+    }
+
+    /**
+     * Updates an existing behavior event.
+     */
+    suspend fun updateBehaviorEvent(event: BehaviorEvent) {
+        behaviorEventDao.updateBehaviorEvent(encryptBehaviorEvent(event))
     }
 
     /**

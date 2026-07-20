@@ -1,5 +1,5 @@
-- [x] Update `Student.kt` to include `DEFAULT 0` for `isPinned`
-- [x] Add `MIGRATION_35_36` to `AppDatabase.kt` to remove `temporaryTask`
-- [x] Increment database version to 36
-- [x] Register the new migration in `AppDatabase.getDatabase()`
-- [x] Verify build succeeds
+- [x] Update `StudentRepository.kt` to provide decrypted streams for logs
+- [x] Update `SeatingChartViewModel.kt` to use decrypted streams from the repository
+- [x] Make `ScheduleEditorDialog.kt` scrollable
+- [x] Verify UI changes for Email Schedule dialog
+- [x] Verify behavior log display on student cards

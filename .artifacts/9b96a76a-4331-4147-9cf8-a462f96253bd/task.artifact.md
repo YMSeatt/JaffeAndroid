@@ -1,0 +1,7 @@
+- [x] Modify `SeatingChartScreen.kt`
+    - [x] Import `CustomDropdownMenu`
+    - [x] Calculate `noAnimations`
+    - [x] Replace main student action menu with `CustomDropdownMenu`
+    - [x] Replace "Assign to Group" sub-menu with `CustomDropdownMenu`
+- [x] Verify changes
+- [x] Create walkthrough

@@ -165,13 +165,13 @@ class SeatingChartViewModel @Inject constructor(
     val allLayoutTemplates: LiveData<List<LayoutTemplate>>
 
     /** Live stream of all historical behavior events. */
-    val allBehaviorEvents: LiveData<List<BehaviorEvent>>
+    val allBehaviorEvents: LiveData<List<BehaviorEvent>> = repository.allBehaviorEvents
 
     /** Live stream of all historical homework logs. */
-    val allHomeworkLogs: LiveData<List<HomeworkLog>>
+    val allHomeworkLogs: LiveData<List<HomeworkLog>> = repository.allHomeworkLogs
 
     /** Live stream of all historical quiz logs. */
-    val allQuizLogs: LiveData<List<QuizLog>>
+    val allQuizLogs: LiveData<List<QuizLog>> = repository.allQuizLogs
 
     /** Live stream of all active conditional formatting rules. */
     val allRules: LiveData<List<com.example.myapplication.data.ConditionalFormattingRule>>
@@ -481,9 +481,6 @@ class SeatingChartViewModel @Inject constructor(
         allStudents = repository.allStudents
         allFurniture = repository.getAllFurniture().asLiveData()
         allLayoutTemplates = repository.getAllLayoutTemplates().asLiveData()
-        allBehaviorEvents = behaviorEventDao.getAllBehaviorEvents()
-        allHomeworkLogs = homeworkLogDao.getAllHomeworkLogs()
-        allQuizLogs = quizLogDao.getAllQuizLogs()
         allRules = conditionalFormattingRuleDao.getAllRules()
         quizMarkTypes = repository.getAllQuizMarkTypes().asLiveData()
         allHomeworkTemplates = homeworkTemplateDao.getAllHomeworkTemplates().asLiveData()
@@ -2105,7 +2102,7 @@ class SeatingChartViewModel @Inject constructor(
 
     fun updateBehaviorEvent(event: BehaviorEvent) {
         viewModelScope.launch(Dispatchers.IO) {
-            behaviorEventDao.updateBehaviorEvent(event)
+            repository.updateBehaviorEvent(event)
             withContext(Dispatchers.Main) {
                 updateStudentsForDisplay(allStudents.value ?: emptyList())
             }
@@ -2173,12 +2170,12 @@ class SeatingChartViewModel @Inject constructor(
             viewModelScope.launch(Dispatchers.IO) {
                 val quizLogsToSave = sessionQuizLogs.value
                 if (!quizLogsToSave.isNullOrEmpty()) {
-                    quizLogDao.insertAll(quizLogsToSave)
+                    repository.insertQuizLogs(quizLogsToSave)
                 }
 
                 val homeworkLogsToSave = sessionHomeworkLogs.value
                 if (!homeworkLogsToSave.isNullOrEmpty()) {
-                    homeworkLogDao.insertAll(homeworkLogsToSave)
+                    repository.insertHomeworkLogs(homeworkLogsToSave)
                 }
 
                 Log.d(
