@@ -97,4 +97,41 @@ object StringSimilarity {
         if (maxLen == 0) return 1.0f
         return 1.0f - (distance.toFloat() / maxLen.toFloat())
     }
+
+    /**
+     * Calculates a similarity ratio between s1 and s2 only if their length difference
+     * allows a similarity score higher than the specified [threshold].
+     *
+     * ### BOLT Optimization:
+     * This avoids expensive Levenshtein distance computations when the difference in length
+     * of s1 and s2 alone guarantees that the maximum possible similarity score will be
+     * less than or equal to the [threshold].
+     *
+     * @param s1 The first string to compare.
+     * @param s2 The second string to compare.
+     * @param threshold The minimum required similarity ratio.
+     * @return The similarity ratio if it exceeds the threshold, or 0.0f if the potential
+     *         similarity is too low or if the actual similarity does not exceed the threshold.
+     */
+    fun nameSimilarityRatioWithThreshold(s1: String?, s2: String?, threshold: Float): Float {
+        if (s1 == s2) return 1.0f
+        if (s1.isNullOrEmpty() || s2.isNullOrEmpty()) {
+            val ratio = if (s1.isNullOrEmpty() && s2.isNullOrEmpty()) 1.0f else 0.0f
+            return if (ratio > threshold) ratio else 0.0f
+        }
+
+        val len1 = s1.length
+        val len2 = s2.length
+        val maxLen = max(len1, len2)
+        if (maxLen == 0) return 1.0f
+
+        val minDistance = kotlin.math.abs(len1 - len2)
+        val maxPotentialRatio = 1.0f - (minDistance.toFloat() / maxLen.toFloat())
+        if (maxPotentialRatio <= threshold) {
+            return 0.0f
+        }
+
+        val actualRatio = nameSimilarityRatio(s1, s2)
+        return if (actualRatio > threshold) actualRatio else 0.0f
+    }
 }

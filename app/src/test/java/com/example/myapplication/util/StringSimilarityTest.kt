@@ -43,4 +43,28 @@ class StringSimilarityTest {
         assertEquals((4.0/7.0).toFloat(), StringSimilarity.nameSimilarityRatio("kitten", "sitting"), 0.001f)
         assertEquals(1.0f, StringSimilarity.nameSimilarityRatio("John", "john"), 0.001f)
     }
+
+    @Test
+    fun testNameSimilarityRatioWithThreshold() {
+        // Exact match (always 1.0f regardless of threshold)
+        assertEquals(1.0f, StringSimilarity.nameSimilarityRatioWithThreshold("John Doe", "John Doe", 0.5f), 0.001f)
+
+        // If length difference dictates potential similarity <= threshold, return 0f
+        // s1: "John Doe" (len 8), s2: "John" (len 4). diff = 4. potential max ratio = 1 - 4/8 = 0.5f.
+        // If threshold is 0.6f, potential is 0.5f <= 0.6f, should return 0.0f.
+        assertEquals(0.0f, StringSimilarity.nameSimilarityRatioWithThreshold("John Doe", "John", 0.6f), 0.001f)
+
+        // If potential max ratio is > threshold, but actual is <= threshold
+        // s1: "John Doe" (len 8), s2: "John" (len 4). actual distance is 4 (actual ratio 0.5f).
+        // threshold is 0.4f. potential is 0.5f > 0.4f, so it computes actual. Actual ratio is 0.5f > 0.4f -> returns 0.5f.
+        assertEquals(0.5f, StringSimilarity.nameSimilarityRatioWithThreshold("John Doe", "John", 0.4f), 0.001f)
+
+        // If actual ratio <= threshold
+        // s1: "John Doe" (len 8), s2: "Jahn" (len 4). actual distance is 5 (actual ratio = 3 / 8 = 0.375f).
+        // threshold is 0.4f. potential is 0.5f > 0.4f, so it computes actual. Actual ratio is 0.375f <= 0.4f -> returns 0.0f.
+        assertEquals(0.0f, StringSimilarity.nameSimilarityRatioWithThreshold("John Doe", "Jahn", 0.4f), 0.001f)
+
+        // Case insensitivity check
+        assertEquals(1.0f, StringSimilarity.nameSimilarityRatioWithThreshold("John", "john", 0.8f), 0.001f)
+    }
 }
