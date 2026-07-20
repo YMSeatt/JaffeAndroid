@@ -6,6 +6,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.example.myapplication.data.*
 import com.example.myapplication.data.importer.JsonImporter
 import com.example.myapplication.preferences.AppPreferencesRepository
+import com.example.myapplication.util.SecurityUtil
 import io.mockk.MockKAnnotations
 import io.mockk.impl.annotations.MockK
 import io.mockk.every

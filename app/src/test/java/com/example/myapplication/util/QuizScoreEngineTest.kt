@@ -1,10 +1,16 @@
 package com.example.myapplication.util
 
+import android.app.Application
 import com.example.myapplication.data.QuizLog
 import com.example.myapplication.data.QuizMarkType
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class QuizScoreEngineTest {
 
     private val markCorrect = QuizMarkType(id = 1, name = "Correct", defaultPoints = 1.0, contributesToTotal = true, isExtraCredit = false)
@@ -24,6 +30,7 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = null,
+            markType = null,
             maxMarkValue = null
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
@@ -40,6 +47,7 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = null,
+            markType = null,
             maxMarkValue = null
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
@@ -57,6 +65,7 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = null,
+            markType = null,
             maxMarkValue = null
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
@@ -74,12 +83,11 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = null,
+            markType = null,
             maxMarkValue = null
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
         // Python parity: if num_questions <= 0 it returns null unless it falls back to legacy markValue.
-        // Wait, my implementation of QuizScoreEngine.kt:
-        // if (log.numQuestions <= 0) { ... fallback ... return null }
         assertEquals(null, result)
     }
 
@@ -93,6 +101,7 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = 7.5,
+            markType = null,
             maxMarkValue = 10.0
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
@@ -109,6 +118,7 @@ class QuizScoreEngineTest {
             loggedAt = 0,
             comment = null,
             markValue = 5.0,
+            markType = null,
             maxMarkValue = 10.0
         )
         val result = QuizScoreEngine.calculatePercentage(log, markTypes)
