@@ -41,7 +41,7 @@ class CollisionDetectorTest {
             groupColor = mutableStateOf(null),
             groupId = mutableStateOf(null),
             sessionLogText = mutableStateOf(emptyList()),
-            temporaryTask = mutableStateOf(null)
+            isPinned = mutableStateOf(false)
         )
     }
 

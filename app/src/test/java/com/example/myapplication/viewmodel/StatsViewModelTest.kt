@@ -1,5 +1,6 @@
 package com.example.myapplication.viewmodel
 
+import android.app.Application
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
 import com.example.myapplication.data.*
@@ -14,10 +15,15 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import com.google.common.truth.Truth.assertThat
 import java.util.Calendar
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class StatsViewModelTest {
 
     @get:Rule
@@ -133,12 +139,12 @@ class StatsViewModelTest {
         val students = listOf(studentA, studentB).sortedWith(compareBy({ it.lastName }, { it.firstName }))
 
         val markTypes = listOf(
-            QuizMarkType(id = 1, name = "Correct", defaultPoints = 1.0, contributesToTotal = true)
+            QuizMarkType(id = 1, name = "Correct", defaultPoints = 1.0, contributesToTotal = true, isExtraCredit = false)
         )
 
         val logs = listOf(
-            QuizLog(studentId = 1, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 2}", loggedAt = 1000L),
-            QuizLog(studentId = 2, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 1}", loggedAt = 1000L)
+            QuizLog(studentId = 1, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 2}", loggedAt = 1000L, markValue = null, markType = null, maxMarkValue = null, comment = null),
+            QuizLog(studentId = 2, quizName = "Math", numQuestions = 2, marksData = "{\"Correct\": 1}", loggedAt = 1000L, markValue = null, markType = null, maxMarkValue = null, comment = null)
         )
 
         val studentNameMap = students.associate { it.id to "${it.firstName} ${it.lastName}" }
@@ -167,6 +173,7 @@ class StatsViewModelTest {
         val summary = viewModel.calculateHomeworkSummary(logs, students, studentNameMap)
 
         assertThat(summary).hasSize(2)
+        // Bob Alpha comes first because Alpha < Zuberi
         assertThat(summary[0].studentName).isEqualTo("Bob Alpha")
         assertThat(summary[0].totalPoints).isEqualTo(5.0)
 

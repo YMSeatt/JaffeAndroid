@@ -1,10 +1,12 @@
 package com.example.myapplication.data.exporter
 
+import android.app.Application
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.os.ParcelFileDescriptor
 import com.example.myapplication.data.*
+import com.example.myapplication.util.HomeworkScoreEngine
 import com.example.myapplication.util.SecurityUtil
 import io.mockk.every
 import io.mockk.mockk
@@ -12,10 +14,15 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
 
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class ExporterTest {
 
     @Test
@@ -66,6 +73,7 @@ class ExporterTest {
                 quizMarkTypes = emptyList(),
                 customHomeworkTypes = emptyList(),
                 customHomeworkStatuses = emptyList(),
+                homeworkScoringContext = HomeworkScoreEngine.HomeworkScoringContext(emptyList()),
                 encrypt = false
             )
         }
@@ -153,6 +161,7 @@ class ExporterTest {
                 quizMarkTypes = emptyList(),
                 customHomeworkTypes = emptyList(),
                 customHomeworkStatuses = emptyList(),
+                homeworkScoringContext = HomeworkScoreEngine.HomeworkScoringContext(emptyList()),
                 encrypt = false
             )
         }
@@ -216,6 +225,7 @@ class ExporterTest {
                 quizMarkTypes = emptyList(),
                 customHomeworkTypes = emptyList(),
                 customHomeworkStatuses = emptyList(),
+                homeworkScoringContext = HomeworkScoreEngine.HomeworkScoringContext(emptyList()),
                 encrypt = false
             )
         }
