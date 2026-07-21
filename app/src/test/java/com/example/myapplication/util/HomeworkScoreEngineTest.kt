@@ -1,10 +1,16 @@
 package com.example.myapplication.util
 
+import android.app.Application
 import com.example.myapplication.data.HomeworkLog
 import com.example.myapplication.data.HomeworkMarkMetadata
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
+@RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class HomeworkScoreEngineTest {
 
     private val metadata = listOf(
