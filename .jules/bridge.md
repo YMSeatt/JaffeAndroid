@@ -45,3 +45,7 @@ LaunchedEffect(autoLockEnabled, autoLockTimeoutMinutes, unlocked, lastActivityTi
 ## 2024-05-20 - Quiz Mark Initials Discrepancy
 **Discrepancy:** Python combines Behaviors and Quiz Mark Types in a single initials map (`behavior_initial_overrides`). Android split them into tabs but omitted Quiz Mark Types from the customization UI entirely.
 **Adaptation:** Unified Quiz Mark Types into the "Behaviors" tab of `ManageInitialsScreen.kt` while maintaining the separate "Quizzes" tab for Template-specific initials to provide superior organization while keeping functional parity.
+
+## 2026-03-12 - ChangeStudentStyleCommand Port & Schema Mapping
+**Discrepancy:** The Python prototype's `ChangeStudentStyleCommand` operates on a highly dynamic, mutable `style_overrides` dictionary. Android/Room structures enforce a strict relational database schema with individual dedicated column fields in the `Student` entity.
+**Adaptation:** Mapped the dynamic string-based property keys (e.g., `"customBackgroundColor"`, `"width"`) to their corresponding type-safe student entity fields using an internal helper function. Safely cast dynamic inputs (`Any?`) to specific types (`String?`, `Int?`) during entity copying, preserving strict multi-platform logical parity without compromising database integrity or thread-safe entity copies.

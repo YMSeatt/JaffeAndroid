@@ -36,6 +36,7 @@ import com.example.myapplication.commands.MoveItemsCommand
 import com.example.myapplication.commands.ItemMove
 import com.example.myapplication.commands.ItemType
 import com.example.myapplication.commands.MoveStudentCommand
+import com.example.myapplication.commands.ChangeStudentStyleCommand
 import com.example.myapplication.commands.UpdateFurnitureCommand
 import com.example.myapplication.commands.UpdateStudentCommand
 import com.example.myapplication.data.AppDatabase
@@ -1387,6 +1388,19 @@ class SeatingChartViewModel @Inject constructor(
                 yPosition = resolvedY
             )
             val command = AddStudentCommand(this@SeatingChartViewModel, positionedStudent)
+            executeCommand(command)
+        }
+    }
+
+    fun changeStudentStyle(studentId: Long, property: String, oldValue: Any?, newValue: Any?) {
+        viewModelScope.launch {
+            val command = ChangeStudentStyleCommand(
+                this@SeatingChartViewModel,
+                studentId,
+                property,
+                oldValue,
+                newValue
+            )
             executeCommand(command)
         }
     }
